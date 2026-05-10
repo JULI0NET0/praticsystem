@@ -1,0 +1,917 @@
+"use client";
+
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { 
+  ArrowRight, 
+  ArrowLeft,
+  CheckCircle2, 
+  Building2, 
+  MapPin, 
+  Phone, 
+  Briefcase, 
+  Share2,
+  Loader2,
+  Lock,
+  Mail,
+  User,
+  Plus,
+  Zap
+} from "lucide-react";
+import Link from "next/link";
+import { formatCPFOrCNPJ, formatCEP, formatPhone } from "@/utils/masks";
+import ThemeLogo from "@/components/ThemeLogo";
+import { supabase } from "@/lib/supabase";
+
+export default function OnboardingPage() {
+  const [step, setStep] = useState(0); // Começa em 0: Splash Screen
+  const [isLoadingCnpj, setIsLoadingCnpj] = useState(false);
+  const [isLoadingCep, setIsLoadingCep] = useState(false);
+
+  // Form Data
+  const [formData, setFormData] = useState({
+    tipoPessoa: "PJ", // PF ou PJ
+    documento: "",
+    nomeRazaoSocial: "",
+    nomeFantasia: "",
+    setor: "",
+    cep: "",
+    logradouro: "",
+    numero: "",
+    complemento: "",
+    bairro: "",
+    cidade: "",
+    uf: "",
+    contatoResponsavel: "",
+    email: "", // Novo campo: E-mail principal
+    whatsapp: "",
+    telefoneFixo: "",
+    emailFinanceiro: "",
+    servico: "",
+    briefing: "",
+    // Redes Sociais
+    redesSociais: {
+      instagram: { ativo: false, usuario: '', senha: '', email: '' },
+      facebook: { ativo: false, usuario: '', senha: '', email: '' },
+      google: { ativo: false, usuario: '', senha: '', email: '' },
+      linkedin: { ativo: false, usuario: '', senha: '', email: '' },
+      tiktok: { ativo: false, usuario: '', senha: '', email: '' },
+    }
+  });
+
+  const updateForm = (field: string, value: any) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const toggleRedeSocial = (rede: keyof typeof formData.redesSociais) => {
+    setFormData(prev => ({
+      ...prev,
+      redesSociais: {
+        ...prev.redesSociais,
+        [rede]: {
+          ...prev.redesSociais[rede],
+          ativo: !prev.redesSociais[rede].ativo
+        }
+      }
+    }));
+  };
+
+  const updateRedeSocial = (rede: keyof typeof formData.redesSociais, field: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      redesSociais: {
+        ...prev.redesSociais,
+        [rede]: {
+          ...prev.redesSociais[rede],
+          [field]: value
+        }
+      }
+    }));
+  };
+
+  const handleDocumentChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = e.target.value;
+    const formatted = formatCPFOrCNPJ(rawValue);
+    updateForm("documento", formatted);
+
+    const digitsOnly = formatted.replace(/\D/g, "");
+    if (formData.tipoPessoa === "PJ" && digitsOnly.length === 14) {
+      setIsLoadingCnpj(true);
+      try {
+        const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${digitsOnly}`);
+        if (res.ok) {
+          const data = await res.json();
+          setFormData((prev) => ({
+            ...prev,
+            nomeRazaoSocial: data.razao_social || prev.nomeRazaoSocial,
+            nomeFantasia: data.nome_fantasia || prev.nomeFantasia,
+            cep: formatCEP(data.cep?.toString() || prev.cep),
+            logradouro: data.logradouro || prev.logradouro,
+            numero: data.numero || prev.numero,
+            complemento: data.complemento || prev.complemento,
+            bairro: data.bairro || prev.bairro,
+            cidade: data.municipio || prev.cidade,
+            uf: data.uf || prev.uf,
+            telefoneFixo: formatPhone(data.ddd_telefone_1 || prev.telefoneFixo)
+          }));
+        }
+      } catch (error) {
+        console.error("Erro ao buscar CNPJ", error);
+      } finally {
+        setIsLoadingCnpj(false);
+      }
+    }
+  };
+
+  const handleCepChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatCEP(e.target.value);
+    updateForm("cep", formatted);
+
+    const digitsOnly = formatted.replace(/\D/g, "");
+    if (digitsOnly.length === 8) {
+      setIsLoadingCep(true);
+      try {
+        const res = await fetch(`https://viacep.com.br/ws/${digitsOnly}/json/`);
+        if (res.ok) {
+          const data = await res.json();
+          if (!data.erro) {
+            setFormData((prev) => ({
+              ...prev,
+              logradouro: data.logradouro || prev.logradouro,
+              bairro: data.bairro || prev.bairro,
+              cidade: data.localidade || prev.cidade,
+              uf: data.uf || prev.uf,
+            }));
+          }
+        }
+      } catch (error) {
+        console.error("Erro ao buscar CEP", error);
+      } finally {
+        setIsLoadingCep(false);
+      }
+    }
+  };
+
+  const playClick = () => {
+    try {
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      
+      // Criar 15 milissegundos de ruído (white noise) para simular o atrito mecânico
+      const bufferSize = audioCtx.sampleRate * 0.015;
+      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const data = buffer.getChannelData(0);
+
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+      }
+
+      const noise = audioCtx.createBufferSource();
+      noise.buffer = buffer;
+
+      const gain = audioCtx.createGain();
+      
+      // Filtro passa-alta para tirar graves e soar como um clique de plástico/switch de mouse
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'highpass';
+      filter.frequency.value = 2500;
+
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(audioCtx.destination);
+      
+      // O decaimento deve ser violento (percussivo)
+      gain.gain.setValueAtTime(1, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.015);
+
+      noise.start(audioCtx.currentTime);
+    } catch(e) {
+      console.warn("Áudio não suportado ou bloqueado no navegador.");
+    }
+  };
+
+  const handleStart = () => {
+    playClick();
+    setStep(1);
+  };
+
+  const nextStep = async () => {
+    if (step === 5) {
+      // Submeter ao Supabase no último passo
+      const success = await handleSubmit();
+      if (success) setStep(6);
+    } else {
+      setStep((p) => Math.min(p + 1, 6));
+    }
+  };
+
+  const handleSubmit = async () => {
+    setIsLoadingCnpj(true); // Reusando o loading state ou criando um novo se preferir
+    try {
+      const { error } = await supabase.from('clients').insert([{
+        name: formData.nomeRazaoSocial,
+        nome_fantasia: formData.nomeFantasia,
+        cnpj: formData.documento,
+        tipo_pessoa: formData.tipoPessoa,
+        contact_name: formData.contatoResponsavel,
+        email: formData.email,
+        email_financeiro: formData.emailFinanceiro,
+        phone: formData.whatsapp,
+        telefone_fixo: formData.telefoneFixo,
+        setor: formData.setor,
+        address: {
+          cep: formData.cep,
+          logradouro: formData.logradouro,
+          numero: formData.numero,
+          complemento: formData.complemento,
+          bairro: formData.bairro,
+          cidade: formData.cidade,
+          uf: formData.uf
+        },
+        social_access: formData.redesSociais,
+        briefing: formData.briefing,
+        servico_interesse: formData.servico,
+        status: 'prospect'
+      }]);
+
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      console.error("Erro ao salvar onboarding:", err);
+      alert("Houve um erro ao salvar seus dados. Por favor, tente novamente.");
+      return false;
+    } finally {
+      setIsLoadingCnpj(false);
+    }
+  };
+
+  const prevStep = () => setStep((p) => Math.max(p - 1, 1));
+
+  const pageVariants = {
+    initial: { opacity: 0, y: 20 },
+    in: { opacity: 1, y: 0 },
+    out: { opacity: 0, y: -20 }
+  };
+
+  const pageTransition = {
+    type: "tween" as const,
+    ease: "anticipate" as const,
+    duration: 0.4
+  };
+
+  const RedesSociaisList = [
+    { id: 'instagram', label: 'Instagram', color: '#E1306C' },
+    { id: 'facebook', label: 'Facebook', color: '#1877F2' },
+    { id: 'google', label: 'Google Meu Negócio', color: '#EA4335' },
+    { id: 'linkedin', label: 'LinkedIn', color: '#0A66C2' },
+    { id: 'tiktok', label: 'TikTok', color: '#000000' }
+  ];
+
+  return (
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '24px',
+      position: 'relative',
+      zIndex: 10
+    }}>
+
+      <AnimatePresence mode="wait">
+        {step === 0 && (
+          <motion.div 
+            key="splash"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, scale: 1.05, filter: 'blur(10px)' }}
+            transition={{ duration: 0.6, ease: "easeInOut" }}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: 'rgba(10, 10, 10, 0.4)',
+              backdropFilter: 'blur(24px)',
+              WebkitBackdropFilter: 'blur(24px)',
+              zIndex: 100,
+              overflow: 'hidden'
+            }}
+          >
+            {/* Grid animado ao fundo */}
+            <div style={{
+              position: 'absolute',
+              inset: '-50%',
+              backgroundImage: 'linear-gradient(rgba(217, 72, 15, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(217, 72, 15, 0.1) 1px, transparent 1px)',
+              backgroundSize: '40px 40px',
+              animation: 'gridMove 10s linear infinite',
+              opacity: 0.6,
+              perspective: '1000px',
+              transform: 'rotateX(60deg) scale(2)'
+            }} />
+
+            {/* Sombra Radial para focar no centro e dar um clima escuro nas bordas */}
+            <div style={{
+              position: 'absolute',
+              inset: 0,
+              background: 'radial-gradient(circle, transparent 0%, rgba(10,10,10,0.85) 80%)',
+              pointerEvents: 'none'
+            }} />
+
+            <motion.div
+              initial={{ y: 30, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.3, duration: 0.8 }}
+              style={{ position: 'relative', zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center' }}
+            >
+              <div style={{ marginBottom: '50px', filter: 'drop-shadow(0 0 20px rgba(217, 72, 15, 0.5))' }}>
+                <ThemeLogo width={320} height={80} />
+              </div>
+
+              <motion.h1 
+                initial="hidden"
+                animate="visible"
+                variants={{
+                  hidden: { opacity: 1 },
+                  visible: {
+                    opacity: 1,
+                    transition: { staggerChildren: 0.08, delayChildren: 0.8 }
+                  }
+                }}
+                style={{ 
+                  fontSize: '2.5rem', 
+                  fontWeight: 600, 
+                  color: '#FFFFFF', 
+                  marginBottom: '50px',
+                  textAlign: 'center',
+                  letterSpacing: '-0.5px',
+                  height: '60px' // Mantém o espaço para o botão não pular
+                }}
+              >
+                {"Pronto para ativar o modo Pratic?".split('').map((char, index) => (
+                  <motion.span 
+                    key={index} 
+                    variants={{
+                      hidden: { opacity: 0, y: 10, filter: 'blur(5px)' },
+                      visible: { opacity: 1, y: 0, filter: 'blur(0px)' }
+                    }}
+                    style={{ display: 'inline-block', whiteSpace: char === ' ' ? 'pre' : 'normal' }}
+                  >
+                    {char}
+                  </motion.span>
+                ))}
+              </motion.h1>
+
+              <motion.button 
+                initial={{ opacity: 0, scale: 0.8, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                transition={{ delay: 3.5, duration: 0.8, type: "spring" }}
+                onClick={handleStart} 
+                className="btn btn-accent" 
+                style={{ 
+                  padding: '16px 48px', 
+                  fontSize: '1.25rem', 
+                  borderRadius: '100px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  boxShadow: '0 0 40px rgba(249, 115, 22, 0.4)'
+                }}
+              >
+                Ativar <Zap size={24} fill="currentColor" />
+              </motion.button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Formulário Principal - Só renderiza se não for step 0 */}
+      <AnimatePresence>
+        {step > 0 && (
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95, y: 40 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.2 }}
+            className="glass-card"
+            style={{
+              width: '100%',
+              maxWidth: '700px',
+              minHeight: '550px',
+              display: 'flex',
+              flexDirection: 'column',
+              position: 'relative',
+              overflow: 'hidden'
+            }}
+          >
+            {/* Mac OS Window Controls & Title */}
+            <div style={{
+              padding: '16px 24px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              borderBottom: '1px solid var(--border)'
+            }}>
+              {/* Bolinhas Mac */}
+              <div style={{ display: 'flex', gap: '8px', width: '80px' }}>
+                <div style={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: '#FF5F56' }} />
+                <div style={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: '#FFBD2E' }} />
+                <div style={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: '#27C93F' }} />
+              </div>
+              
+              {/* Título da Janela */}
+              <div style={{ 
+                color: 'var(--text-secondary)', 
+                fontSize: '0.875rem', 
+                fontWeight: 500,
+                letterSpacing: '0.5px'
+              }}>
+                Onboarding Pratic
+              </div>
+
+              {/* Spacer para centralizar o título */}
+              <div style={{ width: '80px' }} />
+            </div>
+
+            <div style={{ padding: '32px 40px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+              
+              {/* Progress Bar */}
+              {step < 6 && (
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '40px' }}>
+                  {[1, 2, 3, 4, 5].map((s) => (
+                    <div key={s} style={{
+                      flex: 1,
+                      height: '4px',
+                      borderRadius: '2px',
+                      backgroundColor: 'rgba(255,255,255,0.1)',
+                      position: 'relative',
+                      overflow: 'hidden'
+                    }}>
+                      {s <= step && (
+                        <motion.div 
+                          layoutId={`progress-${s}`}
+                          initial={{ width: 0 }}
+                          animate={{ width: "100%" }}
+                          transition={{ duration: 0.4 }}
+                          style={{
+                            position: 'absolute',
+                            top: 0, left: 0, bottom: 0, right: 0,
+                            backgroundColor: 'var(--accent)',
+                            borderRadius: '2px'
+                          }}
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div style={{ flex: 1, position: 'relative' }}>
+                <AnimatePresence mode="wait">
+                  
+                  {/* STEP 1: Identificação */}
+                  {step === 1 && (
+                    <motion.div key="step1" variants={pageVariants} initial="initial" animate="in" exit="out" transition={pageTransition} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '8px' }}>
+                        <div style={{ padding: '12px', background: 'rgba(217, 72, 15, 0.1)', color: 'var(--accent)', borderRadius: '16px' }}>
+                          <Building2 size={24} />
+                        </div>
+                        <h2 style={{ fontSize: '1.75rem', fontWeight: 700 }}>Identificação</h2>
+                      </div>
+                      <p style={{ color: 'var(--text-secondary)', marginBottom: '32px' }}>Vamos começar entendendo o seu negócio.</p>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', flex: 1 }}>
+                        <div style={{ display: 'flex', padding: '4px', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', width: 'fit-content' }}>
+                          <button 
+                            onClick={() => updateForm("tipoPessoa", "PJ")}
+                            style={{
+                              padding: '8px 24px',
+                              borderRadius: '8px',
+                              fontSize: '0.875rem',
+                              fontWeight: 500,
+                              background: formData.tipoPessoa === "PJ" ? 'rgba(255,255,255,0.1)' : 'transparent',
+                              color: formData.tipoPessoa === "PJ" ? 'var(--text-primary)' : 'var(--text-secondary)',
+                              transition: 'all 0.2s'
+                            }}
+                          >Pessoa Jurídica</button>
+                          <button 
+                            onClick={() => updateForm("tipoPessoa", "PF")}
+                            style={{
+                              padding: '8px 24px',
+                              borderRadius: '8px',
+                              fontSize: '0.875rem',
+                              fontWeight: 500,
+                              background: formData.tipoPessoa === "PF" ? 'rgba(255,255,255,0.1)' : 'transparent',
+                              color: formData.tipoPessoa === "PF" ? 'var(--text-primary)' : 'var(--text-secondary)',
+                              transition: 'all 0.2s'
+                            }}
+                          >Pessoa Física</button>
+                        </div>
+
+                        <div>
+                          <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>
+                            {formData.tipoPessoa === "PJ" ? "CNPJ" : "CPF"}
+                          </label>
+                          <div style={{ position: 'relative' }}>
+                            <input 
+                              type="text" 
+                              className="input-dark"
+                              value={formData.documento}
+                              onChange={handleDocumentChange}
+                              placeholder={formData.tipoPessoa === "PJ" ? "00.000.000/0000-00" : "000.000.000-00"}
+                            />
+                            {isLoadingCnpj && (
+                              <div style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }}>
+                                <Loader2 size={20} className="animate-spin" style={{ animation: 'spin 1s linear infinite' }} />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div>
+                          <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>
+                            {formData.tipoPessoa === "PJ" ? "Razão Social" : "Nome Completo"}
+                          </label>
+                          <input 
+                            type="text" 
+                            className="input-dark"
+                            value={formData.nomeRazaoSocial}
+                            onChange={(e) => updateForm("nomeRazaoSocial", e.target.value)}
+                            placeholder="Ex: Prátic Agency LTDA"
+                          />
+                        </div>
+
+                        {formData.tipoPessoa === "PJ" && (
+                          <div>
+                            <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Nome Fantasia (Opcional)</label>
+                            <input 
+                              type="text" 
+                              className="input-dark"
+                              value={formData.nomeFantasia}
+                              onChange={(e) => updateForm("nomeFantasia", e.target.value)}
+                              placeholder="Ex: Prátic"
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      <div style={{ marginTop: '32px', display: 'flex', justifyContent: 'flex-end' }}>
+                        <button onClick={nextStep} className="btn btn-accent">
+                          Próximo Passo <ArrowRight size={18} />
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {/* STEP 2: Endereço */}
+                  {step === 2 && (
+                    <motion.div key="step2" variants={pageVariants} initial="initial" animate="in" exit="out" transition={pageTransition} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '8px' }}>
+                        <div style={{ padding: '12px', background: 'rgba(217, 72, 15, 0.1)', color: 'var(--accent)', borderRadius: '16px' }}>
+                          <MapPin size={24} />
+                        </div>
+                        <h2 style={{ fontSize: '1.75rem', fontWeight: 700 }}>Endereço</h2>
+                      </div>
+                      <p style={{ color: 'var(--text-secondary)', marginBottom: '32px' }}>Informações de localização da sua sede.</p>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', flex: 1 }}>
+                        <div>
+                          <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>CEP</label>
+                          <div style={{ position: 'relative' }}>
+                            <input 
+                              type="text" 
+                              className="input-dark"
+                              value={formData.cep}
+                              onChange={handleCepChange}
+                              placeholder="00000-000"
+                            />
+                            {isLoadingCep && (
+                              <div style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }}>
+                                <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '16px' }}>
+                          <div style={{ flex: 2 }}>
+                            <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Logradouro</label>
+                            <input type="text" className="input-dark" value={formData.logradouro} onChange={(e) => updateForm("logradouro", e.target.value)} placeholder="Rua / Avenida" />
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Número</label>
+                            <input type="text" className="input-dark" value={formData.numero} onChange={(e) => updateForm("numero", e.target.value)} placeholder="123" />
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '16px' }}>
+                          <div style={{ flex: 1 }}>
+                            <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Complemento</label>
+                            <input type="text" className="input-dark" value={formData.complemento} onChange={(e) => updateForm("complemento", e.target.value)} placeholder="Sala, Andar..." />
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Bairro</label>
+                            <input type="text" className="input-dark" value={formData.bairro} onChange={(e) => updateForm("bairro", e.target.value)} placeholder="Centro" />
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '16px' }}>
+                          <div style={{ flex: 2 }}>
+                            <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Cidade</label>
+                            <input type="text" className="input-dark" value={formData.cidade} onChange={(e) => updateForm("cidade", e.target.value)} placeholder="Sua Cidade" />
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>UF</label>
+                            <input type="text" className="input-dark" value={formData.uf} onChange={(e) => updateForm("uf", e.target.value)} placeholder="SP" maxLength={2} style={{ textTransform: 'uppercase' }} />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ marginTop: '32px', display: 'flex', justifyContent: 'space-between' }}>
+                        <button onClick={prevStep} className="btn btn-secondary" style={{ border: 'none', background: 'transparent' }}>
+                          <ArrowLeft size={18} /> Voltar
+                        </button>
+                        <button onClick={nextStep} className="btn btn-accent">
+                          Próximo <ArrowRight size={18} />
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {/* STEP 3: Contatos */}
+                  {step === 3 && (
+                    <motion.div key="step3" variants={pageVariants} initial="initial" animate="in" exit="out" transition={pageTransition} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '8px' }}>
+                        <div style={{ padding: '12px', background: 'rgba(217, 72, 15, 0.1)', color: 'var(--accent)', borderRadius: '16px' }}>
+                          <Phone size={24} />
+                        </div>
+                        <h2 style={{ fontSize: '1.75rem', fontWeight: 700 }}>Contatos Principais</h2>
+                      </div>
+                      <p style={{ color: 'var(--text-secondary)', marginBottom: '32px' }}>Quem serão as pontes com a nossa equipe.</p>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', flex: 1 }}>
+                        <div>
+                          <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Nome do Contato</label>
+                          <input type="text" className="input-dark" value={formData.contatoResponsavel} onChange={(e) => updateForm("contatoResponsavel", e.target.value)} placeholder="Ex: João da Silva" />
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '16px' }}>
+                          <div style={{ flex: 1 }}>
+                            <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>WhatsApp</label>
+                            <input type="text" className="input-dark" value={formData.whatsapp} onChange={(e) => updateForm("whatsapp", formatPhone(e.target.value))} placeholder="(00) 00000-0000" />
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Telefone Fixo</label>
+                            <input type="text" className="input-dark" value={formData.telefoneFixo} onChange={(e) => updateForm("telefoneFixo", formatPhone(e.target.value))} placeholder="(00) 0000-0000" />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>E-mail de Contato Principal</label>
+                          <input type="email" className="input-dark" value={formData.email} onChange={(e) => updateForm("email", e.target.value)} placeholder="contato@empresa.com.br" />
+                        </div>
+
+                        <div>
+                          <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>E-mail do Financeiro</label>
+                          <input type="email" className="input-dark" value={formData.emailFinanceiro} onChange={(e) => updateForm("emailFinanceiro", e.target.value)} placeholder="financeiro@empresa.com.br" />
+                        </div>
+                      </div>
+
+                      <div style={{ marginTop: '32px', display: 'flex', justifyContent: 'space-between' }}>
+                        <button onClick={prevStep} className="btn btn-secondary" style={{ border: 'none', background: 'transparent' }}>
+                          <ArrowLeft size={18} /> Voltar
+                        </button>
+                        <button onClick={nextStep} className="btn btn-accent">
+                          Próximo <ArrowRight size={18} />
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {/* STEP 4: Redes Sociais */}
+                  {step === 4 && (
+                    <motion.div key="step4" variants={pageVariants} initial="initial" animate="in" exit="out" transition={pageTransition} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '8px' }}>
+                        <div style={{ padding: '12px', background: 'rgba(217, 72, 15, 0.1)', color: 'var(--accent)', borderRadius: '16px' }}>
+                          <Share2 size={24} />
+                        </div>
+                        <h2 style={{ fontSize: '1.75rem', fontWeight: 700 }}>Redes Sociais</h2>
+                      </div>
+                      <p style={{ color: 'var(--text-secondary)', marginBottom: '24px' }}>Selecione onde atua e configure os acessos.</p>
+
+                      <div style={{ 
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        gap: '12px', 
+                        flex: 1, 
+                        overflowY: 'auto', 
+                        paddingRight: '8px',
+                        marginRight: '-8px' // Para o scrollbar ficar bonitinho
+                      }}>
+                        {RedesSociaisList.map((rede) => {
+                          const redeKey = rede.id as keyof typeof formData.redesSociais;
+                          const isActive = formData.redesSociais[redeKey].ativo;
+
+                          return (
+                            <div key={rede.id} style={{
+                              background: isActive ? 'rgba(255,255,255,0.05)' : 'transparent',
+                              border: isActive ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(255,255,255,0.05)',
+                              borderRadius: '16px',
+                              overflow: 'hidden',
+                              transition: 'all 0.3s'
+                            }}>
+                              <button 
+                                onClick={() => toggleRedeSocial(redeKey)}
+                                style={{
+                                  width: '100%',
+                                  padding: '16px 20px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  background: 'transparent',
+                                  border: 'none',
+                                  color: 'var(--text-primary)',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                  <div style={{ 
+                                    width: '12px', height: '12px', borderRadius: '50%', 
+                                    backgroundColor: isActive ? rede.color : 'rgba(255,255,255,0.2)' 
+                                  }} />
+                                  <span style={{ fontWeight: 500 }}>{rede.label}</span>
+                                </div>
+                                <div style={{
+                                  width: '24px', height: '24px',
+                                  borderRadius: '50%',
+                                  background: isActive ? 'var(--accent)' : 'rgba(255,255,255,0.1)',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  transform: isActive ? 'rotate(45deg)' : 'rotate(0deg)',
+                                  transition: 'transform 0.3s'
+                                }}>
+                                  <Plus size={16} color={isActive ? '#FFF' : '#A8A8A8'} />
+                                </div>
+                              </button>
+
+                              <AnimatePresence>
+                                {isActive && (
+                                  <motion.div
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: 'auto', opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
+                                    transition={{ duration: 0.3 }}
+                                  >
+                                    <div style={{ padding: '0 20px 20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                      <div style={{ width: '100%', height: '1px', background: 'rgba(255,255,255,0.05)', marginBottom: '4px' }} />
+                                      
+                                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                                        <div style={{ position: 'relative' }}>
+                                          <div style={{ position: 'absolute', left: '12px', top: '12px', color: 'var(--text-secondary)' }}><User size={18} /></div>
+                                          <input 
+                                            type="text" className="input-dark" placeholder="Usuário / Login" 
+                                            style={{ paddingLeft: '40px', fontSize: '0.875rem' }}
+                                            value={formData.redesSociais[redeKey].usuario}
+                                            onChange={(e) => updateRedeSocial(redeKey, 'usuario', e.target.value)}
+                                          />
+                                        </div>
+                                        <div style={{ position: 'relative' }}>
+                                          <div style={{ position: 'absolute', left: '12px', top: '12px', color: 'var(--text-secondary)' }}><Lock size={18} /></div>
+                                          <input 
+                                            type="password" className="input-dark" placeholder="Senha" 
+                                            style={{ paddingLeft: '40px', fontSize: '0.875rem' }}
+                                            value={formData.redesSociais[redeKey].senha}
+                                            onChange={(e) => updateRedeSocial(redeKey, 'senha', e.target.value)}
+                                          />
+                                        </div>
+                                      </div>
+                                      
+                                      <div style={{ position: 'relative' }}>
+                                        <div style={{ position: 'absolute', left: '12px', top: '12px', color: 'var(--text-secondary)' }}><Mail size={18} /></div>
+                                        <input 
+                                          type="email" className="input-dark" placeholder="E-mail vinculado (Opcional)" 
+                                          style={{ paddingLeft: '40px', fontSize: '0.875rem' }}
+                                          value={formData.redesSociais[redeKey].email}
+                                          onChange={(e) => updateRedeSocial(redeKey, 'email', e.target.value)}
+                                        />
+                                      </div>
+                                    </div>
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'space-between', paddingTop: '8px' }}>
+                        <button onClick={prevStep} className="btn btn-secondary" style={{ border: 'none', background: 'transparent' }}>
+                          <ArrowLeft size={18} /> Voltar
+                        </button>
+                        <button onClick={nextStep} className="btn btn-accent">
+                          Próximo <ArrowRight size={18} />
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {/* STEP 5: Serviços */}
+                  {step === 5 && (
+                    <motion.div key="step5" variants={pageVariants} initial="initial" animate="in" exit="out" transition={pageTransition} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '8px' }}>
+                        <div style={{ padding: '12px', background: 'rgba(249, 115, 22, 0.1)', color: 'var(--accent)', borderRadius: '16px' }}>
+                          <Briefcase size={24} />
+                        </div>
+                        <h2 style={{ fontSize: '1.75rem', fontWeight: 700 }}>Serviço e Briefing</h2>
+                      </div>
+                      <p style={{ color: 'var(--text-secondary)', marginBottom: '32px' }}>Nos conte o que faremos juntos.</p>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', flex: 1 }}>
+                        <div style={{ display: 'flex', gap: '16px' }}>
+                          <div style={{ flex: 1 }}>
+                            <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Setor da Empresa</label>
+                            <input type="text" className="input-dark" value={formData.setor} onChange={(e) => updateForm("setor", e.target.value)} placeholder="Ex: Varejo, Saúde" />
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Serviço Contratado</label>
+                            <select className="input-dark" value={formData.servico} onChange={(e) => updateForm("servico", e.target.value)} style={{ appearance: 'none' }}>
+                              <option value="" disabled>Selecione uma opção</option>
+                              <option value="Gestão de Redes Sociais">Gestão de Redes Sociais</option>
+                              <option value="Tráfego Pago (Ads)">Tráfego Pago (Ads)</option>
+                              <option value="Identidade Visual">Identidade Visual</option>
+                              <option value="Desenvolvimento de Site">Desenvolvimento de Site</option>
+                              <option value="Assessoria de Imprensa">Assessoria de Imprensa</option>
+                              <option value="Consultoria">Consultoria de Marketing</option>
+                              <option value="Pacote Completo">Pacote Completo (360)</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div>
+                          <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Pré-briefing (Resumo Geral)</label>
+                          <textarea 
+                            className="input-dark"
+                            value={formData.briefing}
+                            onChange={(e) => updateForm("briefing", e.target.value)}
+                            placeholder="Conte um pouco sobre os objetivos..."
+                            rows={5}
+                            style={{ resize: 'none' }}
+                          />
+                        </div>
+                      </div>
+
+                      <div style={{ marginTop: '32px', display: 'flex', justifyContent: 'space-between' }}>
+                        <button onClick={prevStep} className="btn btn-secondary" style={{ border: 'none', background: 'transparent' }}>
+                          <ArrowLeft size={18} /> Voltar
+                        </button>
+                        <button onClick={nextStep} className="btn btn-accent">
+                          Finalizar <CheckCircle2 size={18} />
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {/* STEP 6: Sucesso */}
+                  {step === 6 && (
+                    <motion.div key="step6" variants={pageVariants} initial="initial" animate="in" exit="out" transition={pageTransition} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', textAlign: 'center' }}>
+                      <motion.div 
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.1 }}
+                        style={{
+                          width: '80px', height: '80px', borderRadius: '50%',
+                          backgroundColor: 'rgba(34, 197, 94, 0.1)', color: '#22C55E',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          marginBottom: '32px'
+                        }}
+                      >
+                        <CheckCircle2 size={40} />
+                      </motion.div>
+                      <h2 style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '16px' }}>Tudo Pronto!</h2>
+                      <p style={{ color: 'var(--text-secondary)', marginBottom: '40px', maxWidth: '300px' }}>
+                        Recebemos seus dados e nosso time entrará em contato em breve para o kickoff do projeto.
+                      </p>
+                      
+                      <Link href="/" className="btn btn-secondary" style={{ background: 'var(--text-primary)', color: 'var(--bg-secondary)', border: 'none' }}>
+                        Voltar para o Início
+                      </Link>
+                    </motion.div>
+                  )}
+
+                </AnimatePresence>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Helper animations */}
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        @keyframes gridMove {
+          0% { background-position: 0 0; }
+          100% { background-position: 40px 40px; }
+        }
+      `}} />
+    </div>
+  );
+}
