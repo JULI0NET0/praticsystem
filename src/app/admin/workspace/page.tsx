@@ -16,7 +16,10 @@ import {
   X,
   ArrowLeft,
   ArrowRight,
-  Loader2
+  Loader2,
+  Inbox,
+  UserX,
+  Save
 } from "lucide-react";
 import Spotlight from "@/components/Spotlight";
 import { motion, AnimatePresence } from "framer-motion";
@@ -36,9 +39,11 @@ export default function WorkspacePage() {
   const { currentUser } = useAuth();
   const [status, setStatus] = useState("");
   const [greeting, setGreeting] = useState("");
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [myNote, setMyNote] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const EMOJIS = ["☀️", "🌙", "🚀", "🔥", "☕", "💻", "🎨", "📈", "🎯", "✨", "✅", "⚡"];
   const [demands, setDemands] = useState<any[]>([]);
   const [loadingDemands, setLoadingDemands] = useState(true);
   
@@ -53,7 +58,8 @@ export default function WorkspacePage() {
       let emoji = "☀️";
       if (hour >= 12 && hour < 18) { greet = "Boa tarde"; emoji = "⛅"; }
       else if (hour >= 18 || hour < 5) { greet = "Boa noite"; emoji = "🌙"; }
-      setGreeting(`${greet}, ${currentUser.name.split(' ')[0]} como esta ${emoji}`);
+      const firstName = currentUser.name?.split(' ')[0] || "";
+      setGreeting(`${greet}, ${firstName}! Como estão as coisas hoje? ${emoji}`);
 
       if (currentUser.workspace_settings?.layout) {
         setWidgets(currentUser.workspace_settings.layout);
@@ -135,20 +141,42 @@ export default function WorkspacePage() {
     }
   };
 
-  const updateStatusInDB = async (newStatus: string) => {
+  const updateStatusInDB = async () => {
     if (!currentUser) return;
     try {
-      await supabase
+      const { error } = await supabase
         .from('users')
         .update({
+          status_message: status,
           workspace_settings: {
             ...currentUser.workspace_settings,
-            status: newStatus
+            status: status
           }
         })
         .eq('id', currentUser.id);
+      
+      if (!error) {
+        showToast("Status atualizado!", "success");
+      }
     } catch (err) {
       console.error("Erro ao atualizar status:", err);
+    }
+  };
+
+  const updateEmoji = async (newEmoji: string) => {
+    if (!currentUser) return;
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({ emoji: newEmoji })
+        .eq('id', currentUser.id);
+      
+      if (!error) {
+        setShowEmojiPicker(false);
+        showToast("Emoji do dia atualizado!", "success");
+      }
+    } catch (err) {
+      console.error("Erro ao atualizar emoji:", err);
     }
   };
 
@@ -201,27 +229,86 @@ export default function WorkspacePage() {
           <h1 style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '8px', letterSpacing: '-0.02em' }}>
             WorkSpace
           </h1>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <p style={{ color: 'var(--accent)', fontSize: '1.25rem', fontWeight: 600 }}>
-              {greeting}
-            </p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '1rem' }}>
-                {isEditing ? 'Configure largura (↔) e altura (↕) dos seus blocos.' : 'Sua central de produtividade personalizada.'}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
+            <div style={{ position: 'relative' }}>
+              <p 
+                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                style={{ 
+                  color: 'var(--accent)', fontSize: '1.25rem', fontWeight: 600, 
+                  display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer',
+                  padding: '4px 8px', borderRadius: '12px', transition: 'background 0.2s'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+              >
+                <span style={{ fontSize: '1.5rem' }}>{currentUser?.emoji || "☀️"}</span> {greeting}
               </p>
-              {!isEditing && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.03)', padding: '4px 12px', borderRadius: '20px', border: '1px solid var(--border)' }}>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Status:</span>
-                  <input 
-                    value={status} 
-                    onChange={(e) => setStatus(e.target.value)}
-                    onBlur={() => updateStatusInDB(status)}
-                    style={{ background: 'none', border: 'none', color: 'var(--text-primary)', fontSize: '0.85rem', outline: 'none', width: '200px' }}
-                    placeholder="Definir status..."
-                  />
-                </div>
-              )}
+              
+              <AnimatePresence>
+                {showEmojiPicker && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.9 }}
+                    className="glass-card"
+                    style={{ 
+                      position: 'absolute', top: '100%', left: 0, zIndex: 100, 
+                      marginTop: '8px', padding: '12px', display: 'grid', 
+                      gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px',
+                      boxShadow: '0 10px 30px rgba(0,0,0,0.3)'
+                    }}
+                  >
+                    {EMOJIS.map(e => (
+                      <button 
+                        key={e}
+                        onClick={() => updateEmoji(e)}
+                        style={{ fontSize: '1.2rem', padding: '8px', background: 'none', border: 'none', cursor: 'pointer', borderRadius: '8px' }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                      >
+                        {e}
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
+
+            {!isEditing && (
+              <div style={{ 
+                display: 'flex', alignItems: 'center', gap: '8px', 
+                background: 'rgba(255,255,255,0.03)', padding: '6px 16px', 
+                borderRadius: '20px', border: '1px solid var(--border)',
+                height: '40px'
+              }}>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>STATUS</span>
+                <input 
+                  value={status} 
+                  onChange={(e) => setStatus(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && updateStatusInDB()}
+                  style={{ background: 'none', border: 'none', color: 'var(--text-primary)', fontSize: '0.9rem', outline: 'none', width: '250px' }}
+                  placeholder="No que você está trabalhando?"
+                />
+                <button 
+                  onClick={updateStatusInDB}
+                  style={{ 
+                    background: 'none', border: 'none', color: 'var(--accent)', 
+                    cursor: 'pointer', display: 'flex', padding: '4px',
+                    transition: 'transform 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.2)'}
+                  onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                >
+                  <Save size={16} />
+                </button>
+              </div>
+            )}
+            
+            {isEditing && (
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 500 }}>
+                Modo de Edição: Configure largura (↔) e altura (↕) dos seus blocos.
+              </p>
+            )}
           </div>
         </div>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
@@ -453,8 +540,15 @@ function DemandsWidget({ demands, loading }: { demands: any[], loading: boolean 
             <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{new Date(d.due_date || d.created_at).toLocaleDateString()}</span>
           </div>
         )) : (
-          <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-            Nenhuma demanda atribuída.
+          <div style={{ 
+            textAlign: 'center', padding: '40px 20px', color: 'var(--text-secondary)', 
+            fontSize: '0.85rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' 
+          }}>
+            <div style={{ width: '50px', height: '50px', borderRadius: '50%', background: 'rgba(255,255,255,0.03)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '8px' }}>
+              <Inbox size={24} strokeWidth={1.5} />
+            </div>
+            <p style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Tudo limpo!</p>
+            <p>Você não tem demandas pendentes para hoje.</p>
           </div>
         )}
       </div>
@@ -522,29 +616,47 @@ function TeamWidget() {
         <User size={18} color="var(--accent)" /> Equipe Online
       </h3>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', overflowY: 'auto', flex: 1 }}>
-        {onlineMembers.map((m: any) => (
+        {onlineMembers.length > 0 ? onlineMembers.map((m: any) => (
           <Link href={`/admin/users/${m.id}`} key={m.id} style={{ textDecoration: 'none', color: 'inherit' }}>
             <motion.div 
               whileHover={{ x: 4, background: 'rgba(255,255,255,0.05)' }}
               style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px', borderRadius: '12px', transition: 'all 0.2s' }}
             >
               <div style={{ position: 'relative' }}>
-                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.75rem', color: 'white' }}>
-                  {m.name.substring(0, 2).toUpperCase()}
+                <div style={{ 
+                  width: '36px', height: '36px', borderRadius: '10px', 
+                  background: 'var(--accent)', overflow: 'hidden',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                  fontWeight: 700, fontSize: '0.75rem', color: 'white' 
+                }}>
+                  {m.avatar_url ? (
+                    <img src={m.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : m.name.substring(0, 2).toUpperCase()}
                 </div>
                 <div style={{ position: 'absolute', bottom: -2, right: -2, width: '10px', height: '10px', background: '#22C55E', borderRadius: '50%', border: '2px solid var(--bg-primary)' }} />
               </div>
               <div style={{ flex: 1, overflow: 'hidden' }}>
-                <p style={{ fontWeight: 600, fontSize: '0.85rem' }}>{m.name}</p>
-                {m.statusMessage && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <p style={{ fontWeight: 600, fontSize: '0.85rem' }}>{m.name}</p>
+                  <span style={{ fontSize: '0.9rem' }}>{m.emoji}</span>
+                </div>
+                {m.status_message && (
                   <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
-                    {m.statusMessage}
+                    {m.status_message}
                   </p>
                 )}
               </div>
             </motion.div>
           </Link>
-        ))}
+        )) : (
+          <div style={{ 
+            textAlign: 'center', padding: '40px 20px', color: 'var(--text-secondary)', 
+            fontSize: '0.85rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' 
+          }}>
+            <UserX size={32} strokeWidth={1.5} opacity={0.5} />
+            <p>Ninguém online no momento.</p>
+          </div>
+        )}
       </div>
     </div>
   );

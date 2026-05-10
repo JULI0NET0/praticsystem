@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import InteractiveBackground from "@/components/InteractiveBackground";
 import GlobalClientControls from "@/components/GlobalClientControls";
+import { ToastProvider } from "@/components/CustomToast";
 import "../styles/globals.css";
 import "../styles/components.css";
 
@@ -19,9 +20,11 @@ export default function RootLayout({
     <html lang="pt-BR" suppressHydrationWarning>
       <body>
         <ThemeProvider>
-          <InteractiveBackground />
-          <GlobalClientControls />
-          {children}
+          <ToastProvider>
+            <InteractiveBackground />
+            <GlobalClientControls />
+            {children}
+          </ToastProvider>
         </ThemeProvider>
       </body>
     </html>

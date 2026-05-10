@@ -263,7 +263,11 @@ export default function Sidebar() {
               cursor: 'pointer'
             }}
           >
-            {currentUser ? currentUser.name.substring(0, 2).toUpperCase() : <Loader2 size={14} className="animate-spin" />}
+            {currentUser ? (
+              currentUser.avatar_url ? (
+                <img src={currentUser.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+              ) : (currentUser.name || "??").substring(0, 2).toUpperCase()
+            ) : <Loader2 size={14} className="animate-spin" />}
             {!isExpanded && (
               <div style={{ position: 'absolute', top: '-2px', right: '-2px', width: '8px', height: '8px', backgroundColor: '#EF4444', borderRadius: '50%', border: '2px solid var(--bg-secondary)' }} />
             )}
@@ -310,7 +314,9 @@ export default function Sidebar() {
                 href="/admin/profile"
                 style={{ flex: 1, overflow: 'hidden', position: 'relative', zIndex: 1, textDecoration: 'none' }}
               >
-                <p style={{ fontSize: '0.875rem', fontWeight: 600, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', color: 'var(--text-primary)' }}>{currentUser?.name || "Usuário"}</p>
+                <p style={{ fontSize: '0.875rem', fontWeight: 600, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  {currentUser?.name || "Usuário"} <span style={{ fontSize: '1rem' }}>{currentUser?.emoji || ""}</span>
+                </p>
                 <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{currentUser?.role || "Indefinido"}</p>
               </Link>
               <div 

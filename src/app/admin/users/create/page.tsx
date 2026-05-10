@@ -8,9 +8,13 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { formatPhone } from "@/utils/masks";
+import { useToast } from "@/components/CustomToast";
+import CustomModal from "@/components/CustomModal";
 
 export default function CreateUserPage() {
   const router = useRouter();
+  const { showToast } = useToast();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -18,7 +22,8 @@ export default function CreateUserPage() {
     password: "",
     role: "",
     statusMessage: "",
-    avatarUrl: ""
+    avatarUrl: "",
+    phone: ""
   });
 
   const [showPassword, setShowPassword] = useState(false);
@@ -44,14 +49,16 @@ export default function CreateUserPage() {
         username: formData.username,
         role: formData.role,
         status_message: formData.statusMessage,
-        avatar_url: formData.avatarUrl
+        avatar_url: formData.avatarUrl,
+        phone: formData.phone.replace(/\D/g, '')
       }]);
 
       if (error) throw error;
+      showToast("Membro da equipe cadastrado com sucesso!", "success");
       router.push("/admin/users");
     } catch (err) {
       console.error("Erro ao criar usuário:", err);
-      alert("Erro ao criar membro da equipe. Verifique o console.");
+      showToast("Erro ao criar membro da equipe. Verifique os dados.", "error");
     } finally {
       setLoading(false);
     }
@@ -207,6 +214,22 @@ export default function CreateUserPage() {
               placeholder="Focado em resultados 🚀"
               value={formData.statusMessage}
               onChange={(e) => setFormData({...formData, statusMessage: e.target.value})}
+            />
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+          {/* Telefone */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Shield size={14} /> Telefone / WhatsApp
+            </label>
+            <input 
+              type="text"
+              className="input-dark" 
+              placeholder="(00) 00000-0000"
+              value={formData.phone}
+              onChange={(e) => setFormData({...formData, phone: formatPhone(e.target.value)})}
             />
           </div>
         </div>

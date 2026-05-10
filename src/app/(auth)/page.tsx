@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Loader2, AlertCircle } from "lucide-react";
 import ThemeLogo from "@/components/ThemeLogo";
+import { supabase } from "@/lib/supabase";
+import Spotlight from "@/components/Spotlight";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -12,14 +14,51 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    // Simula tempo de rede e redireciona para o Workspace
-    setTimeout(() => {
+    setError("");
+
+    try {
+      // 1. Tenta encontrar o email se o usuário digitou um username (@...)
+      let loginEmail = email;
+      const cleanUsername = email.replace('@', '').toLowerCase();
+
+      if (!email.includes('@') || email.startsWith('@')) {
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('email')
+          .eq('username', cleanUsername)
+          .single();
+
+        if (userData) {
+          loginEmail = userData.email;
+        } else if (userError) {
+          throw new Error("Usuário não encontrado.");
+        }
+      }
+
+      // 2. Autentica com o Supabase Auth
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email: loginEmail,
+        password: password,
+      });
+
+      if (authError) {
+        if (authError.message === "Invalid login credentials") {
+          throw new Error("Usuário ou senha incorretos.");
+        }
+        throw authError;
+      }
+
+      // 3. Sucesso! Redireciona para o Workspace
       router.push("/admin/workspace");
-    }, 1200);
+    } catch (err: any) {
+      setError(err.message || "Erro ao realizar o login.");
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -77,6 +116,20 @@ export default function LoginPage() {
             Acesso ao Sistema Integrado
           </p>
         </div>
+
+        {error && (
+          <motion.div 
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            style={{ 
+              padding: '12px', borderRadius: '12px', background: 'rgba(239, 68, 68, 0.1)', 
+              color: '#EF4444', fontSize: '0.85rem', display: 'flex', alignItems: 'center', 
+              gap: '8px', border: '1px solid rgba(239, 68, 68, 0.2)' 
+            }}
+          >
+            <AlertCircle size={16} /> {error}
+          </motion.div>
+        )}
 
         <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -158,7 +211,10 @@ export default function LoginPage() {
             disabled={isLoading}
           >
             {isLoading ? (
-              <span style={{ display: 'inline-block', animation: 'fadeInUp 0.3s' }}>Autenticando...</span>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                <Loader2 size={18} className="animate-spin" />
+                <span>Autenticando...</span>
+              </div>
             ) : (
               'Entrar no Painel'
             )}
