@@ -13,6 +13,7 @@ export interface UserProfile {
   role: string;
   avatar_url?: string;
   status_message?: string;
+  emoji?: string;
   // Campos mapeados para a UI antiga
   avatarUrl?: string; 
   statusMessage?: string;

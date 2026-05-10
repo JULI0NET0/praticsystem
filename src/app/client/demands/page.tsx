@@ -8,7 +8,7 @@ import { useState } from "react";
 
 export default function ClientDemands() {
   const [filter, setFilter] = useState("all");
-  const clientDemands = demands.filter(d => d.clientId === '1');
+  const clientDemands = demands.filter(d => d.client_id === '1');
   
   const filteredDemands = clientDemands.filter(d => {
     if (filter === "all") return true;
@@ -76,7 +76,7 @@ export default function ClientDemands() {
               <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
                   <Clock size={16} />
-                  <span>Previsão de Entrega: <strong>{new Date(demand.dueDate).toLocaleDateString('pt-BR')}</strong></span>
+                  <span>Previsão de Entrega: <strong>{new Date(demand.due_date).toLocaleDateString('pt-BR')}</strong></span>
                 </div>
 
                 <div style={{ height: '8px', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden' }}>

@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Calendar, DollarSign, FileText, CheckCircle2, AlertCircle, Clock, ArrowRight } from "lucide-react";
+import { X, Calendar, DollarSign, FileText, CheckCircle2, AlertCircle, Clock, ArrowRight, Copy, Hash } from "lucide-react";
 import { Contract, Client, Service, Invoice } from "@/types/database";
 
 interface ContractDetailsModalProps {
@@ -79,7 +79,27 @@ export default function ContractDetailsModal({ isOpen, onClose, contract, client
                 </div>
                 <div>
                   <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'white' }}>Detalhes do Contrato</h2>
-                  <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>ID: #{contract.id.substring(0, 8)} • {client?.name}</p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
+                    <div 
+                      onClick={() => {
+                        navigator.clipboard.writeText(contract.id);
+                      }}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '4px',
+                        padding: '2px 8px', borderRadius: '6px',
+                        backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+                        cursor: 'pointer', color: 'var(--text-secondary)', transition: 'all 0.2s'
+                      }}
+                      title="Clique para copiar ID"
+                    >
+                      <Hash size={10} color="var(--accent)" />
+                      <span style={{ fontSize: '0.7rem', fontWeight: 600, fontFamily: 'monospace' }}>
+                        {contract.id.substring(0, 8)}
+                      </span>
+                      <Copy size={10} />
+                    </div>
+                    <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>• {client?.name}</span>
+                  </div>
                 </div>
               </div>
               <button onClick={onClose} style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.05)', border: 'none', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -115,7 +135,7 @@ export default function ContractDetailsModal({ isOpen, onClose, contract, client
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <Clock size={16} color="var(--text-secondary)" />
                     <span style={{ fontWeight: 600, color: 'white' }}>
-                      {new Date(contract.endDate).toLocaleDateString('pt-BR')}
+                      {new Date(contract.end_date).toLocaleDateString('pt-BR')}
                     </span>
                   </div>
                 </div>
@@ -152,7 +172,7 @@ export default function ContractDetailsModal({ isOpen, onClose, contract, client
                       invoices.map(invoice => (
                         <div key={invoice.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '12px' }}>
                           <div>
-                            <p style={{ fontSize: '0.875rem', fontWeight: 500, color: 'white' }}>Venc. {new Date(invoice.dueDate).toLocaleDateString('pt-BR')}</p>
+                            <p style={{ fontSize: '0.875rem', fontWeight: 500, color: 'white' }}>Venc. {new Date(invoice.due_date).toLocaleDateString('pt-BR')}</p>
                             <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{invoice.status === 'paid' ? 'Pago' : 'Pendente'}</p>
                           </div>
                           <p style={{ fontWeight: 600, color: invoice.status === 'paid' ? '#22C55E' : 'var(--accent)' }}>

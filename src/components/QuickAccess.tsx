@@ -18,7 +18,7 @@ export default function QuickAccess() {
           .limit(4);
         
         if (error) throw error;
-        if (data) setActiveClients(data.map(c => ({...c, contactName: c.contact_name})));
+        if (data) setActiveClients(data);
       } catch (err) {
         console.error("Erro ao buscar clientes ativos:", err);
       } finally {
@@ -66,7 +66,7 @@ export default function QuickAccess() {
               </div>
               <div>
                 <p style={{ fontWeight: 500, fontSize: '0.875rem' }}>{client.name}</p>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>{client.contactName}</p>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>{client.contact_name}</p>
               </div>
             </div>
             <ArrowRight size={16} color="var(--text-secondary)" />

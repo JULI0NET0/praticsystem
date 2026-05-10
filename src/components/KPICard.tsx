@@ -9,7 +9,7 @@ interface KPICardProps {
   value: string;
   numericValue?: number;
   prefix?: string;
-  subtitle: string;
+  subtitle?: string;
   icon: ReactNode;
   trend?: "up" | "down" | "neutral";
   trendValue?: string;

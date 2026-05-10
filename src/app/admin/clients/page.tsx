@@ -15,7 +15,7 @@ export default function ClientsPage() {
   const [newClient, setNewClient] = useState({
     name: "",
     cnpj: "",
-    contactName: "",
+    contact_name: "",
     email: "",
     phone: "",
     status: "prospect"
@@ -37,15 +37,8 @@ export default function ClientsPage() {
         
       if (error) throw error;
       
-      // Mapear snake_case para camelCase se necessário, ou usar os nomes reais
       if (data) {
-        const mappedClients = data.map(c => ({
-          ...c,
-          contactName: c.contact_name,
-          nomeFantasia: c.nome_fantasia,
-          tipoPessoa: c.tipo_pessoa
-        }));
-        setClients(mappedClients);
+        setClients(data);
       }
     } catch (err) {
       console.error("Erro ao buscar clientes:", err);
@@ -68,7 +61,7 @@ export default function ClientsPage() {
     console.log("Novo cliente:", newClient);
     setIsModalOpen(false);
     // Reset form
-    setNewClient({ name: "", cnpj: "", contactName: "", email: "", phone: "", status: "prospect" });
+    setNewClient({ name: "", cnpj: "", contact_name: "", email: "", phone: "", status: "prospect" });
   };
 
   return (
@@ -168,7 +161,7 @@ export default function ClientsPage() {
                     </td>
                     <td>
                       <div>
-                        <p style={{ fontWeight: 500, fontSize: '0.9rem' }}>{client.contactName}</p>
+                        <p style={{ fontWeight: 500, fontSize: '0.9rem' }}>{client.contact_name}</p>
                         <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{client.email}</p>
                       </div>
                     </td>

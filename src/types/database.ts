@@ -9,22 +9,22 @@ export interface User {
   name: string;
   username: string; // Para menções @usuario
   email: string;
-  avatarUrl?: string;
+  avatar_url?: string;
   role: string; // ID do cargo ou nome do cargo fixo
-  statusMessage?: string; // Frase de status
+  status_message?: string; // Frase de status
 }
 
 export interface Client {
   id: string;
   name: string; // Razão Social
-  nomeFantasia?: string;
+  nome_fantasia?: string;
   cnpj: string; // Ou CPF
-  tipoPessoa: 'PF' | 'PJ';
-  contactName: string;
+  tipo_pessoa: 'PF' | 'PJ';
+  contact_name: string;
   email: string;
-  emailFinanceiro?: string;
+  email_financeiro?: string;
   phone: string; // WhatsApp
-  telefoneFixo?: string;
+  telefone_fixo?: string;
   setor?: string;
   address?: {
     cep: string;
@@ -36,8 +36,8 @@ export interface Client {
     uf: string;
   };
   status: 'active' | 'inactive' | 'prospect';
-  createdAt: string;
-  socialAccess?: {
+  created_at: string;
+  social_access?: {
     instagram?: { usuario: string; senha?: string; email?: string; link?: string };
     facebook?: { usuario: string; senha?: string; email?: string; link?: string };
     google?: { usuario: string; senha?: string; email?: string; link?: string };
@@ -45,20 +45,20 @@ export interface Client {
     tiktok?: { usuario: string; senha?: string; email?: string; link?: string };
   };
   notes?: { id: string; content: string; date: string; author: string }[];
-  portalEmail?: string;
-  portalPassword?: string;
+  portal_email?: string;
+  portal_password?: string;
   briefing?: string;
-  servicoInteresse?: string;
+  servico_interesse?: string;
 }
 
 export interface Demand {
   id: string;
-  clientId: string;
+  client_id: string;
   title: string;
   description?: string;
   status: 'pending' | 'in_production' | 'review' | 'approved' | 'completed';
   priority: 'low' | 'medium' | 'high';
-  dueDate: string;
+  due_date: string;
   type: string;
 }
 
@@ -67,44 +67,45 @@ export interface Service {
   name: string;
   description: string;
   price: number;
-  isRecurring: boolean;
+  is_recurring: boolean;
   category: string;
 }
 
 export interface Contract {
   id: string;
-  clientId: string;
-  serviceId: string;
+  client_id: string;
+  service_id: string;
   status: 'active' | 'expiring' | 'expired';
-  startDate: string;
-  endDate: string;
+  start_date: string;
+  end_date: string;
   value: number;
-  autoRenew: boolean;
+  auto_renew: boolean;
 }
+
 export interface Notification {
   id: string;
-  userId: string;
+  user_id: string;
   title: string;
   message: string;
   type: 'mention' | 'demand' | 'system';
   read: boolean;
-  createdAt: string;
+  created_at: string;
 }
 
 export interface ChatMessage {
   id: string;
-  senderId: string;
-  receiverId?: string; // se for nulo, é grupo/geral
+  sender_id: string;
+  receiver_id?: string; // se for nulo, é grupo/geral
   content: string;
   timestamp: string;
 }
 
 export interface Invoice {
   id: string;
-  clientId: string;
-  contractId?: string;
+  client_id: string;
+  contract_id?: string;
   amount: number;
-  dueDate: string;
+  due_date: string;
   status: 'pending' | 'paid' | 'overdue';
   description: string;
 }
@@ -114,8 +115,8 @@ export interface AgendaEvent {
   title: string;
   type: 'meeting' | 'payment' | 'prospecting' | 'task';
   date: string;
-  clientId?: string;
-  assignedTo: string;
+  client_id?: string;
+  assigned_to: string;
   status: 'scheduled' | 'completed' | 'cancelled';
 }
 
@@ -124,6 +125,7 @@ export interface PortfolioCase {
   title: string;
   category: string;
   description: string;
-  imageUrl: string;
+  image_url: string;
   results: string[];
 }
+

@@ -25,7 +25,12 @@ import {
   Mail,
   Send,
   Camera,
-  Briefcase
+  Briefcase,
+  Edit2,
+  Trash2,
+  X,
+  Copy,
+  Hash
 } from "lucide-react";
 import Spotlight from "@/components/Spotlight";
 import { motion, AnimatePresence } from "framer-motion";
@@ -53,6 +58,11 @@ export default function ClientDetailPage() {
   const [clientInvoices, setClientInvoices] = useState<any[]>([]);
   const [clientEvents, setClientEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [editFormData, setEditFormData] = useState<any>(null);
 
   useEffect(() => {
     if (id) {
@@ -73,22 +83,7 @@ export default function ClientDetailPage() {
 
       if (clientError) throw clientError;
 
-      // Ensure proper casing for frontend compat
-      const mappedClient = {
-        ...client,
-        contactName: client.contact_name,
-        nomeFantasia: client.nome_fantasia,
-        tipoPessoa: client.tipo_pessoa,
-        emailFinanceiro: client.email_financeiro,
-        telefoneFixo: client.telefone_fixo,
-        socialAccess: client.social_access,
-        portalEmail: client.portal_email,
-        portalPassword: client.portal_password,
-        servicoInteresse: client.servico_interesse,
-        createdAt: client.created_at,
-      };
-
-      setClientData(mappedClient);
+      setClientData(client);
 
       // Note: We don't have a 'notes' table yet. If it was jsonb in mock, let's keep it empty for now 
       // or fetch from somewhere else if it gets added later.
@@ -102,9 +97,9 @@ export default function ClientDetailPage() {
         supabase.from('agenda_events').select('*').eq('client_id', id)
       ]);
 
-      if (demandsRes.data) setLocalDemands(demandsRes.data.map(d => ({ ...d, dueDate: d.due_date })));
-      if (contractsRes.data) setClientContracts(contractsRes.data.map(c => ({ ...c, startDate: c.start_date, endDate: c.end_date })));
-      if (invoicesRes.data) setClientInvoices(invoicesRes.data.map(i => ({ ...i, dueDate: i.due_date })));
+      if (demandsRes.data) setLocalDemands(demandsRes.data);
+      if (contractsRes.data) setClientContracts(contractsRes.data);
+      if (invoicesRes.data) setClientInvoices(invoicesRes.data);
       if (eventsRes.data) setClientEvents(eventsRes.data);
 
     } catch (error) {
@@ -166,6 +161,70 @@ export default function ClientDetailPage() {
     setNewNote("");
   };
 
+  const handleOpenEdit = () => {
+    setEditFormData({ ...clientData });
+    setIsEditModalOpen(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editFormData) return;
+    setIsSaving(true);
+    try {
+      const { error } = await supabase
+        .from('clients')
+        .update({
+          name: editFormData.name,
+          nome_fantasia: editFormData.nome_fantasia,
+          cnpj: editFormData.cnpj,
+          tipo_pessoa: editFormData.tipo_pessoa,
+          contact_name: editFormData.contact_name,
+          email: editFormData.email,
+          email_financeiro: editFormData.email_financeiro,
+          phone: editFormData.phone,
+          telefone_fixo: editFormData.telefone_fixo,
+          status: editFormData.status,
+          setor: editFormData.setor,
+          address: editFormData.address,
+          briefing: editFormData.briefing,
+          servico_interesse: editFormData.servico_interesse,
+          social_access: editFormData.social_access,
+          portal_email: editFormData.portal_email,
+          portal_password: editFormData.portal_password
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+      
+      setClientData(editFormData);
+      setIsEditModalOpen(false);
+      // Aqui você poderia disparar um toast de sucesso
+    } catch (err) {
+      console.error("Erro ao atualizar cliente:", err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteClient = async () => {
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase
+        .from('clients')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      
+      setIsDeleteModalOpen(false);
+      router.push("/admin/clients");
+    } catch (err) {
+      console.error("Erro ao excluir cliente:", err);
+      alert("Erro ao excluir cliente. Verifique se há dependências.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
       {/* Header */}
@@ -188,10 +247,35 @@ export default function ClientDetailPage() {
               {clientData.status === 'active' ? 'Ativo' : 'Prospect'}
             </span>
           </div>
-          <p style={{ color: 'var(--text-secondary)' }}>ID: #{clientData.id} • Cadastrado em {new Date(clientData.createdAt).toLocaleDateString('pt-BR')}</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '4px' }}>
+            <div 
+              onClick={() => {
+                navigator.clipboard.writeText(clientData.id);
+                // Aqui você poderia disparar um toast
+              }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '6px',
+                padding: '4px 10px', borderRadius: '8px',
+                backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)',
+                cursor: 'pointer', color: 'var(--text-secondary)', transition: 'all 0.2s'
+              }}
+              className="hover-accent"
+            >
+              <Hash size={12} color="var(--accent)" />
+              <span style={{ fontSize: '0.75rem', fontWeight: 600, fontFamily: 'monospace', letterSpacing: '0.5px' }}>
+                {clientData.id.split('-')[0]}...
+              </span>
+              <Copy size={12} />
+            </div>
+            <span style={{ color: 'rgba(255,255,255,0.1)' }}>•</span>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Calendar size={14} /> Cadastrado em {new Date(clientData.created_at).toLocaleDateString('pt-BR')}
+            </p>
+          </div>
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: '12px' }}>
-          <button className="btn btn-secondary"><Share2 size={18} /> Compartilhar</button>
+          <button className="btn btn-secondary" onClick={() => setIsDeleteModalOpen(true)} style={{ color: '#EF4444' }}><Trash2 size={18} /></button>
+          <button className="btn btn-secondary" onClick={handleOpenEdit}><Edit2 size={18} /> Editar Cliente</button>
           <button className="btn btn-accent"><Plus size={18} /> Nova Ação</button>
         </div>
       </div>
@@ -262,7 +346,7 @@ export default function ClientDetailPage() {
                     </div>
                     <div>
                       <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Nome Fantasia</p>
-                      <p style={{ fontWeight: 500 }}>{clientData.nomeFantasia || '-'}</p>
+                      <p style={{ fontWeight: 500 }}>{clientData.nome_fantasia || '-'}</p>
                     </div>
                     <div>
                       <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>CNPJ / CPF</p>
@@ -274,7 +358,7 @@ export default function ClientDetailPage() {
                     </div>
                     <div>
                       <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Contato Principal</p>
-                      <p style={{ fontWeight: 500 }}>{clientData.contactName}</p>
+                      <p style={{ fontWeight: 500 }}>{clientData.contact_name}</p>
                     </div>
                     <div>
                       <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>WhatsApp</p>
@@ -282,7 +366,7 @@ export default function ClientDetailPage() {
                     </div>
                     <div>
                       <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Telefone Fixo</p>
-                      <p style={{ fontWeight: 500 }}>{clientData.telefoneFixo || '-'}</p>
+                      <p style={{ fontWeight: 500 }}>{clientData.telefone_fixo || '-'}</p>
                     </div>
                     <div>
                       <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>E-mail Principal</p>
@@ -290,7 +374,7 @@ export default function ClientDetailPage() {
                     </div>
                     <div style={{ gridColumn: 'span 2' }}>
                       <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>E-mail Financeiro</p>
-                      <p style={{ fontWeight: 500 }}>{clientData.emailFinanceiro || clientData.email}</p>
+                      <p style={{ fontWeight: 500 }}>{clientData.email_financeiro || clientData.email}</p>
                     </div>
                   </div>
                 </Spotlight>
@@ -330,7 +414,7 @@ export default function ClientDetailPage() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <div>
                       <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Serviço de Interesse</p>
-                      <p style={{ fontWeight: 600, color: 'var(--accent)' }}>{clientData.servicoInteresse || '-'}</p>
+                      <p style={{ fontWeight: 600, color: 'var(--accent)' }}>{clientData.servico_interesse || '-'}</p>
                     </div>
                     <div>
                       <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Briefing Inicial</p>
@@ -349,7 +433,7 @@ export default function ClientDetailPage() {
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
                       <div>
                         <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>E-mail de Login (Portal)</p>
-                        <p style={{ fontWeight: 500 }}>{clientData.portalEmail || clientData.email}</p>
+                        <p style={{ fontWeight: 500 }}>{clientData.portal_email || clientData.email}</p>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
                         <button
@@ -466,7 +550,7 @@ export default function ClientDetailPage() {
                     <h4 style={{ fontSize: '1.1rem', fontWeight: 600 }}>{demand.title}</h4>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
                       <Clock size={14} />
-                      Entrega: {new Date(demand.dueDate).toLocaleDateString('pt-BR')}
+                      Entrega: {new Date(demand.due_date).toLocaleDateString('pt-BR')}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
                       <div style={{
@@ -549,8 +633,57 @@ export default function ClientDetailPage() {
               exit={{ opacity: 0, y: -10 }}
               style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '24px' }}
             >
-              {clientData.socialAccess ? Object.entries(clientData.socialAccess).map(([key, data]) => {
-                if (!data.usuario) return null;
+              {/* Portal Access Card */}
+              <Spotlight className="glass-card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px', border: '1px solid var(--accent)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{
+                      width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(217, 72, 15, 0.2)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)'
+                    }}>
+                      <ShieldCheck size={20} />
+                    </div>
+                    <h4 style={{ fontWeight: 700, fontSize: '1.1rem' }}>Portal do Cliente</h4>
+                  </div>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--accent)', background: 'rgba(217, 72, 15, 0.1)', padding: '4px 8px', borderRadius: '6px' }}>
+                    Agência Prátic
+                  </span>
+                </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 500 }}>E-mail de Acesso</span>
+                      <div style={{
+                        padding: '10px 14px', background: 'rgba(0,0,0,0.2)', borderRadius: '10px',
+                        display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.9rem'
+                      }}>
+                        <Mail size={14} color="var(--text-secondary)" />
+                        {clientData.portal_email || 'Não definido'}
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Senha</span>
+                      <div style={{
+                        padding: '10px 14px', background: 'rgba(0,0,0,0.2)', borderRadius: '10px',
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', fontSize: '0.9rem'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <Lock size={14} color="var(--text-secondary)" />
+                          <span>{showPasswords['portal'] ? (clientData.portal_password || '••••••••') : '••••••••'}</span>
+                        </div>
+                        <button
+                          onClick={() => togglePassword('portal')}
+                          style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
+                        >
+                          {showPasswords['portal'] ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+              </Spotlight>
+              {clientData.social_access ? Object.entries(clientData.social_access).map(([key, data]: [string, any]) => {
+                if (!data || !data.usuario) return null;
                 return (
                   <Spotlight key={key} className="glass-card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -651,10 +784,10 @@ export default function ClientDetailPage() {
                       <tr key={contract.id}>
                         <td style={{ paddingLeft: '24px' }}>
                           <p style={{ fontWeight: 500 }}>Contrato #{contract.id}</p>
-                          <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>ID Serviço: {contract.serviceId}</p>
+                          <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>ID Serviço: {contract.service_id}</p>
                         </td>
-                        <td>{new Date(contract.startDate).toLocaleDateString('pt-BR')}</td>
-                        <td>{new Date(contract.endDate).toLocaleDateString('pt-BR')}</td>
+                        <td>{new Date(contract.start_date).toLocaleDateString('pt-BR')}</td>
+                        <td>{new Date(contract.end_date).toLocaleDateString('pt-BR')}</td>
                         <td style={{ fontWeight: 600 }}>R$ {contract.value.toLocaleString('pt-BR')}</td>
                         <td>
                           <span className={`badge ${contract.status === 'active' ? 'badge-success' : 'badge-warning'}`}>
@@ -740,6 +873,189 @@ export default function ClientDetailPage() {
           )}
         </AnimatePresence>
       </div>
+
+      {/* Edit Modal */}
+      <AnimatePresence>
+        {isEditModalOpen && (
+          <div style={{
+            position: 'fixed', inset: 0, zIndex: 100,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '24px', backgroundColor: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)'
+          }}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="glass-card"
+              style={{ width: '100%', maxWidth: '800px', maxHeight: '90vh', overflowY: 'auto', padding: '32px' }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+                <h2 style={{ fontSize: '1.5rem', fontWeight: 700 }}>Editar Cliente</h2>
+                <button onClick={() => setIsEditModalOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                  <X size={24} />
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+                {/* Acesso ao Portal */}
+                <section style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Lock size={18} /> Acesso ao Portal do Cliente
+                  </h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>E-mail de Login</label>
+                      <input 
+                        type="email" className="input-dark" 
+                        value={editFormData.portalEmail || ''} 
+                        onChange={(e) => setEditFormData({...editFormData, portalEmail: e.target.value})}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Senha do Portal</label>
+                      <input 
+                        type="text" className="input-dark" 
+                        value={editFormData.portalPassword || ''} 
+                        onChange={(e) => setEditFormData({...editFormData, portalPassword: e.target.value})}
+                      />
+                    </div>
+                  </div>
+                </section>
+
+                {/* Redes Sociais */}
+                <section style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Share2 size={18} /> Redes Sociais
+                  </h3>
+                  {['instagram', 'facebook'].map(social => (
+                    <div key={social} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', textTransform: 'capitalize' }}>Usuário {social}</label>
+                        <input 
+                          type="text" className="input-dark" 
+                          value={editFormData.socialAccess?.[social]?.usuario || ''} 
+                          onChange={(e) => setEditFormData({
+                            ...editFormData, 
+                            socialAccess: {
+                              ...editFormData.socialAccess,
+                              [social]: { ...editFormData.socialAccess?.[social], usuario: e.target.value }
+                            }
+                          })}
+                        />
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Senha {social}</label>
+                        <input 
+                          type="text" className="input-dark" 
+                          value={editFormData.socialAccess?.[social]?.senha || ''} 
+                          onChange={(e) => setEditFormData({
+                            ...editFormData, 
+                            socialAccess: {
+                              ...editFormData.socialAccess,
+                              [social]: { ...editFormData.socialAccess?.[social], senha: e.target.value }
+                            }
+                          })}
+                        />
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>E-mail Recup.</label>
+                        <input 
+                          type="text" className="input-dark" 
+                          value={editFormData.socialAccess?.[social]?.email || ''} 
+                          onChange={(e) => setEditFormData({
+                            ...editFormData, 
+                            socialAccess: {
+                              ...editFormData.socialAccess,
+                              [social]: { ...editFormData.socialAccess?.[social], email: e.target.value }
+                            }
+                          })}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </section>
+
+                {/* Serviço de Interesse */}
+                <section style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Briefcase size={18} /> Serviço de Interesse
+                  </h3>
+                  <select 
+                    className="input-dark"
+                    value={editFormData.servicoInteresse || ''} 
+                    onChange={(e) => setEditFormData({...editFormData, servicoInteresse: e.target.value})}
+                  >
+                    <option value="">Selecione um serviço</option>
+                    <option value="Gestão de Redes Sociais">Gestão de Redes Sociais</option>
+                    <option value="Tráfego Pago (Ads)">Tráfego Pago (Ads)</option>
+                    <option value="Identidade Visual">Identidade Visual</option>
+                    <option value="Desenvolvimento de Site">Desenvolvimento de Site</option>
+                    <option value="Assessoria de Imprensa">Assessoria de Imprensa</option>
+                    <option value="Consultoria">Consultoria de Marketing</option>
+                    <option value="Pacote Completo">Pacote Completo (360)</option>
+                  </select>
+                </section>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '16px' }}>
+                  <button className="btn btn-secondary" onClick={() => setIsEditModalOpen(false)}>Cancelar</button>
+                  <Spotlight as="button" className="btn btn-accent" onClick={handleSaveEdit} disabled={isSaving}>
+                    {isSaving ? "Salvando..." : "Salvar Alterações"}
+                  </Spotlight>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {isDeleteModalOpen && (
+          <div style={{
+            position: 'fixed', inset: 0, zIndex: 110,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '24px', backgroundColor: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)'
+          }}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="glass-card"
+              style={{ width: '100%', maxWidth: '450px', padding: '32px', textAlign: 'center' }}
+            >
+              <div style={{ 
+                width: '64px', height: '64px', borderRadius: '50%', backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#EF4444', margin: '0 auto 24px'
+              }}>
+                <Trash2 size={32} />
+              </div>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '12px' }}>Excluir Cliente?</h2>
+              <p style={{ color: 'var(--text-secondary)', marginBottom: '32px', lineHeight: '1.6' }}>
+                Esta ação é irreversível. Todos os dados, contratos, demandas e notas associados a <strong>{clientData.name}</strong> serão permanentemente removidos.
+              </p>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <button 
+                  className="btn" 
+                  style={{ backgroundColor: '#EF4444', color: 'white', width: '100%' }}
+                  onClick={handleDeleteClient}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? "Excluindo..." : "Sim, Excluir permanentemente"}
+                </button>
+                <button 
+                  className="btn btn-secondary" 
+                  style={{ width: '100%' }}
+                  onClick={() => setIsDeleteModalOpen(false)}
+                  disabled={isDeleting}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -8,7 +8,7 @@ import { demands } from "@/mocks/db";
 
 export default function ClientDashboard() {
   // Simulating fetching demands for Client 1 (Acme Corp)
-  const clientDemands = demands.filter(d => d.clientId === '1');
+  const clientDemands = demands.filter(d => d.client_id === '1');
   const pendingDemands = clientDemands.filter(d => d.status !== 'completed').length;
   const completedDemands = clientDemands.filter(d => d.status === 'completed').length;
 
@@ -29,6 +29,7 @@ export default function ClientDashboard() {
           title="Demandas Ativas" 
           value={pendingDemands.toString()} 
           icon={<Clock size={24} />}
+          subtitle="Aguardando ação"
           trend="neutral"
           index={0}
         />
@@ -36,6 +37,7 @@ export default function ClientDashboard() {
           title="Entregas Concluídas" 
           value={completedDemands.toString()} 
           icon={<CheckCircle2 size={24} />}
+          subtitle="Neste mês"
           trend="up"
           trendValue="100%"
           index={1}
@@ -44,6 +46,7 @@ export default function ClientDashboard() {
           title="Health Score" 
           value="9.8" 
           icon={<TrendingUp size={24} />}
+          subtitle="Satisfação geral"
           trend="up"
           index={2}
         />
@@ -67,7 +70,7 @@ export default function ClientDashboard() {
                 </div>
                 <h4 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '8px' }}>{demand.title}</h4>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
-                  <Clock size={14} /> Previsão: {new Date(demand.dueDate).toLocaleDateString('pt-BR')}
+                  <span>Previsão de Entrega: <strong>{new Date(demand.due_date).toLocaleDateString('pt-BR')}</strong></span>
                 </div>
               </Spotlight>
             ))}

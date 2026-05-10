@@ -16,7 +16,7 @@ export default function ActivityTable() {
           .limit(5);
         
         if (error) throw error;
-        if (data) setRecentInvoices(data.map(i => ({...i, dueDate: i.due_date})));
+        if (data) setRecentInvoices(data);
       } catch (err) {
         console.error("Erro ao buscar faturas recentes:", err);
       } finally {
@@ -50,7 +50,7 @@ export default function ActivityTable() {
                 <td>
                   {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(invoice.amount)}
                 </td>
-                <td>{new Date(invoice.dueDate).toLocaleDateString('pt-BR')}</td>
+                <td>{new Date(invoice.due_date).toLocaleDateString('pt-BR')}</td>
                 <td>
                   <span className={`badge ${
                     invoice.status === 'paid' ? 'badge-success' : 

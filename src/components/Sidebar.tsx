@@ -58,7 +58,7 @@ const NAV_GROUPS = [
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const { currentUser, login, users } = useAuth();
+  const { currentUser, users, logout } = useAuth();
   const [isExpanded, setIsExpanded] = useState(true);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserSwitcher, setShowUserSwitcher] = useState(false);

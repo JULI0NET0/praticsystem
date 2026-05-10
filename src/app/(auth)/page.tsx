@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Loader2, AlertCircle } from "lucide-react";
+import { motion } from "framer-motion";
 import ThemeLogo from "@/components/ThemeLogo";
 import { supabase } from "@/lib/supabase";
 import Spotlight from "@/components/Spotlight";

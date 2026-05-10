@@ -25,6 +25,7 @@ import Spotlight from "@/components/Spotlight";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/components/CustomToast";
 
 // Definição dos Widgets Disponíveis
 const AVAILABLE_WIDGETS = [
@@ -37,6 +38,7 @@ const AVAILABLE_WIDGETS = [
 
 export default function WorkspacePage() {
   const { currentUser } = useAuth();
+  const { showToast } = useToast();
   const [status, setStatus] = useState("");
   const [greeting, setGreeting] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
