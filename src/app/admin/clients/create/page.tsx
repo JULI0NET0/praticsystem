@@ -169,7 +169,7 @@ export default function CreateClientPage() {
         </Link>
         <div style={{ flex: 1 }}>
           <h1 style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '4px' }}>Cadastrar Novo Cliente</h1>
-          <p style={{ color: 'var(--text-secondary)' }}>Etapa {step} de 4 — {step === 1 ? 'Identificação' : step === 2 ? 'Endereço' : step === 3 ? 'Contatos' : 'Digital & Briefing'}</p>
+          <p style={{ color: 'var(--text-secondary)' }}>Etapa {step} de 4 — {step === 1 ? 'Identificação' : step === 2 ? 'Endereço' : step === 3 ? 'Contatos' : 'Presença Digital'}</p>
         </div>
 
         {/* Progress Bar */}
@@ -416,7 +416,7 @@ export default function CreateClientPage() {
                 style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}
               >
                 <h2 style={{ fontSize: '1.25rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--accent)' }}>
-                  <Briefcase size={20} /> Presença Digital & Briefing
+                  <Briefcase size={20} /> Presença Digital
                 </h2>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
@@ -465,15 +465,6 @@ export default function CreateClientPage() {
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Resumo do Briefing / Notas iniciais</label>
-                  <textarea
-                    className="input-dark"
-                    style={{ minHeight: '100px', resize: 'vertical', padding: '16px' }}
-                    placeholder="Detalhes sobre o negócio, objetivos e o que foi conversado no primeiro contato..."
-                    value={formData.briefing} onChange={(e) => updateFormData("briefing", e.target.value)}
-                  />
-                </div>
 
                 {/* Portal Access Credentials */}
                 <div style={{ borderTop: '1px solid var(--border)', paddingTop: '24px', marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '20px' }}>

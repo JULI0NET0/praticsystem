@@ -30,7 +30,9 @@ import {
   Trash2,
   X,
   Copy,
-  Hash
+  Hash,
+  Sparkles,
+  Folder
 } from "lucide-react";
 import Spotlight from "@/components/Spotlight";
 import { motion, AnimatePresence } from "framer-motion";
@@ -38,11 +40,13 @@ import { useToast } from "@/components/CustomToast";
 
 const TABS = [
   { id: 'dados', label: 'Dados', icon: User },
+  { id: 'briefing', label: 'Briefing', icon: Sparkles },
   { id: 'demandas', label: 'Demandas', icon: ClipboardList },
   { id: 'notas', label: 'Notas', icon: MessageSquare },
   { id: 'access', label: 'Acessos', icon: ShieldCheck },
   { id: 'contracts', label: 'Contratos', icon: FileText },
   { id: 'finance', label: 'Financeiro', icon: CreditCard },
+  { id: 'docs', label: 'Docs', icon: Folder },
 ];
 
 export default function ClientDetailPage() {
@@ -59,6 +63,10 @@ export default function ClientDetailPage() {
   const [clientContracts, setClientContracts] = useState<any[]>([]);
   const [clientInvoices, setClientInvoices] = useState<any[]>([]);
   const [clientEvents, setClientEvents] = useState<any[]>([]);
+  const [clientDocuments, setClientDocuments] = useState<any[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isGoogleDriveModalOpen, setIsGoogleDriveModalOpen] = useState(false);
+  const [tempGoogleDriveUrl, setTempGoogleDriveUrl] = useState("");
   const [loading, setLoading] = useState(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -71,7 +79,10 @@ export default function ClientDetailPage() {
     service_id: '',
     value: 0,
     start_date: new Date().toISOString().split('T')[0],
-    billing_cycle: 'monthly'
+    billing_cycle: 'monthly',
+    due_day: 10,
+    installments: 1,
+    contract_duration: 12
   });
 
   useEffect(() => {
@@ -106,17 +117,19 @@ export default function ClientDetailPage() {
       setLocalNotes([]);
 
       // Fetch related data in parallel
-      const [demandsRes, contractsRes, invoicesRes, eventsRes] = await Promise.all([
+      const [demandsRes, contractsRes, invoicesRes, eventsRes, docsRes] = await Promise.all([
         supabase.from('demands').select('*').eq('client_id', id).order('created_at', { ascending: false }),
         supabase.from('contracts').select('*').eq('client_id', id),
         supabase.from('invoices').select('*').eq('client_id', id),
-        supabase.from('agenda_events').select('*').eq('client_id', id)
+        supabase.from('agenda_events').select('*').eq('client_id', id),
+        supabase.from('client_documents').select('*').eq('client_id', id).order('created_at', { ascending: false })
       ]);
 
       if (demandsRes.data) setLocalDemands(demandsRes.data);
       if (contractsRes.data) setClientContracts(contractsRes.data);
       if (invoicesRes.data) setClientInvoices(invoicesRes.data);
       if (eventsRes.data) setClientEvents(eventsRes.data);
+      if (docsRes.data) setClientDocuments(docsRes.data);
 
     } catch (error) {
       console.error("Erro ao buscar detalhes do cliente:", error);
@@ -160,6 +173,29 @@ export default function ClientDetailPage() {
       }
       return d;
     }));
+  };
+
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return '-';
+    // Para datas YYYY-MM-DD, forçamos o meio-dia para evitar que o fuso horário mude o dia
+    const date = dateStr.includes('T') ? new Date(dateStr) : new Date(`${dateStr}T12:00:00`);
+    return date.toLocaleDateString('pt-BR');
+  };
+
+  const handleMarkAsPaid = async (invoiceId: string) => {
+    try {
+      const { error } = await supabase
+        .from('invoices')
+        .update({ status: 'paid' })
+        .eq('id', invoiceId);
+
+      if (error) throw error;
+      showToast('Fatura marcada como paga!', 'success');
+      fetchClientDetails();
+    } catch (err) {
+      console.error("Erro ao atualizar fatura:", err);
+      showToast('Erro ao atualizar fatura.', 'error');
+    }
   };
 
   const handleAddNote = () => {
@@ -230,25 +266,82 @@ export default function ClientDetailPage() {
     try {
       const selectedService = availableServices.find(s => s.id === actionFormData.service_id);
       
-      const { error } = await supabase
+      // 1. Criar o Contrato
+      const startDate = new Date(`${actionFormData.start_date}T12:00:00`);
+      const endDate = new Date(startDate);
+      endDate.setFullYear(endDate.getFullYear() + 1); // Contrato padrão de 1 ano
+
+      const { data: contract, error: contractError } = await supabase
         .from('contracts')
         .insert({
           client_id: id,
           service_id: actionFormData.service_id,
           value: actionFormData.value || Number(selectedService?.price || 0),
           start_date: actionFormData.start_date,
+          end_date: endDate.toISOString().split('T')[0],
           status: 'active',
+          auto_renew: true,
           billing_cycle: actionFormData.billing_cycle || selectedService?.billing_cycle || 'monthly'
-        });
+        })
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (contractError) throw contractError;
 
-      showToast('Serviço adicionado com sucesso!', 'success');
+      // 2. Gerar Faturas (Lógica de Parcelamento ou Recorrência Antecipada)
+      let invoicesToCreate = [];
+      const totalValue = actionFormData.value || Number(selectedService?.price || 0);
+
+      if (actionFormData.billing_cycle === 'one_time') {
+        const numInstallments = actionFormData.installments;
+        const installmentValue = totalValue / numInstallments;
+        for (let i = 0; i < numInstallments; i++) {
+          let dueDate = new Date(startDate.getFullYear(), startDate.getMonth() + i, actionFormData.due_day);
+          invoicesToCreate.push({
+            client_id: id,
+            contract_id: contract.id,
+            amount: installmentValue,
+            due_date: dueDate.toISOString().split('T')[0],
+            status: 'pending',
+            description: `${selectedService?.name || 'Serviço'} (Parcela ${i + 1}/${numInstallments})`
+          });
+        }
+      } else {
+        // Lógica para Recorrentes (Mensal, Trimestral, etc.)
+        const duration = actionFormData.contract_duration;
+        let monthsStep = 1;
+        if (actionFormData.billing_cycle === 'quarterly') monthsStep = 3;
+        if (actionFormData.billing_cycle === 'semiannual') monthsStep = 6;
+        if (actionFormData.billing_cycle === 'annual') monthsStep = 12;
+
+        const numInvoices = Math.ceil(duration / monthsStep);
+        for (let i = 0; i < numInvoices; i++) {
+          // A primeira fatura recorrente começa no mês seguinte (mês + 1 + i * step)
+          let dueDate = new Date(startDate.getFullYear(), startDate.getMonth() + 1 + (i * monthsStep), actionFormData.due_day);
+          invoicesToCreate.push({
+            client_id: id,
+            contract_id: contract.id,
+            amount: totalValue,
+            due_date: dueDate.toISOString().split('T')[0],
+            status: 'pending',
+            description: `Mensalidade: ${selectedService?.name || 'Serviço'} (${i + 1}/${numInvoices})`
+          });
+        }
+      }
+
+      // 3. Inserir todas as faturas geradas
+      const { error: invoiceError } = await supabase
+        .from('invoices')
+        .insert(invoicesToCreate);
+
+      if (invoiceError) throw invoiceError;
+
+      showToast('Serviço ativado e fatura gerada!', 'success');
       setIsActionModalOpen(false);
-      fetchClientDetails(); // Refresh contracts list
+      fetchClientDetails(); 
     } catch (err) {
       console.error("Erro ao criar ação:", err);
-      showToast('Erro ao adicionar serviço', 'error');
+      showToast('Erro ao ativar serviço. Verifique os dados.', 'error');
     } finally {
       setIsSaving(false);
     }
@@ -271,6 +364,84 @@ export default function ClientDetailPage() {
       showToast("Erro ao excluir cliente. Verifique se há dependências.", 'error');
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const handleUploadDocument = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !id) return;
+
+    setIsUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random()}.${fileExt}`;
+      const filePath = `${id}/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('client-documents')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { error: dbError } = await supabase
+        .from('client_documents')
+        .insert({
+          client_id: id,
+          name: file.name,
+          file_path: filePath,
+          file_type: file.type,
+          size: file.size,
+          category: 'attachment'
+        });
+
+      if (dbError) throw dbError;
+
+      showToast('Documento enviado com sucesso!', 'success');
+      fetchClientDetails();
+    } catch (err) {
+      console.error('Erro no upload:', err);
+      showToast('Erro ao enviar documento.', 'error');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleDeleteDocument = async (docId: string, filePath: string) => {
+    try {
+      if (filePath) {
+        await supabase.storage.from('client-documents').remove([filePath]);
+      }
+
+      const { error } = await supabase
+        .from('client_documents')
+        .delete()
+        .eq('id', docId);
+
+      if (error) throw error;
+
+      showToast('Documento excluído!', 'success');
+      setClientDocuments(prev => prev.filter(d => d.id !== docId));
+    } catch (err) {
+      console.error('Erro ao excluir:', err);
+      showToast('Erro ao excluir documento.', 'error');
+    }
+  };
+
+  const handleSaveGoogleDrive = async () => {
+    try {
+      const { error } = await supabase
+        .from('clients')
+        .update({ google_drive_url: tempGoogleDriveUrl })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setClientData({ ...clientData, google_drive_url: tempGoogleDriveUrl });
+      setIsGoogleDriveModalOpen(false);
+      showToast('Link do Google Drive atualizado!', 'success');
+    } catch (err) {
+      console.error('Erro ao salvar Drive:', err);
+      showToast('Erro ao salvar link do Drive.', 'error');
     }
   };
 
@@ -361,14 +532,43 @@ export default function ClientDetailPage() {
                     <Camera size={16} />
                   </button>
                 )}
-                {clientData.social_access?.facebook?.link && (
+                {clientData.social_access?.facebook?.usuario && (
                   <button 
-                    onClick={() => window.open(clientData.social_access.facebook.link.startsWith('http') ? clientData.social_access.facebook.link : `https://${clientData.social_access.facebook.link}`, '_blank')}
-                    title="Acessar Facebook"
+                    onClick={() => window.open(`https://facebook.com/${clientData.social_access.facebook.usuario}`, '_blank')}
+                    title={`Facebook: ${clientData.social_access.facebook.usuario}`}
                     style={{ padding: '8px', borderRadius: '8px', backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', transition: '0.2s' }}
                     className="hover-accent"
                   >
                     <Globe size={16} />
+                  </button>
+                )}
+                {clientData.social_access?.linkedin?.usuario && (
+                  <button 
+                    onClick={() => window.open(`https://linkedin.com/in/${clientData.social_access.linkedin.usuario}`, '_blank')}
+                    title={`LinkedIn: ${clientData.social_access.linkedin.usuario}`}
+                    style={{ padding: '8px', borderRadius: '8px', backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', transition: '0.2s' }}
+                    className="hover-accent"
+                  >
+                    <Briefcase size={16} />
+                  </button>
+                )}
+                {clientData.social_access?.tiktok?.usuario && (
+                  <button 
+                    onClick={() => window.open(`https://tiktok.com/@${clientData.social_access.tiktok.usuario}`, '_blank')}
+                    title={`TikTok: @${clientData.social_access.tiktok.usuario}`}
+                    style={{ padding: '8px', borderRadius: '8px', backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', transition: '0.2s' }}
+                    className="hover-accent"
+                  >
+                    <Share2 size={16} />
+                  </button>
+                )}
+                {clientData.social_access?.google?.usuario && (
+                  <button 
+                    title={`Google Meu Negócio: ${clientData.social_access.google.usuario}`}
+                    style={{ padding: '8px', borderRadius: '8px', backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', transition: '0.2s' }}
+                    className="hover-accent"
+                  >
+                    <MapPin size={16} />
                   </button>
                 )}
                 <button 
@@ -401,7 +601,7 @@ export default function ClientDetailPage() {
                 }}
                 className="hover-accent"
               >
-                <Calendar size={14} /> CAD {new Date(clientData.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+                <Calendar size={14} /> CAD {clientData.created_at ? formatDate(clientData.created_at).split('/').slice(0, 2).join('/') : '-'}
               </div>
             </div>
         </div>
@@ -544,24 +744,44 @@ export default function ClientDetailPage() {
                 </Spotlight>
 
                 <Spotlight className="glass-card" style={{ padding: '24px' }}>
-                  <h3 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '20px' }}>Briefing & Interesse</h3>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <h3 style={{ fontSize: '1.125rem', fontWeight: 600 }}>Briefing & Interesse</h3>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span className={`badge ${clientData.briefing_completed ? 'badge-success' : 'badge-warning'}`} style={{ fontSize: '0.75rem' }}>
+                        {clientData.briefing_completed ? 'Briefing Concluído' : 'Briefing Pendente'}
+                      </span>
+                    </div>
+                  </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    <div title={clientData.servico_interesse || '-'}>
-                      <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Serviço de Interesse</p>
-                      <p style={{ fontWeight: 600, color: 'var(--accent)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{clientData.servico_interesse || '-'}</p>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div title={clientData.servico_interesse || '-'} style={{ flex: 1 }}>
+                        <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Serviço de Interesse</p>
+                        <p style={{ fontWeight: 600, color: 'var(--accent)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{clientData.servico_interesse || '-'}</p>
+                      </div>
+                      <button 
+                        onClick={() => {
+                          const link = `${window.location.origin}/briefing/${clientData.id}`;
+                          navigator.clipboard.writeText(link);
+                          showToast('Link do briefing copiado!', 'success');
+                        }}
+                        className="btn btn-secondary btn-sm"
+                        style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem' }}
+                      >
+                        <Copy size={14} /> Copiar Link de Briefing
+                      </button>
                     </div>
                     <div title={clientData.briefing || 'Nenhum briefing fornecido.'}>
                       <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Briefing Inicial</p>
                       <p style={{ 
-                        fontWeight: 400, 
-                        lineHeight: '1.6', 
-                        fontSize: '0.95rem',
-                        display: '-webkit-box',
-                        WebkitLineClamp: 3,
-                        WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden'
+                         fontWeight: 400, 
+                         lineHeight: '1.6', 
+                         fontSize: '0.95rem',
+                         display: '-webkit-box',
+                         WebkitLineClamp: 5,
+                         WebkitBoxOrient: 'vertical',
+                         overflow: 'hidden'
                       }}>
-                        {clientData.briefing || 'Nenhum briefing fornecido.'}
+                        {clientData.briefing || 'Nenhum briefing preenchido ainda.'}
                       </p>
                     </div>
                   </div>
@@ -620,6 +840,152 @@ export default function ClientDetailPage() {
                     </div>
                   </div>
                 </Spotlight>
+              </div>
+            </motion.div>
+          )}
+
+          {activeTab === 'briefing' && (
+            <motion.div
+              key="briefing"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}
+            >
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', gap: '24px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                  {clientData.briefing_completed ? (
+                    <Spotlight className="glass-card" style={{ padding: '24px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                        <h3 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Respostas do Briefing</h3>
+                        <span className="badge badge-success">Concluído</span>
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+                        {clientData.briefing_data ? Object.entries(clientData.briefing_data).map(([key, value]: [string, any]) => {
+                          if (!value || typeof value !== 'string') return null;
+                          const labels: Record<string, string> = {
+                            nome_contato: 'Nome do Contato',
+                            email_contato: 'E-mail do Contato',
+                            whatsapp: 'WhatsApp',
+                            nicho: 'Nicho de Mercado',
+                            tempo_mercado: 'Tempo de Mercado',
+                            situacao_atual: 'Situação Atual',
+                            produtos_fortes: 'Produtos/Serviços Fortes',
+                            perfil_publico: 'Perfil do Público',
+                            desejos_publico: 'Desejos do Público',
+                            diferencial: 'Diferencial Competitivo',
+                            concorrentes: 'Concorrentes',
+                            referencias: 'Referências',
+                            inspiracoes: 'Inspirações',
+                            equipe_marketing: 'Equipe de Marketing',
+                            processo_vendas: 'Processo de Vendas',
+                            ticket_medio: 'Ticket Médio',
+                            sazonalidade: 'Sazonalidade',
+                            canais_atuais: 'Canais Atuais',
+                            objetivos: 'Objetivos Principais',
+                            historico_marketing: 'Histórico de Marketing',
+                            cores_desejadas: 'Cores Desejadas',
+                            elementos_visuais: 'Elementos Visuais',
+                            cores_evitar: 'Cores a Evitar'
+                          };
+
+                          return (
+                            <div key={key}>
+                              <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+                                {labels[key] || key.replace(/_/g, ' ')}
+                              </p>
+                              <p style={{ lineHeight: 1.6, color: 'var(--text-primary)' }}>{value}</p>
+                            </div>
+                          );
+                        }) : (
+                          <p style={{ color: 'var(--text-secondary)' }}>Dados do briefing não encontrados no formato estruturado.</p>
+                        )}
+                        
+                        {clientData.briefing && !clientData.briefing_data && (
+                           <div style={{ marginTop: '20px' }}>
+                             <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', marginBottom: '8px' }}>Briefing (Texto Consolidado)</p>
+                             <div style={{ whiteSpace: 'pre-wrap', padding: '16px', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', fontSize: '0.9rem' }}>
+                               {clientData.briefing}
+                             </div>
+                           </div>
+                        )}
+                      </div>
+                    </Spotlight>
+                  ) : (
+                    <Spotlight className="glass-card" style={{ padding: '40px', textAlign: 'center' }}>
+                      <div style={{ 
+                        width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(217, 72, 15, 0.1)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)',
+                        margin: '0 auto 24px'
+                      }}>
+                        <Sparkles size={32} />
+                      </div>
+                      <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '12px' }}>Briefing Pendente</h3>
+                      <p style={{ color: 'var(--text-secondary)', marginBottom: '32px', maxWidth: '400px', margin: '0 auto 32px' }}>
+                        O cliente ainda não preencheu o briefing. Envie o link personalizado para coletar as informações necessárias para o projeto.
+                      </p>
+                      
+                      <div style={{ display: 'flex', justifyContent: 'center', gap: '16px' }}>
+                        <button 
+                          className="btn btn-accent"
+                          onClick={() => {
+                            const briefingUrl = `${window.location.origin}/briefing/${clientData.id}`;
+                            navigator.clipboard.writeText(briefingUrl);
+                            showToast('Link do briefing copiado!', 'success');
+                          }}
+                        >
+                          <Copy size={18} /> Copiar Link de Briefing
+                        </button>
+                        <button 
+                          className="btn btn-secondary"
+                          onClick={() => window.open(`/briefing/${clientData.id}`, '_blank')}
+                        >
+                          <ExternalLink size={18} /> Visualizar Formulário
+                        </button>
+                      </div>
+                    </Spotlight>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                  <Spotlight className="glass-card" style={{ padding: '24px' }}>
+                    <h4 style={{ fontWeight: 600, marginBottom: '16px' }}>Gestão de Briefing</h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                        <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Status</span>
+                        <span className={`badge ${clientData.briefing_completed ? 'badge-success' : 'badge-warning'}`}>
+                          {clientData.briefing_completed ? 'Concluído' : 'Pendente'}
+                        </span>
+                      </div>
+                      
+                      <button 
+                        className="btn btn-secondary" 
+                        style={{ width: '100%', fontSize: '0.875rem' }}
+                        onClick={() => {
+                          const briefingUrl = `${window.location.origin}/briefing/${clientData.id}`;
+                          navigator.clipboard.writeText(briefingUrl);
+                          showToast('Link do briefing copiado!', 'success');
+                        }}
+                      >
+                        <Copy size={16} /> Copiar Link p/ WhatsApp
+                      </button>
+                      
+                      {clientData.briefing_completed && (
+                        <button 
+                          className="btn btn-secondary" 
+                          style={{ width: '100%', fontSize: '0.875rem' }}
+                          onClick={() => {
+                             // Resetar briefing (opcional, pode ser perigoso sem confirmação)
+                             showToast('Funcionalidade de editar briefing em breve.', 'info');
+                          }}
+                        >
+                          <Edit2 size={16} /> Editar Respostas
+                        </button>
+                      )}
+                    </div>
+                  </Spotlight>
+                </div>
               </div>
             </motion.div>
           )}
@@ -921,8 +1287,8 @@ export default function ClientDetailPage() {
                           <p style={{ fontWeight: 500 }}>Contrato #{contract.id}</p>
                           <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>ID Serviço: {contract.service_id}</p>
                         </td>
-                        <td>{new Date(contract.start_date).toLocaleDateString('pt-BR')}</td>
-                        <td>{new Date(contract.end_date).toLocaleDateString('pt-BR')}</td>
+                        <td>{formatDate(contract.start_date)}</td>
+                        <td>{formatDate(contract.end_date)}</td>
                         <td style={{ fontWeight: 600 }}>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(contract.value)}</td>
                         <td>
                           <span className={`badge ${contract.status === 'active' ? 'badge-success' : 'badge-warning'}`}>
@@ -956,15 +1322,15 @@ export default function ClientDetailPage() {
                   </h4>
                 </Spotlight>
                 <Spotlight className="glass-card" style={{ padding: '24px' }}>
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Pendente</p>
-                  <h4 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--accent)' }}>
-                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(clientInvoices.filter(i => i.status === 'pending').reduce((acc, curr) => acc + curr.amount, 0))}
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Pendente (Atrasado)</p>
+                  <h4 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#EF4444' }}>
+                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(clientInvoices.filter(i => i.status === 'pending' && new Date(`${i.due_date}T23:59:59`) <= new Date()).reduce((acc, curr) => acc + curr.amount, 0))}
                   </h4>
                 </Spotlight>
                 <Spotlight className="glass-card" style={{ padding: '24px' }}>
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Atrasado</p>
-                  <h4 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#EF4444' }}>
-                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(clientInvoices.filter(i => i.status === 'overdue').reduce((acc, curr) => acc + curr.amount, 0))}
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>A Vencer</p>
+                  <h4 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--accent)' }}>
+                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(clientInvoices.filter(i => i.status === 'pending' && new Date(`${i.due_date}T23:59:59`) > new Date()).reduce((acc, curr) => acc + curr.amount, 0))}
                   </h4>
                 </Spotlight>
               </div>
@@ -981,29 +1347,205 @@ export default function ClientDetailPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {clientInvoices.sort((a, b) => new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime()).map(invoice => (
-                      <tr key={invoice.id}>
-                        <td style={{ paddingLeft: '24px' }}>
-                          <p style={{ fontWeight: 500 }}>{invoice.description}</p>
-                          <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>#{invoice.id}</p>
-                        </td>
-                        <td>{new Date(invoice.dueDate).toLocaleDateString('pt-BR')}</td>
-                        <td style={{ fontWeight: 600 }}>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(invoice.amount)}</td>
-                        <td>
-                          <span className={`badge ${invoice.status === 'paid' ? 'badge-success' :
-                            invoice.status === 'pending' ? 'badge-warning' : 'badge-danger'
+                    {clientInvoices.sort((a, b) => new Date(b.due_date).getTime() - new Date(a.due_date).getTime()).map(invoice => {
+                      const isUpcoming = invoice.status === 'pending' && new Date(`${invoice.due_date}T23:59:59`) > new Date();
+                      
+                      return (
+                        <tr key={invoice.id}>
+                          <td style={{ paddingLeft: '24px' }}>
+                            <p style={{ fontWeight: 500 }}>{invoice.description}</p>
+                            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>#{invoice.id}</p>
+                          </td>
+                          <td>{formatDate(invoice.due_date)}</td>
+                          <td style={{ fontWeight: 600 }}>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(invoice.amount)}</td>
+                          <td>
+                            <span className={`badge ${
+                              invoice.status === 'paid' ? 'badge-success' :
+                              isUpcoming ? 'badge-warning' : 'badge-danger'
                             }`}>
-                            {invoice.status === 'paid' ? 'Pago' : invoice.status === 'pending' ? 'Pendente' : 'Atrasado'}
-                          </span>
-                        </td>
-                        <td style={{ paddingRight: '24px', textAlign: 'right' }}>
-                          <button style={{ color: 'var(--text-secondary)' }}><CreditCard size={16} /></button>
+                              {invoice.status === 'paid' ? 'Pago' : isUpcoming ? 'A Vencer' : 'Pendente'}
+                            </span>
+                          </td>
+                          <td style={{ paddingRight: '24px', textAlign: 'right' }}>
+                            {invoice.status !== 'paid' && (
+                              <button 
+                                onClick={() => handleMarkAsPaid(invoice.id)}
+                                title="Marcar como Pago"
+                                style={{ 
+                                  color: 'var(--accent)', 
+                                  padding: '8px', 
+                                  borderRadius: '8px', 
+                                  background: 'rgba(217, 72, 15, 0.1)', 
+                                  border: 'none', 
+                                  cursor: 'pointer',
+                                  marginRight: '8px'
+                                }}
+                              >
+                                <CheckCircle2 size={16} />
+                              </button>
+                            )}
+                            <button 
+                              style={{ color: 'var(--text-secondary)', padding: '8px', background: 'none', border: 'none', cursor: 'pointer' }}
+                              onClick={() => showToast('Recibo indisponível no momento.', 'info')}
+                            >
+                              <FileText size={16} />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {clientInvoices.length === 0 && (
+                      <tr>
+                        <td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)' }}>
+                          Nenhuma fatura gerada para este cliente.
                         </td>
                       </tr>
-                    ))}
+                    )}
                   </tbody>
                 </table>
               </Spotlight>
+            </motion.div>
+          )}
+
+          {activeTab === 'docs' && (
+            <motion.div
+              key="docs"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}
+            >
+              {/* Google Drive Section */}
+              <Spotlight className="glass-card" style={{ padding: '32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid rgba(66, 133, 244, 0.2)', background: 'rgba(66, 133, 244, 0.03)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                  <div style={{ width: '56px', height: '56px', borderRadius: '16px', backgroundColor: 'rgba(66, 133, 244, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4285F4' }}>
+                    <HardDrive size={32} />
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '4px' }}>Pasta do Google Drive</h3>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
+                      {clientData.google_drive_url ? 'Acesse todos os documentos na pasta sincronizada.' : 'Vincule uma pasta do Google Drive para este cliente.'}
+                    </p>
+                  </div>
+                </div>
+                
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  {clientData.google_drive_url ? (
+                    <>
+                      <button 
+                        onClick={() => window.open(clientData.google_drive_url, '_blank')}
+                        className="btn btn-secondary"
+                        style={{ display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid rgba(66, 133, 244, 0.3)', color: '#4285F4' }}
+                      >
+                        <ExternalLink size={18} /> Abrir Pasta
+                      </button>
+                      <button 
+                        onClick={() => {
+                          setTempGoogleDriveUrl(clientData.google_drive_url || "");
+                          setIsGoogleDriveModalOpen(true);
+                        }}
+                        className="btn btn-secondary"
+                        style={{ padding: '12px' }}
+                      >
+                        <Edit2 size={18} />
+                      </button>
+                    </>
+                  ) : (
+                    <button 
+                      onClick={() => setIsGoogleDriveModalOpen(true)}
+                      className="btn btn-accent"
+                      style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#4285F4', borderColor: '#4285F4' }}
+                    >
+                      <Plus size={18} /> Vincular Pasta
+                    </button>
+                  )}
+                </div>
+              </Spotlight>
+
+              {/* Attachments Section */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Anexos Diretos</h3>
+                  <div style={{ position: 'relative' }}>
+                    <input 
+                      type="file" 
+                      id="doc-upload" 
+                      style={{ display: 'none' }} 
+                      onChange={handleUploadDocument}
+                      disabled={isUploading}
+                    />
+                    <label 
+                      htmlFor="doc-upload" 
+                      className={`btn ${isUploading ? 'btn-secondary' : 'btn-accent'}`}
+                      style={{ cursor: isUploading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+                    >
+                      {isUploading ? (
+                        <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }}>
+                          <Plus size={18} />
+                        </motion.div>
+                      ) : (
+                        <Upload size={18} />
+                      )}
+                      {isUploading ? 'Enviando...' : 'Fazer Upload'}
+                    </label>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
+                  {clientDocuments.map(doc => (
+                    <Spotlight key={doc.id} className="glass-card" style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+                      <div style={{ 
+                        width: '48px', height: '48px', borderRadius: '12px', 
+                        backgroundColor: 'rgba(255,255,255,0.03)', 
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        color: doc.file_type?.includes('pdf') ? '#EF4444' : doc.file_type?.includes('image') ? '#3B82F6' : 'var(--accent)'
+                      }}>
+                        <FileText size={24} />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontWeight: 600, fontSize: '0.95rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={doc.name}>
+                          {doc.name}
+                        </p>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                          {(doc.size / 1024).toFixed(1)} KB • {new Date(doc.created_at).toLocaleDateString('pt-BR')}
+                        </p>
+                      </div>
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        <button 
+                          onClick={() => {
+                            const { data } = supabase.storage.from('client-documents').getPublicUrl(doc.file_path);
+                            window.open(data.publicUrl, '_blank');
+                          }}
+                          style={{ padding: '8px', color: 'var(--text-secondary)', background: 'none', border: 'none', cursor: 'pointer' }}
+                          title="Visualizar"
+                        >
+                          <Eye size={16} />
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteDocument(doc.id, doc.file_path)}
+                          style={{ padding: '8px', color: 'var(--text-secondary)', background: 'none', border: 'none', cursor: 'pointer' }}
+                          title="Excluir"
+                          className="hover-danger"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </Spotlight>
+                  ))}
+
+                  {clientDocuments.length === 0 && !isUploading && (
+                    <div style={{ 
+                      gridColumn: '1 / -1', padding: '48px', textAlign: 'center', 
+                      backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '24px',
+                      border: '2px dashed var(--border)'
+                    }}>
+                      <div style={{ color: 'var(--text-secondary)', marginBottom: '12px' }}><Upload size={40} style={{ opacity: 0.3 }} /></div>
+                      <p style={{ color: 'var(--text-secondary)' }}>Nenhum anexo enviado diretamente.</p>
+                      <p style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.3)', marginTop: '4px' }}>Suba contratos, briefings em PDF ou outros arquivos rápidos.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
@@ -1079,14 +1621,57 @@ export default function ClientDetailPage() {
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Data de Início</label>
-                  <input 
-                    type="date" className="input-dark"
-                    value={actionFormData.start_date}
-                    onChange={(e) => setActionFormData({ ...actionFormData, start_date: e.target.value })}
-                  />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Data de Início</label>
+                    <input 
+                      type="date" className="input-dark"
+                      value={actionFormData.start_date}
+                      onChange={(e) => setActionFormData({ ...actionFormData, start_date: e.target.value })}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Dia de Vencimento</label>
+                    <select 
+                      className="input-dark"
+                      value={actionFormData.due_day}
+                      onChange={(e) => setActionFormData({ ...actionFormData, due_day: Number(e.target.value) })}
+                    >
+                      {[5, 10, 15, 20, 25, 30].map(day => (
+                        <option key={day} value={day}>Todo dia {day}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
+
+                {actionFormData.billing_cycle === 'one_time' ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Número de Parcelas</label>
+                    <select 
+                      className="input-dark"
+                      value={actionFormData.installments}
+                      onChange={(e) => setActionFormData({ ...actionFormData, installments: Number(e.target.value) })}
+                    >
+                      {[1, 2, 3, 4, 5, 6, 10, 12].map(n => (
+                        <option key={n} value={n}>{n}x {n > 1 ? `de ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(actionFormData.value / n)}` : ''}</option>
+                      ))}
+                    </select>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Duração do Contrato (Fidelidade)</label>
+                    <select 
+                      className="input-dark"
+                      value={actionFormData.contract_duration}
+                      onChange={(e) => setActionFormData({ ...actionFormData, contract_duration: Number(e.target.value) })}
+                    >
+                      <option value={3}>3 meses</option>
+                      <option value={6}>6 meses</option>
+                      <option value={12}>12 meses</option>
+                      <option value={24}>24 meses</option>
+                    </select>
+                  </div>
+                )}
 
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '12px' }}>
                   <button className="btn btn-secondary" onClick={() => setIsActionModalOpen(false)}>Cancelar</button>
@@ -1210,11 +1795,11 @@ export default function ClientDetailPage() {
                     <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--accent)', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '12px' }}>
                       Redes Sociais
                     </h3>
-                    {['instagram', 'facebook'].map(social => (
+                    {['instagram', 'facebook', 'google', 'linkedin', 'tiktok'].map(social => (
                       <div key={social} style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '16px', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid var(--border)' }}>
-                        <p style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-secondary)' }}>{social}</p>
+                        <p style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-secondary)' }}>{social.replace('_', ' ')}</p>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                          <input placeholder="Usuário" type="text" className="input-dark" value={editFormData.social_access?.[social]?.usuario || ''} onChange={(e) => setEditFormData({ ...editFormData, social_access: { ...editFormData.social_access, [social]: { ...editFormData.social_access?.[social], usuario: e.target.value } } })} />
+                          <input placeholder="Usuário" type="text" className="input-dark" value={editFormData.social_access?.[social]?.usuario || ''} onChange={(e) => setEditFormData({ ...editFormData, social_access: { ...editFormData.social_access, [social]: { ...editFormData.social_access?.[social], usuario: e.target.value, ativo: !!e.target.value } } })} />
                           <input placeholder="Senha" type="text" className="input-dark" value={editFormData.social_access?.[social]?.senha || ''} onChange={(e) => setEditFormData({ ...editFormData, social_access: { ...editFormData.social_access, [social]: { ...editFormData.social_access?.[social], senha: e.target.value } } })} />
                         </div>
                       </div>
@@ -1276,6 +1861,63 @@ export default function ClientDetailPage() {
                 >
                   Cancelar
                 </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Google Drive Link Modal */}
+      <AnimatePresence>
+        {isGoogleDriveModalOpen && (
+          <div style={{
+            position: 'fixed', inset: 0, zIndex: 110,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '24px', backgroundColor: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)'
+          }}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="glass-card"
+              style={{ width: '100%', maxWidth: '500px', padding: '32px' }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ color: '#4285F4' }}><HardDrive size={24} /></div>
+                  <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Vincular Google Drive</h2>
+                </div>
+                <button onClick={() => setIsGoogleDriveModalOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                  <X size={24} />
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: '1.6' }}>
+                  Cole o link da pasta do Google Drive dedicada a este cliente. Isso permitirá acesso rápido direto pelo sistema.
+                </p>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Link da Pasta</label>
+                  <div style={{ position: 'relative' }}>
+                    <Link size={18} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+                    <input 
+                      type="url" 
+                      className="input-dark" 
+                      placeholder="https://drive.google.com/drive/folders/..." 
+                      style={{ paddingLeft: '48px' }}
+                      value={tempGoogleDriveUrl}
+                      onChange={(e) => setTempGoogleDriveUrl(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
+                  <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setIsGoogleDriveModalOpen(false)}>Cancelar</button>
+                  <button className="btn btn-accent" style={{ flex: 1, backgroundColor: '#4285F4', borderColor: '#4285F4' }} onClick={handleSaveGoogleDrive}>
+                    Salvar Vínculo
+                  </button>
+                </div>
               </div>
             </motion.div>
           </div>

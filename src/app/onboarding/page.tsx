@@ -22,12 +22,14 @@ import Link from "next/link";
 import { formatCPFOrCNPJ, formatCEP, formatPhone } from "@/utils/masks";
 import ThemeLogo from "@/components/ThemeLogo";
 import { supabase } from "@/lib/supabase";
+import { useToast } from "@/components/CustomToast";
 
 export default function OnboardingPage() {
   const [step, setStep] = useState(0); // Começa em 0: Splash Screen
   const [isLoadingCnpj, setIsLoadingCnpj] = useState(false);
   const [isLoadingCep, setIsLoadingCep] = useState(false);
   const [generatedCredentials, setGeneratedCredentials] = useState({ email: "", password: "" });
+  const { showToast } = useToast();
 
   // Form Data
   const [formData, setFormData] = useState({
@@ -210,12 +212,12 @@ export default function OnboardingPage() {
   };
 
   const nextStep = async () => {
-    if (step === 5) {
-      // Submeter ao Supabase no último passo
+    if (step === 4) {
+      // Submeter ao Supabase no último passo (Redes Sociais agora é o último)
       const success = await handleSubmit();
-      if (success) setStep(6);
+      if (success) setStep(5);
     } else {
-      setStep((p) => Math.min(p + 1, 6));
+      setStep((p) => Math.min(p + 1, 5));
     }
   };
 
@@ -236,7 +238,7 @@ export default function OnboardingPage() {
       return true;
     } catch (err) {
       console.error("Erro ao salvar onboarding:", err);
-      alert("Houve um erro ao salvar seus dados. Por favor, tente novamente.");
+      showToast("Houve um erro ao salvar seus dados. Por favor, tente novamente.", "error");
       return false;
     } finally {
       setIsLoadingCnpj(false);
@@ -435,9 +437,9 @@ export default function OnboardingPage() {
             <div style={{ padding: '32px 40px', flex: 1, display: 'flex', flexDirection: 'column' }}>
 
               {/* Progress Bar */}
-              {step < 6 && (
+              {step < 5 && (
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '40px' }}>
-                  {[1, 2, 3, 4, 5].map((s) => (
+                  {[1, 2, 3, 4].map((s) => (
                     <div key={s} style={{
                       flex: 1,
                       height: '4px',
@@ -551,6 +553,37 @@ export default function OnboardingPage() {
                             onChange={(e) => updateForm("name", e.target.value)}
                             placeholder={formData.tipo_pessoa === "PJ" ? "Ex: Prátic Agency LTDA" : "Seu nome completo"}
                           />
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                          <div>
+                            <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Setor / Nicho</label>
+                            <input
+                              type="text"
+                              className="input-dark"
+                              value={formData.setor}
+                              onChange={(e) => updateForm("setor", e.target.value)}
+                              placeholder="Ex: Varejo, Saúde"
+                            />
+                          </div>
+                          <div>
+                            <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Serviço de Interesse</label>
+                            <select
+                              className="input-dark"
+                              value={formData.servico_interesse}
+                              onChange={(e) => updateForm("servico_interesse", e.target.value)}
+                              style={{ appearance: 'none' }}
+                            >
+                              <option value="" disabled>Selecione</option>
+                              <option value="Gestão de Redes Sociais">Gestão de Redes Sociais</option>
+                              <option value="Tráfego Pago (Ads)">Tráfego Pago (Ads)</option>
+                              <option value="Identidade Visual">Identidade Visual</option>
+                              <option value="Desenvolvimento de Site">Desenvolvimento de Site</option>
+                              <option value="Assessoria de Imprensa">Assessoria de Imprensa</option>
+                              <option value="Consultoria">Consultoria</option>
+                              <option value="Pacote Completo">Pacote Completo</option>
+                            </select>
+                          </div>
                         </div>
                       </div>
 
@@ -691,12 +724,14 @@ export default function OnboardingPage() {
                   {step === 4 && (
                     <motion.div key="step4" variants={pageVariants} initial="initial" animate="in" exit="out" transition={pageTransition} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '8px' }}>
-                        <div style={{ padding: '12px', background: 'rgba(217, 72, 15, 0.1)', color: 'var(--accent)', borderRadius: '16px' }}>
+                        <div style={{ padding: '12px', background: 'rgba(249, 115, 22, 0.1)', color: 'var(--accent)', borderRadius: '16px' }}>
                           <Share2 size={24} />
                         </div>
-                        <h2 style={{ fontSize: '1.75rem', fontWeight: 700 }}>Redes Sociais</h2>
+                        <h2 style={{ fontSize: '1.75rem', fontWeight: 700 }}>Acessos (Opcional)</h2>
                       </div>
-                      <p style={{ color: 'var(--text-secondary)', marginBottom: '24px' }}>Selecione onde atua e configure os acessos.</p>
+                      <p style={{ color: 'var(--text-secondary)', marginBottom: '32px' }}>
+                        Se souber os acessos das redes sociais, preencha abaixo. Caso contrário, pode pular.
+                      </p>
 
                       <div style={{
                         display: 'flex',
@@ -813,65 +848,9 @@ export default function OnboardingPage() {
                     </motion.div>
                   )}
 
-                  {/* STEP 5: Serviços */}
+                  {/* STEP 5: Sucesso */}
                   {step === 5 && (
-                    <motion.div key="step5" variants={pageVariants} initial="initial" animate="in" exit="out" transition={pageTransition} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '8px' }}>
-                        <div style={{ padding: '12px', background: 'rgba(249, 115, 22, 0.1)', color: 'var(--accent)', borderRadius: '16px' }}>
-                          <Briefcase size={24} />
-                        </div>
-                        <h2 style={{ fontSize: '1.75rem', fontWeight: 700 }}>Serviço e Briefing</h2>
-                      </div>
-                      <p style={{ color: 'var(--text-secondary)', marginBottom: '32px' }}>Nos conte o que faremos juntos.</p>
-
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', flex: 1 }}>
-                        <div style={{ display: 'flex', gap: '16px' }}>
-                          <div style={{ flex: 1 }}>
-                            <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Setor da Empresa</label>
-                            <input type="text" className="input-dark" value={formData.setor} onChange={(e) => updateForm("setor", e.target.value)} placeholder="Ex: Varejo, Saúde" />
-                          </div>
-                          <div style={{ flex: 1 }}>
-                            <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Qual serviço principal busca?</label>
-                            <select className="input-dark" value={formData.servico_interesse} onChange={(e) => updateForm("servico_interesse", e.target.value)} style={{ appearance: 'none' }}>
-                              <option value="" disabled>Selecione uma opção</option>
-                              <option value="Gestão de Redes Sociais">Gestão de Redes Sociais</option>
-                              <option value="Tráfego Pago (Ads)">Tráfego Pago (Ads)</option>
-                              <option value="Identidade Visual">Identidade Visual</option>
-                              <option value="Desenvolvimento de Site">Desenvolvimento de Site</option>
-                              <option value="Assessoria de Imprensa">Assessoria de Imprensa</option>
-                              <option value="Consultoria">Consultoria de Marketing</option>
-                              <option value="Pacote Completo">Pacote Completo (360)</option>
-                            </select>
-                          </div>
-                        </div>
-
-                        <div>
-                          <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Pré-briefing (Resumo Geral)</label>
-                          <textarea
-                            className="input-dark"
-                            value={formData.briefing}
-                            onChange={(e) => updateForm("briefing", e.target.value)}
-                            placeholder="Conte um pouco sobre os objetivos..."
-                            rows={5}
-                            style={{ resize: 'none' }}
-                          />
-                        </div>
-                      </div>
-
-                      <div style={{ marginTop: '32px', display: 'flex', justifyContent: 'space-between' }}>
-                        <button onClick={prevStep} className="btn btn-secondary" style={{ border: 'none', background: 'transparent' }}>
-                          <ArrowLeft size={18} /> Voltar
-                        </button>
-                        <button onClick={nextStep} className="btn btn-accent">
-                          Finalizar <CheckCircle2 size={18} />
-                        </button>
-                      </div>
-                    </motion.div>
-                  )}
-
-                  {/* STEP 6: Sucesso */}
-                  {step === 6 && (
-                    <motion.div key="step6" variants={pageVariants} initial="initial" animate="in" exit="out" transition={pageTransition} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', textAlign: 'center' }}>
+                    <motion.div key="step5" variants={pageVariants} initial="initial" animate="in" exit="out" transition={pageTransition} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', textAlign: 'center' }}>
                       <motion.div
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}

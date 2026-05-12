@@ -14,9 +14,9 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
         <InteractiveBackground />
         <ShortcutOverlay />
         <GlobalClientControls />
-        
+
         <ClientSidebar />
-        
+
         <main style={{ flex: 1, padding: '40px', position: 'relative', overflowY: 'auto', maxHeight: '100vh' }}>
           {children}
         </main>

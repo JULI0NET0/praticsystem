@@ -40,13 +40,13 @@ export default function ClientsPage() {
 
       if (data) {
         setClients(data);
-        
+
         // Buscar contagem de demandas ativas para cada cliente
         const { data: demandsData } = await supabase
           .from('demands')
           .select('client_id, status')
           .neq('status', 'completed');
-          
+
         if (demandsData) {
           const counts: Record<string, number> = {};
           demandsData.forEach(d => {
@@ -164,7 +164,7 @@ export default function ClientsPage() {
                           <p style={{ fontWeight: 600, fontSize: '0.95rem', color: 'white' }}>
                             {client.nome_fantasia || client.name}
                           </p>
-                          <span style={{ 
+                          <span style={{
                             fontFamily: 'monospace', fontSize: '0.75rem', fontWeight: 600, color: 'var(--accent)',
                             opacity: 0.8
                           }}>
@@ -188,8 +188,8 @@ export default function ClientsPage() {
                       </td>
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <div style={{ 
-                            width: '24px', height: '24px', borderRadius: '50%', 
+                          <div style={{
+                            width: '24px', height: '24px', borderRadius: '50%',
                             background: (demandsCount[client.id] || 0) > 0 ? 'rgba(217, 72, 15, 0.2)' : 'rgba(255,255,255,0.05)',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             fontSize: '0.75rem', fontWeight: 600, color: (demandsCount[client.id] || 0) > 0 ? 'var(--accent)' : 'var(--text-secondary)'
@@ -200,10 +200,9 @@ export default function ClientsPage() {
                         </div>
                       </td>
                       <td>
-                        <span className={`badge ${
-                          client.status === 'active' ? 'badge-success' : 
-                          client.status === 'prospect' ? 'badge-warning' : 'badge-danger'
-                        }`}>
+                        <span className={`badge ${client.status === 'active' ? 'badge-success' :
+                            client.status === 'prospect' ? 'badge-warning' : 'badge-danger'
+                          }`}>
                           {client.status === 'active' ? 'Ativo' : client.status === 'prospect' ? 'Prospect' : 'Inativo'}
                         </span>
                       </td>
