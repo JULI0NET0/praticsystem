@@ -472,13 +472,13 @@ export default function ClientDetailPage() {
                 <Spotlight className="glass-card" style={{ padding: '24px' }}>
                   <h3 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '20px' }}>Informações Cadastrais</h3>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-                    <div title={clientData.name}>
+                    <div title={clientData.name} style={{ overflow: 'hidden' }}>
                       <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Razão Social</p>
-                      <p style={{ fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{clientData.name}</p>
+                      <p style={{ fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '250px' }}>{clientData.name}</p>
                     </div>
-                    <div>
+                    <div title={clientData.nome_fantasia || '-'} style={{ overflow: 'hidden' }}>
                       <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Nome Fantasia</p>
-                      <p style={{ fontWeight: 500 }}>{clientData.nome_fantasia || '-'}</p>
+                      <p style={{ fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '250px' }}>{clientData.nome_fantasia || '-'}</p>
                     </div>
                     <div>
                       <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>CNPJ / CPF</p>
@@ -1009,6 +1009,97 @@ export default function ClientDetailPage() {
         </AnimatePresence>
       </div>
 
+      {/* Action Modal (Nova Ação) */}
+      <AnimatePresence>
+        {isActionModalOpen && (
+          <div style={{
+            position: 'fixed', inset: 0, zIndex: 110,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '24px', backgroundColor: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)'
+          }}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="glass-card"
+              style={{ width: '100%', maxWidth: '500px', padding: '32px' }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Nova Ação / Serviço</h2>
+                <button onClick={() => setIsActionModalOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                  <X size={24} />
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Selecione o Serviço</label>
+                  <select 
+                    className="input-dark"
+                    value={actionFormData.service_id}
+                    onChange={(e) => {
+                      const service = availableServices.find(s => s.id === e.target.value);
+                      setActionFormData({ 
+                        ...actionFormData, 
+                        service_id: e.target.value,
+                        value: Number(service?.price || 0),
+                        billing_cycle: service?.billing_cycle || 'monthly'
+                      });
+                    }}
+                  >
+                    <option value="">Selecione um serviço cadastrado</option>
+                    {availableServices.map(s => (
+                      <option key={s.id} value={s.id}>{s.name} - {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(s.price)}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Valor Personalizado</label>
+                    <input 
+                      type="number" className="input-dark"
+                      value={actionFormData.value}
+                      onChange={(e) => setActionFormData({ ...actionFormData, value: Number(e.target.value) })}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Ciclo de Cobrança</label>
+                    <select 
+                      className="input-dark"
+                      value={actionFormData.billing_cycle}
+                      onChange={(e) => setActionFormData({ ...actionFormData, billing_cycle: e.target.value })}
+                    >
+                      <option value="monthly">Mensal</option>
+                      <option value="quarterly">Trimestral</option>
+                      <option value="semiannual">Semestral</option>
+                      <option value="annual">Anual</option>
+                      <option value="one_time">Avulso (Único)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Data de Início</label>
+                  <input 
+                    type="date" className="input-dark"
+                    value={actionFormData.start_date}
+                    onChange={(e) => setActionFormData({ ...actionFormData, start_date: e.target.value })}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '12px' }}>
+                  <button className="btn btn-secondary" onClick={() => setIsActionModalOpen(false)}>Cancelar</button>
+                  <button className="btn btn-accent" onClick={handleCreateAction} disabled={isSaving}>
+                    {isSaving ? 'Salvando...' : 'Confirmar e Ativar'}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Edit Modal */}
       <AnimatePresence>
         {isEditModalOpen && (
@@ -1022,7 +1113,7 @@ export default function ClientDetailPage() {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               className="glass-card"
-              style={{ width: '100%', maxWidth: '800px', maxHeight: '90vh', overflowY: 'auto', padding: '32px' }}
+              style={{ width: '100%', maxWidth: '850px', maxHeight: '90vh', overflowY: 'auto', padding: '32px' }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
                 <h2 style={{ fontSize: '1.5rem', fontWeight: 700 }}>Editar Cliente</h2>
@@ -1031,107 +1122,106 @@ export default function ClientDetailPage() {
                 </button>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-                {/* Acesso ao Portal */}
-                <section style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                  <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Lock size={18} /> Acesso ao Portal do Cliente
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '40px' }}>
+                {/* Informações Cadastrais */}
+                <section style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--accent)', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '12px' }}>
+                    Informações Gerais
                   </h3>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>E-mail de Login</label>
-                      <input
-                        type="email" className="input-dark"
-                        value={editFormData.portal_email || ''}
-                        onChange={(e) => setEditFormData({ ...editFormData, portal_email: e.target.value })}
-                      />
+                      <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Nome Fantasia</label>
+                      <input type="text" className="input-dark" value={editFormData.nome_fantasia || ''} onChange={(e) => setEditFormData({ ...editFormData, nome_fantasia: e.target.value })} />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Senha do Portal</label>
-                      <input
-                        type="text" className="input-dark"
-                        value={editFormData.portal_password || ''}
-                        onChange={(e) => setEditFormData({ ...editFormData, portal_password: e.target.value })}
-                      />
+                      <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Razão Social</label>
+                      <input type="text" className="input-dark" value={editFormData.name || ''} onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })} />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>CNPJ / CPF</label>
+                      <input type="text" className="input-dark" value={editFormData.cnpj || ''} onChange={(e) => setEditFormData({ ...editFormData, cnpj: e.target.value })} />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Setor / Nicho</label>
+                      <input type="text" className="input-dark" value={editFormData.setor || ''} onChange={(e) => setEditFormData({ ...editFormData, setor: e.target.value })} />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Contato Principal</label>
+                      <input type="text" className="input-dark" value={editFormData.contact_name || ''} onChange={(e) => setEditFormData({ ...editFormData, contact_name: e.target.value })} />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Serviço de Interesse</label>
+                      <select 
+                        className="input-dark"
+                        value={editFormData.servico_interesse || ''}
+                        onChange={(e) => setEditFormData({ ...editFormData, servico_interesse: e.target.value })}
+                      >
+                        <option value="">Selecione um serviço</option>
+                        {availableServices.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+                      </select>
                     </div>
                   </div>
                 </section>
 
-                {/* Redes Sociais */}
-                <section style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                  <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Share2 size={18} /> Redes Sociais
+                {/* Contato e Financeiro */}
+                <section style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--accent)', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '12px' }}>
+                    Contato e Financeiro
                   </h3>
-                  {['instagram', 'facebook'].map(social => (
-                    <div key={social} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>WhatsApp / Celular</label>
+                      <input type="text" className="input-dark" value={editFormData.phone || ''} onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })} />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>E-mail Principal</label>
+                      <input type="email" className="input-dark" value={editFormData.email || ''} onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })} />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>E-mail Financeiro</label>
+                      <input type="email" className="input-dark" value={editFormData.email_financeiro || ''} onChange={(e) => setEditFormData({ ...editFormData, email_financeiro: e.target.value })} />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Telefone Fixo</label>
+                      <input type="text" className="input-dark" value={editFormData.telefone_fixo || ''} onChange={(e) => setEditFormData({ ...editFormData, telefone_fixo: e.target.value })} />
+                    </div>
+                  </div>
+                </section>
+
+                {/* Redes Sociais e Acesso */}
+                <section style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--accent)', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '12px' }}>
+                      Acesso ao Portal
+                    </h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', textTransform: 'capitalize' }}>Usuário {social}</label>
-                        <input
-                          type="text" className="input-dark"
-                          value={editFormData.socialAccess?.[social]?.usuario || ''}
-                          onChange={(e) => setEditFormData({
-                            ...editFormData,
-                            socialAccess: {
-                              ...editFormData.socialAccess,
-                              [social]: { ...editFormData.socialAccess?.[social], usuario: e.target.value }
-                            }
-                          })}
-                        />
+                        <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>E-mail de Login</label>
+                        <input type="email" className="input-dark" value={editFormData.portal_email || ''} onChange={(e) => setEditFormData({ ...editFormData, portal_email: e.target.value })} />
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Senha {social}</label>
-                        <input
-                          type="text" className="input-dark"
-                          value={editFormData.socialAccess?.[social]?.senha || ''}
-                          onChange={(e) => setEditFormData({
-                            ...editFormData,
-                            socialAccess: {
-                              ...editFormData.socialAccess,
-                              [social]: { ...editFormData.socialAccess?.[social], senha: e.target.value }
-                            }
-                          })}
-                        />
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>E-mail Recup.</label>
-                        <input
-                          type="text" className="input-dark"
-                          value={editFormData.socialAccess?.[social]?.email || ''}
-                          onChange={(e) => setEditFormData({
-                            ...editFormData,
-                            socialAccess: {
-                              ...editFormData.socialAccess,
-                              [social]: { ...editFormData.socialAccess?.[social], email: e.target.value }
-                            }
-                          })}
-                        />
+                        <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Senha do Portal</label>
+                        <input type="text" className="input-dark" value={editFormData.portal_password || ''} onChange={(e) => setEditFormData({ ...editFormData, portal_password: e.target.value })} />
                       </div>
                     </div>
-                  ))}
-                </section>
+                  </div>
 
-                {/* Serviço de Interesse */}
-                <section style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                  <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Briefcase size={18} /> Serviço de Interesse
-                  </h3>
-                  <select
-                    className="input-dark"
-                    value={editFormData.servico_interesse || ''}
-                    onChange={(e) => setEditFormData({ ...editFormData, servico_interesse: e.target.value })}
-                  >
-                    <option value="">Selecione um serviço</option>
-                    <option value="Gestão de Redes Sociais">Gestão de Redes Sociais</option>
-                    <option value="Tráfego Pago (Ads)">Tráfego Pago (Ads)</option>
-                    <option value="Identidade Visual">Identidade Visual</option>
-                    <option value="Desenvolvimento de Site">Desenvolvimento de Site</option>
-                    <option value="Assessoria de Imprensa">Assessoria de Imprensa</option>
-                    <option value="Consultoria">Consultoria de Marketing</option>
-                    <option value="Pacote Completo">Pacote Completo (360)</option>
-                  </select>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--accent)', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '12px' }}>
+                      Redes Sociais
+                    </h3>
+                    {['instagram', 'facebook'].map(social => (
+                      <div key={social} style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '16px', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                        <p style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-secondary)' }}>{social}</p>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                          <input placeholder="Usuário" type="text" className="input-dark" value={editFormData.social_access?.[social]?.usuario || ''} onChange={(e) => setEditFormData({ ...editFormData, social_access: { ...editFormData.social_access, [social]: { ...editFormData.social_access?.[social], usuario: e.target.value } } })} />
+                          <input placeholder="Senha" type="text" className="input-dark" value={editFormData.social_access?.[social]?.senha || ''} onChange={(e) => setEditFormData({ ...editFormData, social_access: { ...editFormData.social_access, [social]: { ...editFormData.social_access?.[social], senha: e.target.value } } })} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </section>
-
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '16px', borderTop: '1px solid var(--border)', paddingTop: '24px' }}>
                   <button className="btn btn-secondary" onClick={() => setIsEditModalOpen(false)}>Cancelar</button>
                   <Spotlight as="button" className="btn btn-accent" onClick={handleSaveEdit} disabled={isSaving}>
                     {isSaving ? "Salvando..." : "Salvar Alterações"}
