@@ -5,7 +5,8 @@ import { ArrowLeft, UserPlus, AtSign, Mail, User, Shield, MessageSquare, Plus } 
 import Spotlight from "@/components/Spotlight";
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@supabase/supabase-js";
+import { supabase, supabaseUrl, supabaseAnonKey } from "@/lib/supabase";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { formatPhone } from "@/utils/masks";
@@ -42,8 +43,29 @@ export default function CreateUserPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      // Inserindo o usuário na tabela public.users
-      const { data, error } = await supabase.from('users').insert([{
+      // 1. Criar cliente temporário para não deslogar o admin atual
+      const tempSupabase = createClient(supabaseUrl, supabaseAnonKey, {
+        auth: { persistSession: false }
+      });
+
+      // 2. Criar o usuário no Supabase Auth
+      const { data: authData, error: authError } = await tempSupabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: {
+            full_name: formData.name,
+            username: formData.username
+          }
+        }
+      });
+
+      if (authError) throw authError;
+      if (!authData.user) throw new Error("Erro ao criar credenciais de acesso.");
+
+      // 3. Inserindo o usuário na tabela public.users vinculado ao ID do Auth
+      const { error } = await supabase.from('users').insert([{
+        id: authData.user.id,
         name: formData.name,
         email: formData.email,
         username: formData.username,
@@ -56,16 +78,16 @@ export default function CreateUserPage() {
       if (error) throw error;
       showToast("Membro da equipe cadastrado com sucesso!", "success");
       router.push("/admin/users");
-    } catch (err) {
+    } catch (err: any) {
       console.error("Erro ao criar usuário:", err);
-      showToast("Erro ao criar membro da equipe. Verifique os dados.", "error");
+      showToast(err.message || "Erro ao criar membro da equipe. Verifique os dados.", "error");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
@@ -85,8 +107,8 @@ export default function CreateUserPage() {
         {/* Upload de Avatar */}
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px' }}>
           <div style={{ position: 'relative' }}>
-            <div style={{ 
-              width: '100px', height: '100px', borderRadius: '24px', 
+            <div style={{
+              width: '100px', height: '100px', borderRadius: '24px',
               background: 'rgba(217, 72, 15, 0.05)', border: '2px dashed rgba(217, 72, 15, 0.2)',
               display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden'
             }}>
@@ -96,11 +118,11 @@ export default function CreateUserPage() {
                 <User size={32} color="var(--text-secondary)" />
               )}
             </div>
-            <button 
+            <button
               type="button"
-              onClick={() => setFormData({...formData, avatarUrl: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80"})} // Simula upload
-              style={{ 
-                position: 'absolute', bottom: '-8px', right: '-8px', 
+              onClick={() => setFormData({ ...formData, avatarUrl: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80" })} // Simula upload
+              style={{
+                position: 'absolute', bottom: '-8px', right: '-8px',
                 background: 'var(--accent)', color: 'white', border: '2px solid var(--bg-primary)',
                 width: '32px', height: '32px', borderRadius: '10px',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer'
@@ -117,13 +139,13 @@ export default function CreateUserPage() {
             <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <User size={14} /> Nome Completo
             </label>
-            <input 
-              type="text" 
-              className="input-dark" 
-              placeholder="Ex: João Silva" 
+            <input
+              type="text"
+              className="input-dark"
+              placeholder="Ex: João Silva"
               required
               value={formData.name}
-              onChange={(e) => setFormData({...formData, name: e.target.value})}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             />
           </div>
 
@@ -132,13 +154,13 @@ export default function CreateUserPage() {
             <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <AtSign size={14} /> Usuário (para menções)
             </label>
-            <input 
-              type="text" 
-              className="input-dark" 
-              placeholder="joao.silva" 
+            <input
+              type="text"
+              className="input-dark"
+              placeholder="joao.silva"
               required
               value={formData.username}
-              onChange={(e) => setFormData({...formData, username: e.target.value.toLowerCase().replace(/\s/g, '')})}
+              onChange={(e) => setFormData({ ...formData, username: e.target.value.toLowerCase().replace(/\s/g, '') })}
             />
           </div>
         </div>
@@ -149,13 +171,13 @@ export default function CreateUserPage() {
             <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Mail size={14} /> Email Corporativo
             </label>
-            <input 
-              type="email" 
-              className="input-dark" 
-              placeholder="joao@agenciapratic.com" 
+            <input
+              type="email"
+              className="input-dark"
+              placeholder="joao@agenciapratic.com"
               required
               value={formData.email}
-              onChange={(e) => setFormData({...formData, email: e.target.value})}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
             />
           </div>
 
@@ -165,16 +187,16 @@ export default function CreateUserPage() {
               <Shield size={14} /> Senha Temporária
             </label>
             <div style={{ position: 'relative' }}>
-              <input 
-                type={showPassword ? "text" : "password"} 
-                className="input-dark" 
-                placeholder="••••••••" 
+              <input
+                type={showPassword ? "text" : "password"}
+                className="input-dark"
+                placeholder="••••••••"
                 required
                 value={formData.password}
-                onChange={(e) => setFormData({...formData, password: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 style={{ paddingRight: '40px' }}
               />
-              <button 
+              <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
@@ -191,10 +213,10 @@ export default function CreateUserPage() {
             <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Shield size={14} /> Cargo / Função
             </label>
-            <select 
+            <select
               className="input-dark"
               value={formData.role}
-              onChange={(e) => setFormData({...formData, role: e.target.value})}
+              onChange={(e) => setFormData({ ...formData, role: e.target.value })}
               required
             >
               <option value="" disabled>Selecione um cargo</option>
@@ -209,11 +231,11 @@ export default function CreateUserPage() {
             <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <MessageSquare size={14} /> Frase de Status (Bio)
             </label>
-            <input 
-              className="input-dark" 
+            <input
+              className="input-dark"
               placeholder="Focado em resultados 🚀"
               value={formData.statusMessage}
-              onChange={(e) => setFormData({...formData, statusMessage: e.target.value})}
+              onChange={(e) => setFormData({ ...formData, statusMessage: e.target.value })}
             />
           </div>
         </div>
@@ -224,12 +246,12 @@ export default function CreateUserPage() {
             <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Shield size={14} /> Telefone / WhatsApp
             </label>
-            <input 
+            <input
               type="text"
-              className="input-dark" 
+              className="input-dark"
               placeholder="(00) 00000-0000"
               value={formData.phone}
-              onChange={(e) => setFormData({...formData, phone: formatPhone(e.target.value)})}
+              onChange={(e) => setFormData({ ...formData, phone: formatPhone(e.target.value) })}
             />
           </div>
         </div>
@@ -239,7 +261,7 @@ export default function CreateUserPage() {
             Cancelar
           </Link>
           <Spotlight as="button" type="submit" className="btn btn-accent" disabled={loading}>
-            {loading ? "Criando..." : <><UserPlus size={18} /> Criar Membro</>}
+            {loading ? "Criando..." : <><UserPlus size={18} /> Criar Novo Usuário</>}
           </Spotlight>
         </div>
       </form>

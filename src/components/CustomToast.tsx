@@ -56,10 +56,10 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               {toast.type === 'success' && <CheckCircle2 size={20} color="#10B981" />}
               {toast.type === 'error' && <AlertCircle size={20} color="#EF4444" />}
               {toast.type === 'info' && <Info size={20} color="var(--accent)" />}
-              
+
               <span style={{ fontSize: '0.9rem', fontWeight: 600, flex: 1 }}>{toast.message}</span>
-              
-              <button 
+
+              <button
                 onClick={() => setToasts(t => t.filter(x => x.id !== toast.id))}
                 style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex' }}
               >

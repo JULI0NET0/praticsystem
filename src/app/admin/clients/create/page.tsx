@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, Building2, Mail, Phone, User, Globe, MessageSquare, Save, X, MapPin, Briefcase, Loader2, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Building2, Mail, Phone, User, Globe, MessageSquare, Save, X, MapPin, Briefcase, Loader2, CheckCircle2, Lock } from "lucide-react";
 import Spotlight from "@/components/Spotlight";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
@@ -15,17 +15,17 @@ export default function CreateClientPage() {
   const router = useRouter();
   const [formData, setFormData] = useState({
     name: "",
-    nomeFantasia: "",
+    nome_fantasia: "",
     cnpj: "",
-    tipoPessoa: "PJ",
-    contactName: "",
+    tipo_pessoa: "PJ",
+    contact_name: "",
     email: "",
-    emailFinanceiro: "",
+    email_financeiro: "",
     phone: "",
-    telefoneFixo: "",
+    telefone_fixo: "",
     status: "prospect",
     setor: "",
-    servicoInteresse: "",
+    servico_interesse: "",
     briefing: "",
     address: {
       cep: "",
@@ -36,11 +36,13 @@ export default function CreateClientPage() {
       cidade: "",
       uf: ""
     },
-    socialAccess: {
+    social_access: {
       instagram: { usuario: "", senha: "", email: "" },
       facebook: { usuario: "", senha: "", email: "" },
       website: ""
-    }
+    },
+    portal_email: "",
+    portal_password: ""
   });
 
   const [loading, setLoading] = useState(false);
@@ -51,7 +53,14 @@ export default function CreateClientPage() {
   const [showModal, setShowModal] = useState(false);
 
   const updateFormData = (field: string, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData(prev => {
+      const newData = { ...prev, [field]: value };
+      // Auto-preencher portal_email se estiver vazio e o e-mail principal for alterado
+      if (field === 'email' && !prev.portal_email) {
+        newData.portal_email = value;
+      }
+      return newData;
+    });
   };
 
   const updateAddress = (field: string, value: any) => {
@@ -66,7 +75,7 @@ export default function CreateClientPage() {
     updateFormData("cnpj", formatted);
 
     const digitsOnly = formatted.replace(/\D/g, "");
-    if (formData.tipoPessoa === "PJ" && digitsOnly.length === 14) {
+    if (formData.tipo_pessoa === "PJ" && digitsOnly.length === 14) {
       setIsLoadingCnpj(true);
       try {
         const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${digitsOnly}`);
@@ -75,7 +84,7 @@ export default function CreateClientPage() {
           setFormData(prev => ({
             ...prev,
             name: data.razao_social || prev.name,
-            nomeFantasia: data.nome_fantasia || prev.nomeFantasia,
+            nome_fantasia: data.nome_fantasia || prev.nome_fantasia,
             address: {
               ...prev.address,
               cep: formatCEP(data.cep?.toString() || prev.address.cep),
@@ -86,7 +95,7 @@ export default function CreateClientPage() {
               cidade: data.municipio || prev.address.cidade,
               uf: data.uf || prev.address.uf,
             },
-            telefoneFixo: formatPhone(data.ddd_telefone_1 || prev.telefoneFixo)
+            telefone_fixo: formatPhone(data.ddd_telefone_1 || prev.telefone_fixo)
           }));
           showToast("Dados da empresa carregados automaticamente!", "success");
         }
@@ -134,23 +143,7 @@ export default function CreateClientPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      const { data, error } = await supabase.from('clients').insert([{
-        name: formData.name,
-        nome_fantasia: formData.nomeFantasia,
-        cnpj: formData.cnpj,
-        tipo_pessoa: formData.tipoPessoa,
-        contact_name: formData.contactName,
-        email: formData.email,
-        email_financeiro: formData.emailFinanceiro,
-        phone: formData.phone,
-        telefone_fixo: formData.telefoneFixo,
-        status: formData.status,
-        setor: formData.setor,
-        address: formData.address,
-        briefing: formData.briefing,
-        servico_interesse: formData.servicoInteresse,
-        social_access: formData.socialAccess
-      }]);
+      const { data, error } = await supabase.from('clients').insert([formData]);
 
       if (error) throw error;
       showToast("Cliente cadastrado com sucesso!", "success");
@@ -164,7 +157,7 @@ export default function CreateClientPage() {
   };
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
@@ -178,10 +171,10 @@ export default function CreateClientPage() {
           <h1 style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '4px' }}>Cadastrar Novo Cliente</h1>
           <p style={{ color: 'var(--text-secondary)' }}>Etapa {step} de 4 — {step === 1 ? 'Identificação' : step === 2 ? 'Endereço' : step === 3 ? 'Contatos' : 'Digital & Briefing'}</p>
         </div>
-        
+
         {/* Progress Bar */}
         <div style={{ width: '200px', height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '10px', overflow: 'hidden' }}>
-          <motion.div 
+          <motion.div
             initial={{ width: 0 }}
             animate={{ width: `${(step / 4) * 100}%` }}
             style={{ height: '100%', background: 'var(--accent)' }}
@@ -193,7 +186,7 @@ export default function CreateClientPage() {
         <form onSubmit={handleSubmit} style={{ padding: '40px', display: 'flex', flexDirection: 'column', gap: '40px' }}>
           <AnimatePresence mode="wait">
             {step === 1 && (
-              <motion.section 
+              <motion.section
                 key="step1"
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -203,28 +196,28 @@ export default function CreateClientPage() {
                 <h2 style={{ fontSize: '1.25rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--accent)' }}>
                   <Building2 size={20} /> Identificação da Empresa
                 </h2>
-                
+
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Tipo de Pessoa</label>
                     <div style={{ display: 'flex', padding: '4px', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', width: 'fit-content' }}>
-                      <button 
+                      <button
                         type="button"
-                        onClick={() => setFormData({ ...formData, tipoPessoa: "PJ" })}
+                        onClick={() => setFormData({ ...formData, tipo_pessoa: "PJ" })}
                         style={{
                           padding: '8px 24px', borderRadius: '8px', fontSize: '0.875rem', fontWeight: 500,
-                          background: formData.tipoPessoa === "PJ" ? 'rgba(255,255,255,0.1)' : 'transparent',
-                          color: formData.tipoPessoa === "PJ" ? 'var(--text-primary)' : 'var(--text-secondary)',
+                          background: formData.tipo_pessoa === "PJ" ? 'rgba(255,255,255,0.1)' : 'transparent',
+                          color: formData.tipo_pessoa === "PJ" ? 'var(--text-primary)' : 'var(--text-secondary)',
                           border: 'none', cursor: 'pointer'
                         }}
                       >PJ</button>
-                      <button 
+                      <button
                         type="button"
-                        onClick={() => setFormData({ ...formData, tipoPessoa: "PF" })}
+                        onClick={() => setFormData({ ...formData, tipo_pessoa: "PF" })}
                         style={{
                           padding: '8px 24px', borderRadius: '8px', fontSize: '0.875rem', fontWeight: 500,
-                          background: formData.tipoPessoa === "PF" ? 'rgba(255,255,255,0.1)' : 'transparent',
-                          color: formData.tipoPessoa === "PF" ? 'var(--text-primary)' : 'var(--text-secondary)',
+                          background: formData.tipo_pessoa === "PF" ? 'rgba(255,255,255,0.1)' : 'transparent',
+                          color: formData.tipo_pessoa === "PF" ? 'var(--text-primary)' : 'var(--text-secondary)',
                           border: 'none', cursor: 'pointer'
                         }}
                       >PF</button>
@@ -232,7 +225,7 @@ export default function CreateClientPage() {
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Setor / Nicho</label>
-                    <input 
+                    <input
                       type="text" className="input-dark" placeholder="Ex: Varejo, Saúde..."
                       value={formData.setor} onChange={(e) => updateFormData("setor", e.target.value)}
                     />
@@ -241,10 +234,10 @@ export default function CreateClientPage() {
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>{formData.tipoPessoa === 'PJ' ? 'CNPJ' : 'CPF'}</label>
+                    <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>{formData.tipo_pessoa === 'PJ' ? 'CNPJ' : 'CPF'}</label>
                     <div style={{ position: 'relative' }}>
-                      <input 
-                        type="text" className="input-dark" placeholder={formData.tipoPessoa === 'PJ' ? "00.000.000/0000-00" : "000.000.000-00"} required
+                      <input
+                        type="text" className="input-dark" placeholder={formData.tipo_pessoa === 'PJ' ? "00.000.000/0000-00" : "000.000.000-00"} required
                         value={formData.cnpj} onChange={(e) => handleDocumentChange(e.target.value)}
                       />
                       {isLoadingCnpj && <Loader2 size={16} className="animate-spin" style={{ position: 'absolute', right: '12px', top: '50%', marginTop: '-8px', color: 'var(--accent)' }} />}
@@ -252,7 +245,7 @@ export default function CreateClientPage() {
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Status Inicial</label>
-                    <select 
+                    <select
                       className="input-dark"
                       value={formData.status} onChange={(e) => updateFormData("status", e.target.value)}
                     >
@@ -265,17 +258,17 @@ export default function CreateClientPage() {
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Razão Social / Nome Completo</label>
-                    <input 
-                      type="text" className="input-dark" placeholder="Ex: Acme Corporation Ltda" required
-                      value={formData.name} onChange={(e) => updateFormData("name", e.target.value)}
+                    <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Nome Fantasia (Principal)</label>
+                    <input
+                      type="text" className="input-dark" placeholder="Ex: Acme"
+                      value={formData.nome_fantasia} onChange={(e) => updateFormData("nome_fantasia", e.target.value)}
                     />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Nome Fantasia</label>
-                    <input 
-                      type="text" className="input-dark" placeholder="Ex: Acme"
-                      value={formData.nomeFantasia} onChange={(e) => updateFormData("nomeFantasia", e.target.value)}
+                    <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Razão Social / Nome Completo</label>
+                    <input
+                      type="text" className="input-dark" placeholder="Ex: Acme Corporation Ltda" required
+                      value={formData.name} onChange={(e) => updateFormData("name", e.target.value)}
                     />
                   </div>
                 </div>
@@ -283,7 +276,7 @@ export default function CreateClientPage() {
             )}
 
             {step === 2 && (
-              <motion.section 
+              <motion.section
                 key="step2"
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -298,7 +291,7 @@ export default function CreateClientPage() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>CEP</label>
                     <div style={{ position: 'relative' }}>
-                      <input 
+                      <input
                         type="text" className="input-dark" placeholder="00000-000"
                         value={formData.address.cep} onChange={(e) => handleCepChange(e.target.value)}
                       />
@@ -307,14 +300,14 @@ export default function CreateClientPage() {
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Logradouro</label>
-                    <input 
+                    <input
                       type="text" className="input-dark" placeholder="Rua / Avenida"
                       value={formData.address.logradouro} onChange={(e) => updateAddress("logradouro", e.target.value)}
                     />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Número</label>
-                    <input 
+                    <input
                       type="text" className="input-dark" placeholder="123"
                       value={formData.address.numero} onChange={(e) => updateAddress("numero", e.target.value)}
                     />
@@ -324,21 +317,21 @@ export default function CreateClientPage() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '24px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Bairro</label>
-                    <input 
+                    <input
                       type="text" className="input-dark" placeholder="Centro"
                       value={formData.address.bairro} onChange={(e) => updateAddress("bairro", e.target.value)}
                     />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Cidade</label>
-                    <input 
+                    <input
                       type="text" className="input-dark" placeholder="Sua Cidade"
                       value={formData.address.cidade} onChange={(e) => updateAddress("cidade", e.target.value)}
                     />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>UF</label>
-                    <input 
+                    <input
                       type="text" className="input-dark" placeholder="SP" maxLength={2}
                       value={formData.address.uf} onChange={(e) => updateAddress("uf", e.target.value.toUpperCase())}
                     />
@@ -348,7 +341,7 @@ export default function CreateClientPage() {
             )}
 
             {step === 3 && (
-              <motion.section 
+              <motion.section
                 key="step3"
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -362,16 +355,16 @@ export default function CreateClientPage() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Nome do Responsável</label>
-                    <input 
+                    <input
                       type="text" className="input-dark" placeholder="Nome completo" required
-                      value={formData.contactName} onChange={(e) => updateFormData("contactName", e.target.value)}
+                      value={formData.contact_name} onChange={(e) => updateFormData("contact_name", e.target.value)}
                     />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>WhatsApp</label>
                     <div style={{ position: 'relative' }}>
                       <Phone size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
-                      <input 
+                      <input
                         type="text" className="input-dark" style={{ paddingLeft: '40px' }} placeholder="(00) 00000-0000" required
                         value={formData.phone} onChange={(e) => updateFormData("phone", formatPhone(e.target.value))}
                       />
@@ -384,7 +377,7 @@ export default function CreateClientPage() {
                     <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>E-mail Principal</label>
                     <div style={{ position: 'relative' }}>
                       <Mail size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
-                      <input 
+                      <input
                         type="email" className="input-dark" style={{ paddingLeft: '40px' }} placeholder="contato@empresa.com" required
                         value={formData.email} onChange={(e) => updateFormData("email", e.target.value)}
                       />
@@ -394,9 +387,9 @@ export default function CreateClientPage() {
                     <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>E-mail Financeiro</label>
                     <div style={{ position: 'relative' }}>
                       <Mail size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
-                      <input 
+                      <input
                         type="email" className="input-dark" style={{ paddingLeft: '40px' }} placeholder="financeiro@empresa.com"
-                        value={formData.emailFinanceiro} onChange={(e) => updateFormData("emailFinanceiro", e.target.value)}
+                        value={formData.email_financeiro} onChange={(e) => updateFormData("email_financeiro", e.target.value)}
                       />
                     </div>
                   </div>
@@ -404,9 +397,9 @@ export default function CreateClientPage() {
                     <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Telefone Fixo</label>
                     <div style={{ position: 'relative' }}>
                       <Phone size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
-                      <input 
+                      <input
                         type="text" className="input-dark" style={{ paddingLeft: '40px' }} placeholder="(00) 0000-0000"
-                        value={formData.telefoneFixo} onChange={(e) => updateFormData("telefoneFixo", formatPhone(e.target.value))}
+                        value={formData.telefone_fixo} onChange={(e) => updateFormData("telefone_fixo", formatPhone(e.target.value))}
                       />
                     </div>
                   </div>
@@ -415,7 +408,7 @@ export default function CreateClientPage() {
             )}
 
             {step === 4 && (
-              <motion.section 
+              <motion.section
                 key="step4"
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -429,9 +422,9 @@ export default function CreateClientPage() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Serviço de Interesse</label>
-                    <select 
+                    <select
                       className="input-dark"
-                      value={formData.servicoInteresse} onChange={(e) => updateFormData("servicoInteresse", e.target.value)}
+                      value={formData.servico_interesse} onChange={(e) => updateFormData("servico_interesse", e.target.value)}
                     >
                       <option value="">Selecione um serviço</option>
                       <option value="Gestão de Redes Sociais">Gestão de Redes Sociais</option>
@@ -447,9 +440,9 @@ export default function CreateClientPage() {
                     <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Website / Instagram</label>
                     <div style={{ position: 'relative' }}>
                       <Globe size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
-                      <input 
+                      <input
                         type="text" className="input-dark" style={{ paddingLeft: '40px' }} placeholder="https://www.exemplo.com"
-                        value={formData.socialAccess.website} onChange={(e) => setFormData({...formData, socialAccess: {...formData.socialAccess, website: e.target.value}})}
+                        value={formData.social_access.website} onChange={(e) => setFormData({ ...formData, social_access: { ...formData.social_access, website: e.target.value } })}
                       />
                     </div>
                   </div>
@@ -458,28 +451,61 @@ export default function CreateClientPage() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Instagram (@usuario)</label>
-                    <input 
+                    <input
                       type="text" className="input-dark" placeholder="@agenciapratic"
-                      value={formData.socialAccess.instagram.usuario} onChange={(e) => setFormData({...formData, socialAccess: {...formData.socialAccess, instagram: {...formData.socialAccess.instagram, usuario: e.target.value}}})}
+                      value={formData.social_access.instagram.usuario} onChange={(e) => setFormData({ ...formData, social_access: { ...formData.social_access, instagram: { ...formData.social_access.instagram, usuario: e.target.value } } })}
                     />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Senha Instagram (Opcional)</label>
-                    <input 
+                    <input
                       type="text" className="input-dark" placeholder="Senha para gestão"
-                      value={formData.socialAccess.instagram.senha} onChange={(e) => setFormData({...formData, socialAccess: {...formData.socialAccess, instagram: {...formData.socialAccess.instagram, senha: e.target.value}}})}
+                      value={formData.social_access.instagram.senha} onChange={(e) => setFormData({ ...formData, social_access: { ...formData.social_access, instagram: { ...formData.social_access.instagram, senha: e.target.value } } })}
                     />
                   </div>
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Resumo do Briefing / Notas iniciais</label>
-                  <textarea 
-                    className="input-dark" 
-                    style={{ minHeight: '120px', resize: 'vertical', padding: '16px' }}
+                  <textarea
+                    className="input-dark"
+                    style={{ minHeight: '100px', resize: 'vertical', padding: '16px' }}
                     placeholder="Detalhes sobre o negócio, objetivos e o que foi conversado no primeiro contato..."
                     value={formData.briefing} onChange={(e) => updateFormData("briefing", e.target.value)}
                   />
+                </div>
+
+                {/* Portal Access Credentials */}
+                <div style={{ borderTop: '1px solid var(--border)', paddingTop: '24px', marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  <h3 style={{ fontSize: '1rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <Lock size={18} style={{ color: 'var(--accent)' }} /> Acesso ao Portal do Cliente
+                  </h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>E-mail de Acesso</label>
+                      <input
+                        type="email" className="input-dark" placeholder="Email para login no portal"
+                        value={formData.portal_email} onChange={(e) => updateFormData("portal_email", e.target.value)}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Senha de Acesso</label>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <input
+                          type="text" className="input-dark" placeholder="Senha inicial"
+                          value={formData.portal_password} onChange={(e) => updateFormData("portal_password", e.target.value)}
+                        />
+                        <button 
+                          type="button"
+                          className="btn"
+                          onClick={() => updateFormData("portal_password", `Pratic@${Math.floor(1000 + Math.random() * 9000)}`)}
+                          style={{ padding: '0 12px', fontSize: '0.75rem', whiteSpace: 'nowrap', background: 'rgba(255,255,255,0.05)' }}
+                        >
+                          Gerar Senha
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </motion.section>
             )}
@@ -497,7 +523,7 @@ export default function CreateClientPage() {
                 Cancelar
               </Link>
             </div>
-            
+
             <div style={{ display: 'flex', gap: '12px' }}>
               {step < 4 ? (
                 <button type="button" onClick={() => setStep(s => s + 1)} className="btn btn-accent" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

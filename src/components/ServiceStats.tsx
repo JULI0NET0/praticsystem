@@ -89,52 +89,54 @@ export function ServiceStats() {
   return (
     <div style={{ 
       display: 'grid', 
-      gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', 
-      gap: '20px',
+      gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+      gap: '16px',
       marginBottom: '32px'
     }}>
       {stats.map((stat, index) => (
         <div key={index} className="glass-card" style={{ 
-          padding: '24px',
+          padding: '16px 20px',
           display: 'flex',
           flexDirection: 'column',
-          gap: '12px',
+          gap: '8px',
           position: 'relative',
-          overflow: 'hidden'
+          overflow: 'hidden',
+          minWidth: 0 // Prevents grid blowout
         }}>
           <div style={{ 
             position: 'absolute', 
-            top: '-10px', 
-            right: '-10px', 
-            opacity: 0.05,
+            top: '-5px', 
+            right: '-5px', 
+            opacity: 0.03,
             transform: 'rotate(-15deg)'
           }}>
-            <stat.icon size={80} color={stat.color} />
+            <stat.icon size={60} color={stat.color} />
           </div>
           
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{ 
-              width: '40px', 
-              height: '40px', 
-              borderRadius: '10px', 
+              width: '32px', 
+              height: '32px', 
+              borderRadius: '8px', 
               backgroundColor: `${stat.color}15`,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: stat.color
+              color: stat.color,
+              flexShrink: 0
             }}>
-              <stat.icon size={20} />
+              <stat.icon size={16} />
             </div>
-            <span style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {stat.label}
             </span>
           </div>
           
-          <div>
-            <h3 style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0 }}>
+          <div style={{ marginTop: '4px' }}>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {stat.value}
             </h3>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: '4px' }}>
+            <p style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {stat.description}
             </p>
           </div>

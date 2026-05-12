@@ -69,6 +69,8 @@ export interface Service {
   price: number;
   is_recurring: boolean;
   category: string;
+  billing_cycle?: 'monthly' | 'quarterly' | 'yearly' | 'one_time';
+  minimum_term?: number; // em meses
 }
 
 export interface Contract {
@@ -80,6 +82,8 @@ export interface Contract {
   end_date: string;
   value: number;
   auto_renew: boolean;
+  billing_cycle?: 'monthly' | 'quarterly' | 'yearly' | 'one_time';
+  minimum_term?: number; // em meses
 }
 
 export interface Notification {

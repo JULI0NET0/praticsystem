@@ -29,7 +29,7 @@ export default function CustomModal({
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)', zIndex: 10001, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-      <motion.div 
+      <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
@@ -50,25 +50,25 @@ export default function CustomModal({
 
         <div style={{ display: 'flex', gap: '12px', width: '100%', marginTop: '8px' }}>
           {type === 'confirm' && (
-            <button 
+            <button
               onClick={onClose}
-              className="btn btn-secondary" 
+              className="btn btn-secondary"
               style={{ flex: 1 }}
             >
               {cancelText}
             </button>
           )}
-          <Spotlight 
-            as="button" 
+          <Spotlight
+            as="button"
             onClick={onConfirm || onClose}
-            className={`btn ${type === 'error' ? 'btn-danger' : 'btn-accent'}`} 
+            className={`btn ${type === 'error' ? 'btn-danger' : 'btn-accent'}`}
             style={{ flex: 1, background: type === 'error' ? '#EF4444' : 'var(--accent)' }}
           >
             {confirmText}
           </Spotlight>
         </div>
 
-        <button 
+        <button
           onClick={onClose}
           style={{ position: 'absolute', top: '16px', right: '16px', background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
         >

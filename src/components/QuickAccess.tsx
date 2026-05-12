@@ -16,7 +16,7 @@ export default function QuickAccess() {
           .select('*')
           .eq('status', 'active')
           .limit(4);
-        
+
         if (error) throw error;
         if (data) setActiveClients(data);
       } catch (err) {
@@ -31,11 +31,11 @@ export default function QuickAccess() {
   return (
     <Spotlight className="glass-card" style={{ padding: '24px' }}>
       <h3 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '24px' }}>Acesso Rápido</h3>
-      
+
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
         {activeClients.map((client) => (
-          <Link 
-            key={client.id} 
+          <Link
+            key={client.id}
             href={`/admin/clients/${client.id}`}
             style={{
               display: 'flex',
@@ -51,10 +51,10 @@ export default function QuickAccess() {
             onMouseOut={(e) => e.currentTarget.style.borderColor = 'transparent'}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ 
-                width: '40px', 
-                height: '40px', 
-                borderRadius: '50%', 
+              <div style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: '50%',
                 backgroundColor: 'rgba(217, 72, 15, 0.1)',
                 color: 'var(--accent)',
                 display: 'flex',

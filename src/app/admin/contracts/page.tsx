@@ -110,12 +110,12 @@ export default function ContractsPage() {
       {/* ... KPIs ... */}
       <div style={{ 
         display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', 
-        gap: '20px' 
+        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+        gap: '16px' 
       }}>
         <KPICard 
           title="MRR Total" 
-          value={`R$ ${mrrTotal.toLocaleString('pt-BR')}`}
+          value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(mrrTotal)}
           numericValue={mrrTotal}
           prefix="R$ "
           subtitle="Receita Mensal Recorrente"
@@ -326,7 +326,7 @@ export default function ContractsPage() {
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Vence em {new Date(invoice.due_date).toLocaleDateString('pt-BR')}</div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontWeight: 700, color: 'var(--accent)' }}>R$ {invoice.amount.toLocaleString('pt-BR')}</div>
+                  <div style={{ fontWeight: 700, color: 'var(--accent)' }}>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(invoice.amount)}</div>
                   <div style={{ fontSize: '0.75rem', color: '#EF4444' }}>Pendente</div>
                 </div>
               </div>

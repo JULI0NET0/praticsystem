@@ -2,13 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import { 
-  User, 
-  MessageSquare, 
-  CheckCircle2, 
-  Clock, 
-  Calendar, 
-  Star, 
+import {
+  User,
+  MessageSquare,
+  CheckCircle2,
+  Clock,
+  Calendar,
+  Star,
   Plus,
   LayoutGrid,
   Zap,
@@ -48,12 +48,12 @@ export default function WorkspacePage() {
   const EMOJIS = ["☀️", "🌙", "🚀", "🔥", "☕", "💻", "🎨", "📈", "🎯", "✨", "✅", "⚡"];
   const [demands, setDemands] = useState<any[]>([]);
   const [loadingDemands, setLoadingDemands] = useState(true);
-  
+
   useEffect(() => {
     if (currentUser) {
       setMyNote(`Anotações de ${currentUser.name}`);
       setStatus(currentUser.workspace_settings?.status || "Planejando a semana...");
-      
+
       // Define saudação baseada na hora
       const hour = new Date().getHours();
       let greet = "Bom dia";
@@ -66,7 +66,7 @@ export default function WorkspacePage() {
       if (currentUser.workspace_settings?.layout) {
         setWidgets(currentUser.workspace_settings.layout);
       }
-      
+
       fetchWorkspaceData();
     }
   }, [currentUser]);
@@ -80,7 +80,7 @@ export default function WorkspacePage() {
         .eq('assigned_to', currentUser?.id)
         .order('created_at', { ascending: false })
         .limit(5);
-      
+
       if (data) setDemands(data);
     } catch (err) {
       console.error("Erro ao buscar dados do workspace:", err);
@@ -88,7 +88,7 @@ export default function WorkspacePage() {
       setLoadingDemands(false);
     }
   };
-  
+
   // Layouts Pré-definidos (Ajustados para gridAutoRows de 120px)
   const PRESETS = {
     default: [
@@ -123,7 +123,7 @@ export default function WorkspacePage() {
   const saveLayout = async (newWidgets?: any[]) => {
     const layoutToSave = newWidgets || widgets;
     if (!currentUser) return;
-    
+
     try {
       const { error } = await supabase
         .from('users')
@@ -156,7 +156,7 @@ export default function WorkspacePage() {
           }
         })
         .eq('id', currentUser.id);
-      
+
       if (!error) {
         showToast("Status atualizado!", "success");
       }
@@ -172,7 +172,7 @@ export default function WorkspacePage() {
         .from('users')
         .update({ emoji: newEmoji })
         .eq('id', currentUser.id);
-      
+
       if (!error) {
         setShowEmojiPicker(false);
         showToast("Emoji do dia atualizado!", "success");
@@ -219,7 +219,7 @@ export default function WorkspacePage() {
   };
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
@@ -233,10 +233,10 @@ export default function WorkspacePage() {
           </h1>
           <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
             <div style={{ position: 'relative' }}>
-              <p 
+              <p
                 onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                style={{ 
-                  color: 'var(--accent)', fontSize: '1.25rem', fontWeight: 600, 
+                style={{
+                  color: 'var(--accent)', fontSize: '1.25rem', fontWeight: 600,
                   display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer',
                   padding: '4px 8px', borderRadius: '12px', transition: 'background 0.2s'
                 }}
@@ -245,23 +245,23 @@ export default function WorkspacePage() {
               >
                 <span style={{ fontSize: '1.5rem' }}>{currentUser?.emoji || "☀️"}</span> {greeting}
               </p>
-              
+
               <AnimatePresence>
                 {showEmojiPicker && (
-                  <motion.div 
+                  <motion.div
                     initial={{ opacity: 0, y: 10, scale: 0.9 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 10, scale: 0.9 }}
                     className="glass-card"
-                    style={{ 
-                      position: 'absolute', top: '100%', left: 0, zIndex: 100, 
-                      marginTop: '8px', padding: '12px', display: 'grid', 
+                    style={{
+                      position: 'absolute', top: '100%', left: 0, zIndex: 100,
+                      marginTop: '8px', padding: '12px', display: 'grid',
                       gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px',
                       boxShadow: '0 10px 30px rgba(0,0,0,0.3)'
                     }}
                   >
                     {EMOJIS.map(e => (
-                      <button 
+                      <button
                         key={e}
                         onClick={() => updateEmoji(e)}
                         style={{ fontSize: '1.2rem', padding: '8px', background: 'none', border: 'none', cursor: 'pointer', borderRadius: '8px' }}
@@ -277,24 +277,24 @@ export default function WorkspacePage() {
             </div>
 
             {!isEditing && (
-              <div style={{ 
-                display: 'flex', alignItems: 'center', gap: '8px', 
-                background: 'rgba(255,255,255,0.03)', padding: '6px 16px', 
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: '8px',
+                background: 'rgba(255,255,255,0.03)', padding: '6px 16px',
                 borderRadius: '20px', border: '1px solid var(--border)',
                 height: '40px'
               }}>
                 <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>STATUS</span>
-                <input 
-                  value={status} 
+                <input
+                  value={status}
                   onChange={(e) => setStatus(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && updateStatusInDB()}
                   style={{ background: 'none', border: 'none', color: 'var(--text-primary)', fontSize: '0.9rem', outline: 'none', width: '250px' }}
                   placeholder="No que você está trabalhando?"
                 />
-                <button 
+                <button
                   onClick={updateStatusInDB}
-                  style={{ 
-                    background: 'none', border: 'none', color: 'var(--accent)', 
+                  style={{
+                    background: 'none', border: 'none', color: 'var(--accent)',
                     cursor: 'pointer', display: 'flex', padding: '4px',
                     transition: 'transform 0.2s'
                   }}
@@ -305,7 +305,7 @@ export default function WorkspacePage() {
                 </button>
               </div>
             )}
-            
+
             {isEditing && (
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 500 }}>
                 Modo de Edição: Configure largura (↔) e altura (↕) dos seus blocos.
@@ -316,9 +316,9 @@ export default function WorkspacePage() {
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
           {isEditing ? (
             <div style={{ display: 'flex', gap: '8px', background: 'rgba(255,255,255,0.05)', padding: '4px', borderRadius: '12px', border: '1px solid var(--border)' }}>
-              <button 
+              <button
                 onClick={() => setIsAddModalOpen(true)}
-                className="btn btn-secondary btn-sm" 
+                className="btn btn-secondary btn-sm"
                 style={{ display: 'flex', alignItems: 'center', gap: '8px', height: '32px' }}
               >
                 <Plus size={16} /> Widget
@@ -343,9 +343,9 @@ export default function WorkspacePage() {
       </div>
 
       {/* Grid de Widgets Configurável */}
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(12, 1fr)', 
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(12, 1fr)',
         gridAutoRows: 'minmax(120px, auto)',
         gap: '24px',
         position: 'relative'
@@ -368,16 +368,16 @@ export default function WorkspacePage() {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              style={{ 
+              style={{
                 gridColumn: `span ${w.colSpan}`,
                 gridRow: `span ${w.rowSpan || 1}`,
                 position: 'relative',
                 zIndex: isEditing ? 1 : 0
               }}
             >
-              <div className={`glass-card ${isEditing ? 'editing' : ''}`} style={{ 
-                height: '100%', 
-                padding: '24px', 
+              <div className={`glass-card ${isEditing ? 'editing' : ''}`} style={{
+                height: '100%',
+                padding: '24px',
                 border: isEditing ? '2px dashed var(--accent)' : '1px solid var(--border)',
                 transition: 'all 0.3s ease',
                 position: 'relative',
@@ -388,10 +388,10 @@ export default function WorkspacePage() {
               }}>
                 {isEditing && (
                   <>
-                    <div style={{ 
-                      position: 'absolute', 
-                      top: '-12px', 
-                      left: '50%', 
+                    <div style={{
+                      position: 'absolute',
+                      top: '-12px',
+                      left: '50%',
                       transform: 'translateX(-50%)',
                       display: 'flex',
                       gap: '8px',
@@ -420,15 +420,15 @@ export default function WorkspacePage() {
                   </div>
                 )}
 
-                <button 
+                <button
                   onClick={() => removeWidget(w.id)}
-                  style={{ 
-                    position: 'absolute', 
-                    right: '12px', 
-                    top: '12px', 
-                    background: 'none', 
-                    border: 'none', 
-                    color: '#EF4444', 
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '12px',
+                    background: 'none',
+                    border: 'none',
+                    color: '#EF4444',
                     cursor: 'pointer',
                     opacity: isEditing ? 1 : 0,
                     transition: 'opacity 0.2s',
@@ -455,7 +455,7 @@ export default function WorkspacePage() {
       <AnimatePresence>
         {isAddModalOpen && (
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-            <motion.div 
+            <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               className="glass-card"
@@ -464,11 +464,11 @@ export default function WorkspacePage() {
               <h3 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '24px' }}>Adicionar Widget</h3>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 {AVAILABLE_WIDGETS.map(w => (
-                  <button 
+                  <button
                     key={w.id}
                     disabled={!!widgets.find(widget => widget.id === w.id)}
                     onClick={() => addWidget(w.id)}
-                    style={{ 
+                    style={{
                       padding: '20px', borderRadius: '16px', border: '1px solid var(--border)',
                       background: widgets.find(widget => widget.id === w.id) ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.05)',
                       color: widgets.find(widget => widget.id === w.id) ? 'var(--text-secondary)' : 'var(--text-primary)',
@@ -481,9 +481,9 @@ export default function WorkspacePage() {
                   </button>
                 ))}
               </div>
-              <button 
+              <button
                 onClick={() => setIsAddModalOpen(false)}
-                className="btn btn-secondary" 
+                className="btn btn-secondary"
                 style={{ width: '100%', marginTop: '24px' }}
               >
                 Fechar
@@ -498,29 +498,39 @@ export default function WorkspacePage() {
 
 // Sub-componentes
 function StatsWidget({ colSpan, demandsCount }: { colSpan: number, demandsCount: number }) {
-  const gridCols = colSpan > 6 ? 'repeat(3, 1fr)' : colSpan > 3 ? 'repeat(2, 1fr)' : '1fr';
-  
+  const gridCols = colSpan > 8 ? 'repeat(4, 1fr)' : colSpan > 5 ? 'repeat(3, 1fr)' : colSpan > 2 ? 'repeat(2, 1fr)' : '1fr';
+
+  const items = [
+    { label: "Demandas", value: demandsCount, color: "var(--accent)" },
+    { label: "Finalizadas", value: "0", color: "#10B981" },
+    { label: "Horas", value: "0h", color: "#3B82F6" },
+    { label: "Alertas", value: "0", color: "#EF4444" }
+  ];
+
   return (
-    <div style={{ 
-      display: 'grid', 
-      gridTemplateColumns: gridCols, 
-      gap: '20px',
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: gridCols,
+      gap: '12px',
       height: '100%',
-      alignItems: 'center',
-      padding: '8px 0'
+      alignItems: 'center'
     }}>
-      <div style={{ borderLeft: '4px solid var(--accent)', padding: '4px 12px' }}>
-        <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Minhas Demandas</p>
-        <h2 style={{ fontSize: '1.25rem', fontWeight: 800 }}>{demandsCount}</h2>
-      </div>
-      <div style={{ borderLeft: '4px solid #10B981', padding: '4px 12px' }}>
-        <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Finalizadas</p>
-        <h2 style={{ fontSize: '1.25rem', fontWeight: 800 }}>0</h2>
-      </div>
-      <div style={{ borderLeft: '4px solid #3B82F6', padding: '4px 12px' }}>
-        <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Horas Logadas</p>
-        <h2 style={{ fontSize: '1.25rem', fontWeight: 800 }}>0h</h2>
-      </div>
+      {items.slice(0, colSpan > 8 ? 4 : colSpan > 5 ? 3 : 2).map((item, i) => (
+        <div key={i} style={{ 
+          background: 'rgba(255,255,255,0.03)',
+          padding: '12px 16px',
+          borderRadius: '12px',
+          borderLeft: `3px solid ${item.color}`,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '2px'
+        }}>
+          <p style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            {item.label}
+          </p>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0 }}>{item.value}</h2>
+        </div>
+      ))}
     </div>
   );
 }
@@ -542,9 +552,9 @@ function DemandsWidget({ demands, loading }: { demands: any[], loading: boolean 
             <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{new Date(d.due_date || d.created_at).toLocaleDateString()}</span>
           </div>
         )) : (
-          <div style={{ 
-            textAlign: 'center', padding: '40px 20px', color: 'var(--text-secondary)', 
-            fontSize: '0.85rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' 
+          <div style={{
+            textAlign: 'center', padding: '40px 20px', color: 'var(--text-secondary)',
+            fontSize: '0.85rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px'
           }}>
             <div style={{ width: '50px', height: '50px', borderRadius: '50%', background: 'rgba(255,255,255,0.03)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '8px' }}>
               <Inbox size={24} strokeWidth={1.5} />
@@ -564,7 +574,7 @@ function NotesWidget({ myNote, setMyNote }: any) {
       <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
         <MessageSquare size={18} color="var(--accent)" /> Notas Rápidas
       </h3>
-      <textarea 
+      <textarea
         value={myNote}
         onChange={(e) => setMyNote(e.target.value)}
         className="input-dark"
@@ -576,7 +586,7 @@ function NotesWidget({ myNote, setMyNote }: any) {
 
 function LinksWidget() {
   const [links, setLinks] = useState<any[]>([]);
-  
+
   useEffect(() => {
     async function fetchLinks() {
       // In a real app, this could be a 'links' table.
@@ -620,16 +630,16 @@ function TeamWidget() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', overflowY: 'auto', flex: 1 }}>
         {onlineMembers.length > 0 ? onlineMembers.map((m: any) => (
           <Link href={`/admin/users/${m.id}`} key={m.id} style={{ textDecoration: 'none', color: 'inherit' }}>
-            <motion.div 
+            <motion.div
               whileHover={{ x: 4, background: 'rgba(255,255,255,0.05)' }}
               style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px', borderRadius: '12px', transition: 'all 0.2s' }}
             >
               <div style={{ position: 'relative' }}>
-                <div style={{ 
-                  width: '36px', height: '36px', borderRadius: '10px', 
+                <div style={{
+                  width: '36px', height: '36px', borderRadius: '10px',
                   background: 'var(--accent)', overflow: 'hidden',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', 
-                  fontWeight: 700, fontSize: '0.75rem', color: 'white' 
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontWeight: 700, fontSize: '0.75rem', color: 'white'
                 }}>
                   {m.avatar_url ? (
                     <img src={m.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -651,9 +661,9 @@ function TeamWidget() {
             </motion.div>
           </Link>
         )) : (
-          <div style={{ 
-            textAlign: 'center', padding: '40px 20px', color: 'var(--text-secondary)', 
-            fontSize: '0.85rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' 
+          <div style={{
+            textAlign: 'center', padding: '40px 20px', color: 'var(--text-secondary)',
+            fontSize: '0.85rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px'
           }}>
             <UserX size={32} strokeWidth={1.5} opacity={0.5} />
             <p>Ninguém online no momento.</p>

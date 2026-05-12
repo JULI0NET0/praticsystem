@@ -1,24 +1,69 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Clock, CheckCircle2, AlertCircle, Search, Filter } from "lucide-react";
+import { Clock, CheckCircle2, AlertCircle, Search, Filter, Loader2 } from "lucide-react";
 import Spotlight from "@/components/Spotlight";
-import { demands } from "@/mocks/db";
-import { useState } from "react";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function ClientDemands() {
+  const { currentUser } = useAuth();
   const [filter, setFilter] = useState("all");
-  const clientDemands = demands.filter(d => d.client_id === '1');
-  
-  const filteredDemands = clientDemands.filter(d => {
+  const [demands, setDemands] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (currentUser) {
+      fetchDemands();
+    }
+  }, [currentUser]);
+
+  const fetchDemands = async () => {
+    try {
+      setLoading(true);
+      // Primeiro buscamos o cliente vinculado a este usuário
+      const { data: client } = await supabase
+        .from('clients')
+        .select('id')
+        .eq('portal_email', currentUser?.email)
+        .single();
+
+      if (client) {
+        const { data } = await supabase
+          .from('demands')
+          .select('*')
+          .eq('client_id', client.id)
+          .order('created_at', { ascending: false });
+
+        if (data) setDemands(data);
+      }
+    } catch (err) {
+      console.error("Erro ao buscar demandas:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredDemands = demands.filter(d => {
     if (filter === "all") return true;
     if (filter === "pending") return d.status !== 'completed';
     if (filter === "completed") return d.status === 'completed';
     return true;
   });
 
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', padding: '100px' }}>
+        <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }}>
+          <Loader2 size={32} color="var(--accent)" />
+        </motion.div>
+      </div>
+    );
+  }
+
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
@@ -30,8 +75,8 @@ export default function ClientDemands() {
           <p style={{ color: 'var(--text-secondary)' }}>Lista completa de atividades e entregas da agência.</p>
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
-          <select 
-            className="input-dark" 
+          <select
+            className="input-dark"
             style={{ width: '160px' }}
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
@@ -53,15 +98,14 @@ export default function ClientDemands() {
           >
             <Spotlight className="glass-card" style={{ padding: '24px', height: '100%', display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <span style={{ 
+                <span style={{
                   fontSize: '0.75rem', fontWeight: 600, padding: '4px 10px', borderRadius: '8px',
                   backgroundColor: 'rgba(255,255,255,0.05)', color: 'var(--text-secondary)',
                   textTransform: 'uppercase'
                 }}>{demand.type}</span>
-                <span className={`badge ${
-                  demand.status === 'completed' ? 'badge-success' : 
-                  demand.status === 'pending' ? 'badge-warning' : 'badge-accent'
-                }`}>
+                <span className={`badge ${demand.status === 'completed' ? 'badge-success' :
+                    demand.status === 'pending' ? 'badge-warning' : 'badge-accent'
+                  }`}>
                   {demand.status === 'completed' ? 'Concluído' : demand.status === 'pending' ? 'Pendente' : 'Em Produção'}
                 </span>
               </div>
@@ -80,7 +124,7 @@ export default function ClientDemands() {
                 </div>
 
                 <div style={{ height: '8px', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
-                  <motion.div 
+                  <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: demand.status === 'completed' ? '100%' : '40%' }}
                     transition={{ duration: 1, delay: 0.5 }}

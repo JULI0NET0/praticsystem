@@ -15,7 +15,7 @@ export interface UserProfile {
   status_message?: string;
   emoji?: string;
   // Campos mapeados para a UI antiga
-  avatarUrl?: string; 
+  avatarUrl?: string;
   statusMessage?: string;
   phone?: string;
   workspace_settings?: {
@@ -62,7 +62,7 @@ export function useAuth() {
         .single();
 
       if (error) throw error;
-      
+
       // Mapeia para suportar o código legado do frontend
       if (data) {
         data.avatarUrl = data.avatar_url;

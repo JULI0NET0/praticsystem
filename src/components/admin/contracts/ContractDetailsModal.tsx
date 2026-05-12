@@ -65,10 +65,10 @@ export default function ContractDetailsModal({ isOpen, onClose, contract, client
             {/* Header */}
             <div style={{ padding: '24px', borderBottom: '1px solid rgba(255, 255, 255, 0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                <div style={{ 
-                  width: '48px', 
-                  height: '48px', 
-                  borderRadius: '12px', 
+                <div style={{
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '12px',
                   backgroundColor: 'rgba(217, 72, 15, 0.1)',
                   display: 'flex',
                   alignItems: 'center',
@@ -80,7 +80,7 @@ export default function ContractDetailsModal({ isOpen, onClose, contract, client
                 <div>
                   <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'white' }}>Detalhes do Contrato</h2>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
-                    <div 
+                    <div
                       onClick={() => {
                         navigator.clipboard.writeText(contract.id);
                       }}
@@ -109,7 +109,7 @@ export default function ContractDetailsModal({ isOpen, onClose, contract, client
 
             {/* Content */}
             <div style={{ padding: '32px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '32px' }}>
-              
+
               {/* Top Info Grid */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
                 <div className="glass-card" style={{ padding: '16px', backgroundColor: 'rgba(255,255,255,0.02)' }}>

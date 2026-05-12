@@ -103,7 +103,7 @@ export default function ProfilePage() {
         .eq('id', currentUser.id);
 
       if (error) throw error;
-      
+
       setModalConfig({
         title: 'Sucesso!',
         message: 'Suas alterações foram salvas com sucesso no banco de dados.',
@@ -180,12 +180,12 @@ export default function ProfilePage() {
         {activeTab === 'profile' && (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '32px' }}>
             <Spotlight className="glass-card" style={{ padding: '32px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
-              <div 
+              <div
                 onClick={() => fileInputRef.current?.click()}
-                style={{ 
-                  width: '140px', height: '140px', borderRadius: '50%', 
-                  background: 'var(--accent)', 
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                style={{
+                  width: '140px', height: '140px', borderRadius: '50%',
+                  background: 'var(--accent)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
                   color: '#fff', boxShadow: '0 0 30px rgba(217, 72, 15, 0.3)',
                   cursor: 'pointer', position: 'relative', overflow: 'hidden'
                 }}
@@ -195,13 +195,13 @@ export default function ProfilePage() {
                 ) : (
                   <span style={{ fontSize: '3rem', fontWeight: 700 }}>{currentUser.name.substring(0, 2).toUpperCase()}</span>
                 )}
-                
+
                 <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', opacity: 0, transition: 'opacity 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")} onMouseLeave={(e) => (e.currentTarget.style.opacity = "0")}>
                   {uploading ? <Loader2 size={24} className="animate-spin" /> : <Camera size={24} />}
                 </div>
               </div>
               <input type="file" ref={fileInputRef} onChange={handleAvatarUpload} hidden accept="image/*" />
-              
+
               <div>
                 <h3 style={{ fontSize: '1.4rem', fontWeight: 700 }}>{currentUser.name}</h3>
                 <p style={{ color: 'var(--text-secondary)', fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
@@ -213,11 +213,11 @@ export default function ProfilePage() {
                 <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>Emoji do Dia</p>
                 <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
                   {EMOJIS.map(emoji => (
-                    <button 
+                    <button
                       key={emoji}
-                      onClick={() => setFormData({...formData, emoji})}
-                      style={{ 
-                        fontSize: '1.2rem', padding: '6px', borderRadius: '8px', 
+                      onClick={() => setFormData({ ...formData, emoji })}
+                      style={{
+                        fontSize: '1.2rem', padding: '6px', borderRadius: '8px',
                         background: formData.emoji === emoji ? 'rgba(217, 72, 15, 0.2)' : 'transparent',
                         border: formData.emoji === emoji ? '1px solid var(--accent)' : '1px solid transparent',
                         cursor: 'pointer', transition: 'all 0.2s'
@@ -234,18 +234,18 @@ export default function ProfilePage() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <label style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Nome Completo</label>
-                  <input 
-                    className="input-dark" 
-                    value={formData.name || ""} 
-                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  <input
+                    className="input-dark"
+                    value={formData.name || ""}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <label style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Usuário (@)</label>
-                  <input 
-                    className="input-dark" 
-                    value={formData.username || ""} 
-                    onChange={(e) => setFormData({...formData, username: e.target.value})}
+                  <input
+                    className="input-dark"
+                    value={formData.username || ""}
+                    onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                   />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -258,28 +258,28 @@ export default function ProfilePage() {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <label style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Telefone</label>
-                  <input 
-                    className="input-dark" 
+                  <input
+                    className="input-dark"
                     placeholder="(00) 00000-0000"
-                    value={formData.phone || ""} 
+                    value={formData.phone || ""}
                     onChange={handlePhoneChange}
                   />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <label style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Frase de Status</label>
-                  <input 
-                    className="input-dark" 
+                  <input
+                    className="input-dark"
                     placeholder="O que você está fazendo agora?"
-                    value={formData.status_message || ""} 
-                    onChange={(e) => setFormData({...formData, status_message: e.target.value})}
+                    value={formData.status_message || ""}
+                    onChange={(e) => setFormData({ ...formData, status_message: e.target.value })}
                   />
                 </div>
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '12px' }}>
-                <button 
+                <button
                   onClick={handleSave}
                   disabled={loading}
-                  className="btn btn-accent" 
+                  className="btn btn-accent"
                   style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 32px' }}
                 >
                   {loading ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
@@ -290,8 +290,8 @@ export default function ProfilePage() {
           </div>
         )}
 
-        <CustomModal 
-          isOpen={showModal} 
+        <CustomModal
+          isOpen={showModal}
           onClose={() => setShowModal(false)}
           title={modalConfig.title}
           message={modalConfig.message}

@@ -4,14 +4,14 @@ import { useParams, useRouter } from "next/navigation";
 // import { roles } from "@/mocks/db"; // Removido mock
 import { supabase } from "@/lib/supabase";
 import { useState, useEffect } from "react";
-import { 
-  ArrowLeft, 
-  Mail, 
-  AtSign, 
-  Shield, 
-  Clock, 
-  ClipboardList, 
-  CheckCircle2, 
+import {
+  ArrowLeft,
+  Mail,
+  AtSign,
+  Shield,
+  Clock,
+  ClipboardList,
+  CheckCircle2,
   Calendar,
   MessageSquare,
   MoreVertical,
@@ -53,7 +53,7 @@ export default function UserDetailPage() {
         .single();
 
       if (error) throw error;
-      
+
       if (data) {
         setUser({
           ...data,
@@ -67,7 +67,7 @@ export default function UserDetailPage() {
         .from('demands')
         .select('*')
         .eq('assigned_to', id); // Assuming assigned_to is the field name
-      
+
       if (demandsData) {
         setUserDemands(demandsData);
       }
@@ -102,7 +102,7 @@ export default function UserDetailPage() {
   }
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
@@ -110,11 +110,11 @@ export default function UserDetailPage() {
     >
       {/* Header com Navegação */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-        <motion.button 
+        <motion.button
           whileHover={{ x: -4 }}
           onClick={() => router.back()}
-          style={{ 
-            width: '40px', height: '40px', borderRadius: '12px', 
+          style={{
+            width: '40px', height: '40px', borderRadius: '12px',
             backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)',
             cursor: 'pointer'
@@ -135,27 +135,27 @@ export default function UserDetailPage() {
         {/* Lado Esquerdo: Info Cartão */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           <Spotlight className="glass-card" style={{ padding: '32px', textAlign: 'center' }}>
-            <div style={{ 
-              width: '120px', height: '120px', borderRadius: '50%', background: 'var(--accent)', 
-              margin: '0 auto 20px', fontSize: '3rem', fontWeight: 700, 
+            <div style={{
+              width: '120px', height: '120px', borderRadius: '50%', background: 'var(--accent)',
+              margin: '0 auto 20px', fontSize: '3rem', fontWeight: 700,
               display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff',
               boxShadow: '0 0 30px rgba(217, 72, 15, 0.3)', position: 'relative'
             }}>
               {user.name.substring(0, 2).toUpperCase()}
-              <div style={{ 
-                position: 'absolute', bottom: '5px', right: '5px', 
-                width: '24px', height: '24px', borderRadius: '50%', 
-                backgroundColor: '#22C55E', border: '4px solid var(--bg-secondary)' 
+              <div style={{
+                position: 'absolute', bottom: '5px', right: '5px',
+                width: '24px', height: '24px', borderRadius: '50%',
+                backgroundColor: '#22C55E', border: '4px solid var(--bg-secondary)'
               }} />
             </div>
-            
+
             <h3 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '4px' }}>{user.name}</h3>
             <p style={{ color: 'var(--accent)', fontWeight: 600, fontSize: '0.9rem', marginBottom: '16px' }}>{userRole?.name}</p>
-            
+
             {user.statusMessage && (
-              <div style={{ 
-                padding: '12px', borderRadius: '12px', background: 'rgba(255,255,255,0.03)', 
-                fontStyle: 'italic', color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '24px' 
+              <div style={{
+                padding: '12px', borderRadius: '12px', background: 'rgba(255,255,255,0.03)',
+                fontStyle: 'italic', color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '24px'
               }}>
                 "{user.statusMessage}"
               </div>
@@ -177,13 +177,13 @@ export default function UserDetailPage() {
             </div>
 
             <div style={{ marginTop: '24px', paddingTop: '24px', borderTop: '1px solid var(--border)' }}>
-              <button 
+              <button
                 onClick={() => {
-                  if(confirm(`Deseja realmente redefinir a senha de ${user.name}?`)) {
+                  if (confirm(`Deseja realmente redefinir a senha de ${user.name}?`)) {
                     alert('Um link de redefinição foi enviado para o email corporativo ou a senha foi resetada para o padrão.');
                   }
                 }}
-                className="btn btn-secondary" 
+                className="btn btn-secondary"
                 style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
               >
                 <Shield size={16} /> Redefinir Senha
@@ -240,11 +240,11 @@ export default function UserDetailPage() {
               </h3>
               <button className="btn btn-secondary btn-sm">Ver Histórico</button>
             </div>
-            
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {userDemands.length > 0 ? userDemands.map(demand => (
-                <div key={demand.id} style={{ 
-                  padding: '16px', borderRadius: '16px', border: '1px solid var(--border)', 
+                <div key={demand.id} style={{
+                  padding: '16px', borderRadius: '16px', border: '1px solid var(--border)',
                   background: 'rgba(255,255,255,0.02)', display: 'flex', justifyContent: 'space-between', alignItems: 'center'
                 }}>
                   <div>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
+import Link from "next/link";
 import { Plus, Search, Filter, MoreHorizontal, ArrowUpRight, Loader2 } from "lucide-react";
 import { ServiceStats } from "@/components/ServiceStats";
 
@@ -60,9 +61,9 @@ export default function ServicesPage() {
             Gerencie o catálogo de soluções e acompanhe a rentabilidade operacional.
           </p>
         </div>
-        <button className="btn btn-accent" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px' }}>
+        <Link href="/admin/services/create" className="btn btn-accent" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px', textDecoration: 'none' }}>
           <Plus size={20} /> Novo Serviço
-        </button>
+        </Link>
       </div>
 
       {/* Stats Cards */}
@@ -164,9 +165,18 @@ export default function ServicesPage() {
                       </span>
                     </td>
                     <td>
-                      <span className={`badge ${service.is_recurring ? 'badge-success' : 'badge-warning'}`} style={{ fontSize: '0.7rem' }}>
-                        {service.is_recurring ? 'RECORRENTE' : 'AVULSO'}
-                      </span>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <span className={`badge ${service.is_recurring ? 'badge-success' : 'badge-warning'}`} style={{ fontSize: '0.7rem', width: 'fit-content' }}>
+                          {service.is_recurring ? 'RECORRENTE' : 'AVULSO'}
+                        </span>
+                        {service.is_recurring && service.billing_cycle && (
+                          <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', paddingLeft: '4px' }}>
+                            {service.billing_cycle === 'monthly' ? 'Mensal' : 
+                             service.billing_cycle === 'quarterly' ? 'Trimestral' : 
+                             service.billing_cycle === 'yearly' ? 'Anual' : ''}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

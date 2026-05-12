@@ -79,7 +79,7 @@ export default function DashboardPage() {
       <div className="dashboard-grid-kpis">
         <KPICard
           title="MRR (Contratos Ativos)"
-          value={`R$ ${stats.mrr.toLocaleString('pt-BR')}`}
+          value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.mrr)}
           numericValue={stats.mrr}
           prefix="R$ "
           subtitle="Receita mensal recorrente"
@@ -90,7 +90,7 @@ export default function DashboardPage() {
         />
         <KPICard
           title="Previsão Semestral"
-          value={`R$ ${(stats.mrr * 6).toLocaleString('pt-BR')}`}
+          value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.mrr * 6)}
           numericValue={stats.mrr * 6}
           prefix="R$ "
           subtitle="Baseado em contratos"

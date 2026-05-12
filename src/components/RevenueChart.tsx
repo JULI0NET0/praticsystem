@@ -48,6 +48,7 @@ export default function RevenueChart() {
               <Tooltip 
                 contentStyle={{ backgroundColor: '#1C1C1C', borderColor: '#282828', borderRadius: '8px' }}
                 itemStyle={{ color: '#FFFFFF' }}
+                formatter={(value: any) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value))}
               />
               <Area 
                 type="monotone" 

@@ -194,7 +194,7 @@ export default function ClientDetailPage() {
         .eq('id', id);
 
       if (error) throw error;
-      
+
       setClientData(editFormData);
       setIsEditModalOpen(false);
       // Aqui você poderia disparar um toast de sucesso
@@ -214,7 +214,7 @@ export default function ClientDetailPage() {
         .eq('id', id);
 
       if (error) throw error;
-      
+
       setIsDeleteModalOpen(false);
       router.push("/admin/clients");
     } catch (err) {
@@ -242,13 +242,27 @@ export default function ClientDetailPage() {
         </motion.button>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <h1 style={{ fontSize: '2rem', fontWeight: 700 }}>{clientData.name}</h1>
+            <h1 style={{ fontSize: '2rem', fontWeight: 700 }}>{clientData.nome_fantasia || clientData.name}</h1>
             <span className={`badge ${clientData.status === 'active' ? 'badge-success' : 'badge-warning'}`}>
               {clientData.status === 'active' ? 'Ativo' : 'Prospect'}
             </span>
+            <span style={{ 
+              fontFamily: 'monospace', fontSize: '0.85rem', fontWeight: 600, color: 'var(--accent)',
+              background: 'rgba(217, 72, 15, 0.05)', padding: '4px 8px', borderRadius: '6px', border: '1px solid rgba(217, 72, 15, 0.1)'
+            }}>
+              #{String(clientData.sequential_id || 0).padStart(3, '0')}
+            </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '4px' }}>
-            <div 
+            {clientData.nome_fantasia && (
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>{clientData.name}</p>
+            )}
+            <span style={{ color: 'rgba(255,255,255,0.1)' }}>•</span>
+            <p style={{ color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Briefcase size={14} style={{ color: 'var(--accent)' }} /> {clientData.servico_interesse || 'Sem serviço definido'}
+            </p>
+          </div>
+            <div
               onClick={() => {
                 navigator.clipboard.writeText(clientData.id);
                 // Aqui você poderia disparar um toast
@@ -271,7 +285,6 @@ export default function ClientDetailPage() {
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Calendar size={14} /> Cadastrado em {new Date(clientData.created_at).toLocaleDateString('pt-BR')}
             </p>
-          </div>
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: '12px' }}>
           <button className="btn btn-secondary" onClick={() => setIsDeleteModalOpen(true)} style={{ color: '#EF4444' }}><Trash2 size={18} /></button>
@@ -425,38 +438,6 @@ export default function ClientDetailPage() {
                   </div>
                 </Spotlight>
 
-                <Spotlight className="glass-card" style={{ padding: '24px' }}>
-                  <h3 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Lock size={18} color="var(--accent)" /> Acesso ao Portal do Cliente
-                  </h3>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-                      <div>
-                        <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>E-mail de Login (Portal)</p>
-                        <p style={{ fontWeight: 500 }}>{clientData.portal_email || clientData.email}</p>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-                        <button
-                          onClick={() => {
-                            if (confirm(`Deseja realmente redefinir a senha do portal para ${clientData.name}?`)) {
-                              alert('Um e-mail de redefinição de senha foi enviado para o cliente.');
-                            }
-                          }}
-                          className="btn btn-secondary"
-                          style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-                        >
-                          <ShieldCheck size={16} /> Redefinir Senha do Portal
-                        </button>
-                      </div>
-                    </div>
-                    <div style={{ padding: '12px', borderRadius: '12px', background: 'rgba(217, 72, 15, 0.05)', border: '1px solid rgba(217, 72, 15, 0.1)' }}>
-                      <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'flex', gap: '8px' }}>
-                        <AlertCircle size={14} style={{ flexShrink: 0, marginTop: '2px' }} />
-                        O cliente usa estas credenciais para acessar o painel de acompanhamento de demandas e financeiro.
-                      </p>
-                    </div>
-                  </div>
-                </Spotlight>
 
                 <Spotlight className="glass-card" style={{ padding: '24px' }}>
                   <h3 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '20px' }}>Próximos Passos & Agenda</h3>
@@ -493,7 +474,7 @@ export default function ClientDetailPage() {
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <span style={{ color: 'var(--text-secondary)' }}>Recorrência Total</span>
                       <span style={{ fontWeight: 600, color: 'var(--accent)' }}>
-                        R$ {clientContracts.reduce((acc, curr) => acc + curr.value, 0).toLocaleString('pt-BR')}
+                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(clientContracts.reduce((acc, curr) => acc + curr.value, 0))}
                       </span>
                     </div>
                     <div style={{ height: '1px', background: 'var(--border)', margin: '8px 0' }} />
@@ -650,37 +631,61 @@ export default function ClientDetailPage() {
                   </span>
                 </div>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 500 }}>E-mail de Acesso</span>
-                      <div style={{
-                        padding: '10px 14px', background: 'rgba(0,0,0,0.2)', borderRadius: '10px',
-                        display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.9rem'
-                      }}>
-                        <Mail size={14} color="var(--text-secondary)" />
-                        {clientData.portal_email || 'Não definido'}
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Senha</span>
-                      <div style={{
-                        padding: '10px 14px', background: 'rgba(0,0,0,0.2)', borderRadius: '10px',
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', fontSize: '0.9rem'
-                      }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <Lock size={14} color="var(--text-secondary)" />
-                          <span>{showPasswords['portal'] ? (clientData.portal_password || '••••••••') : '••••••••'}</span>
-                        </div>
-                        <button
-                          onClick={() => togglePassword('portal')}
-                          style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
-                        >
-                          {showPasswords['portal'] ? <EyeOff size={16} /> : <Eye size={16} />}
-                        </button>
-                      </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 500 }}>E-mail de Acesso</span>
+                    <div style={{
+                      padding: '10px 14px', background: 'rgba(0,0,0,0.2)', borderRadius: '10px',
+                      display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.9rem'
+                    }}>
+                      <Mail size={14} color="var(--text-secondary)" />
+                      {clientData.portal_email || 'Não definido'}
                     </div>
                   </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Senha</span>
+                    <div style={{
+                      padding: '10px 14px', background: 'rgba(0,0,0,0.2)', borderRadius: '10px',
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', fontSize: '0.9rem'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <Lock size={14} color="var(--text-secondary)" />
+                        <span>{showPasswords['portal'] ? (clientData.portal_password || '••••••••') : '••••••••'}</span>
+                      </div>
+                      <button
+                        onClick={() => togglePassword('portal')}
+                        style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
+                      >
+                        {showPasswords['portal'] ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '8px' }}>
+                    <button 
+                      className="btn btn-accent" 
+                      style={{ fontSize: '0.75rem', height: '36px', display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}
+                      onClick={() => {
+                        // Simulação: Abre o dashboard do cliente com um parâmetro de simulação
+                        window.open(`/client/dashboard?simulate=${clientData.id}`, '_blank');
+                      }}
+                    >
+                      <Eye size={14} /> Simular Visão do Cliente
+                    </button>
+                    <button 
+                      className="btn btn-secondary" 
+                      style={{ fontSize: '0.75rem', height: '36px', display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}
+                      onClick={() => {
+                        const link = `${window.location.origin}/login?email=${clientData.portal_email || clientData.email}&auto=true`;
+                        navigator.clipboard.writeText(`Link de Acesso ao Portal Prátic:\n${link}\n\nE-mail: ${clientData.portal_email || clientData.email}\nSenha: ${clientData.portal_password}`);
+                        alert('Link e credenciais copiados para a área de transferência!');
+                      }}
+                    >
+                      <Copy size={14} /> Link de Acesso Rápido
+                    </button>
+                  </div>
+                </div>
               </Spotlight>
               {clientData.social_access ? Object.entries(clientData.social_access).map(([key, data]: [string, any]) => {
                 if (!data || !data.usuario) return null;
@@ -788,7 +793,7 @@ export default function ClientDetailPage() {
                         </td>
                         <td>{new Date(contract.start_date).toLocaleDateString('pt-BR')}</td>
                         <td>{new Date(contract.end_date).toLocaleDateString('pt-BR')}</td>
-                        <td style={{ fontWeight: 600 }}>R$ {contract.value.toLocaleString('pt-BR')}</td>
+                        <td style={{ fontWeight: 600 }}>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(contract.value)}</td>
                         <td>
                           <span className={`badge ${contract.status === 'active' ? 'badge-success' : 'badge-warning'}`}>
                             {contract.status === 'active' ? 'Ativo' : 'Expirando'}
@@ -817,19 +822,19 @@ export default function ClientDetailPage() {
                 <Spotlight className="glass-card" style={{ padding: '24px' }}>
                   <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Total Pago</p>
                   <h4 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#22C55E' }}>
-                    R$ {clientInvoices.filter(i => i.status === 'paid').reduce((acc, curr) => acc + curr.amount, 0).toLocaleString('pt-BR')}
+                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(clientInvoices.filter(i => i.status === 'paid').reduce((acc, curr) => acc + curr.amount, 0))}
                   </h4>
                 </Spotlight>
                 <Spotlight className="glass-card" style={{ padding: '24px' }}>
                   <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Pendente</p>
                   <h4 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--accent)' }}>
-                    R$ {clientInvoices.filter(i => i.status === 'pending').reduce((acc, curr) => acc + curr.amount, 0).toLocaleString('pt-BR')}
+                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(clientInvoices.filter(i => i.status === 'pending').reduce((acc, curr) => acc + curr.amount, 0))}
                   </h4>
                 </Spotlight>
                 <Spotlight className="glass-card" style={{ padding: '24px' }}>
                   <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Atrasado</p>
                   <h4 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#EF4444' }}>
-                    R$ {clientInvoices.filter(i => i.status === 'overdue').reduce((acc, curr) => acc + curr.amount, 0).toLocaleString('pt-BR')}
+                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(clientInvoices.filter(i => i.status === 'overdue').reduce((acc, curr) => acc + curr.amount, 0))}
                   </h4>
                 </Spotlight>
               </div>
@@ -853,7 +858,7 @@ export default function ClientDetailPage() {
                           <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>#{invoice.id}</p>
                         </td>
                         <td>{new Date(invoice.dueDate).toLocaleDateString('pt-BR')}</td>
-                        <td style={{ fontWeight: 600 }}>R$ {invoice.amount.toLocaleString('pt-BR')}</td>
+                        <td style={{ fontWeight: 600 }}>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(invoice.amount)}</td>
                         <td>
                           <span className={`badge ${invoice.status === 'paid' ? 'badge-success' :
                             invoice.status === 'pending' ? 'badge-warning' : 'badge-danger'
@@ -905,18 +910,18 @@ export default function ClientDetailPage() {
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>E-mail de Login</label>
-                      <input 
-                        type="email" className="input-dark" 
-                        value={editFormData.portalEmail || ''} 
-                        onChange={(e) => setEditFormData({...editFormData, portalEmail: e.target.value})}
+                      <input
+                        type="email" className="input-dark"
+                        value={editFormData.portal_email || ''}
+                        onChange={(e) => setEditFormData({ ...editFormData, portal_email: e.target.value })}
                       />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Senha do Portal</label>
-                      <input 
-                        type="text" className="input-dark" 
-                        value={editFormData.portalPassword || ''} 
-                        onChange={(e) => setEditFormData({...editFormData, portalPassword: e.target.value})}
+                      <input
+                        type="text" className="input-dark"
+                        value={editFormData.portal_password || ''}
+                        onChange={(e) => setEditFormData({ ...editFormData, portal_password: e.target.value })}
                       />
                     </div>
                   </div>
@@ -931,11 +936,11 @@ export default function ClientDetailPage() {
                     <div key={social} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', textTransform: 'capitalize' }}>Usuário {social}</label>
-                        <input 
-                          type="text" className="input-dark" 
-                          value={editFormData.socialAccess?.[social]?.usuario || ''} 
+                        <input
+                          type="text" className="input-dark"
+                          value={editFormData.socialAccess?.[social]?.usuario || ''}
                           onChange={(e) => setEditFormData({
-                            ...editFormData, 
+                            ...editFormData,
                             socialAccess: {
                               ...editFormData.socialAccess,
                               [social]: { ...editFormData.socialAccess?.[social], usuario: e.target.value }
@@ -945,11 +950,11 @@ export default function ClientDetailPage() {
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Senha {social}</label>
-                        <input 
-                          type="text" className="input-dark" 
-                          value={editFormData.socialAccess?.[social]?.senha || ''} 
+                        <input
+                          type="text" className="input-dark"
+                          value={editFormData.socialAccess?.[social]?.senha || ''}
                           onChange={(e) => setEditFormData({
-                            ...editFormData, 
+                            ...editFormData,
                             socialAccess: {
                               ...editFormData.socialAccess,
                               [social]: { ...editFormData.socialAccess?.[social], senha: e.target.value }
@@ -959,11 +964,11 @@ export default function ClientDetailPage() {
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>E-mail Recup.</label>
-                        <input 
-                          type="text" className="input-dark" 
-                          value={editFormData.socialAccess?.[social]?.email || ''} 
+                        <input
+                          type="text" className="input-dark"
+                          value={editFormData.socialAccess?.[social]?.email || ''}
                           onChange={(e) => setEditFormData({
-                            ...editFormData, 
+                            ...editFormData,
                             socialAccess: {
                               ...editFormData.socialAccess,
                               [social]: { ...editFormData.socialAccess?.[social], email: e.target.value }
@@ -980,10 +985,10 @@ export default function ClientDetailPage() {
                   <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <Briefcase size={18} /> Serviço de Interesse
                   </h3>
-                  <select 
+                  <select
                     className="input-dark"
-                    value={editFormData.servicoInteresse || ''} 
-                    onChange={(e) => setEditFormData({...editFormData, servicoInteresse: e.target.value})}
+                    value={editFormData.servico_interesse || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, servico_interesse: e.target.value })}
                   >
                     <option value="">Selecione um serviço</option>
                     <option value="Gestão de Redes Sociais">Gestão de Redes Sociais</option>
@@ -1023,7 +1028,7 @@ export default function ClientDetailPage() {
               className="glass-card"
               style={{ width: '100%', maxWidth: '450px', padding: '32px', textAlign: 'center' }}
             >
-              <div style={{ 
+              <div style={{
                 width: '64px', height: '64px', borderRadius: '50%', backgroundColor: 'rgba(239, 68, 68, 0.1)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#EF4444', margin: '0 auto 24px'
               }}>
@@ -1035,16 +1040,16 @@ export default function ClientDetailPage() {
               </p>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <button 
-                  className="btn" 
+                <button
+                  className="btn"
                   style={{ backgroundColor: '#EF4444', color: 'white', width: '100%' }}
                   onClick={handleDeleteClient}
                   disabled={isDeleting}
                 >
                   {isDeleting ? "Excluindo..." : "Sim, Excluir permanentemente"}
                 </button>
-                <button 
-                  className="btn btn-secondary" 
+                <button
+                  className="btn btn-secondary"
                   style={{ width: '100%' }}
                   onClick={() => setIsDeleteModalOpen(false)}
                   disabled={isDeleting}

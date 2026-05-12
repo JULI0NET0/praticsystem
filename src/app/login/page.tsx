@@ -41,7 +41,10 @@ export default function LoginPage() {
       });
 
       if (authError) {
-        throw new Error("Senha incorreta.");
+        if (authError.message === 'Invalid login credentials') {
+          throw new Error("Senha incorreta ou usuário não autorizado.");
+        }
+        throw new Error(authError.message);
       }
 
       // 3. Redirect to dashboard on success

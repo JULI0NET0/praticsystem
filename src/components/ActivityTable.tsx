@@ -14,7 +14,7 @@ export default function ActivityTable() {
           .select('*')
           .order('due_date', { ascending: false })
           .limit(5);
-        
+
         if (error) throw error;
         if (data) setRecentInvoices(data);
       } catch (err) {
@@ -52,10 +52,9 @@ export default function ActivityTable() {
                 </td>
                 <td>{new Date(invoice.due_date).toLocaleDateString('pt-BR')}</td>
                 <td>
-                  <span className={`badge ${
-                    invoice.status === 'paid' ? 'badge-success' : 
-                    invoice.status === 'pending' ? 'badge-warning' : 'badge-danger'
-                  }`}>
+                  <span className={`badge ${invoice.status === 'paid' ? 'badge-success' :
+                      invoice.status === 'pending' ? 'badge-warning' : 'badge-danger'
+                    }`}>
                     {invoice.status === 'paid' ? 'Pago' : invoice.status === 'pending' ? 'Pendente' : 'Atrasado'}
                   </span>
                 </td>

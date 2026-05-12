@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
-import { 
-  LayoutDashboard, 
-  Users, 
-  Briefcase, 
-  FileText, 
-  CreditCard, 
+import {
+  LayoutDashboard,
+  Users,
+  Briefcase,
+  FileText,
+  CreditCard,
   CalendarDays,
   ChevronLeft,
   ChevronRight,
@@ -18,7 +18,8 @@ import {
   Sun,
   Bell,
   LogOut,
-  Loader2
+  Loader2,
+  Activity
 } from "lucide-react";
 import { notifications } from "@/mocks/db";
 import { useAuth } from "@/hooks/useAuth";
@@ -43,6 +44,7 @@ const NAV_GROUPS = [
       { href: "/admin/dashboard", label: "Financeiro", icon: CreditCard, roles: ['admin', 'board'] },
       { href: "/admin/registrations", label: "Cadastros", icon: FileText, roles: ['admin', 'board'] },
       { href: "/admin/users", label: "Equipe", icon: ShieldAlert, roles: ['admin', 'board'] },
+      { href: "/admin/management", label: "Gestão", icon: Activity, roles: ['admin', 'board'] },
     ]
   },
   {
@@ -77,7 +79,7 @@ export default function Sidebar() {
 
     window.addEventListener('toggle-sidebar', handleToggle);
     window.addEventListener('new-notification', handleNewNotification);
-    
+
     return () => {
       window.removeEventListener('toggle-sidebar', handleToggle);
       window.removeEventListener('new-notification', handleNewNotification);
@@ -85,7 +87,7 @@ export default function Sidebar() {
   }, []);
 
   return (
-    <aside 
+    <aside
       className="sidebar-desktop"
       style={{
         width: isExpanded ? '280px' : '80px',
@@ -96,7 +98,7 @@ export default function Sidebar() {
         transition: 'width 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
       }}
     >
-      <button 
+      <button
         onClick={() => setIsExpanded(!isExpanded)}
         style={{
           position: 'absolute',
@@ -117,18 +119,18 @@ export default function Sidebar() {
         {isExpanded ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
       </button>
 
-      <div style={{ 
-        padding: isExpanded ? '32px 24px' : '32px 16px', 
-        display: 'flex', 
+      <div style={{
+        padding: isExpanded ? '32px 24px' : '32px 16px',
+        display: 'flex',
         justifyContent: isExpanded ? 'flex-start' : 'center',
         alignItems: 'center',
         height: '90px'
       }}>
-        <ThemeLogo 
-          width={220} 
-          height={48} 
-          align="left" 
-          isCollapsed={!isExpanded} 
+        <ThemeLogo
+          width={220}
+          height={48}
+          align="left"
+          isCollapsed={!isExpanded}
         />
       </div>
 
@@ -137,10 +139,10 @@ export default function Sidebar() {
           {NAV_GROUPS.filter(group => !currentUser || group.roles.includes(currentUser.role)).map((group) => (
             <div key={group.title} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {isExpanded && (
-                <span style={{ 
-                  fontSize: '0.75rem', 
-                  textTransform: 'uppercase', 
-                  letterSpacing: '0.05em', 
+                <span style={{
+                  fontSize: '0.75rem',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
                   color: 'var(--text-secondary)',
                   paddingLeft: '16px',
                   fontWeight: 600,
@@ -153,9 +155,9 @@ export default function Sidebar() {
                 {group.items.filter(item => !currentUser || item.roles.includes(currentUser.role)).map((item) => {
                   const isActive = pathname.startsWith(item.href);
                   const isHovered = hoveredPath === item.href;
-                  
+
                   return (
-                    <li 
+                    <li
                       key={item.href}
                       onMouseEnter={() => setHoveredPath(item.href)}
                       onMouseLeave={() => setHoveredPath(null)}
@@ -180,28 +182,28 @@ export default function Sidebar() {
                           />
                         )}
                       </AnimatePresence>
-                      
+
                       <motion.div whileTap={{ scale: 0.96 }} style={{ width: '100%' }}>
-                        <Link 
+                        <Link
                           href={item.href}
                           style={{
-                          position: 'relative',
-                          zIndex: 1,
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '12px',
-                          padding: '12px 16px',
-                          borderRadius: 'var(--radius-input)',
-                          color: isActive ? 'var(--sidebar-active-text)' : 'var(--text-secondary)',
-                          backgroundColor: isActive ? 'var(--sidebar-active-bg)' : 'transparent',
-                          border: isActive ? '1px solid rgba(217, 72, 15, 0.1)' : '1px solid transparent',
-                          transition: 'color 0.2s',
-                          justifyContent: isExpanded ? 'flex-start' : 'center'
-                        }}
-                      >
-                        <item.icon size={20} color={isActive ? 'var(--accent)' : 'currentColor'} />
-                        {isExpanded && <span style={{ fontWeight: isActive ? 600 : 500 }}>{item.label}</span>}
-                      </Link>
+                            position: 'relative',
+                            zIndex: 1,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            padding: '12px 16px',
+                            borderRadius: 'var(--radius-input)',
+                            color: isActive ? 'var(--sidebar-active-text)' : 'var(--text-secondary)',
+                            backgroundColor: isActive ? 'var(--sidebar-active-bg)' : 'transparent',
+                            border: isActive ? '1px solid rgba(217, 72, 15, 0.1)' : '1px solid transparent',
+                            transition: 'color 0.2s',
+                            justifyContent: isExpanded ? 'flex-start' : 'center'
+                          }}
+                        >
+                          <item.icon size={20} color={isActive ? 'var(--accent)' : 'currentColor'} />
+                          {isExpanded && <span style={{ fontWeight: isActive ? 600 : 500 }}>{item.label}</span>}
+                        </Link>
                       </motion.div>
                     </li>
                   );
@@ -212,26 +214,26 @@ export default function Sidebar() {
         </div>
       </nav>
 
-      <div style={{ 
-        padding: isExpanded ? '24px' : '16px', 
-        display: 'flex', 
-        flexDirection: 'column', 
+      <div style={{
+        padding: isExpanded ? '24px' : '16px',
+        display: 'flex',
+        flexDirection: 'column',
         gap: '8px',
         borderTop: '1px solid var(--border)',
         marginTop: 'auto'
       }}>
         {/* Profile Card / Link */}
-        <div 
+        <div
           onMouseEnter={() => setHoveredPath('profile-container')}
           onMouseLeave={() => setHoveredPath(null)}
-          style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '12px', 
-            padding: isExpanded ? '12px 16px' : '0', 
-            borderRadius: 'var(--radius-input)', 
-            border: isExpanded ? '1px solid var(--border)' : 'none', 
-            backgroundColor: isExpanded ? 'var(--bg-secondary)' : 'transparent', 
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            padding: isExpanded ? '12px 16px' : '0',
+            borderRadius: 'var(--radius-input)',
+            border: isExpanded ? '1px solid var(--border)' : 'none',
+            backgroundColor: isExpanded ? 'var(--bg-secondary)' : 'transparent',
             marginBottom: '8px',
             justifyContent: isExpanded ? 'flex-start' : 'center',
             position: 'relative',
@@ -250,12 +252,12 @@ export default function Sidebar() {
               />
             )}
           </AnimatePresence>
-          
-          <div 
+
+          <div
             onClick={() => setShowUserSwitcher(!showUserSwitcher)}
-            style={{ 
-              width: '32px', height: '32px', borderRadius: '50%', 
-              backgroundColor: 'var(--accent)', color: '#fff', 
+            style={{
+              width: '32px', height: '32px', borderRadius: '50%',
+              backgroundColor: 'var(--accent)', color: '#fff',
               display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600, fontSize: '0.875rem',
               flexShrink: 0,
               position: 'relative',
@@ -271,7 +273,7 @@ export default function Sidebar() {
             {!isExpanded && (
               <div style={{ position: 'absolute', top: '-2px', right: '-2px', width: '8px', height: '8px', backgroundColor: '#EF4444', borderRadius: '50%', border: '2px solid var(--bg-secondary)' }} />
             )}
-            
+
             {/* Auth Actions Popover */}
             <AnimatePresence>
               {showUserSwitcher && (
@@ -289,12 +291,12 @@ export default function Sidebar() {
                 >
                   <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '8px', paddingLeft: '8px' }}>Conta:</p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <button 
+                    <button
                       onClick={() => {
                         logout();
                         setShowUserSwitcher(false);
                       }}
-                      style={{ 
+                      style={{
                         padding: '10px 12px', borderRadius: '12px', background: 'rgba(239, 68, 68, 0.1)',
                         border: 'none', color: '#EF4444',
                         fontSize: '0.875rem', textAlign: 'left', cursor: 'pointer', transition: 'all 0.2s',
@@ -310,7 +312,7 @@ export default function Sidebar() {
           </div>
           {isExpanded && (
             <>
-              <Link 
+              <Link
                 href="/admin/profile"
                 style={{ flex: 1, overflow: 'hidden', position: 'relative', zIndex: 1, textDecoration: 'none' }}
               >
@@ -319,17 +321,17 @@ export default function Sidebar() {
                 </p>
                 <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{currentUser?.role || "Indefinido"}</p>
               </Link>
-              <div 
+              <div
                 style={{ color: 'var(--text-secondary)', position: 'relative', zIndex: 1, cursor: 'pointer' }}
                 onClick={() => setShowNotifications(!showNotifications)}
               >
                 <div style={{ position: 'relative' }}>
                   <Bell size={18} color={localNotifications.some(n => !n.read) ? 'var(--accent)' : 'currentColor'} />
                   {localNotifications.filter(n => !n.read).length > 0 && (
-                    <div style={{ 
-                      position: 'absolute', top: -6, right: -6, 
-                      backgroundColor: 'var(--accent)', color: 'white', 
-                      fontSize: '0.6rem', fontWeight: 800, width: '16px', height: '16px', 
+                    <div style={{
+                      position: 'absolute', top: -6, right: -6,
+                      backgroundColor: 'var(--accent)', color: 'white',
+                      fontSize: '0.6rem', fontWeight: 800, width: '16px', height: '16px',
                       borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
                       border: '2px solid var(--bg-secondary)'
                     }}>
@@ -337,7 +339,7 @@ export default function Sidebar() {
                     </div>
                   )}
                 </div>
-                
+
                 {/* Popover de Notificações */}
                 <AnimatePresence>
                   {showNotifications && (
@@ -355,7 +357,7 @@ export default function Sidebar() {
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                         <h4 style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)' }}>Notificações</h4>
-                        <button 
+                        <button
                           onClick={() => {
                             setLocalNotifications(localNotifications.map(n => ({ ...n, read: true })));
                           }}
@@ -369,21 +371,21 @@ export default function Sidebar() {
                           <p style={{ textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.85rem', padding: '20px' }}>Nenhuma notificação por enquanto.</p>
                         ) : (
                           localNotifications.map(notif => (
-                            <motion.div 
+                            <motion.div
                               key={notif.id}
                               whileHover={{ x: 4 }}
                               onClick={() => {
                                 setLocalNotifications(localNotifications.map(n => n.id === notif.id ? { ...n, read: true } : n));
                               }}
-                              style={{ 
-                                padding: '14px', borderRadius: '16px', 
+                              style={{
+                                padding: '14px', borderRadius: '16px',
                                 background: notif.read ? 'rgba(255,255,255,0.02)' : 'rgba(217, 72, 15, 0.05)',
                                 border: '1px solid var(--border)', display: 'flex', gap: '12px',
                                 cursor: 'pointer', transition: 'all 0.2s'
                               }}
                             >
                               {!notif.read && (
-                                <div style={{ 
+                                <div style={{
                                   width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent)', marginTop: '6px', flexShrink: 0
                                 }} />
                               )}
@@ -404,14 +406,14 @@ export default function Sidebar() {
         </div>
 
         {mounted && (
-          <button 
+          <button
             onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
             onMouseEnter={() => setHoveredPath('theme-toggle')}
             onMouseLeave={() => setHoveredPath(null)}
-            style={{ 
+            style={{
               position: 'relative',
-              background: 'transparent', 
-              padding: isExpanded ? '16px' : '12px', 
+              background: 'transparent',
+              padding: isExpanded ? '16px' : '12px',
               borderRadius: 'var(--radius-input)',
               display: 'flex',
               alignItems: 'center',
