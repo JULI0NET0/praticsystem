@@ -40,7 +40,7 @@ const formatMinutes = (mins: number) => {
 
 export default function ManagementPage() {
   const { currentUser, users } = useAuth();
-  const { onlineUsers, isUserOnline } = usePresence(currentUser);
+  const { onlineUsers, isUserOnline } = usePresence();
   const [userStats, setUserStats] = useState<UserStats[]>([]);
   const [timeLogs, setTimeLogs] = useState<TimeLogEntry[]>([]);
   const [period, setPeriod] = useState<'today' | 'week' | 'month'>('today');

@@ -130,6 +130,21 @@ input, textarea, select {
   transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.3s ease;
 }
 
+.hover-accent:hover {
+  border-color: var(--accent) !important;
+  color: var(--accent) !important;
+  background-color: rgba(217, 72, 15, 0.08) !important;
+}
+
+.hover-text-accent {
+  transition: all 0.2s ease;
+}
+
+.hover-text-accent:hover {
+  color: var(--accent);
+  cursor: default;
+}
+
 /* Containers */
 .container {
   max-width: 1200px;

@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 import Spotlight from "@/components/Spotlight";
 import { motion, AnimatePresence } from "framer-motion";
+import { useToast } from "@/components/CustomToast";
 
 const TABS = [
   { id: 'dados', label: 'Dados', icon: User },
@@ -47,6 +48,7 @@ const TABS = [
 export default function ClientDetailPage() {
   const { id } = useParams();
   const router = useRouter();
+  const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState('dados');
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
 
@@ -63,12 +65,26 @@ export default function ClientDetailPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [editFormData, setEditFormData] = useState<any>(null);
+  const [availableServices, setAvailableServices] = useState<any[]>([]);
+  const [isActionModalOpen, setIsActionModalOpen] = useState(false);
+  const [actionFormData, setActionFormData] = useState({
+    service_id: '',
+    value: 0,
+    start_date: new Date().toISOString().split('T')[0],
+    billing_cycle: 'monthly'
+  });
 
   useEffect(() => {
     if (id) {
       fetchClientDetails();
+      fetchAvailableServices();
     }
   }, [id]);
+
+  const fetchAvailableServices = async () => {
+    const { data } = await supabase.from('services').select('*').order('name');
+    if (data) setAvailableServices(data);
+  };
 
   const fetchClientDetails = async () => {
     try {
@@ -197,9 +213,42 @@ export default function ClientDetailPage() {
 
       setClientData(editFormData);
       setIsEditModalOpen(false);
-      // Aqui você poderia disparar um toast de sucesso
+      showToast('Dados do cliente atualizados com sucesso!', 'success');
     } catch (err) {
       console.error("Erro ao atualizar cliente:", err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCreateAction = async () => {
+    if (!actionFormData.service_id) {
+      showToast('Selecione um serviço', 'error');
+      return;
+    }
+    setIsSaving(true);
+    try {
+      const selectedService = availableServices.find(s => s.id === actionFormData.service_id);
+      
+      const { error } = await supabase
+        .from('contracts')
+        .insert({
+          client_id: id,
+          service_id: actionFormData.service_id,
+          value: actionFormData.value || Number(selectedService?.price || 0),
+          start_date: actionFormData.start_date,
+          status: 'active',
+          billing_cycle: actionFormData.billing_cycle || selectedService?.billing_cycle || 'monthly'
+        });
+
+      if (error) throw error;
+
+      showToast('Serviço adicionado com sucesso!', 'success');
+      setIsActionModalOpen(false);
+      fetchClientDetails(); // Refresh contracts list
+    } catch (err) {
+      console.error("Erro ao criar ação:", err);
+      showToast('Erro ao adicionar serviço', 'error');
     } finally {
       setIsSaving(false);
     }
@@ -219,7 +268,7 @@ export default function ClientDetailPage() {
       router.push("/admin/clients");
     } catch (err) {
       console.error("Erro ao excluir cliente:", err);
-      alert("Erro ao excluir cliente. Verifique se há dependências.");
+      showToast("Erro ao excluir cliente. Verifique se há dependências.", 'error');
     } finally {
       setIsDeleting(false);
     }
@@ -242,7 +291,20 @@ export default function ClientDetailPage() {
         </motion.button>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <h1 style={{ fontSize: '2rem', fontWeight: 700 }}>{clientData.nome_fantasia || clientData.name}</h1>
+            <h1 
+              title={clientData.nome_fantasia || clientData.name}
+              className="hover-text-accent"
+              style={{ 
+                fontSize: '2rem', 
+                fontWeight: 700,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                maxWidth: '400px'
+              }}
+            >
+              {clientData.nome_fantasia || clientData.name}
+            </h1>
             <span className={`badge ${clientData.status === 'active' ? 'badge-success' : 'badge-warning'}`}>
               {clientData.status === 'active' ? 'Ativo' : 'Prospect'}
             </span>
@@ -255,41 +317,98 @@ export default function ClientDetailPage() {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '4px' }}>
             {clientData.nome_fantasia && (
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>{clientData.name}</p>
+              <p 
+                title={clientData.name}
+                style={{ 
+                  color: 'var(--text-secondary)', 
+                  fontSize: '0.95rem',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  maxWidth: '250px'
+                }}
+              >
+                {clientData.name}
+              </p>
             )}
             <span style={{ color: 'rgba(255,255,255,0.1)' }}>•</span>
-            <p style={{ color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <p 
+              title={clientData.servico_interesse || 'Sem serviço definido'}
+              style={{ 
+                color: 'var(--text-secondary)', 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '6px',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                maxWidth: '300px'
+              }}
+            >
               <Briefcase size={14} style={{ color: 'var(--accent)' }} /> {clientData.servico_interesse || 'Sem serviço definido'}
             </p>
           </div>
-            <div
-              onClick={() => {
-                navigator.clipboard.writeText(clientData.id);
-                // Aqui você poderia disparar um toast
-              }}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '6px',
-                padding: '4px 10px', borderRadius: '8px',
-                backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)',
-                cursor: 'pointer', color: 'var(--text-secondary)', transition: 'all 0.2s'
-              }}
-              className="hover-accent"
-            >
-              <Hash size={12} color="var(--accent)" />
-              <span style={{ fontSize: '0.75rem', fontWeight: 600, fontFamily: 'monospace', letterSpacing: '0.5px' }}>
-                {clientData.id.split('-')[0]}...
-              </span>
-              <Copy size={12} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginTop: '12px' }}>
+              {/* Quick Access Icons */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {clientData.social_access?.instagram?.usuario && (
+                  <button 
+                    onClick={() => window.open(`https://instagram.com/${clientData.social_access.instagram.usuario}`, '_blank')}
+                    title={`Instagram: @${clientData.social_access.instagram.usuario}`}
+                    style={{ padding: '8px', borderRadius: '8px', backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', transition: '0.2s' }}
+                    className="hover-accent"
+                  >
+                    <Camera size={16} />
+                  </button>
+                )}
+                {clientData.social_access?.facebook?.link && (
+                  <button 
+                    onClick={() => window.open(clientData.social_access.facebook.link.startsWith('http') ? clientData.social_access.facebook.link : `https://${clientData.social_access.facebook.link}`, '_blank')}
+                    title="Acessar Facebook"
+                    style={{ padding: '8px', borderRadius: '8px', backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', transition: '0.2s' }}
+                    className="hover-accent"
+                  >
+                    <Globe size={16} />
+                  </button>
+                )}
+                <button 
+                  onClick={() => window.open(`/client/dashboard?simulate=${clientData.id}`, '_blank')}
+                  title="Visão do Cliente"
+                  style={{ padding: '8px', borderRadius: '8px', backgroundColor: 'rgba(217, 72, 15, 0.05)', border: '1px solid rgba(217, 72, 15, 0.2)', color: 'var(--accent)', display: 'flex', alignItems: 'center', transition: '0.2s' }}
+                  className="hover-accent"
+                >
+                  <Eye size={16} />
+                </button>
+              </div>
+
+              <span style={{ color: 'rgba(255,255,255,0.1)' }}>•</span>
+              
+              <div
+                title={`Cadastrado em ${new Date(clientData.created_at).toLocaleDateString('pt-BR')} às ${new Date(clientData.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`}
+                style={{ 
+                  color: 'var(--text-secondary)', 
+                  fontSize: '0.75rem', 
+                  fontWeight: 600,
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '6px',
+                  backgroundColor: 'rgba(255,255,255,0.03)',
+                  padding: '4px 10px',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border)',
+                  cursor: 'default',
+                  transition: '0.2s'
+                }}
+                className="hover-accent"
+              >
+                <Calendar size={14} /> CAD {new Date(clientData.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+              </div>
             </div>
-            <span style={{ color: 'rgba(255,255,255,0.1)' }}>•</span>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Calendar size={14} /> Cadastrado em {new Date(clientData.created_at).toLocaleDateString('pt-BR')}
-            </p>
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: '12px' }}>
           <button className="btn btn-secondary" onClick={() => setIsDeleteModalOpen(true)} style={{ color: '#EF4444' }}><Trash2 size={18} /></button>
           <button className="btn btn-secondary" onClick={handleOpenEdit}><Edit2 size={18} /> Editar Cliente</button>
-          <button className="btn btn-accent"><Plus size={18} /> Nova Ação</button>
+          <button className="btn btn-accent" onClick={() => setIsActionModalOpen(true)}><Plus size={18} /> Nova Ação</button>
         </div>
       </div>
 
@@ -353,9 +472,9 @@ export default function ClientDetailPage() {
                 <Spotlight className="glass-card" style={{ padding: '24px' }}>
                   <h3 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '20px' }}>Informações Cadastrais</h3>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-                    <div>
+                    <div title={clientData.name}>
                       <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Razão Social</p>
-                      <p style={{ fontWeight: 500 }}>{clientData.name}</p>
+                      <p style={{ fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{clientData.name}</p>
                     </div>
                     <div>
                       <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Nome Fantasia</p>
@@ -396,21 +515,23 @@ export default function ClientDetailPage() {
                   <h3 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '20px' }}>Endereço</h3>
                   {clientData.address ? (
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                      <div style={{ gridColumn: 'span 2' }}>
+                      <div style={{ gridColumn: 'span 2' }} title={`${clientData.address.logradouro}, ${clientData.address.numero}`}>
                         <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Logradouro</p>
-                        <p style={{ fontWeight: 500 }}>{clientData.address.logradouro}, {clientData.address.numero}</p>
+                        <p style={{ fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {clientData.address.logradouro}, {clientData.address.numero}
+                        </p>
                       </div>
-                      <div>
+                      <div title={clientData.address.complemento || '-'}>
                         <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Complemento</p>
-                        <p style={{ fontWeight: 500 }}>{clientData.address.complemento || '-'}</p>
+                        <p style={{ fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{clientData.address.complemento || '-'}</p>
                       </div>
-                      <div>
+                      <div title={clientData.address.bairro}>
                         <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Bairro</p>
-                        <p style={{ fontWeight: 500 }}>{clientData.address.bairro}</p>
+                        <p style={{ fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{clientData.address.bairro}</p>
                       </div>
-                      <div>
+                      <div title={`${clientData.address.cidade} - ${clientData.address.uf}`}>
                         <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Cidade/UF</p>
-                        <p style={{ fontWeight: 500 }}>{clientData.address.cidade} - {clientData.address.uf}</p>
+                        <p style={{ fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{clientData.address.cidade} - {clientData.address.uf}</p>
                       </div>
                       <div>
                         <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>CEP</p>
@@ -425,13 +546,21 @@ export default function ClientDetailPage() {
                 <Spotlight className="glass-card" style={{ padding: '24px' }}>
                   <h3 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '20px' }}>Briefing & Interesse</h3>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    <div>
+                    <div title={clientData.servico_interesse || '-'}>
                       <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Serviço de Interesse</p>
-                      <p style={{ fontWeight: 600, color: 'var(--accent)' }}>{clientData.servico_interesse || '-'}</p>
+                      <p style={{ fontWeight: 600, color: 'var(--accent)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{clientData.servico_interesse || '-'}</p>
                     </div>
-                    <div>
+                    <div title={clientData.briefing || 'Nenhum briefing fornecido.'}>
                       <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Briefing Inicial</p>
-                      <p style={{ fontWeight: 400, lineHeight: '1.6', fontSize: '0.95rem' }}>
+                      <p style={{ 
+                        fontWeight: 400, 
+                        lineHeight: '1.6', 
+                        fontSize: '0.95rem',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 3,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden'
+                      }}>
                         {clientData.briefing || 'Nenhum briefing fornecido.'}
                       </p>
                     </div>
@@ -667,22 +796,23 @@ export default function ClientDetailPage() {
                       className="btn btn-accent" 
                       style={{ fontSize: '0.75rem', height: '36px', display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}
                       onClick={() => {
-                        // Simulação: Abre o dashboard do cliente com um parâmetro de simulação
                         window.open(`/client/dashboard?simulate=${clientData.id}`, '_blank');
                       }}
                     >
-                      <Eye size={14} /> Simular Visão do Cliente
+                      <Eye size={14} /> Visão do Cliente
                     </button>
                     <button 
                       className="btn btn-secondary" 
                       style={{ fontSize: '0.75rem', height: '36px', display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}
                       onClick={() => {
-                        const link = `${window.location.origin}/login?email=${clientData.portal_email || clientData.email}&auto=true`;
-                        navigator.clipboard.writeText(`Link de Acesso ao Portal Prátic:\n${link}\n\nE-mail: ${clientData.portal_email || clientData.email}\nSenha: ${clientData.portal_password}`);
-                        alert('Link e credenciais copiados para a área de transferência!');
+                        const cleanPhone = clientData.phone.replace(/\D/g, '');
+                        const portalLink = `${window.location.origin}/login`;
+                        const message = `Olá, ${clientData.contact_name}!\n\nSegue o acesso ao Portal Prátic para acompanhar o progresso da ${clientData.nome_fantasia || clientData.name}:\n\n🔗 Link: ${portalLink}\n📧 E-mail: ${clientData.portal_email || clientData.email}\n🔑 Senha: ${clientData.portal_password || '********'}\n\nQualquer dúvida, estamos à disposição!`;
+                        navigator.clipboard.writeText(message);
+                        showToast('Mensagem copiada para o WhatsApp!', 'success');
                       }}
                     >
-                      <Copy size={14} /> Link de Acesso Rápido
+                      <Copy size={14} /> Copiar p/ WhatsApp
                     </button>
                   </div>
                 </div>

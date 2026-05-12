@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { MessageSquare, X, Send, Minus, Maximize2, Users, Hash, Clock } from "lucide-react";
+import { MessageSquare, X, Send, Hash, Clock } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 import { usePresence } from "@/hooks/usePresence";
 import { useTimeTracker } from "@/hooks/useTimeTracker";
 import { supabase } from "@/lib/supabase";
+import { usePathname } from "next/navigation";
 
 interface ChatMessage {
   id: string;
@@ -20,27 +21,33 @@ interface ChatMessage {
 
 export default function LiveChat() {
   const { currentUser, users } = useAuth();
-  const { onlineUsers, isUserOnline } = usePresence(currentUser);
-  const { isTracking, todayHours, clockIn, clockOut } = useTimeTracker(currentUser);
+  const { onlineUsers, isUserOnline } = usePresence();
+  const { isTracking, todayHours, clockIn, clockOut } = useTimeTracker();
+  const pathname = usePathname();
 
   const [isOpen, setIsOpen] = useState(false);
-  const [isMinimized, setIsMinimized] = useState(false);
   const [activeChat, setActiveChat] = useState<'general' | string>('general');
   const [message, setMessage] = useState("");
   const [localMessages, setLocalMessages] = useState<ChatMessage[]>([]);
   const [isTyping, setIsTyping] = useState<string | null>(null);
   const [showMentions, setShowMentions] = useState(false);
   const [mentionFilter, setMentionFilter] = useState("");
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showSidebar, setShowSidebar] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const typingChannelRef = useRef<any>(null);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const teamUsers = users.filter(u => u.id !== currentUser?.id && ['admin', 'board', 'social_media', 'filmmaker'].includes(u.role));
 
   // Buscar mensagens
   const fetchMessages = useCallback(async () => {
     const { data } = await supabase
       .from('chat_messages')
       .select('*')
-      .order('timestamp', { ascending: true });
+      .order('timestamp', { ascending: true })
+      .limit(200);
     if (data) setLocalMessages(data);
   }, []);
 
@@ -49,19 +56,37 @@ export default function LiveChat() {
     fetchMessages();
 
     const channel = supabase
-      .channel('public:chat_messages')
+      .channel('chat_realtime')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, payload => {
-        setLocalMessages(prev => [...prev, payload.new as ChatMessage]);
+        const newMsg = payload.new as ChatMessage;
+        setLocalMessages(prev => [...prev, newMsg]);
+
+        // Notificação se a mensagem não é minha
+        if (newMsg.sender_id !== currentUser?.id) {
+          if (!isOpen) setUnreadCount(prev => prev + 1);
+
+          // Criar notificação no banco
+          if (newMsg.receiver_id === currentUser?.id || (!newMsg.receiver_id && newMsg.channel === 'general')) {
+            const sender = users.find(u => u.id === newMsg.sender_id);
+            supabase.from('notifications').insert([{
+              user_id: currentUser?.id,
+              title: newMsg.receiver_id ? `Mensagem de ${sender?.name}` : `Nova mensagem no Canal Geral`,
+              message: newMsg.content.substring(0, 80),
+              type: 'mention'
+            }]);
+          }
+        }
       })
       .subscribe();
 
-    // Canal de broadcast para typing indicator
+    // Canal de broadcast para typing
     const typingChannel = supabase.channel('chat:typing');
     typingChannel
       .on('broadcast', { event: 'typing' }, ({ payload }) => {
         if (payload.user_id !== currentUser?.id) {
           setIsTyping(payload.name);
-          setTimeout(() => setIsTyping(null), 3000);
+          if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+          typingTimeoutRef.current = setTimeout(() => setIsTyping(null), 2500);
         }
       })
       .subscribe();
@@ -71,7 +96,7 @@ export default function LiveChat() {
       supabase.removeChannel(channel);
       supabase.removeChannel(typingChannel);
     };
-  }, [fetchMessages, currentUser?.id]);
+  }, [currentUser?.id]);
 
   // Filtrar mensagens
   const filteredMessages = localMessages.filter(msg => {
@@ -87,15 +112,19 @@ export default function LiveChat() {
   // Scroll automático
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-  }, [filteredMessages, isOpen, isMinimized, activeChat]);
+  }, [filteredMessages, isOpen, activeChat]);
+
+  // Limpar unread ao abrir
+  useEffect(() => {
+    if (isOpen) setUnreadCount(0);
+  }, [isOpen]);
 
   // Enviar mensagem
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!message.trim() || !currentUser) return;
 
-    // Detectar menções para notificação
-    const mentionRegex = /@(\w+)/g;
+    const mentionRegex = /@(\S+)/g;
     const mentions = message.match(mentionRegex);
 
     await supabase.from('chat_messages').insert([{
@@ -107,16 +136,16 @@ export default function LiveChat() {
       timestamp: new Date().toISOString()
     }]);
 
-    // Criar notificações para menções
+    // Notificação para menções @
     if (mentions) {
       for (const mention of mentions) {
         const username = mention.replace('@', '');
-        const mentionedUser = users.find(u => u.name.toLowerCase().includes(username.toLowerCase()));
-        if (mentionedUser) {
+        const mentioned = users.find(u => u.name.toLowerCase().includes(username.toLowerCase()));
+        if (mentioned && mentioned.id !== currentUser.id) {
           await supabase.from('notifications').insert([{
-            user_id: mentionedUser.id,
+            user_id: mentioned.id,
             title: 'Menção no Chat',
-            message: `${currentUser.name} mencionou você: "${message.substring(0, 60)}..."`,
+            message: `${currentUser.name} mencionou você: "${message.substring(0, 60)}"`,
             type: 'mention'
           }]);
         }
@@ -127,24 +156,21 @@ export default function LiveChat() {
     setShowMentions(false);
   };
 
-  // Typing indicator broadcast
+  // Typing broadcast
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setMessage(val);
 
-    // Detectar @ para menções
     const lastAt = val.lastIndexOf('@');
-    if (lastAt !== -1 && lastAt === val.length - 1 || (lastAt !== -1 && !val.substring(lastAt).includes(' '))) {
+    if (lastAt !== -1 && !val.substring(lastAt + 1).includes(' ')) {
       setShowMentions(true);
       setMentionFilter(val.substring(lastAt + 1));
     } else {
       setShowMentions(false);
     }
 
-    // Broadcast typing
     typingChannelRef.current?.send({
-      type: 'broadcast',
-      event: 'typing',
+      type: 'broadcast', event: 'typing',
       payload: { user_id: currentUser?.id, name: currentUser?.name }
     });
   };
@@ -156,43 +182,45 @@ export default function LiveChat() {
     inputRef.current?.focus();
   };
 
-  const formatTime = (ts: string) => {
-    return new Date(ts).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
-  };
+  const formatTime = (ts: string) => new Date(ts).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
 
-  const teamUsers = users.filter(u => u.id !== currentUser?.id && ['admin', 'board', 'social_media', 'filmmaker'].includes(u.role));
   const filteredMentionUsers = teamUsers.filter(u => u.name.toLowerCase().includes(mentionFilter.toLowerCase()));
 
-  // Não renderizar para clientes
+  // Não renderizar para clientes ou na página /admin/chat
   if (!currentUser || !['admin', 'board', 'social_media', 'filmmaker'].includes(currentUser.role)) return null;
+  if (pathname === '/admin/chat') return null;
 
   return (
-    <div style={{ position: 'fixed', bottom: '32px', right: '32px', zIndex: 10000 }}>
+    <div style={{ position: 'fixed', bottom: '24px', right: '24px', zIndex: 10000 }}>
       <AnimatePresence>
         {!isOpen && (
           <motion.button
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0, opacity: 0 }}
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            exit={{ scale: 0 }}
+            whileHover={{ scale: 1.08 }}
+            whileTap={{ scale: 0.92 }}
             onClick={() => setIsOpen(true)}
             style={{
-              width: '64px', height: '64px', borderRadius: '24px',
-              background: 'var(--accent)', color: 'white', border: 'none',
-              boxShadow: '0 10px 30px rgba(217, 72, 15, 0.4)',
+              width: '52px', height: '52px', borderRadius: '16px',
+              background: 'linear-gradient(135deg, var(--accent), #e85d26)',
+              color: 'white', border: 'none',
+              boxShadow: '0 6px 20px rgba(217, 72, 15, 0.35)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               cursor: 'pointer', position: 'relative'
             }}
           >
-            <MessageSquare size={28} />
-            {onlineUsers.length > 1 && (
+            <MessageSquare size={22} />
+            {(unreadCount > 0 || onlineUsers.length > 1) && (
               <div style={{
-                position: 'absolute', top: '-4px', right: '-4px',
-                width: '22px', height: '22px', borderRadius: '50%',
-                background: '#22C55E', color: 'white', fontSize: '0.65rem',
-                fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                border: '2px solid var(--bg-primary)'
+                position: 'absolute', top: '-6px', right: '-6px',
+                minWidth: '20px', height: '20px', borderRadius: '10px',
+                background: unreadCount > 0 ? '#EF4444' : '#22C55E',
+                color: 'white', fontSize: '0.6rem', fontWeight: 800,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                padding: '0 5px', border: '2px solid var(--bg-primary)'
               }}>
-                {onlineUsers.length}
+                {unreadCount > 0 ? unreadCount : onlineUsers.length}
               </div>
             )}
           </motion.button>
@@ -202,76 +230,72 @@ export default function LiveChat() {
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ y: 100, opacity: 0, scale: 0.9 }}
+            initial={{ y: 60, opacity: 0, scale: 0.95 }}
             animate={{ y: 0, opacity: 1, scale: 1 }}
-            exit={{ y: 100, opacity: 0, scale: 0.9 }}
+            exit={{ y: 60, opacity: 0, scale: 0.95 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 30 }}
             style={{
-              width: '680px',
-              height: isMinimized ? '70px' : '560px',
-              background: 'rgba(15, 15, 15, 0.95)',
+              width: 'min(640px, calc(100vw - 32px))',
+              height: 'min(520px, calc(100vh - 100px))',
+              background: 'rgba(12, 12, 12, 0.96)',
               backdropFilter: 'blur(30px)',
-              borderRadius: '24px',
+              borderRadius: '20px',
               border: '1px solid var(--border)',
               display: 'flex',
-              boxShadow: '0 20px 60px rgba(0,0,0,0.6)',
-              overflow: 'hidden',
-              transition: 'height 0.3s ease'
+              boxShadow: '0 16px 48px rgba(0,0,0,0.5)',
+              overflow: 'hidden'
             }}
           >
-            {/* Sidebar do Chat */}
-            {!isMinimized && (
+            {/* Sidebar (esconde em mobile) */}
+            {showSidebar && (
               <div style={{
-                width: '240px', borderRight: '1px solid var(--border)',
-                display: 'flex', flexDirection: 'column', background: 'rgba(255,255,255,0.02)'
+                width: '220px', minWidth: '220px', borderRight: '1px solid var(--border)',
+                display: 'flex', flexDirection: 'column', background: 'rgba(255,255,255,0.015)'
               }}>
-                {/* Time Tracker Mini */}
+                {/* Timer mini */}
                 <div style={{
-                  padding: '16px', borderBottom: '1px solid var(--border)',
-                  background: isTracking ? 'rgba(34, 197, 94, 0.05)' : 'transparent'
+                  padding: '12px', borderBottom: '1px solid var(--border)',
+                  background: isTracking ? 'rgba(34, 197, 94, 0.04)' : 'transparent'
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                    <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: 'var(--text-secondary)', letterSpacing: '0.05em', fontWeight: 600 }}>
-                      <Clock size={10} style={{ marginRight: '4px', verticalAlign: 'middle' }} />Hoje
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                    <span style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: 'var(--text-secondary)', letterSpacing: '0.05em', fontWeight: 600 }}>
+                      <Clock size={9} style={{ marginRight: '3px', verticalAlign: 'middle' }} />Hoje
                     </span>
-                    <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>{todayHours}</span>
+                    <span style={{ fontSize: '0.8rem', fontWeight: 700 }}>{todayHours}</span>
                   </div>
                   <button
                     onClick={isTracking ? clockOut : clockIn}
                     style={{
-                      width: '100%', padding: '8px', borderRadius: '10px', border: 'none',
-                      background: isTracking ? 'rgba(239, 68, 68, 0.15)' : 'rgba(34, 197, 94, 0.15)',
+                      width: '100%', padding: '6px', borderRadius: '8px', border: 'none',
+                      background: isTracking ? 'rgba(239, 68, 68, 0.12)' : 'rgba(34, 197, 94, 0.12)',
                       color: isTracking ? '#EF4444' : '#22C55E',
-                      fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s'
+                      fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer'
                     }}
                   >
-                    {isTracking ? '⏹ Parar Registro' : '▶ Iniciar Registro'}
+                    {isTracking ? '⏹ Parar' : '▶ Iniciar'}
                   </button>
                 </div>
 
-                <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
-                  <h4 style={{ fontWeight: 800, fontSize: '1rem' }}>Mensagens</h4>
+                <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
+                  <h4 style={{ fontWeight: 800, fontSize: '0.9rem' }}>Mensagens</h4>
                 </div>
 
-                <div style={{ flex: 1, overflowY: 'auto', padding: '12px' }}>
-                  {/* Canal Geral */}
+                <div style={{ flex: 1, overflowY: 'auto', padding: '8px' }}>
                   <button
                     onClick={() => setActiveChat('general')}
                     style={{
-                      width: '100%', padding: '12px', borderRadius: '12px', border: 'none',
-                      background: activeChat === 'general' ? 'rgba(217, 72, 15, 0.15)' : 'transparent',
+                      width: '100%', padding: '10px', borderRadius: '10px', border: 'none',
+                      background: activeChat === 'general' ? 'rgba(217, 72, 15, 0.12)' : 'transparent',
                       color: activeChat === 'general' ? 'var(--accent)' : 'var(--text-secondary)',
-                      display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer',
-                      transition: 'all 0.2s', marginBottom: '8px'
+                      display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer',
+                      marginBottom: '6px', fontSize: '0.85rem', fontWeight: 600
                     }}
                   >
-                    <Hash size={18} /> <span style={{ fontWeight: 600 }}>Canal Geral</span>
+                    <Hash size={16} /> Canal Geral
                   </button>
 
-                  <p style={{
-                    fontSize: '0.7rem', textTransform: 'uppercase', color: 'var(--text-secondary)',
-                    padding: '16px 8px 8px', letterSpacing: '0.05em', fontWeight: 600
-                  }}>
-                    Equipe ({onlineUsers.length} online)
+                  <p style={{ fontSize: '0.6rem', textTransform: 'uppercase', color: 'var(--text-secondary)', padding: '10px 8px 6px', letterSpacing: '0.05em', fontWeight: 600 }}>
+                    Equipe ({onlineUsers.length})
                   </p>
 
                   {teamUsers.map(user => {
@@ -281,36 +305,30 @@ export default function LiveChat() {
                         key={user.id}
                         onClick={() => setActiveChat(user.id)}
                         style={{
-                          width: '100%', padding: '10px', borderRadius: '12px', border: 'none',
-                          background: activeChat === user.id ? 'rgba(217, 72, 15, 0.15)' : 'transparent',
+                          width: '100%', padding: '8px', borderRadius: '10px', border: 'none',
+                          background: activeChat === user.id ? 'rgba(217, 72, 15, 0.12)' : 'transparent',
                           color: activeChat === user.id ? 'var(--text-primary)' : 'var(--text-secondary)',
-                          display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer',
-                          transition: 'all 0.2s', marginBottom: '4px', opacity: online ? 1 : 0.5
+                          display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer',
+                          marginBottom: '2px', opacity: online ? 1 : 0.5
                         }}
                       >
-                        <div style={{ position: 'relative' }}>
+                        <div style={{ position: 'relative', flexShrink: 0 }}>
                           <div style={{
-                            width: '32px', height: '32px', borderRadius: '50%',
-                            background: 'var(--accent)', fontSize: '0.8rem',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white'
+                            width: '28px', height: '28px', borderRadius: '50%',
+                            background: 'var(--accent)', fontSize: '0.7rem',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700
                           }}>
-                            {user.avatar_url
-                              ? <img src={user.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
-                              : user.name.substring(0, 2).toUpperCase()}
+                            {user.name.substring(0, 2).toUpperCase()}
                           </div>
                           <div style={{
-                            position: 'absolute', bottom: 0, right: 0,
-                            width: '8px', height: '8px',
-                            background: online ? '#22C55E' : '#6B7280',
-                            borderRadius: '50%', border: '2px solid rgba(15,15,15,0.95)'
+                            position: 'absolute', bottom: -1, right: -1, width: '8px', height: '8px',
+                            background: online ? '#22C55E' : '#6B7280', borderRadius: '50%',
+                            border: '2px solid rgba(12,12,12,0.96)'
                           }} />
                         </div>
-                        <div style={{ textAlign: 'left' }}>
-                          <span style={{ fontWeight: 500, fontSize: '0.85rem', display: 'block' }}>{user.name}</span>
-                          <span style={{ fontSize: '0.65rem', color: online ? '#22C55E' : '#6B7280' }}>
-                            {online ? 'Online' : 'Offline'}
-                          </span>
-                        </div>
+                        <span style={{ fontWeight: 500, fontSize: '0.8rem', textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {user.name.split(' ')[0]}
+                        </span>
                       </button>
                     );
                   })}
@@ -319,176 +337,159 @@ export default function LiveChat() {
             )}
 
             {/* Área de Mensagens */}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
               {/* Header */}
               <div style={{
-                padding: '16px 24px',
-                background: 'rgba(217, 72, 15, 0.05)',
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                borderBottom: '1px solid var(--border)'
+                padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                borderBottom: '1px solid var(--border)', background: 'rgba(217,72,15,0.03)'
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <button
+                    onClick={() => setShowSidebar(!showSidebar)}
+                    style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', padding: '4px' }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+                  </button>
                   {activeChat === 'general'
-                    ? <Hash size={18} color="var(--accent)" />
+                    ? <Hash size={16} color="var(--accent)" />
                     : activeMember && (
                       <div style={{ position: 'relative' }}>
-                        <div style={{
-                          width: '28px', height: '28px', borderRadius: '50%', background: 'var(--accent)',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.75rem'
-                        }}>
+                        <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.65rem', fontWeight: 700 }}>
                           {activeMember.name.substring(0, 2).toUpperCase()}
                         </div>
-                        <div style={{
-                          position: 'absolute', bottom: -1, right: -1, width: '8px', height: '8px',
-                          background: isUserOnline(activeMember.id) ? '#22C55E' : '#6B7280',
-                          borderRadius: '50%', border: '2px solid rgba(15,15,15,0.95)'
-                        }} />
+                        <div style={{ position: 'absolute', bottom: -1, right: -1, width: '7px', height: '7px', background: isUserOnline(activeMember.id) ? '#22C55E' : '#6B7280', borderRadius: '50%', border: '2px solid rgba(12,12,12,0.96)' }} />
                       </div>
                     )}
                   <div>
-                    <h4 style={{ fontWeight: 700, fontSize: '0.95rem' }}>
+                    <h4 style={{ fontWeight: 700, fontSize: '0.85rem', lineHeight: 1.2 }}>
                       {activeChat === 'general' ? 'Canal Geral' : activeMember?.name}
                     </h4>
                     {activeChat !== 'general' && activeMember && (
-                      <span style={{ fontSize: '0.7rem', color: isUserOnline(activeMember.id) ? '#22C55E' : '#6B7280' }}>
-                        {isUserOnline(activeMember.id) ? 'Online agora' : 'Offline'}
+                      <span style={{ fontSize: '0.65rem', color: isUserOnline(activeMember.id) ? '#22C55E' : '#6B7280' }}>
+                        {isUserOnline(activeMember.id) ? 'Online' : 'Offline'}
                       </span>
                     )}
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button onClick={() => setIsMinimized(!isMinimized)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
-                    {isMinimized ? <Maximize2 size={16} /> : <Minus size={16} />}
-                  </button>
-                  <button onClick={() => setIsOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
-                    <X size={16} />
-                  </button>
-                </div>
+                <button onClick={() => setIsOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px' }}>
+                  <X size={16} />
+                </button>
               </div>
 
-              {!isMinimized && (
-                <>
-                  {/* Messages */}
-                  <div ref={scrollRef} style={{ flex: 1, padding: '20px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {filteredMessages.length === 0 && (
-                      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '8px', opacity: 0.5 }}>
-                        <MessageSquare size={32} />
-                        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Nenhuma mensagem ainda</p>
-                      </div>
-                    )}
-                    {filteredMessages.map((msg) => {
-                      const isMe = msg.sender_id === currentUser?.id;
-                      const sender = users.find(u => u.id === msg.sender_id);
-                      return (
-                        <motion.div
-                          key={msg.id}
-                          initial={{ opacity: 0, scale: 0.9, y: 10 }}
-                          animate={{ opacity: 1, scale: 1, y: 0 }}
-                          transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                          style={{
-                            alignSelf: isMe ? 'flex-end' : 'flex-start',
-                            maxWidth: '85%', display: 'flex', flexDirection: 'column',
-                            alignItems: isMe ? 'flex-end' : 'flex-start'
-                          }}
-                        >
-                          {!isMe && activeChat === 'general' && (
-                            <span style={{ fontSize: '0.7rem', color: 'var(--accent)', marginBottom: '4px', fontWeight: 600 }}>
-                              {sender?.name}
-                            </span>
-                          )}
-                          <div style={{
-                            padding: '10px 14px',
-                            borderRadius: isMe ? '14px 14px 2px 14px' : '14px 14px 14px 2px',
-                            background: isMe ? 'var(--accent)' : 'rgba(255,255,255,0.05)',
-                            color: isMe ? 'white' : 'var(--text-primary)',
-                            fontSize: '0.85rem',
-                            border: isMe ? 'none' : '1px solid var(--border)'
-                          }}>
-                            {msg.content}
-                          </div>
-                          <span style={{ fontSize: '0.6rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                            {formatTime(msg.timestamp)}
-                          </span>
-                        </motion.div>
-                      );
-                    })}
+              {/* Messages */}
+              <div ref={scrollRef} style={{ flex: 1, padding: '16px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {filteredMessages.length === 0 && (
+                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '8px', opacity: 0.4 }}>
+                    <MessageSquare size={28} />
+                    <p style={{ fontSize: '0.8rem' }}>Nenhuma mensagem</p>
                   </div>
-
-                  {/* Typing indicator */}
-                  {isTyping && (
-                    <div style={{ padding: '0 20px 8px', fontSize: '0.75rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
-                      {isTyping} está digitando...
-                    </div>
-                  )}
-
-                  {/* Input */}
-                  <form onSubmit={handleSendMessage} style={{ padding: '16px', borderTop: '1px solid var(--border)', display: 'flex', gap: '10px', position: 'relative' }}>
-                    {/* Mentions dropdown */}
-                    <AnimatePresence>
-                      {showMentions && filteredMentionUsers.length > 0 && (
-                        <motion.div
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: 10 }}
-                          style={{
-                            position: 'absolute', bottom: '100%', left: '16px', right: '70px',
-                            background: 'rgba(20,20,20,0.98)', border: '1px solid var(--border)',
-                            borderRadius: '12px', padding: '8px', maxHeight: '150px', overflowY: 'auto',
-                            boxShadow: '0 -10px 30px rgba(0,0,0,0.4)'
-                          }}
-                        >
-                          {filteredMentionUsers.map(u => (
-                            <button
-                              key={u.id}
-                              type="button"
-                              onClick={() => insertMention(u.name)}
-                              style={{
-                                width: '100%', padding: '8px 12px', border: 'none', borderRadius: '8px',
-                                background: 'transparent', color: 'var(--text-primary)', textAlign: 'left',
-                                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px',
-                                fontSize: '0.85rem'
-                              }}
-                              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(217,72,15,0.1)')}
-                              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                            >
-                              <div style={{
-                                width: '24px', height: '24px', borderRadius: '50%', background: 'var(--accent)',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                color: 'white', fontSize: '0.65rem', fontWeight: 700
-                              }}>
-                                {u.name.substring(0, 2).toUpperCase()}
-                              </div>
-                              {u.name}
-                            </button>
-                          ))}
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-
-                    <input
-                      ref={inputRef}
-                      type="text"
-                      value={message}
-                      onChange={handleInputChange}
-                      placeholder="Mensagem... (use @ para mencionar)"
+                )}
+                {filteredMessages.map((msg) => {
+                  const isMe = msg.sender_id === currentUser?.id;
+                  const sender = users.find(u => u.id === msg.sender_id);
+                  return (
+                    <div
+                      key={msg.id}
                       style={{
-                        flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)',
-                        borderRadius: '12px', padding: '10px 16px', color: 'white', outline: 'none'
-                      }}
-                    />
-                    <button
-                      type="submit"
-                      style={{
-                        width: '40px', height: '40px', padding: 0, borderRadius: '12px',
-                        background: 'var(--accent)', border: 'none', color: 'white',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer'
+                        display: 'flex', gap: '8px',
+                        flexDirection: isMe ? 'row-reverse' : 'row',
+                        alignItems: 'flex-end'
                       }}
                     >
-                      <Send size={18} />
-                    </button>
-                  </form>
-                </>
+                      {!isMe && (
+                        <div style={{
+                          width: '26px', height: '26px', borderRadius: '50%', flexShrink: 0,
+                          background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          color: 'white', fontSize: '0.6rem', fontWeight: 700
+                        }}>
+                          {sender?.name?.substring(0, 2).toUpperCase() || '??'}
+                        </div>
+                      )}
+                      <div style={{ maxWidth: '75%' }}>
+                        {!isMe && activeChat === 'general' && (
+                          <span style={{ fontSize: '0.65rem', color: 'var(--accent)', fontWeight: 600, marginLeft: '2px' }}>
+                            {sender?.name?.split(' ')[0]}
+                          </span>
+                        )}
+                        <div style={{
+                          padding: '8px 12px',
+                          borderRadius: isMe ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
+                          background: isMe ? 'var(--accent)' : 'rgba(255,255,255,0.06)',
+                          color: isMe ? 'white' : 'var(--text-primary)',
+                          fontSize: '0.82rem', lineHeight: 1.4,
+                          border: isMe ? 'none' : '1px solid var(--border)'
+                        }}>
+                          {msg.content}
+                        </div>
+                        <span style={{ fontSize: '0.55rem', color: 'var(--text-secondary)', marginLeft: '4px', marginTop: '2px', display: 'block' }}>
+                          {formatTime(msg.timestamp)}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Typing */}
+              {isTyping && (
+                <div style={{ padding: '0 16px 6px', fontSize: '0.7rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+                  {isTyping} está digitando...
+                </div>
               )}
+
+              {/* Input */}
+              <form onSubmit={handleSendMessage} style={{ padding: '12px', borderTop: '1px solid var(--border)', display: 'flex', gap: '8px', position: 'relative' }}>
+                <AnimatePresence>
+                  {showMentions && filteredMentionUsers.length > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 8 }}
+                      style={{
+                        position: 'absolute', bottom: '100%', left: '12px', right: '64px',
+                        background: 'rgba(18,18,18,0.98)', border: '1px solid var(--border)',
+                        borderRadius: '10px', padding: '6px', maxHeight: '130px', overflowY: 'auto',
+                        boxShadow: '0 -8px 24px rgba(0,0,0,0.3)'
+                      }}
+                    >
+                      {filteredMentionUsers.map(u => (
+                        <button
+                          key={u.id} type="button"
+                          onClick={() => insertMention(u.name)}
+                          style={{
+                            width: '100%', padding: '6px 10px', border: 'none', borderRadius: '6px',
+                            background: 'transparent', color: 'var(--text-primary)', textAlign: 'left',
+                            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem'
+                          }}
+                          onMouseEnter={e => (e.currentTarget.style.background = 'rgba(217,72,15,0.1)')}
+                          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                        >
+                          <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.55rem', fontWeight: 700 }}>
+                            {u.name.substring(0, 2).toUpperCase()}
+                          </div>
+                          {u.name}
+                        </button>
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                <input
+                  ref={inputRef}
+                  type="text" value={message} onChange={handleInputChange}
+                  placeholder="Mensagem... (@ para mencionar)"
+                  style={{
+                    flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)',
+                    borderRadius: '10px', padding: '8px 14px', color: 'white', outline: 'none', fontSize: '0.82rem'
+                  }}
+                />
+                <button type="submit" style={{
+                  width: '36px', height: '36px', borderRadius: '10px', background: 'var(--accent)',
+                  border: 'none', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0
+                }}>
+                  <Send size={16} />
+                </button>
+              </form>
             </div>
           </motion.div>
         )}

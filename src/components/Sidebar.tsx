@@ -19,7 +19,8 @@ import {
   Bell,
   LogOut,
   Loader2,
-  Activity
+  Activity,
+  MessageSquare
 } from "lucide-react";
 import { notifications } from "@/mocks/db";
 import { useAuth } from "@/hooks/useAuth";
@@ -34,6 +35,7 @@ const NAV_GROUPS = [
     roles: ['admin', 'board', 'social_media', 'filmmaker'],
     items: [
       { href: "/admin/workspace", label: "WorkSpace", icon: LayoutDashboard, roles: ['admin', 'board', 'social_media', 'filmmaker'] },
+      { href: "/admin/chat", label: "Chat", icon: MessageSquare, roles: ['admin', 'board', 'social_media', 'filmmaker'] },
       { href: "/admin/schedule", label: "Minha Agenda", icon: CalendarDays, roles: ['admin', 'board', 'social_media', 'filmmaker'] },
     ]
   },

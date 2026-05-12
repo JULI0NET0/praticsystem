@@ -90,12 +90,23 @@ function ClientDashboard() {
       {simulateId && (
         <div style={{ 
           padding: '12px 20px', background: 'rgba(217, 72, 15, 0.1)', borderRadius: '12px', 
-          border: '1px solid var(--accent)', display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px'
+          border: '1px solid var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '8px'
         }}>
-          <AlertTriangle size={18} color="var(--accent)" />
-          <p style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--accent)' }}>
-            Modo Simulação: Você está visualizando o portal como o cliente <strong>{clientData?.nome_fantasia}</strong>.
-          </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <AlertTriangle size={18} color="var(--accent)" />
+            <p style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--accent)' }}>
+              Modo Simulação: Você está visualizando o portal como o cliente <strong>{clientData?.nome_fantasia || clientData?.name}</strong>.
+            </p>
+          </div>
+          <button 
+            onClick={() => window.close()} 
+            style={{ 
+              padding: '6px 12px', borderRadius: '8px', background: 'var(--accent)', color: 'white', 
+              fontSize: '0.75rem', fontWeight: 600, border: 'none', cursor: 'pointer' 
+            }}
+          >
+            Encerrar Simulação
+          </button>
         </div>
       )}
       <header>
@@ -173,7 +184,7 @@ function ClientDashboard() {
                   <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Hoje</span>
                 </div>
                 <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
-                  John, acabamos de subir as artes da campanha de Junho. Dê uma olhada na aba de demandas!
+                  {clientData?.contact_name?.split(' ')[0] || 'Cliente'}, acabamos de subir as artes da campanha de Junho. Dê uma olhada na aba de demandas!
                 </p>
               </div>
             </div>

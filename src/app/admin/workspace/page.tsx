@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import {
   User,
@@ -19,17 +19,24 @@ import {
   Loader2,
   Inbox,
   UserX,
-  Save
+  Save,
+  Timer,
+  Play,
+  Square
 } from "lucide-react";
 import Spotlight from "@/components/Spotlight";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/components/CustomToast";
+import { usePresence } from "@/hooks/usePresence";
+import { useTimeTracker } from "@/hooks/useTimeTracker";
 
 // Definição dos Widgets Disponíveis
 const AVAILABLE_WIDGETS = [
   { id: 'stats', title: 'Métricas Rápidas', icon: Zap },
+  { id: 'timetracker', title: 'Meu Registro', icon: Timer },
   { id: 'demands', title: 'Minhas Demandas', icon: CheckCircle2 },
   { id: 'notes', title: 'Notas Rápidas', icon: MessageSquare },
   { id: 'links', title: 'Links Úteis', icon: Star },
@@ -37,8 +44,10 @@ const AVAILABLE_WIDGETS = [
 ];
 
 export default function WorkspacePage() {
-  const { currentUser } = useAuth();
+  const { currentUser, users } = useAuth();
   const { showToast } = useToast();
+  const { onlineUsers, isUserOnline } = usePresence();
+  const { isTracking, todayHours, todayMinutes, currentSession, clockIn, clockOut } = useTimeTracker();
   const [status, setStatus] = useState("");
   const [greeting, setGreeting] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -92,7 +101,8 @@ export default function WorkspacePage() {
   // Layouts Pré-definidos (Ajustados para gridAutoRows de 120px)
   const PRESETS = {
     default: [
-      { id: 'stats', colSpan: 12, rowSpan: 1 },
+      { id: 'stats', colSpan: 8, rowSpan: 1 },
+      { id: 'timetracker', colSpan: 4, rowSpan: 1 },
       { id: 'demands', colSpan: 6, rowSpan: 3 },
       { id: 'notes', colSpan: 3, rowSpan: 2 },
       { id: 'team', colSpan: 3, rowSpan: 2 },
@@ -439,11 +449,12 @@ export default function WorkspacePage() {
                 </button>
 
                 <div style={{ opacity: isEditing ? 0.4 : 1, transition: 'opacity 0.3s', flex: 1, overflow: 'hidden' }}>
-                  {w.id === 'stats' && <StatsWidget colSpan={w.colSpan} demandsCount={demands.length} />}
+                  {w.id === 'stats' && <StatsWidget colSpan={w.colSpan} demandsCount={demands.length} todayHours={todayHours} />}
+                  {w.id === 'timetracker' && <TimeTrackerWidget isTracking={isTracking} todayHours={todayHours} todayMinutes={todayMinutes} currentSession={currentSession} clockIn={clockIn} clockOut={clockOut} />}
                   {w.id === 'demands' && <DemandsWidget demands={demands} loading={loadingDemands} />}
                   {w.id === 'notes' && <NotesWidget myNote={myNote} setMyNote={setMyNote} />}
                   {w.id === 'links' && <LinksWidget />}
-                  {w.id === 'team' && <TeamWidget />}
+                  {w.id === 'team' && <TeamWidget isUserOnline={isUserOnline} onlineUsers={onlineUsers} />}
                 </div>
               </div>
             </motion.div>
@@ -497,13 +508,13 @@ export default function WorkspacePage() {
 }
 
 // Sub-componentes
-function StatsWidget({ colSpan, demandsCount }: { colSpan: number, demandsCount: number }) {
+function StatsWidget({ colSpan, demandsCount, todayHours }: { colSpan: number, demandsCount: number, todayHours: string }) {
   const gridCols = colSpan > 8 ? 'repeat(4, 1fr)' : colSpan > 5 ? 'repeat(3, 1fr)' : colSpan > 2 ? 'repeat(2, 1fr)' : '1fr';
 
   const items = [
     { label: "Demandas", value: demandsCount, color: "var(--accent)" },
     { label: "Finalizadas", value: "0", color: "#10B981" },
-    { label: "Horas", value: "0h", color: "#3B82F6" },
+    { label: "Horas Hoje", value: todayHours, color: "#3B82F6" },
     { label: "Alertas", value: "0", color: "#EF4444" }
   ];
 
@@ -531,6 +542,60 @@ function StatsWidget({ colSpan, demandsCount }: { colSpan: number, demandsCount:
           <h2 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0 }}>{item.value}</h2>
         </div>
       ))}
+    </div>
+  );
+}
+
+// Timer Widget com contagem ao vivo
+function TimeTrackerWidget({ isTracking, todayHours, todayMinutes, currentSession, clockIn, clockOut }: any) {
+  const [elapsed, setElapsed] = useState('00:00:00');
+
+  useEffect(() => {
+    if (!isTracking || !currentSession) {
+      setElapsed('00:00:00');
+      return;
+    }
+
+    const tick = () => {
+      const start = new Date(currentSession.start_time).getTime();
+      const diff = Math.max(0, Date.now() - start);
+      const h = Math.floor(diff / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      setElapsed(`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`);
+    };
+
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [isTracking, currentSession]);
+
+  return (
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <Timer size={18} color={isTracking ? '#22C55E' : 'var(--text-secondary)'} />
+        <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '0.05em' }}>Meu Registro</span>
+      </div>
+
+      <div style={{ fontFamily: 'monospace', fontSize: '2rem', fontWeight: 800, letterSpacing: '0.05em', color: isTracking ? '#22C55E' : 'var(--text-primary)' }}>
+        {elapsed}
+      </div>
+
+      <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Total hoje: {todayHours}</span>
+
+      <button
+        onClick={isTracking ? clockOut : clockIn}
+        style={{
+          padding: '8px 24px', borderRadius: '10px', border: 'none',
+          background: isTracking ? 'rgba(239, 68, 68, 0.12)' : 'rgba(34, 197, 94, 0.12)',
+          color: isTracking ? '#EF4444' : '#22C55E',
+          fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer',
+          display: 'flex', alignItems: 'center', gap: '6px',
+          transition: 'all 0.2s'
+        }}
+      >
+        {isTracking ? <><Square size={14} /> Parar</> : <><Play size={14} /> Iniciar</>}
+      </button>
     </div>
   );
 }
@@ -617,56 +682,119 @@ function LinksWidget() {
   );
 }
 
-function TeamWidget() {
+function TeamWidget({ isUserOnline, onlineUsers }: { isUserOnline: (id: string) => boolean, onlineUsers: any[] }) {
   const { users, currentUser } = useAuth();
-  // Pegando usuários que não são o atual
-  const onlineMembers = users.filter(u => u.id !== currentUser?.id).slice(0, 5);
+  const router = useRouter();
+  const [activePopover, setActivePopover] = useState<string | null>(null);
+
+  const teamMembers = users.filter(u => u.id !== currentUser?.id && ['admin', 'board', 'social_media', 'filmmaker'].includes(u.role));
+  // Ordena: online primeiro
+  const sorted = [...teamMembers].sort((a, b) => {
+    const aOnline = isUserOnline(a.id) ? 1 : 0;
+    const bOnline = isUserOnline(b.id) ? 1 : 0;
+    return bOnline - aOnline;
+  });
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <User size={18} color="var(--accent)" /> Equipe Online
+        <User size={18} color="var(--accent)" /> Equipe
+        <span style={{ fontSize: '0.7rem', color: '#22C55E', fontWeight: 600, marginLeft: 'auto' }}>
+          {onlineUsers.length} online
+        </span>
       </h3>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', overflowY: 'auto', flex: 1 }}>
-        {onlineMembers.length > 0 ? onlineMembers.map((m: any) => (
-          <Link href={`/admin/users/${m.id}`} key={m.id} style={{ textDecoration: 'none', color: 'inherit' }}>
-            <motion.div
-              whileHover={{ x: 4, background: 'rgba(255,255,255,0.05)' }}
-              style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px', borderRadius: '12px', transition: 'all 0.2s' }}
-            >
-              <div style={{ position: 'relative' }}>
-                <div style={{
-                  width: '36px', height: '36px', borderRadius: '10px',
-                  background: 'var(--accent)', overflow: 'hidden',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontWeight: 700, fontSize: '0.75rem', color: 'white'
-                }}>
-                  {m.avatar_url ? (
-                    <img src={m.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : m.name.substring(0, 2).toUpperCase()}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', overflowY: 'auto', flex: 1 }}>
+        {sorted.length > 0 ? sorted.map((m: any) => {
+          const online = isUserOnline(m.id);
+          return (
+            <div key={m.id} style={{ position: 'relative' }}>
+              <motion.div
+                whileHover={{ background: 'rgba(255,255,255,0.04)' }}
+                onClick={() => setActivePopover(activePopover === m.id ? null : m.id)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '12px',
+                  padding: '8px', borderRadius: '12px', cursor: 'pointer',
+                  opacity: online ? 1 : 0.5
+                }}
+              >
+                <div style={{ position: 'relative', flexShrink: 0 }}>
+                  <div style={{
+                    width: '36px', height: '36px', borderRadius: '10px',
+                    background: 'var(--accent)', overflow: 'hidden',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontWeight: 700, fontSize: '0.75rem', color: 'white'
+                  }}>
+                    {m.avatar_url
+                      ? <img src={m.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
+                      : m.name.substring(0, 2).toUpperCase()}
+                  </div>
+                  <div style={{
+                    position: 'absolute', bottom: -2, right: -2, width: '10px', height: '10px',
+                    background: online ? '#22C55E' : '#6B7280', borderRadius: '50%',
+                    border: '2px solid var(--bg-primary)'
+                  }} />
                 </div>
-                <div style={{ position: 'absolute', bottom: -2, right: -2, width: '10px', height: '10px', background: '#22C55E', borderRadius: '50%', border: '2px solid var(--bg-primary)' }} />
-              </div>
-              <div style={{ flex: 1, overflow: 'hidden' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <p style={{ fontWeight: 600, fontSize: '0.85rem' }}>{m.name}</p>
-                  <span style={{ fontSize: '0.9rem' }}>{m.emoji}</span>
-                </div>
-                {m.status_message && (
-                  <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
-                    {m.status_message}
+                <div style={{ flex: 1, overflow: 'hidden' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <p style={{ fontWeight: 600, fontSize: '0.85rem' }}>{m.name}</p>
+                    <span style={{ fontSize: '0.9rem' }}>{m.emoji}</span>
+                  </div>
+                  <p style={{ fontSize: '0.65rem', color: online ? '#22C55E' : '#6B7280', fontWeight: 500 }}>
+                    {online ? 'Online' : 'Offline'}
                   </p>
+                </div>
+              </motion.div>
+
+              {/* Popover de ações */}
+              <AnimatePresence>
+                {activePopover === m.id && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.92, y: -4 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.92, y: -4 }}
+                    style={{
+                      position: 'absolute', top: '100%', left: '8px', zIndex: 50, marginTop: '4px',
+                      background: 'rgba(18,18,18,0.98)', border: '1px solid var(--border)',
+                      borderRadius: '12px', padding: '6px', width: '180px',
+                      boxShadow: '0 10px 30px rgba(0,0,0,0.4)'
+                    }}
+                  >
+                    <button
+                      onClick={() => { router.push(`/admin/chat`); setActivePopover(null); }}
+                      style={{
+                        width: '100%', padding: '8px 12px', border: 'none', borderRadius: '8px',
+                        background: 'transparent', color: 'var(--text-primary)', textAlign: 'left',
+                        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem'
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(217,72,15,0.1)')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                    >
+                      <MessageSquare size={14} color="var(--accent)" /> Enviar Mensagem
+                    </button>
+                    <button
+                      onClick={() => { router.push(`/admin/users/${m.id}`); setActivePopover(null); }}
+                      style={{
+                        width: '100%', padding: '8px 12px', border: 'none', borderRadius: '8px',
+                        background: 'transparent', color: 'var(--text-primary)', textAlign: 'left',
+                        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem'
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                    >
+                      <User size={14} /> Ver Perfil
+                    </button>
+                  </motion.div>
                 )}
-              </div>
-            </motion.div>
-          </Link>
-        )) : (
+              </AnimatePresence>
+            </div>
+          );
+        }) : (
           <div style={{
             textAlign: 'center', padding: '40px 20px', color: 'var(--text-secondary)',
             fontSize: '0.85rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px'
           }}>
             <UserX size={32} strokeWidth={1.5} opacity={0.5} />
-            <p>Ninguém online no momento.</p>
+            <p>Ninguém na equipe ainda.</p>
           </div>
         )}
       </div>
