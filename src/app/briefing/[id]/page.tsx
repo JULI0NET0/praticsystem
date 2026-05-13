@@ -230,7 +230,7 @@ DADOS DO BRIEFING:
     type: "tween",
     ease: "anticipate",
     duration: 0.4
-  };
+  } as const;
 
   return (
     <div style={{
