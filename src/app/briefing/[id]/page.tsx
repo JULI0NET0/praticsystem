@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  ArrowRight, ArrowLeft, CheckCircle2, 
-  Info, Target, Users, Search, 
+import {
+  ArrowRight, ArrowLeft, CheckCircle2,
+  Info, Target, Users, Search,
   Settings, TrendingUp, Megaphone, Palette,
   Send, Loader2, Sparkles, Monitor, Mail
 } from 'lucide-react';
@@ -58,7 +58,7 @@ export default function BriefingPage() {
     nome_contato: '',
     email_contato: '',
     whatsapp: '',
-    
+
     // 2. Identidade da Empresa
     nicho: '',
     tempo_mercado: '',
@@ -151,7 +151,7 @@ export default function BriefingPage() {
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
-    
+
     // Consolidar briefing em texto para o campo legado
     const briefingText = `
 DADOS DO BRIEFING:
@@ -233,9 +233,9 @@ DADOS DO BRIEFING:
   };
 
   return (
-    <div style={{ 
-      minHeight: '100vh', 
-      background: '#09090b', 
+    <div style={{
+      minHeight: '100vh',
+      background: '#09090b',
       color: 'white',
       display: 'flex',
       alignItems: 'center',
@@ -251,27 +251,27 @@ DADOS DO BRIEFING:
 
       <AnimatePresence mode="wait">
         {step === 0 && (
-          <motion.div 
+          <motion.div
             key="welcome"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             className="glass-card"
-            style={{ 
-              maxWidth: '600px', 
-              padding: '48px', 
-              textAlign: 'center', 
+            style={{
+              maxWidth: '600px',
+              padding: '48px',
+              textAlign: 'center',
               zIndex: 1,
               border: '1px solid rgba(255, 255, 255, 0.1)'
             }}
           >
-            <div style={{ 
-              width: '80px', 
-              height: '80px', 
-              background: 'rgba(249, 115, 22, 0.1)', 
-              borderRadius: '24px', 
-              display: 'flex', 
-              alignItems: 'center', 
+            <div style={{
+              width: '80px',
+              height: '80px',
+              background: 'rgba(249, 115, 22, 0.1)',
+              borderRadius: '24px',
+              display: 'flex',
+              alignItems: 'center',
               justifyContent: 'center',
               margin: '0 auto 32px',
               color: '#f97316'
@@ -282,9 +282,9 @@ DADOS DO BRIEFING:
             <p style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '1.125rem', marginBottom: '40px', lineHeight: '1.6' }}>
               Olá, <strong>{client.nome_fantasia || client.name}</strong>! Este formulário nos ajudará a entender profundamente o seu negócio para criarmos estratégias de alto impacto.
             </p>
-            <button 
+            <button
               onClick={() => setStep(1)}
-              className="btn btn-accent" 
+              className="btn btn-accent"
               style={{ width: '100%', padding: '16px', fontSize: '1rem', fontWeight: 600 }}
             >
               Começar Briefing <ArrowRight size={20} />
@@ -293,15 +293,15 @@ DADOS DO BRIEFING:
         )}
 
         {step >= 1 && step <= 8 && (
-          <motion.div 
+          <motion.div
             key="form"
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
             className="glass-card"
-            style={{ 
+            style={{
               width: '100%',
-              maxWidth: '800px', 
+              maxWidth: '800px',
               minHeight: '600px',
               zIndex: 1,
               border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -311,9 +311,9 @@ DADOS DO BRIEFING:
             }}
           >
             {/* Mac OS Window Header */}
-            <div style={{ 
-              padding: '16px 24px', 
-              background: 'rgba(255, 255, 255, 0.03)', 
+            <div style={{
+              padding: '16px 24px',
+              background: 'rgba(255, 255, 255, 0.03)',
               borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
               display: 'flex',
               alignItems: 'center',
@@ -345,7 +345,7 @@ DADOS DO BRIEFING:
               </div>
 
               <AnimatePresence mode="wait">
-                <motion.div 
+                <motion.div
                   key={step}
                   variants={pageVariants}
                   initial="initial"
@@ -377,11 +377,11 @@ DADOS DO BRIEFING:
                           </div>
                           <div>
                             <label className="label-briefing">WhatsApp</label>
-                            <input 
-                              className="input-briefing" 
-                              value={formData.whatsapp} 
-                              onChange={e => updateForm('whatsapp', formatWhatsApp(e.target.value))} 
-                              placeholder="(00) 00000-0000" 
+                            <input
+                              className="input-briefing"
+                              value={formData.whatsapp}
+                              onChange={e => updateForm('whatsapp', formatWhatsApp(e.target.value))}
+                              placeholder="(00) 00000-0000"
                             />
                           </div>
                         </div>
@@ -411,7 +411,7 @@ DADOS DO BRIEFING:
                             <input className="input-briefing" value={formData.tempo_mercado} onChange={e => updateForm('tempo_mercado', e.target.value)} placeholder="Ex: 5 anos" />
                           </div>
                         </div>
-                        
+
                         <div>
                           <label className="label-briefing">Sua empresa é nova no mercado?</label>
                           <div style={{ display: 'flex', gap: '12px' }}>
@@ -581,8 +581,8 @@ DADOS DO BRIEFING:
                                 key={red}
                                 onClick={() => {
                                   const current = formData.redes_sociais || [];
-                                  const next = current.includes(red) 
-                                    ? current.filter((r: string) => r !== red) 
+                                  const next = current.includes(red)
+                                    ? current.filter((r: string) => r !== red)
                                     : [...current, red];
                                   updateForm('redes_sociais', next);
                                 }}
@@ -647,9 +647,9 @@ DADOS DO BRIEFING:
                     <button onClick={prevStep} className="btn btn-secondary" style={{ border: 'none', background: 'transparent' }}>
                       <ArrowLeft size={18} /> Voltar
                     </button>
-                    <button 
-                      onClick={nextStep} 
-                      className="btn btn-accent" 
+                    <button
+                      onClick={nextStep}
+                      className="btn btn-accent"
                       disabled={isSubmitting}
                       style={{ minWidth: '160px' }}
                     >
@@ -669,26 +669,26 @@ DADOS DO BRIEFING:
         )}
 
         {step === 9 && (
-          <motion.div 
+          <motion.div
             key="success"
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             className="glass-card"
-            style={{ 
-              maxWidth: '500px', 
-              padding: '48px', 
-              textAlign: 'center', 
+            style={{
+              maxWidth: '500px',
+              padding: '48px',
+              textAlign: 'center',
               zIndex: 1,
               border: '1px solid rgba(34, 197, 94, 0.2)'
             }}
           >
-            <div style={{ 
-              width: '80px', 
-              height: '80px', 
-              background: 'rgba(34, 197, 94, 0.1)', 
-              borderRadius: '50%', 
-              display: 'flex', 
-              alignItems: 'center', 
+            <div style={{
+              width: '80px',
+              height: '80px',
+              background: 'rgba(34, 197, 94, 0.1)',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
               justifyContent: 'center',
               margin: '0 auto 32px',
               color: '#22c55e'

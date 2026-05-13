@@ -21,14 +21,14 @@
   --radius-card: 24px;
   --radius-input: 16px;
   --radius-badge: 8px;
-  
+
   /* Depth & Neon Shadows */
   --shadow-glow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.1);
   --shadow-glow-hover: 0 12px 48px rgba(217, 72, 15, 0.15), inset 0 1px 1px rgba(255, 255, 255, 0.2);
-  
+
   --glass-bg: rgba(28, 28, 28, 0.5);
   --glass-border: 1px solid rgba(255, 255, 255, 0.08);
-  
+
   --sidebar-active-text: #FFFFFF;
   --sidebar-active-bg: rgba(217, 72, 15, 0.2);
 
@@ -55,7 +55,7 @@
 
   --shadow-glow: 0 8px 32px rgba(0, 0, 0, 0.06), inset 0 1px 1px rgba(255, 255, 255, 0.8);
   --shadow-glow-hover: 0 12px 48px rgba(217, 72, 15, 0.12), inset 0 1px 1px rgba(255, 255, 255, 0.9);
-  
+
   --glass-bg: rgba(255, 255, 255, 0.85);
   --glass-border: 1px solid rgba(0, 0, 0, 0.08);
 
@@ -91,7 +91,9 @@ button {
   cursor: pointer;
 }
 
-input, textarea, select {
+input,
+textarea,
+select {
   font-family: inherit;
 }
 
@@ -101,6 +103,7 @@ input, textarea, select {
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -289,13 +292,14 @@ input, textarea, select {
   background: var(--glass-bg);
   backdrop-filter: blur(32px);
   -webkit-backdrop-filter: blur(32px);
-  box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
 }
 
 @media (max-width: 768px) {
   .mobile-header {
     display: flex;
   }
+
   .mobile-nav {
     display: flex;
   }
@@ -323,6 +327,7 @@ input, textarea, select {
   .show-mobile-only {
     display: flex !important;
   }
+
   .hide-desktop {
     display: initial;
   }
@@ -360,7 +365,7 @@ input, textarea, select {
     gap: 16px !important;
   }
 
-  .workspace-widget-grid > * {
+  .workspace-widget-grid>* {
     grid-column: span 1 !important;
     grid-row: span 1 !important;
   }

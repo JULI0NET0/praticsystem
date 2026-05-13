@@ -79,12 +79,15 @@
 
 @media (max-width: 768px) {
   .input-dark {
-    font-size: 16px; /* Previne zoom automático no iOS */
+    font-size: 16px;
+    /* Previne zoom automático no iOS */
     min-height: 44px;
     padding: 10px 14px;
   }
 
-  .input-dark, select, textarea {
+  .input-dark,
+  select,
+  textarea {
     font-size: 16px !important;
   }
 }
@@ -153,6 +156,7 @@
 }
 
 @media (max-width: 768px) {
+
   .table th,
   .table td {
     padding: 12px 10px;

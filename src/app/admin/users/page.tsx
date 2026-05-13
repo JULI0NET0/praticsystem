@@ -90,37 +90,37 @@ export default function UsersPage() {
       transition={{ duration: 0.5 }}
       style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+      <div className="mobile-stack" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px' }}>
         <div>
-          <h1 style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '8px' }}>Gestão de Equipe</h1>
-          <p style={{ color: 'var(--text-secondary)' }}>Gerencie os membros, cargos e frases de status da Prátic.</p>
+          <h1 style={{ fontSize: 'clamp(1.5rem, 4vw, 2rem)', fontWeight: 700, marginBottom: '8px' }}>Gestão de Equipe</h1>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Gerencie os membros, cargos e frases de status da Prátic.</p>
         </div>
-        <div style={{ display: 'flex', gap: '12px' }}>
+        <div className="mobile-stack" style={{ display: 'flex', gap: '12px' }}>
           <Link href="/admin/users/roles">
-            <Spotlight as="button" className="btn" style={{ background: 'rgba(255, 255, 255, 0.05)' }}>Gerenciar Cargos</Spotlight>
+            <Spotlight as="button" className="btn" style={{ background: 'rgba(255, 255, 255, 0.05)', minHeight: '44px' }}>Gerenciar Cargos</Spotlight>
           </Link>
           <Link href="/admin/users/create">
-            <Spotlight as="button" className="btn btn-accent"><Plus size={18} /> Criar Novo Usuário</Spotlight>
+            <Spotlight as="button" className="btn btn-accent" style={{ minHeight: '44px' }}><Plus size={18} /> Criar Novo Usuário</Spotlight>
           </Link>
         </div>
       </div>
 
       <div className="glass-card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
-        <div style={{ display: 'flex', gap: '16px' }}>
-          <div style={{ position: 'relative', flex: 1 }}>
+        <div className="mobile-stack" style={{ display: 'flex', gap: '16px' }}>
+          <div style={{ position: 'relative', flex: 1, width: '100%' }}>
             <Search size={18} color="var(--text-secondary)" style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)' }} />
             <input
               type="text"
               placeholder="Buscar por nome, email ou @usuario..."
               className="input-dark"
-              style={{ paddingLeft: '48px' }}
+              style={{ paddingLeft: '48px', minHeight: '44px' }}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
           <select
             className="input-dark"
-            style={{ width: '200px' }}
+            style={{ width: '100%', maxWidth: '200px', minHeight: '44px' }}
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
           >
@@ -131,7 +131,7 @@ export default function UsersPage() {
           </select>
         </div>
 
-        <div className="table-container">
+        <div className="table-container hide-mobile">
           <table className="table">
             <thead>
               <tr>
@@ -275,6 +275,78 @@ export default function UsersPage() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile: Card List */}
+        <div className="show-mobile-only" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '40px' }}>
+              <Loader2 size={32} color="var(--accent)" className="animate-spin" style={{ margin: '0 auto' }} />
+            </div>
+          ) : (
+            <AnimatePresence mode="popLayout">
+              {filteredUsers.map((user, idx) => {
+                const roleObj = roles.find(r => r.id === user.role);
+                return (
+                  <motion.div
+                    key={user.id}
+                    layout
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ delay: idx * 0.03 }}
+                    onClick={() => window.location.href = `/admin/users/${user.id}`}
+                    style={{
+                      padding: '16px',
+                      borderRadius: '16px',
+                      background: 'var(--bg-secondary)',
+                      border: '1px solid var(--border)',
+                      cursor: 'pointer',
+                      WebkitTapHighlightColor: 'transparent'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                      {user.avatarUrl ? (
+                        <img
+                          src={user.avatarUrl}
+                          alt={user.name}
+                          style={{ width: '44px', height: '44px', borderRadius: '12px', objectFit: 'cover' }}
+                        />
+                      ) : (
+                        <div style={{
+                          width: '44px', height: '44px', borderRadius: '12px',
+                          backgroundColor: 'rgba(217, 72, 15, 0.1)', color: 'var(--accent)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700
+                        }}>
+                          {user.name.substring(0, 2).toUpperCase()}
+                        </div>
+                      )}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontWeight: 600, fontSize: '0.95rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.name}</p>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{
+                            fontWeight: 500, fontSize: '0.75rem',
+                            color: user.role === 'admin' ? '#EF4444' :
+                              user.role === 'board' ? 'var(--accent)' :
+                                user.role === 'social_media' ? '#22C55E' : '#8B5CF6'
+                          }}>
+                            {roleObj?.name || user.role}
+                          </span>
+                          <span style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>@{user.username}</span>
+                        </div>
+                      </div>
+                      <MoreVertical size={16} color="var(--text-secondary)" />
+                    </div>
+                    {user.statusMessage && (
+                      <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontStyle: 'italic', background: 'var(--card-inner-bg)', padding: '8px 12px', borderRadius: '8px' }}>
+                        "{user.statusMessage}"
+                      </p>
+                    )}
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
+          )}
         </div>
       </div>
     </motion.div>

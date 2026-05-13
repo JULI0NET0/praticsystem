@@ -86,21 +86,21 @@ export default function ContractsPage() {
         invoices={invoices.filter(i => i.contract_id === selectedContract?.id)}
       />
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <div className="mobile-stack" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px' }}>
         <div>
-          <h1 style={{ fontSize: '2.5rem', fontWeight: 800, letterSpacing: '-0.02em', marginBottom: '8px' }}>
+          <h1 style={{ fontSize: 'clamp(1.75rem, 5vw, 2.5rem)', fontWeight: 800, letterSpacing: '-0.02em', marginBottom: '8px' }}>
             Contratos
           </h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem' }}>
+          <p style={{ color: 'var(--text-secondary)', fontSize: 'clamp(0.9rem, 2vw, 1.1rem)' }}>
             Gerencie a receita recorrente e o ciclo de vida dos seus clientes.
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <button className="btn btn-secondary">
+        <div className="mobile-stack" style={{ display: 'flex', gap: '12px' }}>
+          <button className="btn btn-secondary" style={{ minHeight: '44px' }}>
             Exportar CSV
           </button>
           <Link href="/admin/contracts/create">
-            <Spotlight as="div" className="btn btn-accent" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Spotlight as="div" className="btn btn-accent" style={{ display: 'flex', alignItems: 'center', gap: '8px', minHeight: '44px' }}>
               <Plus size={18} /> Novo Contrato
             </Spotlight>
           </Link>
@@ -108,7 +108,7 @@ export default function ContractsPage() {
       </div>
 
       {/* ... KPIs ... */}
-      <div style={{
+      <div className="dashboard-grid-kpis" style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
         gap: '16px'
@@ -153,27 +153,26 @@ export default function ContractsPage() {
 
       {/* Table Section */}
       <div className="glass-card" style={{ padding: '24px', overflow: 'hidden' }}>
-        <div style={{
+        <div className="mobile-stack" style={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           marginBottom: '24px',
-          gap: '16px',
-          flexWrap: 'wrap'
+          gap: '16px'
         }}>
-          <div style={{ position: 'relative', flex: 1, maxWidth: '400px' }}>
+          <div style={{ position: 'relative', flex: 1, width: '100%', maxWidth: '400px' }}>
             <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
             <input
               type="text"
               placeholder="Buscar por cliente ou serviço..."
               className="input-field"
-              style={{ paddingLeft: '40px', width: '100%' }}
+              style={{ paddingLeft: '40px', width: '100%', minHeight: '44px' }}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
 
-          <div style={{ display: 'flex', gap: '8px' }}>
+          <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px', width: '100%', scrollbarWidth: 'none' }} className="client-tabs-scroll">
             {['all', 'active', 'expiring', 'expired'].map((status) => (
               <button
                 key={status}
@@ -187,7 +186,9 @@ export default function ContractsPage() {
                   backgroundColor: filterStatus === status ? 'var(--accent)' : 'var(--card-inner-bg)',
                   color: filterStatus === status ? 'white' : 'var(--text-secondary)',
                   border: '1px solid transparent',
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  minHeight: '36px'
                 }}
               >
                 {status === 'all' ? 'Todos' : status === 'active' ? 'Ativos' : status === 'expiring' ? 'A Vencer' : 'Encerrados'}
@@ -196,7 +197,7 @@ export default function ContractsPage() {
           </div>
         </div>
 
-        <div className="table-container">
+        <div className="table-container hide-mobile">
           <table className="table">
             <thead>
               <tr>
@@ -306,10 +307,70 @@ export default function ContractsPage() {
             </tbody>
           </table>
         </div>
+
+        {/* Mobile: Card List */}
+        <div className="show-mobile-only" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <AnimatePresence mode="popLayout">
+            {filteredContracts.map((contract, i) => {
+              const client = clients.find(c => c.id === contract.client_id);
+              const service = services.find(s => s.id === contract.service_id);
+              return (
+                <motion.div
+                  key={contract.id}
+                  layout
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ delay: i * 0.03 }}
+                  onClick={() => handleOpenDetails(contract)}
+                  style={{
+                    padding: '16px',
+                    borderRadius: '16px',
+                    background: 'var(--bg-secondary)',
+                    border: '1px solid var(--border)',
+                    cursor: 'pointer',
+                    WebkitTapHighlightColor: 'transparent'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{
+                        width: '32px', height: '32px', borderRadius: '8px',
+                        backgroundColor: 'rgba(217, 72, 15, 0.1)', display: 'flex',
+                        alignItems: 'center', justifyContent: 'center', color: 'var(--accent)',
+                        fontSize: '0.7rem', fontWeight: 700
+                      }}>
+                        {client?.name.substring(0, 2).toUpperCase()}
+                      </div>
+                      <div>
+                        <p style={{ fontWeight: 600, fontSize: '0.9rem' }}>{client?.name}</p>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{service?.name}</p>
+                      </div>
+                    </div>
+                    <span className={`badge ${contract.status === 'active' ? 'badge-success' :
+                        contract.status === 'expiring' ? 'badge-warning' : 'badge-danger'
+                      }`} style={{ fontSize: '0.7rem' }}>
+                      {contract.status === 'active' ? 'Ativo' : contract.status === 'expiring' ? 'Vencendo' : 'Encerrado'}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                      <p>Início: {new Date(contract.start_date).toLocaleDateString('pt-BR')}</p>
+                      <p>Valor: <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(contract.value)}</span></p>
+                    </div>
+                    <button className="btn-icon" style={{ backgroundColor: 'var(--card-inner-bg)' }}>
+                      <FileText size={16} />
+                    </button>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+        </div>
       </div>
 
       {/* Relationship Detail Section */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+      <div className="mobile-grid-1" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
         <div className="glass-card" style={{ padding: '24px' }}>
           <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <DollarSign size={20} color="var(--accent)" /> Fluxo Financeiro
