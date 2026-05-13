@@ -30,7 +30,7 @@ export default function ContractsPage() {
           supabase.from('services').select('*'),
           supabase.from('invoices').select('*')
         ]);
-        
+
         if (contractsRes.data) setContracts(contractsRes.data);
         if (clientsRes.data) setClients(clientsRes.data);
         if (servicesRes.data) setServices(servicesRes.data);
@@ -57,12 +57,12 @@ export default function ContractsPage() {
   const filteredContracts = contracts.filter(contract => {
     const client = clients.find(c => c.id === contract.client_id);
     const service = services.find(s => s.id === contract.service_id);
-    const matchesSearch = 
+    const matchesSearch =
       client?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       service?.name.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     const matchesStatus = filterStatus === 'all' || contract.status === filterStatus;
-    
+
     return matchesSearch && matchesStatus;
   });
 
@@ -77,7 +77,7 @@ export default function ContractsPage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', paddingBottom: '40px' }}>
       {/* ... (anteriormente definido) ... */}
-      <ContractDetailsModal 
+      <ContractDetailsModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         contract={selectedContract}
@@ -106,15 +106,15 @@ export default function ContractsPage() {
           </Link>
         </div>
       </div>
-      
+
       {/* ... KPIs ... */}
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-        gap: '16px' 
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+        gap: '16px'
       }}>
-        <KPICard 
-          title="MRR Total" 
+        <KPICard
+          title="MRR Total"
           value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(mrrTotal)}
           numericValue={mrrTotal}
           prefix="R$ "
@@ -124,16 +124,16 @@ export default function ContractsPage() {
           trendValue="12%"
           index={0}
         />
-        <KPICard 
-          title="Contratos Ativos" 
+        <KPICard
+          title="Contratos Ativos"
           value={activeContracts.length.toString()}
           numericValue={activeContracts.length}
           subtitle="Em vigência no momento"
           icon={<CheckCircle2 size={24} />}
           index={1}
         />
-        <KPICard 
-          title="A Vencer" 
+        <KPICard
+          title="A Vencer"
           value={expiringSoon.toString()}
           numericValue={expiringSoon}
           subtitle="Expiram em 30 dias"
@@ -141,8 +141,8 @@ export default function ContractsPage() {
           trend="neutral"
           index={2}
         />
-        <KPICard 
-          title="Faturas Pendentes" 
+        <KPICard
+          title="Faturas Pendentes"
           value={pendingInvoicesCount.toString()}
           numericValue={pendingInvoicesCount}
           subtitle="Aguardando pagamento"
@@ -153,9 +153,9 @@ export default function ContractsPage() {
 
       {/* Table Section */}
       <div className="glass-card" style={{ padding: '24px', overflow: 'hidden' }}>
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
           alignItems: 'center',
           marginBottom: '24px',
           gap: '16px',
@@ -163,24 +163,24 @@ export default function ContractsPage() {
         }}>
           <div style={{ position: 'relative', flex: 1, maxWidth: '400px' }}>
             <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
-            <input 
-              type="text" 
-              placeholder="Buscar por cliente ou serviço..." 
+            <input
+              type="text"
+              placeholder="Buscar por cliente ou serviço..."
               className="input-field"
               style={{ paddingLeft: '40px', width: '100%' }}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          
+
           <div style={{ display: 'flex', gap: '8px' }}>
             {['all', 'active', 'expiring', 'expired'].map((status) => (
-              <button 
+              <button
                 key={status}
                 onClick={() => setFilterStatus(status)}
-                style={{ 
-                  padding: '8px 16px', 
-                  borderRadius: '100px', 
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '100px',
                   fontSize: '0.875rem',
                   fontWeight: 500,
                   transition: 'all 0.2s ease',
@@ -214,9 +214,9 @@ export default function ContractsPage() {
                 {filteredContracts.map((contract, i) => {
                   const client = clients.find(c => c.id === contract.client_id);
                   const service = services.find(s => s.id === contract.service_id);
-                  
+
                   return (
-                    <motion.tr 
+                    <motion.tr
                       key={contract.id}
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
@@ -225,10 +225,10 @@ export default function ContractsPage() {
                     >
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <div style={{ 
-                            width: '32px', 
-                            height: '32px', 
-                            borderRadius: '8px', 
+                          <div style={{
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '8px',
                             backgroundColor: 'rgba(217, 72, 15, 0.1)',
                             border: '1px solid rgba(217, 72, 15, 0.2)',
                             display: 'flex',
@@ -265,7 +265,7 @@ export default function ContractsPage() {
                         </span>
                       </td>
                       <td>
-                        <span style={{ 
+                        <span style={{
                           color: contract.auto_renew ? '#22C55E' : 'var(--text-secondary)',
                           fontSize: '0.875rem',
                           fontWeight: 500
@@ -274,24 +274,23 @@ export default function ContractsPage() {
                         </span>
                       </td>
                       <td>
-                        <span className={`badge ${
-                          contract.status === 'active' ? 'badge-success' : 
-                          contract.status === 'expiring' ? 'badge-warning' : 'badge-danger'
-                        }`} style={{ padding: '4px 12px', fontSize: '0.75rem' }}>
+                        <span className={`badge ${contract.status === 'active' ? 'badge-success' :
+                            contract.status === 'expiring' ? 'badge-warning' : 'badge-danger'
+                          }`} style={{ padding: '4px 12px', fontSize: '0.75rem' }}>
                           {contract.status === 'active' ? 'Ativo' : contract.status === 'expiring' ? 'Vencendo' : 'Encerrado'}
                         </span>
                       </td>
                       <td style={{ textAlign: 'right' }}>
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                          <button 
-                            className="btn-icon" 
+                          <button
+                            className="btn-icon"
                             title="Ver detalhes"
                             onClick={() => handleOpenDetails(contract)}
                             style={{ width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--card-inner-bg)', color: 'var(--text-primary)', border: 'none', cursor: 'pointer' }}
                           >
                             <FileText size={16} />
                           </button>
-                          <button 
+                          <button
                             className="btn-icon"
                             title="Mais opções"
                             style={{ width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--card-inner-bg)', color: 'var(--text-primary)', border: 'none', cursor: 'pointer' }}
