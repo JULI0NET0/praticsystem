@@ -434,7 +434,7 @@ export default function OnboardingPage() {
               <div style={{ width: '80px' }} />
             </div>
 
-            <div style={{ padding: '32px 40px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+            <div style={{ padding: 'clamp(20px, 4vw, 32px) clamp(16px, 4vw, 40px)', flex: 1, display: 'flex', flexDirection: 'column' }}>
 
               {/* Progress Bar */}
               {step < 5 && (
@@ -555,7 +555,7 @@ export default function OnboardingPage() {
                           />
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                        <div className="onboarding-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                           <div>
                             <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Setor / Nicho</label>
                             <input
@@ -798,7 +798,7 @@ export default function OnboardingPage() {
                                     <div style={{ padding: '0 20px 20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                                       <div style={{ width: '100%', height: '1px', background: 'rgba(255,255,255,0.05)', marginBottom: '4px' }} />
 
-                                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                                      <div className="onboarding-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                                         <div style={{ position: 'relative' }}>
                                           <div style={{ position: 'absolute', left: '12px', top: '12px', color: 'var(--text-secondary)' }}><User size={18} /></div>
                                           <input

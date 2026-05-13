@@ -184,7 +184,7 @@ export default function ContractsPage() {
                   fontSize: '0.875rem',
                   fontWeight: 500,
                   transition: 'all 0.2s ease',
-                  backgroundColor: filterStatus === status ? 'var(--accent)' : 'rgba(255, 255, 255, 0.05)',
+                  backgroundColor: filterStatus === status ? 'var(--accent)' : 'var(--card-inner-bg)',
                   color: filterStatus === status ? 'white' : 'var(--text-secondary)',
                   border: '1px solid transparent',
                   cursor: 'pointer'
@@ -260,7 +260,7 @@ export default function ContractsPage() {
                         </div>
                       </td>
                       <td>
-                        <span style={{ fontWeight: 700, color: '#FFFFFF' }}>
+                        <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
                           {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(contract.value)}
                         </span>
                       </td>
@@ -287,14 +287,14 @@ export default function ContractsPage() {
                             className="btn-icon" 
                             title="Ver detalhes"
                             onClick={() => handleOpenDetails(contract)}
-                            style={{ width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.05)', color: 'white', border: 'none', cursor: 'pointer' }}
+                            style={{ width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--card-inner-bg)', color: 'var(--text-primary)', border: 'none', cursor: 'pointer' }}
                           >
                             <FileText size={16} />
                           </button>
                           <button 
                             className="btn-icon"
                             title="Mais opções"
-                            style={{ width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.05)', color: 'white', border: 'none', cursor: 'pointer' }}
+                            style={{ width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--card-inner-bg)', color: 'var(--text-primary)', border: 'none', cursor: 'pointer' }}
                           >
                             <MoreVertical size={16} />
                           </button>
@@ -320,7 +320,7 @@ export default function ContractsPage() {
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {invoices.filter(i => i.status === 'pending').slice(0, 3).map(invoice => (
-              <div key={invoice.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: '12px' }}>
+              <div key={invoice.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', backgroundColor: 'var(--card-inner-bg)', borderRadius: '12px' }}>
                 <div>
                   <div style={{ fontWeight: 500, fontSize: '0.875rem' }}>{invoice.description}</div>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Vence em {new Date(invoice.due_date).toLocaleDateString('pt-BR')}</div>

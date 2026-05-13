@@ -154,7 +154,7 @@ export default function UserDetailPage() {
 
             {user.statusMessage && (
               <div style={{
-                padding: '12px', borderRadius: '12px', background: 'rgba(255,255,255,0.03)',
+                padding: '12px', borderRadius: '12px', background: 'var(--card-inner-bg)',
                 fontStyle: 'italic', color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '24px'
               }}>
                 "{user.statusMessage}"
@@ -245,7 +245,7 @@ export default function UserDetailPage() {
               {userDemands.length > 0 ? userDemands.map(demand => (
                 <div key={demand.id} style={{
                   padding: '16px', borderRadius: '16px', border: '1px solid var(--border)',
-                  background: 'rgba(255,255,255,0.02)', display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                  background: 'var(--card-inner-bg)', display: 'flex', justifyContent: 'space-between', alignItems: 'center'
                 }}>
                   <div>
                     <h5 style={{ fontWeight: 600, fontSize: '1rem', marginBottom: '4px' }}>{demand.title}</h5>
@@ -274,11 +274,11 @@ export default function UserDetailPage() {
               <Calendar size={22} color="var(--accent)" /> Próximos Compromissos
             </h3>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-              <div style={{ padding: '16px', borderRadius: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)' }}>
+              <div style={{ padding: '16px', borderRadius: '12px', background: 'var(--card-inner-bg)', border: '1px solid var(--border)' }}>
                 <p style={{ fontSize: '0.75rem', color: 'var(--accent)', fontWeight: 700 }}>AMANHÃ às 14:00</p>
                 <p style={{ fontWeight: 600 }}>Daily de Alinhamento</p>
               </div>
-              <div style={{ padding: '16px', borderRadius: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)' }}>
+              <div style={{ padding: '16px', borderRadius: '12px', background: 'var(--card-inner-bg)', border: '1px solid var(--border)' }}>
                 <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 700 }}>15 MAI às 10:00</p>
                 <p style={{ fontWeight: 600 }}>Reunião de Feedback</p>
               </div>

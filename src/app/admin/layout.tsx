@@ -1,15 +1,21 @@
+"use client";
+
 import Sidebar from "@/components/Sidebar";
 import FloatingSearch from "@/components/FloatingSearch";
 import MobileHeader from "@/components/MobileHeader";
 import MobileNav from "@/components/MobileNav";
+import MobileMenuDrawer from "@/components/MobileMenuDrawer";
 import LiveChat from "@/components/LiveChat";
 import AdminProviders from "@/components/AdminProviders";
+import { useState } from "react";
 
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
   return (
     <AdminProviders>
       <div className="admin-layout-container">
@@ -22,10 +28,14 @@ export default function AdminLayout({
             </div>
           </main>
           <FloatingSearch />
-          <MobileNav />
+          <MobileNav onOpenMenu={() => setIsMenuOpen(true)} />
           <LiveChat />
         </div>
       </div>
+      <MobileMenuDrawer
+        isOpen={isMenuOpen}
+        onClose={() => setIsMenuOpen(false)}
+      />
     </AdminProviders>
   );
 }

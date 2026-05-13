@@ -86,23 +86,23 @@ export default function ClientsPage() {
       transition={{ duration: 0.5 }}
       style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-        <div>
-          <h1 style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '8px' }}>Gestão de Clientes</h1>
-          <p style={{ color: 'var(--text-secondary)' }}>Visualize e gerencie toda a sua carteira de clientes.</p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '16px' }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <h1 style={{ fontSize: 'clamp(1.4rem, 4vw, 2rem)', fontWeight: 700, marginBottom: '8px' }}>Gestão de Clientes</h1>
+          <p style={{ color: 'var(--text-secondary)', fontSize: 'clamp(0.8rem, 2vw, 1rem)' }}>Visualize e gerencie toda a sua carteira de clientes.</p>
         </div>
         <Link href="/admin/clients/create">
           <Spotlight
             as="div"
             className="btn btn-accent"
           >
-            <Plus size={18} /> Novo Cliente
+            <Plus size={18} /> <span className="hide-mobile">Novo</span> Cliente
           </Spotlight>
         </Link>
       </div>
 
       <div className="glass-card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
-        <div style={{ display: 'flex', gap: '16px' }}>
+        <div className="mobile-stack" style={{ display: 'flex', gap: '12px' }}>
           <div style={{ position: 'relative', flex: 1 }}>
             <Search size={18} color="var(--text-secondary)" style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)' }} />
             <input
@@ -115,7 +115,7 @@ export default function ClientsPage() {
             />
           </div>
           <select
-            className="input-dark"
+            className="input-dark mobile-full-width"
             style={{ width: '200px' }}
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
@@ -134,7 +134,9 @@ export default function ClientsPage() {
             </motion.div>
           </div>
         ) : (
-          <div className="table-container">
+          <>
+          {/* Desktop: Table */}
+          <div className="table-container hide-mobile">
             <table className="table">
               <thead>
                 <tr>
@@ -212,6 +214,58 @@ export default function ClientsPage() {
               </tbody>
             </table>
           </div>
+
+          {/* Mobile: Card List */}
+          <div className="show-mobile-only" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <AnimatePresence mode="popLayout">
+              {filteredClients.map((client, idx) => (
+                <motion.div
+                  key={client.id}
+                  layout
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ delay: idx * 0.03 }}
+                  onClick={() => window.location.href = `/admin/clients/${client.id}`}
+                  style={{
+                    padding: '16px',
+                    borderRadius: '16px',
+                    background: 'var(--bg-secondary)',
+                    border: '1px solid var(--border)',
+                    cursor: 'pointer',
+                    WebkitTapHighlightColor: 'transparent'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontWeight: 600, fontSize: '0.95rem', marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {client.nome_fantasia || client.name}
+                      </p>
+                      <span style={{
+                        fontFamily: 'monospace', fontSize: '0.7rem', fontWeight: 600, color: 'var(--accent)', opacity: 0.8
+                      }}>
+                        #{String(client.sequential_id || idx + 1).padStart(3, '0')}
+                      </span>
+                    </div>
+                    <span className={`badge ${client.status === 'active' ? 'badge-success' :
+                        client.status === 'prospect' ? 'badge-warning' : 'badge-danger'
+                      }`} style={{ fontSize: '0.75rem', flexShrink: 0 }}>
+                      {client.status === 'active' ? 'Ativo' : client.status === 'prospect' ? 'Prospect' : 'Inativo'}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                    <span>{client.contact_name}</span>
+                    {(demandsCount[client.id] || 0) > 0 && (
+                      <span style={{ color: 'var(--accent)', fontWeight: 600 }}>
+                        {demandsCount[client.id]} demandas
+                      </span>
+                    )}
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+          </>
         )}
       </div>
 

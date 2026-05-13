@@ -64,6 +64,7 @@ export default function BriefingPage() {
     tempo_mercado: '',
     situacao_atual: '',
     produtos_fortes: '',
+    empresa_nova: 'Não', // Objetiva
 
     // 3. Público Alvo
     perfil_publico: '',
@@ -76,7 +77,7 @@ export default function BriefingPage() {
     inspiracoes: '',
 
     // 5. Estrutura Interna
-    equipe_marketing: '',
+    equipe_marketing_interna: 'Não', // Objetiva
     processo_vendas: '',
 
     // 6. Dados de Mercado
@@ -84,6 +85,7 @@ export default function BriefingPage() {
     sazonalidade: '',
 
     // 7. Marketing & Estratégia
+    redes_sociais: [], // Multi-seleção
     canais_atuais: '',
     objetivos: '',
     historico_marketing: '',
@@ -110,7 +112,8 @@ export default function BriefingPage() {
             whatsapp: data.whatsapp || '',
             email_contato: data.email || '',
             nicho: data.setor || '',
-            nome_contato: data.name || ''
+            nome_contato: data.contact_name || '',
+            whatsapp: data.phone || ''
           }));
         }
       } catch (err) {
@@ -122,8 +125,19 @@ export default function BriefingPage() {
     loadClient();
   }, [id]);
 
-  const updateForm = (field: string, value: string) => {
+  const updateForm = (field: string, value: any) => {
     setFormData((prev: any) => ({ ...prev, [field]: value }));
+  };
+
+  const formatWhatsApp = (value: string) => {
+    const numbers = value.replace(/\D/g, '');
+    if (numbers.length <= 11) {
+      return numbers
+        .replace(/(\d{2})(\d)/, '($1) $2')
+        .replace(/(\d{5})(\d)/, '$1-$2')
+        .replace(/(-\d{4})\d+?$/, '$1');
+    }
+    return value;
   };
 
   const nextStep = () => {
@@ -267,7 +281,7 @@ DADOS DO BRIEFING:
             </div>
             <h1 style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '16px' }}>Bem-vindo ao seu Briefing</h1>
             <p style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '1.125rem', marginBottom: '40px', lineHeight: '1.6' }}>
-              Olá, <strong>{client.name}</strong>! Este formulário nos ajudará a entender profundamente o seu negócio para criarmos estratégias de alto impacto.
+              Olá, <strong>{client.nome_fantasia || client.name}</strong>! Este formulário nos ajudará a entender profundamente o seu negócio para criarmos estratégias de alto impacto.
             </p>
             <button 
               onClick={() => setStep(1)}
@@ -364,7 +378,12 @@ DADOS DO BRIEFING:
                           </div>
                           <div>
                             <label className="label-briefing">WhatsApp</label>
-                            <input className="input-briefing" value={formData.whatsapp} onChange={e => updateForm('whatsapp', e.target.value)} placeholder="(00) 00000-0000" />
+                            <input 
+                              className="input-briefing" 
+                              value={formData.whatsapp} 
+                              onChange={e => updateForm('whatsapp', formatWhatsApp(e.target.value))} 
+                              placeholder="(00) 00000-0000" 
+                            />
                           </div>
                         </div>
                       </div>
@@ -393,6 +412,28 @@ DADOS DO BRIEFING:
                             <input className="input-briefing" value={formData.tempo_mercado} onChange={e => updateForm('tempo_mercado', e.target.value)} placeholder="Ex: 5 anos" />
                           </div>
                         </div>
+                        
+                        <div>
+                          <label className="label-briefing">Sua empresa é nova no mercado?</label>
+                          <div style={{ display: 'flex', gap: '12px' }}>
+                            {['Sim', 'Não'].map(opt => (
+                              <button
+                                key={opt}
+                                onClick={() => updateForm('empresa_nova', opt)}
+                                style={{
+                                  flex: 1, padding: '12px', borderRadius: '12px',
+                                  background: formData.empresa_nova === opt ? 'rgba(249, 115, 22, 0.2)' : 'rgba(255,255,255,0.05)',
+                                  border: `1px solid ${formData.empresa_nova === opt ? '#f97316' : 'rgba(255,255,255,0.1)'}`,
+                                  color: formData.empresa_nova === opt ? '#f97316' : 'white',
+                                  fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s'
+                                }}
+                              >
+                                {opt}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
                         <div>
                           <label className="label-briefing">Situação Atual da Empresa</label>
                           <textarea className="input-briefing" rows={3} value={formData.situacao_atual} onChange={e => updateForm('situacao_atual', e.target.value)} placeholder="Como está o momento da empresa hoje?" />
@@ -471,7 +512,23 @@ DADOS DO BRIEFING:
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                         <div>
                           <label className="label-briefing">Possui equipe de marketing ou alguém interno?</label>
-                          <input className="input-briefing" value={formData.equipe_marketing} onChange={e => updateForm('equipe_marketing', e.target.value)} placeholder="Ex: Sim, uma pessoa dedicada / Não" />
+                          <div style={{ display: 'flex', gap: '12px' }}>
+                            {['Sim', 'Não'].map(opt => (
+                              <button
+                                key={opt}
+                                onClick={() => updateForm('equipe_marketing_interna', opt)}
+                                style={{
+                                  flex: 1, padding: '12px', borderRadius: '12px',
+                                  background: formData.equipe_marketing_interna === opt ? 'rgba(249, 115, 22, 0.2)' : 'rgba(255,255,255,0.05)',
+                                  border: `1px solid ${formData.equipe_marketing_interna === opt ? '#f97316' : 'rgba(255,255,255,0.1)'}`,
+                                  color: formData.equipe_marketing_interna === opt ? '#f97316' : 'white',
+                                  fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s'
+                                }}
+                              >
+                                {opt}
+                              </button>
+                            ))}
+                          </div>
                         </div>
                         <div>
                           <label className="label-briefing">Como funciona o seu processo de vendas atual?</label>
@@ -518,16 +575,42 @@ DADOS DO BRIEFING:
 
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                         <div>
-                          <label className="label-briefing">Canais que utiliza atualmente</label>
-                          <input className="input-briefing" value={formData.canais_atuais} onChange={e => updateForm('canais_atuais', e.target.value)} placeholder="Ex: Instagram, Google Ads, Indicação..." />
+                          <label className="label-briefing">Quais redes sociais você já trabalha?</label>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+                            {['Instagram', 'Facebook', 'LinkedIn', 'YouTube', 'TikTok', 'Google Meu Negócio'].map(red => (
+                              <button
+                                key={red}
+                                onClick={() => {
+                                  const current = formData.redes_sociais || [];
+                                  const next = current.includes(red) 
+                                    ? current.filter((r: string) => r !== red) 
+                                    : [...current, red];
+                                  updateForm('redes_sociais', next);
+                                }}
+                                style={{
+                                  padding: '12px', borderRadius: '12px', textAlign: 'left',
+                                  background: (formData.redes_sociais || []).includes(red) ? 'rgba(249, 115, 22, 0.2)' : 'rgba(255,255,255,0.05)',
+                                  border: `1px solid ${(formData.redes_sociais || []).includes(red) ? '#f97316' : 'rgba(255,255,255,0.1)'}`,
+                                  color: (formData.redes_sociais || []).includes(red) ? '#f97316' : 'white',
+                                  fontSize: '0.9rem', cursor: 'pointer', transition: 'all 0.2s',
+                                  display: 'flex', alignItems: 'center', gap: '8px'
+                                }}
+                              >
+                                <div style={{ width: '16px', height: '16px', borderRadius: '4px', border: '1px solid currentColor', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                  {(formData.redes_sociais || []).includes(red) && <CheckCircle2 size={12} />}
+                                </div>
+                                {red}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        <div>
+                          <label className="label-briefing">Outros canais que utiliza atualmente</label>
+                          <input className="input-briefing" value={formData.canais_atuais} onChange={e => updateForm('canais_atuais', e.target.value)} placeholder="Ex: Google Ads, Indicação, Rádio..." />
                         </div>
                         <div>
                           <label className="label-briefing">Principais Objetivos (Curto e Longo Prazo)</label>
                           <textarea className="input-briefing" rows={3} value={formData.objetivos} onChange={e => updateForm('objetivos', e.target.value)} placeholder="O que você espera alcançar nos próximos 6 meses?" />
-                        </div>
-                        <div>
-                          <label className="label-briefing">Já fez marketing antes? Qual foi o resultado?</label>
-                          <textarea className="input-briefing" rows={2} value={formData.historico_marketing} onChange={e => updateForm('historico_marketing', e.target.value)} placeholder="Experiências passadas com outras agências..." />
                         </div>
                       </div>
                     </>

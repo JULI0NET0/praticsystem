@@ -191,7 +191,7 @@ export default function LiveChat() {
   if (pathname === '/admin/chat') return null;
 
   return (
-    <div style={{ position: 'fixed', bottom: '24px', right: '24px', zIndex: 10000 }}>
+    <div className="hide-mobile" style={{ position: 'fixed', bottom: '24px', right: '24px', zIndex: 10000 }}>
       <AnimatePresence>
         {!isOpen && (
           <motion.button

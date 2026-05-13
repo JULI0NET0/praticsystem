@@ -236,9 +236,9 @@ export default function WorkspacePage() {
       style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}
     >
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px' }}>
-        <div>
-          <h1 style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '8px', letterSpacing: '-0.02em' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <h1 className="workspace-title" style={{ fontSize: 'clamp(1.5rem, 5vw, 2.5rem)', fontWeight: 800, marginBottom: '8px', letterSpacing: '-0.02em' }}>
             WorkSpace
           </h1>
           <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
@@ -246,12 +246,13 @@ export default function WorkspacePage() {
               <p
                 onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                 style={{
-                  color: 'var(--accent)', fontSize: '1.25rem', fontWeight: 600,
+                  color: 'var(--accent)', fontSize: '1.25rem', fontWeight: 700,
                   display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer',
-                  padding: '4px 8px', borderRadius: '12px', transition: 'background 0.2s'
+                  padding: '8px 12px', borderRadius: '16px', transition: 'all 0.2s',
+                  background: 'var(--card-inner-bg)', border: '1px solid var(--border)'
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
-                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--accent)'}
+                onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--border)'}
               >
                 <span style={{ fontSize: '1.5rem' }}>{currentUser?.emoji || "☀️"}</span> {greeting}
               </p>
@@ -289,7 +290,7 @@ export default function WorkspacePage() {
             {!isEditing && (
               <div style={{
                 display: 'flex', alignItems: 'center', gap: '8px',
-                background: 'rgba(255,255,255,0.03)', padding: '6px 16px',
+                background: 'var(--card-inner-bg)', padding: '6px 16px',
                 borderRadius: '20px', border: '1px solid var(--border)',
                 height: '40px'
               }}>
@@ -298,7 +299,7 @@ export default function WorkspacePage() {
                   value={status}
                   onChange={(e) => setStatus(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && updateStatusInDB()}
-                  style={{ background: 'none', border: 'none', color: 'var(--text-primary)', fontSize: '0.9rem', outline: 'none', width: '250px' }}
+                  style={{ background: 'none', border: 'none', color: 'var(--text-primary)', fontSize: '0.9rem', outline: 'none', width: '100%', maxWidth: '250px', minWidth: '120px' }}
                   placeholder="No que você está trabalhando?"
                 />
                 <button
@@ -323,7 +324,7 @@ export default function WorkspacePage() {
             )}
           </div>
         </div>
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+        <div className="hide-mobile" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
           {isEditing ? (
             <div style={{ display: 'flex', gap: '8px', background: 'rgba(255,255,255,0.05)', padding: '4px', borderRadius: '12px', border: '1px solid var(--border)' }}>
               <button
@@ -353,7 +354,7 @@ export default function WorkspacePage() {
       </div>
 
       {/* Grid de Widgets Configurável */}
-      <div style={{
+      <div className="workspace-widget-grid" style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(12, 1fr)',
         gridAutoRows: 'minmax(120px, auto)',
@@ -528,7 +529,7 @@ function StatsWidget({ colSpan, demandsCount, todayHours }: { colSpan: number, d
     }}>
       {items.slice(0, colSpan > 8 ? 4 : colSpan > 5 ? 3 : 2).map((item, i) => (
         <div key={i} style={{ 
-          background: 'rgba(255,255,255,0.03)',
+          background: 'var(--card-inner-bg)',
           padding: '12px 16px',
           borderRadius: '12px',
           borderLeft: `3px solid ${item.color}`,
@@ -612,7 +613,7 @@ function DemandsWidget({ demands, loading }: { demands: any[], loading: boolean 
             <Loader2 size={24} className="animate-spin" color="var(--accent)" />
           </div>
         ) : demands.length > 0 ? demands.map(d => (
-          <div key={d.id} style={{ padding: '12px 16px', borderRadius: '12px', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', flexShrink: 0 }}>
+          <div key={d.id} style={{ padding: '12px 16px', borderRadius: '12px', background: 'var(--card-inner-bg)', border: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', flexShrink: 0 }}>
             <span style={{ fontWeight: 600 }}>{d.title}</span>
             <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{new Date(d.due_date || d.created_at).toLocaleDateString()}</span>
           </div>
@@ -621,7 +622,7 @@ function DemandsWidget({ demands, loading }: { demands: any[], loading: boolean 
             textAlign: 'center', padding: '40px 20px', color: 'var(--text-secondary)',
             fontSize: '0.85rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px'
           }}>
-            <div style={{ width: '50px', height: '50px', borderRadius: '50%', background: 'rgba(255,255,255,0.03)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '8px' }}>
+            <div style={{ width: '50px', height: '50px', borderRadius: '50%', background: 'var(--card-inner-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '8px' }}>
               <Inbox size={24} strokeWidth={1.5} />
             </div>
             <p style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Tudo limpo!</p>
@@ -671,7 +672,7 @@ function LinksWidget() {
       </h3>
       <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
         {links.length > 0 ? links.map(link => (
-          <a key={link.name} href={link.url} target="_blank" rel="noopener noreferrer" style={{ padding: '8px 16px', borderRadius: '10px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', textDecoration: 'none', color: 'var(--text-primary)', fontSize: '0.8rem', fontWeight: 600 }}>
+          <a key={link.name} href={link.url} target="_blank" rel="noopener noreferrer" style={{ padding: '8px 16px', borderRadius: '10px', background: 'var(--card-inner-bg)', border: '1px solid var(--border)', textDecoration: 'none', color: 'var(--text-primary)', fontSize: '0.8rem', fontWeight: 600 }}>
             {link.icon} {link.name}
           </a>
         )) : (

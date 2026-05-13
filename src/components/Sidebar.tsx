@@ -2,25 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import Image from "next/image";
 import {
-  LayoutDashboard,
-  Users,
-  Briefcase,
-  FileText,
-  CreditCard,
-  CalendarDays,
   ChevronLeft,
   ChevronRight,
-  ShieldAlert,
-  Settings,
   Moon,
   Sun,
   Bell,
   LogOut,
   Loader2,
-  Activity,
-  MessageSquare
 } from "lucide-react";
 import { notifications } from "@/mocks/db";
 import { useAuth } from "@/hooks/useAuth";
@@ -28,37 +17,9 @@ import { useState, useEffect } from "react";
 import { useTheme } from "next-themes";
 import ThemeLogo from "./ThemeLogo";
 import { motion, AnimatePresence } from "framer-motion";
+import { NAV_GROUPS } from "@/lib/navConfig";
 
-const NAV_GROUPS = [
-  {
-    title: "Minha Área",
-    roles: ['admin', 'board', 'social_media', 'filmmaker'],
-    items: [
-      { href: "/admin/workspace", label: "WorkSpace", icon: LayoutDashboard, roles: ['admin', 'board', 'social_media', 'filmmaker'] },
-      { href: "/admin/chat", label: "Chat", icon: MessageSquare, roles: ['admin', 'board', 'social_media', 'filmmaker'] },
-      { href: "/admin/schedule", label: "Minha Agenda", icon: CalendarDays, roles: ['admin', 'board', 'social_media', 'filmmaker'] },
-    ]
-  },
-  {
-    title: "Administrativo",
-    roles: ['admin', 'board'],
-    items: [
-      { href: "/admin/dashboard", label: "Financeiro", icon: CreditCard, roles: ['admin', 'board'] },
-      { href: "/admin/registrations", label: "Cadastros", icon: FileText, roles: ['admin', 'board'] },
-      { href: "/admin/users", label: "Equipe", icon: ShieldAlert, roles: ['admin', 'board'] },
-      { href: "/admin/management", label: "Gestão", icon: Activity, roles: ['admin', 'board'] },
-    ]
-  },
-  {
-    title: "Gestão Comercial",
-    roles: ['admin', 'board', 'social_media'],
-    items: [
-      { href: "/admin/clients", label: "Clientes", icon: Users, roles: ['admin', 'board', 'social_media'] },
-      { href: "/admin/services", label: "Serviços", icon: Briefcase, roles: ['admin', 'board'] },
-      { href: "/admin/contracts", label: "Contratos", icon: FileText, roles: ['admin', 'board', 'social_media'] },
-    ]
-  }
-];
+// NAV_GROUPS importado de @/lib/navConfig
 
 export default function Sidebar() {
   const pathname = usePathname();

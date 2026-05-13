@@ -32,7 +32,16 @@ import {
   Copy,
   Hash,
   Sparkles,
-  Folder
+  Folder,
+  HardDrive,
+  Upload,
+  Link,
+  Download,
+  FilePlus,
+  MoreVertical,
+  MapPin,
+  Layout,
+  Target
 } from "lucide-react";
 import Spotlight from "@/components/Spotlight";
 import { motion, AnimatePresence } from "framer-motion";
@@ -40,7 +49,7 @@ import { useToast } from "@/components/CustomToast";
 
 const TABS = [
   { id: 'dados', label: 'Dados', icon: User },
-  { id: 'briefing', label: 'Briefing', icon: Sparkles },
+  { id: 'briefing', label: 'Briefing', icon: Layout },
   { id: 'demandas', label: 'Demandas', icon: ClipboardList },
   { id: 'notas', label: 'Notas', icon: MessageSquare },
   { id: 'access', label: 'Acessos', icon: ShieldCheck },
@@ -446,9 +455,9 @@ export default function ClientDetailPage() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+      <div className="mobile-stack" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
         <motion.button
           whileHover={{ x: -4 }}
           onClick={() => router.back()}
@@ -466,12 +475,12 @@ export default function ClientDetailPage() {
               title={clientData.nome_fantasia || clientData.name}
               className="hover-text-accent"
               style={{ 
-                fontSize: '2rem', 
+                fontSize: 'clamp(1.3rem, 4vw, 2rem)', 
                 fontWeight: 700,
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
-                maxWidth: '400px'
+                maxWidth: '100%'
               }}
             >
               {clientData.nome_fantasia || clientData.name}
@@ -519,14 +528,14 @@ export default function ClientDetailPage() {
               <Briefcase size={14} style={{ color: 'var(--accent)' }} /> {clientData.servico_interesse || 'Sem serviço definido'}
             </p>
           </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginTop: '12px' }}>
+            <div className="hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: '16px', marginTop: '12px' }}>
               {/* Quick Access Icons */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 {clientData.social_access?.instagram?.usuario && (
                   <button 
                     onClick={() => window.open(`https://instagram.com/${clientData.social_access.instagram.usuario}`, '_blank')}
                     title={`Instagram: @${clientData.social_access.instagram.usuario}`}
-                    style={{ padding: '8px', borderRadius: '8px', backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', transition: '0.2s' }}
+                    style={{ padding: '8px', borderRadius: '8px', backgroundColor: 'var(--card-inner-bg)', border: '1px solid var(--border)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', transition: '0.2s' }}
                     className="hover-accent"
                   >
                     <Camera size={16} />
@@ -536,7 +545,7 @@ export default function ClientDetailPage() {
                   <button 
                     onClick={() => window.open(`https://facebook.com/${clientData.social_access.facebook.usuario}`, '_blank')}
                     title={`Facebook: ${clientData.social_access.facebook.usuario}`}
-                    style={{ padding: '8px', borderRadius: '8px', backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', transition: '0.2s' }}
+                    style={{ padding: '8px', borderRadius: '8px', backgroundColor: 'var(--card-inner-bg)', border: '1px solid var(--border)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', transition: '0.2s' }}
                     className="hover-accent"
                   >
                     <Globe size={16} />
@@ -546,7 +555,7 @@ export default function ClientDetailPage() {
                   <button 
                     onClick={() => window.open(`https://linkedin.com/in/${clientData.social_access.linkedin.usuario}`, '_blank')}
                     title={`LinkedIn: ${clientData.social_access.linkedin.usuario}`}
-                    style={{ padding: '8px', borderRadius: '8px', backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', transition: '0.2s' }}
+                    style={{ padding: '8px', borderRadius: '8px', backgroundColor: 'var(--card-inner-bg)', border: '1px solid var(--border)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', transition: '0.2s' }}
                     className="hover-accent"
                   >
                     <Briefcase size={16} />
@@ -556,7 +565,7 @@ export default function ClientDetailPage() {
                   <button 
                     onClick={() => window.open(`https://tiktok.com/@${clientData.social_access.tiktok.usuario}`, '_blank')}
                     title={`TikTok: @${clientData.social_access.tiktok.usuario}`}
-                    style={{ padding: '8px', borderRadius: '8px', backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', transition: '0.2s' }}
+                    style={{ padding: '8px', borderRadius: '8px', backgroundColor: 'var(--card-inner-bg)', border: '1px solid var(--border)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', transition: '0.2s' }}
                     className="hover-accent"
                   >
                     <Share2 size={16} />
@@ -565,7 +574,7 @@ export default function ClientDetailPage() {
                 {clientData.social_access?.google?.usuario && (
                   <button 
                     title={`Google Meu Negócio: ${clientData.social_access.google.usuario}`}
-                    style={{ padding: '8px', borderRadius: '8px', backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', transition: '0.2s' }}
+                    style={{ padding: '8px', borderRadius: '8px', backgroundColor: 'var(--card-inner-bg)', border: '1px solid var(--border)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', transition: '0.2s' }}
                     className="hover-accent"
                   >
                     <MapPin size={16} />
@@ -592,7 +601,7 @@ export default function ClientDetailPage() {
                   display: 'flex', 
                   alignItems: 'center', 
                   gap: '6px',
-                  backgroundColor: 'rgba(255,255,255,0.03)',
+                  backgroundColor: 'var(--card-inner-bg)',
                   padding: '4px 10px',
                   borderRadius: '8px',
                   border: '1px solid var(--border)',
@@ -605,15 +614,24 @@ export default function ClientDetailPage() {
               </div>
             </div>
         </div>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: '12px' }}>
-          <button className="btn btn-secondary" onClick={() => setIsDeleteModalOpen(true)} style={{ color: '#EF4444' }}><Trash2 size={18} /></button>
-          <button className="btn btn-secondary" onClick={handleOpenEdit}><Edit2 size={18} /> Editar Cliente</button>
-          <button className="btn btn-accent" onClick={() => setIsActionModalOpen(true)}><Plus size={18} /> Nova Ação</button>
+        <div className="mobile-stack" style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
+          <button className="btn btn-secondary" onClick={() => setIsDeleteModalOpen(true)} style={{ color: '#EF4444', minHeight: '44px' }}><Trash2 size={18} /></button>
+          <button className="btn btn-secondary" onClick={handleOpenEdit} style={{ minHeight: '44px' }}><Edit2 size={18} /> <span className="hide-mobile">Editar</span></button>
+          <button className="btn btn-accent" onClick={() => setIsActionModalOpen(true)} style={{ minHeight: '44px' }}><Plus size={18} /> <span className="hide-mobile">Nova</span> Ação</button>
         </div>
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid var(--border)', paddingBottom: '2px', overflowX: 'auto' }}>
+      <div style={{
+        display: 'flex',
+        gap: '4px',
+        borderBottom: '1px solid var(--border)',
+        paddingBottom: '2px',
+        overflowX: 'auto',
+        WebkitOverflowScrolling: 'touch',
+        scrollbarWidth: 'none',
+        msOverflowStyle: 'none'
+      }} className="client-tabs-scroll">
         {TABS.map((tab) => {
           const isActive = activeTab === tab.id;
           return (
@@ -624,7 +642,7 @@ export default function ClientDetailPage() {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
-                padding: '12px 24px',
+                padding: '10px 16px',
                 borderRadius: '12px 12px 0 0',
                 background: isActive ? 'rgba(217, 72, 15, 0.1)' : 'transparent',
                 color: isActive ? 'var(--accent)' : 'var(--text-secondary)',
@@ -667,6 +685,7 @@ export default function ClientDetailPage() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '24px' }}
+              className="mobile-grid-1"
             >
               <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                 <Spotlight className="glass-card" style={{ padding: '24px' }}>
@@ -743,56 +762,15 @@ export default function ClientDetailPage() {
                   )}
                 </Spotlight>
 
-                <Spotlight className="glass-card" style={{ padding: '24px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                    <h3 style={{ fontSize: '1.125rem', fontWeight: 600 }}>Briefing & Interesse</h3>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span className={`badge ${clientData.briefing_completed ? 'badge-success' : 'badge-warning'}`} style={{ fontSize: '0.75rem' }}>
-                        {clientData.briefing_completed ? 'Briefing Concluído' : 'Briefing Pendente'}
-                      </span>
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <div title={clientData.servico_interesse || '-'} style={{ flex: 1 }}>
-                        <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Serviço de Interesse</p>
-                        <p style={{ fontWeight: 600, color: 'var(--accent)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{clientData.servico_interesse || '-'}</p>
-                      </div>
-                      <button 
-                        onClick={() => {
-                          const link = `${window.location.origin}/briefing/${clientData.id}`;
-                          navigator.clipboard.writeText(link);
-                          showToast('Link do briefing copiado!', 'success');
-                        }}
-                        className="btn btn-secondary btn-sm"
-                        style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem' }}
-                      >
-                        <Copy size={14} /> Copiar Link de Briefing
-                      </button>
-                    </div>
-                    <div title={clientData.briefing || 'Nenhum briefing fornecido.'}>
-                      <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Briefing Inicial</p>
-                      <p style={{ 
-                         fontWeight: 400, 
-                         lineHeight: '1.6', 
-                         fontSize: '0.95rem',
-                         display: '-webkit-box',
-                         WebkitLineClamp: 5,
-                         WebkitBoxOrient: 'vertical',
-                         overflow: 'hidden'
-                      }}>
-                        {clientData.briefing || 'Nenhum briefing preenchido ainda.'}
-                      </p>
-                    </div>
-                  </div>
-                </Spotlight>
+                {/* Agenda and Sidebar Content */}
+              </div>
 
-
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                 <Spotlight className="glass-card" style={{ padding: '24px' }}>
                   <h3 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '20px' }}>Próximos Passos & Agenda</h3>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     {clientEvents.length > 0 ? clientEvents.map(event => (
-                      <div key={event.id} style={{ display: 'flex', gap: '16px', alignItems: 'center', padding: '12px', backgroundColor: 'rgba(255, 255, 255, 0.03)', borderRadius: '12px' }}>
+                      <div key={event.id} style={{ display: 'flex', gap: '16px', alignItems: 'center', padding: '12px', backgroundColor: 'var(--card-inner-bg)', borderRadius: '12px' }}>
                         <div style={{
                           width: '40px', height: '40px', borderRadius: '10px', backgroundColor: 'rgba(217, 72, 15, 0.1)',
                           display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)'
@@ -810,9 +788,6 @@ export default function ClientDetailPage() {
                     )}
                   </div>
                 </Spotlight>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                 <Spotlight className="glass-card" style={{ padding: '24px' }}>
                   <h3 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '20px' }}>Resumo de Contratos</h3>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -861,9 +836,32 @@ export default function ClientDetailPage() {
                         <span className="badge badge-success">Concluído</span>
                       </div>
 
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-                        {clientData.briefing_data ? Object.entries(clientData.briefing_data).map(([key, value]: [string, any]) => {
-                          if (!value || typeof value !== 'string') return null;
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '40px' }}>
+                        {(() => {
+                          const data = clientData.briefing_data || {};
+                          const groups = [
+                            {
+                              title: 'Identidade e Negócio',
+                              icon: <User size={20} />,
+                              fields: ['nome_contato', 'email_contato', 'whatsapp', 'nicho', 'tempo_mercado', 'situacao_atual', 'produtos_fortes']
+                            },
+                            {
+                              title: 'Público e Diferenciais',
+                              icon: <Target size={20} />,
+                              fields: ['perfil_publico', 'desejos_publico', 'diferencial', 'concorrentes']
+                            },
+                            {
+                              title: 'Marketing e Vendas',
+                              icon: <Briefcase size={20} />,
+                              fields: ['equipe_marketing', 'processo_vendas', 'ticket_medio', 'sazonalidade', 'canais_atuais', 'objetivos', 'historico_marketing']
+                            },
+                            {
+                              title: 'Identidade Visual e Inspirações',
+                              icon: <Camera size={20} />,
+                              fields: ['cores_desejadas', 'elementos_visuais', 'cores_evitar', 'referencias', 'inspiracoes']
+                            }
+                          ];
+
                           const labels: Record<string, string> = {
                             nome_contato: 'Nome do Contato',
                             email_contato: 'E-mail do Contato',
@@ -878,7 +876,9 @@ export default function ClientDetailPage() {
                             concorrentes: 'Concorrentes',
                             referencias: 'Referências',
                             inspiracoes: 'Inspirações',
-                            equipe_marketing: 'Equipe de Marketing',
+                            equipe_marketing_interna: 'Equipe de Marketing Interna',
+                            empresa_nova: 'Empresa Nova no Mercado?',
+                            redes_sociais: 'Redes Sociais Atuais',
                             processo_vendas: 'Processo de Vendas',
                             ticket_medio: 'Ticket Médio',
                             sazonalidade: 'Sazonalidade',
@@ -890,17 +890,37 @@ export default function ClientDetailPage() {
                             cores_evitar: 'Cores a Evitar'
                           };
 
-                          return (
-                            <div key={key}>
-                              <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
-                                {labels[key] || key.replace(/_/g, ' ')}
-                              </p>
-                              <p style={{ lineHeight: 1.6, color: 'var(--text-primary)' }}>{value}</p>
-                            </div>
-                          );
-                        }) : (
-                          <p style={{ color: 'var(--text-secondary)' }}>Dados do briefing não encontrados no formato estruturado.</p>
-                        )}
+                          return groups.map((group, gIdx) => {
+                            const hasData = group.fields.some(f => data[f]);
+                            if (!hasData) return null;
+
+                            return (
+                              <div key={gIdx} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--accent)' }}>
+                                  {group.icon}
+                                  <h4 style={{ fontSize: '1rem', fontWeight: 600, letterSpacing: '0.02em' }}>{group.title}</h4>
+                                  <div style={{ flex: 1, height: '1px', background: 'linear-gradient(to right, var(--accent), transparent)', opacity: 0.2 }} />
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '24px' }}>
+                                  {group.fields.map(field => {
+                                    if (!data[field]) return null;
+                                    const value = data[field];
+                                    const displayValue = Array.isArray(value) ? value.join(', ') : value;
+                                    
+                                    return (
+                                      <div key={field} style={{ backgroundColor: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                        <p style={{ color: 'var(--text-secondary)', fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+                                          {labels[field] || field.replace(/_/g, ' ')}
+                                        </p>
+                                        <p style={{ lineHeight: 1.6, color: 'var(--text-primary)', fontSize: '0.95rem' }}>{displayValue}</p>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            );
+                          });
+                        })()}
                         
                         {clientData.briefing && !clientData.briefing_data && (
                            <div style={{ marginTop: '20px' }}>
