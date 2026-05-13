@@ -109,7 +109,7 @@ export default function UserDetailPage() {
       style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}
     >
       {/* Header com Navegação */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+      <div className="mobile-stack" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
         <motion.button
           whileHover={{ x: -4 }}
           onClick={() => router.back()}
@@ -131,7 +131,7 @@ export default function UserDetailPage() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '32px' }}>
+      <div className="mobile-grid-1" style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '32px' }}>
         {/* Lado Esquerdo: Info Cartão */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           <Spotlight className="glass-card" style={{ padding: '32px', textAlign: 'center' }}>
@@ -184,7 +184,7 @@ export default function UserDetailPage() {
                   }
                 }}
                 className="btn btn-secondary"
-                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', minHeight: '44px' }}
               >
                 <Shield size={16} /> Redefinir Senha
               </button>
@@ -217,7 +217,7 @@ export default function UserDetailPage() {
         {/* Lado Direito: Stats e Demandas */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           {/* Grid de Stats */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px' }}>
+          <div className="onboarding-form-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
             <Spotlight className="glass-card" style={{ padding: '24px' }}>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', fontWeight: 600 }}>Demandas Ativas</p>
               <h4 style={{ fontSize: '1.8rem', fontWeight: 800 }}>{userDemands.length}</h4>
@@ -273,7 +273,7 @@ export default function UserDetailPage() {
             <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '12px' }}>
               <Calendar size={22} color="var(--accent)" /> Próximos Compromissos
             </h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div className="onboarding-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               <div style={{ padding: '16px', borderRadius: '12px', background: 'var(--card-inner-bg)', border: '1px solid var(--border)' }}>
                 <p style={{ fontSize: '0.75rem', color: 'var(--accent)', fontWeight: 700 }}>AMANHÃ às 14:00</p>
                 <p style={{ fontWeight: 600 }}>Daily de Alinhamento</p>

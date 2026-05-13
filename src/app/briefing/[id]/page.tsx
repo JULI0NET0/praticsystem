@@ -109,11 +109,10 @@ export default function BriefingPage() {
           setClient(data);
           setFormData((prev: any) => ({
             ...prev,
-            whatsapp: data.whatsapp || '',
+            whatsapp: data.whatsapp || data.phone || '',
             email_contato: data.email || '',
             nicho: data.setor || '',
-            nome_contato: data.contact_name || '',
-            whatsapp: data.phone || ''
+            nome_contato: data.contact_name || ''
           }));
         }
       } catch (err) {
