@@ -2,36 +2,43 @@
 
 import { supabase } from "@/lib/supabase";
 import { useState, useEffect } from "react";
-import { Download, Loader2 } from "lucide-react";
+import { Download, Loader2, LayoutDashboard, Receipt, Repeat, Users } from "lucide-react";
+import { FinancialOverview } from "@/components/financeiro/FinancialOverview";
+import { InvoicesList } from "@/components/financeiro/InvoicesList";
+import { RecurringRevenue } from "@/components/financeiro/RecurringRevenue";
+import { ClientFinancials } from "@/components/financeiro/ClientFinancials";
 
 export default function BillingPage() {
   const [invoices, setInvoices] = useState<any[]>([]);
   const [clients, setClients] = useState<any[]>([]);
+  const [contracts, setContracts] = useState<any[]>([]);
+  const [services, setServices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'geral' | 'recebimentos' | 'recorrencia' | 'clientes'>('geral');
 
   useEffect(() => {
     async function fetchData() {
       try {
         setLoading(true);
-        const [invoicesRes, clientsRes] = await Promise.all([
+        const [invoicesRes, clientsRes, contractsRes, servicesRes] = await Promise.all([
           supabase.from('invoices').select('*'),
-          supabase.from('clients').select('*')
+          supabase.from('clients').select('*'),
+          supabase.from('contracts').select('*'),
+          supabase.from('services').select('*')
         ]);
         
         if (invoicesRes.data) setInvoices(invoicesRes.data);
         if (clientsRes.data) setClients(clientsRes.data);
+        if (contractsRes.data) setContracts(contractsRes.data);
+        if (servicesRes.data) setServices(servicesRes.data);
       } catch (err) {
-        console.error("Erro ao buscar faturas:", err);
+        console.error("Erro ao buscar dados financeiros:", err);
       } finally {
         setLoading(false);
       }
     }
     fetchData();
   }, []);
-
-  const totalPending = invoices.filter(i => i.status === 'pending').reduce((acc, curr) => acc + Number(curr.amount), 0);
-  const totalPaid = invoices.filter(i => i.status === 'paid').reduce((acc, curr) => acc + Number(curr.amount), 0);
-  const totalOverdue = invoices.filter(i => i.status === 'overdue').reduce((acc, curr) => acc + Number(curr.amount), 0);
 
   if (loading) {
     return (
@@ -41,86 +48,75 @@ export default function BillingPage() {
     );
   }
 
+  const tabs = [
+    { id: 'geral', label: 'Geral', icon: <LayoutDashboard size={18} /> },
+    { id: 'recebimentos', label: 'Recebimentos', icon: <Receipt size={18} /> },
+    { id: 'recorrencia', label: 'Recorrência', icon: <Repeat size={18} /> },
+    { id: 'clientes', label: 'Clientes', icon: <Users size={18} /> },
+  ] as const;
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
         <div>
           <h1 style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '8px' }}>Financeiro</h1>
-          <p style={{ color: 'var(--text-secondary)' }}>Controle de faturamentos e recebimentos.</p>
+          <p style={{ color: 'var(--text-secondary)' }}>Controle de faturamentos e recebimentos da agência.</p>
         </div>
-        <button className="btn btn-secondary"><Download size={18} /> Exportar Relatório</button>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px' }}>
-        <div className="glass-card" style={{ padding: '24px', borderLeft: '4px solid #22C55E' }}>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Total Recebido (Mês)</p>
-          <h3 style={{ fontSize: '1.5rem', fontWeight: 700, marginTop: '8px' }}>
-            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalPaid)}
-          </h3>
-        </div>
-        <div className="glass-card" style={{ padding: '24px', borderLeft: '4px solid #EAB308' }}>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>A Receber (Pendente)</p>
-          <h3 style={{ fontSize: '1.5rem', fontWeight: 700, marginTop: '8px' }}>
-            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalPending)}
-          </h3>
-        </div>
-        <div className="glass-card" style={{ padding: '24px', borderLeft: '4px solid #EF4444' }}>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Em Atraso</p>
-          <h3 style={{ fontSize: '1.5rem', fontWeight: 700, marginTop: '8px' }}>
-            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalOverdue)}
-          </h3>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button className="btn btn-secondary"><Download size={18} /> Exportar Relatório</button>
         </div>
       </div>
 
-      <div className="glass-card" style={{ padding: '24px' }}>
-        <div className="table-container">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Descrição / Cliente</th>
-                <th>Vencimento</th>
-                <th>Valor</th>
-                <th>Status</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {invoices.map((invoice) => {
-                const client = clients.find(c => c.id === invoice.client_id);
-                return (
-                  <tr key={invoice.id}>
-                    <td>
-                      <div>
-                        <p style={{ fontWeight: 500 }}>{invoice.description}</p>
-                        <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{client?.name}</p>
-                      </div>
-                    </td>
-                    <td>{new Date(invoice.due_date).toLocaleDateString('pt-BR')}</td>
-                    <td style={{ fontWeight: 500 }}>
-                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(invoice.amount))}
-                    </td>
-                    <td>
-                      <span className={`badge ${
-                        invoice.status === 'paid' ? 'badge-success' : 
-                        invoice.status === 'pending' ? 'badge-warning' : 'badge-danger'
-                      }`}>
-                        {invoice.status === 'paid' ? 'Pago' : invoice.status === 'pending' ? 'Pendente' : 'Atrasado'}
-                      </span>
-                    </td>
-                    <td>
-                      {invoice.status !== 'paid' && (
-                        <button style={{ color: 'var(--accent)', fontSize: '0.875rem', fontWeight: 500 }}>
-                          Confirmar Pagamento
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+      {/* Tabs Navigation */}
+      <div style={{ 
+        display: 'flex', 
+        gap: '8px', 
+        borderBottom: '1px solid rgba(255,255,255,0.1)',
+        paddingBottom: '2px'
+      }}>
+        {tabs.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '12px 24px',
+              fontSize: '0.875rem',
+              fontWeight: 500,
+              color: activeTab === tab.id ? 'var(--accent)' : 'var(--text-secondary)',
+              borderBottom: activeTab === tab.id ? '2px solid var(--accent)' : '2px solid transparent',
+              transition: 'all 0.2s ease',
+              background: 'none',
+              borderTop: 'none',
+              borderLeft: 'none',
+              borderRight: 'none',
+              cursor: 'pointer'
+            }}
+          >
+            {tab.icon}
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab Content */}
+      <div style={{ minHeight: '400px' }}>
+        {activeTab === 'geral' && (
+          <FinancialOverview invoices={invoices} contracts={contracts} />
+        )}
+        {activeTab === 'recebimentos' && (
+          <InvoicesList invoices={invoices} clients={clients} />
+        )}
+        {activeTab === 'recorrencia' && (
+          <RecurringRevenue contracts={contracts} clients={clients} services={services} />
+        )}
+        {activeTab === 'clientes' && (
+          <ClientFinancials invoices={invoices} clients={clients} contracts={contracts} />
+        )}
       </div>
     </div>
   );
 }
+

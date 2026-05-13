@@ -91,7 +91,10 @@ export default function ClientDetailPage() {
     billing_cycle: 'monthly',
     due_day: 10,
     installments: 1,
-    contract_duration: 12
+    contract_duration: 12,
+    posts_per_week: 3,
+    content_capture: false,
+    capture_frequency: '1 meia diária'
   });
 
   useEffect(() => {
@@ -290,7 +293,10 @@ export default function ClientDetailPage() {
           end_date: endDate.toISOString().split('T')[0],
           status: 'active',
           auto_renew: true,
-          billing_cycle: actionFormData.billing_cycle || selectedService?.billing_cycle || 'monthly'
+          billing_cycle: actionFormData.billing_cycle || selectedService?.billing_cycle || 'monthly',
+          posts_per_week: actionFormData.posts_per_week,
+          content_capture: actionFormData.content_capture,
+          capture_frequency: actionFormData.content_capture ? actionFormData.capture_frequency : null
         })
         .select()
         .single();
@@ -300,6 +306,11 @@ export default function ClientDetailPage() {
       // 2. Gerar Faturas (Lógica de Parcelamento ou Recorrência Antecipada)
       let invoicesToCreate = [];
       const totalValue = actionFormData.value || Number(selectedService?.price || 0);
+
+      // Buscar o último número de fatura sequencial para este cliente (simulado ou do banco se houver coluna)
+      const lastInvoiceNumber = clientInvoices.length > 0 
+        ? Math.max(...clientInvoices.map(i => i.invoice_number || 0)) 
+        : 0;
 
       if (actionFormData.billing_cycle === 'one_time') {
         const numInstallments = actionFormData.installments;
@@ -312,6 +323,7 @@ export default function ClientDetailPage() {
             amount: installmentValue,
             due_date: dueDate.toISOString().split('T')[0],
             status: 'pending',
+            invoice_number: lastInvoiceNumber + i + 1,
             description: `${selectedService?.name || 'Serviço'} (Parcela ${i + 1}/${numInstallments})`
           });
         }
@@ -333,6 +345,7 @@ export default function ClientDetailPage() {
             amount: totalValue,
             due_date: dueDate.toISOString().split('T')[0],
             status: 'pending',
+            invoice_number: lastInvoiceNumber + i + 1,
             description: `Mensalidade: ${selectedService?.name || 'Serviço'} (${i + 1}/${numInvoices})`
           });
         }
@@ -513,7 +526,7 @@ export default function ClientDetailPage() {
             )}
             <span style={{ color: 'rgba(255,255,255,0.1)' }}>•</span>
             <p 
-              title={clientData.servico_interesse || 'Sem serviço definido'}
+              title={clientContracts.find(c => c.status === 'active') ? availableServices.find(s => s.id === clientContracts.find(c => c.status === 'active').service_id)?.name : (clientData.servico_interesse || 'Sem serviço definido')}
               style={{ 
                 color: 'var(--text-secondary)', 
                 display: 'flex', 
@@ -525,7 +538,10 @@ export default function ClientDetailPage() {
                 maxWidth: '300px'
               }}
             >
-              <Briefcase size={14} style={{ color: 'var(--accent)' }} /> {clientData.servico_interesse || 'Sem serviço definido'}
+              <Briefcase size={14} style={{ color: 'var(--accent)' }} /> 
+              {clientContracts.find(c => c.status === 'active') 
+                ? availableServices.find(s => s.id === clientContracts.find(c => c.status === 'active').service_id)?.name 
+                : (clientData.servico_interesse || 'Sem serviço definido')}
             </p>
           </div>
             <div className="hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: '16px', marginTop: '12px' }}>
@@ -1304,8 +1320,22 @@ export default function ClientDetailPage() {
                     {clientContracts.map(contract => (
                       <tr key={contract.id}>
                         <td style={{ paddingLeft: '24px' }}>
-                          <p style={{ fontWeight: 500 }}>Contrato #{contract.id}</p>
-                          <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>ID Serviço: {contract.service_id}</p>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <p style={{ fontWeight: 500 }}>{availableServices.find(s => s.id === contract.service_id)?.name || 'Contrato'}</p>
+                            <span style={{ fontSize: '0.7rem', opacity: 0.5 }}>#{contract.id.slice(-6).toUpperCase()}</span>
+                          </div>
+                          <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                            {contract.posts_per_week > 0 && (
+                              <span style={{ fontSize: '0.65rem', background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: '4px', color: 'var(--text-secondary)' }}>
+                                {contract.posts_per_week} posts/sem ({contract.posts_per_week * 4} mes)
+                              </span>
+                            )}
+                            {contract.content_capture && (
+                              <span style={{ fontSize: '0.65rem', background: 'rgba(217, 72, 15, 0.1)', padding: '2px 6px', borderRadius: '4px', color: 'var(--accent)' }}>
+                                Captação: {contract.capture_frequency}
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td>{formatDate(contract.start_date)}</td>
                         <td>{formatDate(contract.end_date)}</td>
@@ -1374,7 +1404,10 @@ export default function ClientDetailPage() {
                         <tr key={invoice.id}>
                           <td style={{ paddingLeft: '24px' }}>
                             <p style={{ fontWeight: 500 }}>{invoice.description}</p>
-                            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>#{invoice.id}</p>
+                            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                              Fatura #{String(invoice.invoice_number || 0).padStart(3, '0')} 
+                              <span style={{ opacity: 0.3, marginLeft: '8px' }}>#{invoice.id.slice(-6).toUpperCase()}</span>
+                            </p>
                           </td>
                           <td>{formatDate(invoice.due_date)}</td>
                           <td style={{ fontWeight: 600 }}>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(invoice.amount)}</td>
@@ -1605,7 +1638,10 @@ export default function ClientDetailPage() {
                         ...actionFormData, 
                         service_id: e.target.value,
                         value: Number(service?.price || 0),
-                        billing_cycle: service?.billing_cycle || 'monthly'
+                        billing_cycle: service?.billing_cycle || 'monthly',
+                        posts_per_week: service?.default_posts_per_week || 3,
+                        content_capture: service?.default_content_capture || false,
+                        capture_frequency: service?.default_capture_frequency || '1 meia diária'
                       });
                     }}
                   >
@@ -1664,20 +1700,7 @@ export default function ClientDetailPage() {
                   </div>
                 </div>
 
-                {actionFormData.billing_cycle === 'one_time' ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Número de Parcelas</label>
-                    <select 
-                      className="input-dark"
-                      value={actionFormData.installments}
-                      onChange={(e) => setActionFormData({ ...actionFormData, installments: Number(e.target.value) })}
-                    >
-                      {[1, 2, 3, 4, 5, 6, 10, 12].map(n => (
-                        <option key={n} value={n}>{n}x {n > 1 ? `de ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(actionFormData.value / n)}` : ''}</option>
-                      ))}
-                    </select>
-                  </div>
-                ) : (
+                {actionFormData.billing_cycle !== 'one_time' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Duração do Contrato (Fidelidade)</label>
                     <select 
@@ -1692,6 +1715,70 @@ export default function ClientDetailPage() {
                     </select>
                   </div>
                 )}
+
+                {/* Campos de Redes Sociais */}
+                {(availableServices.find(s => s.id === actionFormData.service_id)?.name?.toLowerCase().includes('redes') || 
+                  availableServices.find(s => s.id === actionFormData.service_id)?.name?.toLowerCase().includes('social')) && (
+                  <motion.div 
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    style={{ background: 'rgba(217, 72, 15, 0.05)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(217, 72, 15, 0.1)', display: 'flex', flexDirection: 'column', gap: '16px' }}
+                  >
+                    <p style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '1px' }}>Especificações de Gestão</p>
+                    
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Posts Semanais</label>
+                        <input 
+                          type="number" className="input-dark" style={{ height: '36px' }}
+                          value={actionFormData.posts_per_week}
+                          onChange={(e) => setActionFormData({ ...actionFormData, posts_per_week: Number(e.target.value) })}
+                        />
+                        <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>{actionFormData.posts_per_week * 4} posts mensais</span>
+                      </div>
+                      
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Captação de Conteúdo?</label>
+                        <select 
+                          className="input-dark" style={{ height: '36px' }}
+                          value={actionFormData.content_capture ? 'sim' : 'nao'}
+                          onChange={(e) => setActionFormData({ ...actionFormData, content_capture: e.target.value === 'sim' })}
+                        >
+                          <option value="nao">Não</option>
+                          <option value="sim">Sim</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {actionFormData.content_capture && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Frequência de Captação</label>
+                        <select 
+                          className="input-dark" style={{ height: '36px' }}
+                          value={actionFormData.capture_frequency}
+                          onChange={(e) => setActionFormData({ ...actionFormData, capture_frequency: e.target.value })}
+                        >
+                          <option value="1 meia diária">1 meia diária</option>
+                          <option value="1 diária inteira">1 diária inteira</option>
+                          <option value="2 meias diárias">2 meias diárias</option>
+                          <option value="2 diárias inteiras">2 diárias inteiras</option>
+                        </select>
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+
+                {/* Resumo Visual */}
+                <div style={{ padding: '16px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', marginTop: '8px' }}>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>Resumo do Contrato</p>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <p style={{ fontWeight: 600 }}>{availableServices.find(s => s.id === actionFormData.service_id)?.name || 'Nenhum serviço'}</p>
+                    <p style={{ fontWeight: 700, color: 'var(--accent)' }}>
+                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(actionFormData.value)}
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 400 }}> /mês</span>
+                    </p>
+                  </div>
+                </div>
 
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '12px' }}>
                   <button className="btn btn-secondary" onClick={() => setIsActionModalOpen(false)}>Cancelar</button>

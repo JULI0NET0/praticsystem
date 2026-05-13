@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Search, Plus, MoreHorizontal, User, X, Building2, Mail, Phone, Shield, Loader2, Briefcase } from "lucide-react";
+import { Search, Plus, MoreHorizontal, User, X, Building2, Mail, Phone, Shield, Loader2, Briefcase, Copy } from "lucide-react";
 import Spotlight from "@/components/Spotlight";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
@@ -91,14 +91,27 @@ export default function ClientsPage() {
           <h1 style={{ fontSize: 'clamp(1.4rem, 4vw, 2rem)', fontWeight: 700, marginBottom: '8px' }}>Gestão de Clientes</h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: 'clamp(0.8rem, 2vw, 1rem)' }}>Visualize e gerencie toda a sua carteira de clientes.</p>
         </div>
-        <Link href="/admin/clients/create">
-          <Spotlight
-            as="div"
-            className="btn btn-accent"
+        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+          <button 
+            onClick={() => {
+              const url = `${window.location.origin}/onboarding`;
+              navigator.clipboard.writeText(url);
+              alert("Link de onboarding copiado!");
+            }}
+            className="btn btn-secondary" 
+            style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
           >
-            <Plus size={18} /> <span className="hide-mobile">Novo</span> Cliente
-          </Spotlight>
-        </Link>
+            <Copy size={18} /> <span className="hide-mobile">Copiar</span> Onboarding
+          </button>
+          <Link href="/admin/clients/create">
+            <Spotlight
+              as="div"
+              className="btn btn-accent"
+            >
+              <Plus size={18} /> <span className="hide-mobile">Novo</span> Cliente
+            </Spotlight>
+          </Link>
+        </div>
       </div>
 
       <div className="glass-card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '24px' }}>

@@ -226,11 +226,7 @@ DADOS DO BRIEFING:
     out: { opacity: 0, x: -20 }
   };
 
-  const pageTransition = {
-    type: "tween",
-    ease: "anticipate",
-    duration: 0.4
-  } as const;
+
 
   return (
     <div style={{
@@ -351,7 +347,11 @@ DADOS DO BRIEFING:
                   initial="initial"
                   animate="in"
                   exit="out"
-                  transition={pageTransition}
+                  transition={{
+                    type: "tween",
+                    ease: "anticipate",
+                    duration: 0.4
+                  }}
                   style={{ flex: 1, display: 'flex', flexDirection: 'column' }}
                 >
                   {/* Step 1: Informações Gerais */}

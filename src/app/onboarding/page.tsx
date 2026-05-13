@@ -253,11 +253,7 @@ export default function OnboardingPage() {
     out: { opacity: 0, y: -20 }
   };
 
-  const pageTransition = {
-    type: "tween" as const,
-    ease: "anticipate" as const,
-    duration: 0.4
-  };
+
 
   const RedesSociaisList = [
     { id: 'instagram', label: 'Instagram', color: '#E1306C' },
@@ -472,7 +468,7 @@ export default function OnboardingPage() {
 
                   {/* STEP 1: Identificação */}
                   {step === 1 && (
-                    <motion.div key="step1" variants={pageVariants} initial="initial" animate="in" exit="out" transition={pageTransition} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                    <motion.div key="step1" variants={pageVariants} initial="initial" animate="in" exit="out" transition={{ type: "tween", ease: "anticipate", duration: 0.4 }} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '8px' }}>
                         <div style={{ padding: '12px', background: 'rgba(217, 72, 15, 0.1)', color: 'var(--accent)', borderRadius: '16px' }}>
                           <Building2 size={24} />
@@ -597,7 +593,7 @@ export default function OnboardingPage() {
 
                   {/* STEP 2: Endereço */}
                   {step === 2 && (
-                    <motion.div key="step2" variants={pageVariants} initial="initial" animate="in" exit="out" transition={pageTransition} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                    <motion.div key="step2" variants={pageVariants} initial="initial" animate="in" exit="out" transition={{ type: "tween", ease: "anticipate", duration: 0.4 }} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '8px' }}>
                         <div style={{ padding: '12px', background: 'rgba(217, 72, 15, 0.1)', color: 'var(--accent)', borderRadius: '16px' }}>
                           <MapPin size={24} />
@@ -672,7 +668,7 @@ export default function OnboardingPage() {
 
                   {/* STEP 3: Contatos */}
                   {step === 3 && (
-                    <motion.div key="step3" variants={pageVariants} initial="initial" animate="in" exit="out" transition={pageTransition} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                    <motion.div key="step3" variants={pageVariants} initial="initial" animate="in" exit="out" transition={{ type: "tween", ease: "anticipate", duration: 0.4 }} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '8px' }}>
                         <div style={{ padding: '12px', background: 'rgba(217, 72, 15, 0.1)', color: 'var(--accent)', borderRadius: '16px' }}>
                           <Phone size={24} />
@@ -722,7 +718,7 @@ export default function OnboardingPage() {
 
                   {/* STEP 4: Redes Sociais */}
                   {step === 4 && (
-                    <motion.div key="step4" variants={pageVariants} initial="initial" animate="in" exit="out" transition={pageTransition} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                    <motion.div key="step4" variants={pageVariants} initial="initial" animate="in" exit="out" transition={{ type: "tween", ease: "anticipate", duration: 0.4 }} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '8px' }}>
                         <div style={{ padding: '12px', background: 'rgba(249, 115, 22, 0.1)', color: 'var(--accent)', borderRadius: '16px' }}>
                           <Share2 size={24} />
@@ -850,7 +846,7 @@ export default function OnboardingPage() {
 
                   {/* STEP 5: Sucesso */}
                   {step === 5 && (
-                    <motion.div key="step5" variants={pageVariants} initial="initial" animate="in" exit="out" transition={pageTransition} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', textAlign: 'center' }}>
+                    <motion.div key="step5" variants={pageVariants} initial="initial" animate="in" exit="out" transition={{ type: "tween", ease: "anticipate", duration: 0.4 }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', textAlign: 'center' }}>
                       <motion.div
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}

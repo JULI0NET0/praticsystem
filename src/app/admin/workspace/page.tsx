@@ -22,7 +22,9 @@ import {
   Save,
   Timer,
   Play,
-  Square
+  Square,
+  MoreHorizontal,
+  Activity
 } from "lucide-react";
 import Spotlight from "@/components/Spotlight";
 import { motion, AnimatePresence } from "framer-motion";
@@ -235,28 +237,20 @@ export default function WorkspacePage() {
       transition={{ duration: 0.5 }}
       style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}
     >
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <h1 className="workspace-title" style={{ fontSize: 'clamp(1.5rem, 5vw, 2.5rem)', fontWeight: 800, marginBottom: '8px', letterSpacing: '-0.02em' }}>
-            WorkSpace
-          </h1>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
+      {/* Header Principal */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '24px' }}>
+        <div style={{ flex: 1, minWidth: '300px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '4px' }}>
             <div style={{ position: 'relative' }}>
-              <p
+              <span 
                 onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                style={{
-                  color: 'var(--accent)', fontSize: '1.25rem', fontWeight: 700,
-                  display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer',
-                  padding: '8px 12px', borderRadius: '16px', transition: 'all 0.2s',
-                  background: 'var(--card-inner-bg)', border: '1px solid var(--border)'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--accent)'}
-                onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--border)'}
+                style={{ fontSize: '2.5rem', cursor: 'pointer', display: 'block', transition: 'transform 0.2s' }}
+                onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+                onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
               >
-                <span style={{ fontSize: '1.5rem' }}>{currentUser?.emoji || "☀️"}</span> {greeting}
-              </p>
-
+                {currentUser?.emoji || "☀️"}
+              </span>
+              
               <AnimatePresence>
                 {showEmojiPicker && (
                   <motion.div
@@ -266,16 +260,19 @@ export default function WorkspacePage() {
                     className="glass-card"
                     style={{
                       position: 'absolute', top: '100%', left: 0, zIndex: 100,
-                      marginTop: '8px', padding: '12px', display: 'grid',
-                      gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px',
-                      boxShadow: '0 10px 30px rgba(0,0,0,0.3)'
+                      marginTop: '12px', padding: '16px', display: 'grid',
+                      gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px',
+                      boxShadow: '0 20px 50px rgba(0,0,0,0.4)',
+                      width: '200px',
+                      background: 'rgba(20, 20, 20, 0.95)',
+                      backdropFilter: 'blur(20px)'
                     }}
                   >
                     {EMOJIS.map(e => (
                       <button
                         key={e}
                         onClick={() => updateEmoji(e)}
-                        style={{ fontSize: '1.2rem', padding: '8px', background: 'none', border: 'none', cursor: 'pointer', borderRadius: '8px' }}
+                        style={{ fontSize: '1.5rem', padding: '8px', background: 'none', border: 'none', cursor: 'pointer', borderRadius: '12px', transition: 'background 0.2s' }}
                         onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
                         onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
                       >
@@ -286,71 +283,91 @@ export default function WorkspacePage() {
                 )}
               </AnimatePresence>
             </div>
-
-            {!isEditing && (
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: '8px',
-                background: 'var(--card-inner-bg)', padding: '6px 16px',
-                borderRadius: '20px', border: '1px solid var(--border)',
-                height: '40px'
-              }}>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>STATUS</span>
-                <input
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && updateStatusInDB()}
-                  style={{ background: 'none', border: 'none', color: 'var(--text-primary)', fontSize: '0.9rem', outline: 'none', width: '100%', maxWidth: '250px', minWidth: '120px' }}
-                  placeholder="No que você está trabalhando?"
-                />
-                <button
-                  onClick={updateStatusInDB}
-                  style={{
-                    background: 'none', border: 'none', color: 'var(--accent)',
-                    cursor: 'pointer', display: 'flex', padding: '4px',
-                    transition: 'transform 0.2s'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.2)'}
-                  onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                >
-                  <Save size={16} />
-                </button>
-              </div>
-            )}
-
-            {isEditing && (
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 500 }}>
-                Modo de Edição: Configure largura (↔) e altura (↕) dos seus blocos.
-              </p>
-            )}
+            <h1 className="workspace-title" style={{ fontSize: 'clamp(1.5rem, 5vw, 2.5rem)', fontWeight: 800, letterSpacing: '-0.02em', margin: 0 }}>
+              {greeting.split('!')[0]}!
+            </h1>
           </div>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem', fontWeight: 500, opacity: 0.9, marginLeft: '4px' }}>
+            {greeting.split('?')[1] || "Pronto para um dia produtivo?"}
+          </p>
         </div>
-        <div className="hide-mobile" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+
+        {/* Quick Time Tracker in Header */}
+        <div className="glass-card" style={{ 
+          padding: '8px 8px 8px 16px', 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '20px',
+          borderRadius: '20px',
+          background: 'rgba(255, 255, 255, 0.03)',
+          border: '1px solid var(--border)'
+        }}>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Hoje</span>
+            <span style={{ fontSize: '1.1rem', fontWeight: 800, color: isTracking ? '#22C55E' : 'var(--text-primary)' }}>{todayHours}</span>
+          </div>
+          <button
+            onClick={isTracking ? clockOut : clockIn}
+            style={{
+              padding: '10px 24px',
+              borderRadius: '14px',
+              background: isTracking ? 'rgba(239, 68, 68, 0.1)' : 'var(--accent)',
+              color: isTracking ? '#EF4444' : 'white',
+              fontSize: '0.85rem',
+              fontWeight: 700,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              transition: 'all 0.3s ease',
+              boxShadow: isTracking ? 'none' : '0 4px 15px rgba(217, 72, 15, 0.3)'
+            }}
+          >
+            {isTracking ? <><Square size={16} fill="currentColor" /> Parar</> : <><Play size={16} fill="currentColor" /> Iniciar</>}
+          </button>
+        </div>
+
+        <div className="hide-mobile" style={{ display: 'flex', gap: '12px' }}>
           {isEditing ? (
-            <div style={{ display: 'flex', gap: '8px', background: 'rgba(255,255,255,0.05)', padding: '4px', borderRadius: '12px', border: '1px solid var(--border)' }}>
-              <button
-                onClick={() => setIsAddModalOpen(true)}
-                className="btn btn-secondary btn-sm"
-                style={{ display: 'flex', alignItems: 'center', gap: '8px', height: '32px' }}
-              >
+            <div style={{ display: 'flex', gap: '8px', background: 'rgba(255,255,255,0.05)', padding: '6px', borderRadius: '16px', border: '1px solid var(--border)' }}>
+              <button onClick={() => setIsAddModalOpen(true)} className="btn btn-secondary btn-sm" style={{ height: '36px' }}>
                 <Plus size={16} /> Widget
               </button>
-              <div style={{ width: '1px', background: 'var(--border)', margin: '4px' }} />
-              <button onClick={() => applyPreset('default')} className="btn-small" style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '0.8rem', padding: '6px 12px' }}>Padrão</button>
-              <button onClick={() => applyPreset('finance')} className="btn-small" style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '0.8rem', padding: '6px 12px' }}>Financeiro</button>
-              <button onClick={() => applyPreset('compact')} className="btn-small" style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '0.8rem', padding: '6px 12px' }}>Compacto</button>
-              <div style={{ width: '1px', background: 'var(--border)', margin: '4px' }} />
-              <Spotlight as="button" onClick={() => saveLayout()} className="btn btn-accent btn-sm" style={{ padding: '6px 16px', height: '32px' }}>
-                <CheckCircle2 size={16} /> Salvar
+              <div style={{ width: '1px', background: 'var(--border)', margin: '4px 8px' }} />
+              <Spotlight as="button" onClick={() => saveLayout()} className="btn btn-accent btn-sm" style={{ height: '36px', padding: '0 20px' }}>
+                <CheckCircle2 size={16} /> Salvar Layout
               </Spotlight>
             </div>
           ) : (
-            <>
-              <Spotlight as="button" onClick={() => setIsEditing(true)} className="btn btn-accent btn-sm" style={{ height: '32px', fontSize: '0.85rem' }}>
-                <LayoutGrid size={16} /> Editar
-              </Spotlight>
-            </>
+            <button onClick={() => setIsEditing(true)} className="btn btn-secondary btn-sm" style={{ height: '40px', borderRadius: '14px', padding: '0 16px', gap: '8px' }}>
+              <LayoutGrid size={18} /> Personalizar
+            </button>
           )}
         </div>
+      </div>
+
+      {/* Status Bar */}
+      <div style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: '12px',
+        background: 'rgba(255,255,255,0.02)',
+        padding: '12px 20px',
+        borderRadius: '16px',
+        border: '1px solid var(--border)',
+        maxWidth: 'fit-content'
+      }}>
+        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22C55E', boxShadow: '0 0 10px #22C55E' }} />
+        <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Status:</span>
+        <input
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && updateStatusInDB()}
+          style={{ background: 'none', border: 'none', color: 'var(--text-primary)', fontSize: '0.85rem', outline: 'none', width: '250px' }}
+          placeholder="No que você está trabalhando?"
+        />
+        <button onClick={updateStatusInDB} style={{ color: 'var(--accent)', padding: '4px', opacity: status !== (currentUser?.workspace_settings?.status || "") ? 1 : 0.4 }}>
+          <Save size={16} />
+        </button>
       </div>
 
       {/* Grid de Widgets Configurável */}
@@ -366,7 +383,7 @@ export default function WorkspacePage() {
             <motion.div
               layout
               key={w.id}
-              drag={isEditing ? true : false}
+              drag={isEditing}
               dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
               dragElastic={0.1}
               onDragEnd={(_, info) => {
@@ -375,9 +392,9 @@ export default function WorkspacePage() {
                 if (info.offset.x > threshold) moveWidget(index, 'right');
                 else if (info.offset.x < -threshold) moveWidget(index, 'left');
               }}
-              initial={{ opacity: 0, scale: 0.9 }}
+              initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
+              exit={{ opacity: 0, scale: 0.95 }}
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
               style={{
                 gridColumn: `span ${w.colSpan}`,
@@ -395,61 +412,30 @@ export default function WorkspacePage() {
                 background: isEditing ? 'rgba(217, 72, 15, 0.08)' : 'var(--glass-bg)',
                 display: 'flex',
                 flexDirection: 'column',
-                cursor: isEditing ? 'grab' : 'default'
+                cursor: isEditing ? 'grab' : 'default',
+                overflow: 'hidden'
               }}>
                 {isEditing && (
-                  <>
-                    <div style={{
-                      position: 'absolute',
-                      top: '-12px',
-                      left: '50%',
-                      transform: 'translateX(-50%)',
-                      display: 'flex',
-                      gap: '8px',
-                      zIndex: 20
-                    }}>
-                      <div style={{ background: 'var(--accent)', color: 'white', padding: '4px 12px', borderRadius: '20px', fontSize: '0.7rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <GripVertical size={12} /> {w.colSpan}x{w.rowSpan}
-                      </div>
+                  <div style={{
+                    position: 'absolute',
+                    top: '12px',
+                    left: '12px',
+                    right: '12px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    zIndex: 20
+                  }}>
+                    <div style={{ background: 'var(--accent)', color: 'white', padding: '4px 10px', borderRadius: '10px', fontSize: '0.65rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <GripVertical size={10} /> {w.colSpan}x{w.rowSpan}
                     </div>
-                  </>
-                )}
-
-                {/* Controles de Largura (↔) */}
-                {isEditing && (
-                  <div style={{ position: 'absolute', bottom: '12px', right: '12px', display: 'flex', flexDirection: 'column', gap: '8px', zIndex: 10 }}>
-                    <div style={{ display: 'flex', gap: '4px' }}>
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginRight: '4px' }}>↔</span>
-                      <button onClick={() => updateWidgetSize(w.id, 'colSpan', -1)} style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', width: '24px', height: '24px', borderRadius: '4px', color: 'var(--text-primary)', cursor: 'pointer' }}>-</button>
-                      <button onClick={() => updateWidgetSize(w.id, 'colSpan', 1)} style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', width: '24px', height: '24px', borderRadius: '4px', color: 'var(--text-primary)', cursor: 'pointer' }}>+</button>
-                    </div>
-                    <div style={{ display: 'flex', gap: '4px' }}>
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginRight: '4px' }}>↕</span>
-                      <button onClick={() => updateWidgetSize(w.id, 'rowSpan', -1)} style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', width: '24px', height: '24px', borderRadius: '4px', color: 'var(--text-primary)', cursor: 'pointer' }}>-</button>
-                      <button onClick={() => updateWidgetSize(w.id, 'rowSpan', 1)} style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', width: '24px', height: '24px', borderRadius: '4px', color: 'var(--text-primary)', cursor: 'pointer' }}>+</button>
-                    </div>
+                    <button onClick={() => removeWidget(w.id)} style={{ color: '#EF4444', padding: '4px' }}>
+                      <X size={16} />
+                    </button>
                   </div>
                 )}
 
-                <button
-                  onClick={() => removeWidget(w.id)}
-                  style={{
-                    position: 'absolute',
-                    right: '12px',
-                    top: '12px',
-                    background: 'none',
-                    border: 'none',
-                    color: '#EF4444',
-                    cursor: 'pointer',
-                    opacity: isEditing ? 1 : 0,
-                    transition: 'opacity 0.2s',
-                    zIndex: 11
-                  }}
-                >
-                  <X size={16} />
-                </button>
-
-                <div style={{ opacity: isEditing ? 0.4 : 1, transition: 'opacity 0.3s', flex: 1, overflow: 'hidden' }}>
+                <div style={{ opacity: isEditing ? 0.3 : 1, transition: 'opacity 0.3s', flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                   {w.id === 'stats' && <StatsWidget colSpan={w.colSpan} demandsCount={demands.length} todayHours={todayHours} />}
                   {w.id === 'timetracker' && <TimeTrackerWidget isTracking={isTracking} todayHours={todayHours} todayMinutes={todayMinutes} currentSession={currentSession} clockIn={clockIn} clockOut={clockOut} />}
                   {w.id === 'demands' && <DemandsWidget demands={demands} loading={loadingDemands} />}
@@ -457,6 +443,20 @@ export default function WorkspacePage() {
                   {w.id === 'links' && <LinksWidget />}
                   {w.id === 'team' && <TeamWidget isUserOnline={isUserOnline} onlineUsers={onlineUsers} />}
                 </div>
+
+                {/* Controles de Redimensionamento */}
+                {isEditing && (
+                  <div style={{ position: 'absolute', bottom: '12px', right: '12px', display: 'flex', gap: '8px', zIndex: 20 }}>
+                    <div style={{ display: 'flex', background: 'rgba(0,0,0,0.3)', borderRadius: '8px', padding: '2px' }}>
+                      <button onClick={() => updateWidgetSize(w.id, 'colSpan', -1)} style={{ width: '24px', height: '24px', color: 'white' }}>-</button>
+                      <button onClick={() => updateWidgetSize(w.id, 'colSpan', 1)} style={{ width: '24px', height: '24px', color: 'white' }}>+</button>
+                    </div>
+                    <div style={{ display: 'flex', background: 'rgba(0,0,0,0.3)', borderRadius: '8px', padding: '2px' }}>
+                      <button onClick={() => updateWidgetSize(w.id, 'rowSpan', -1)} style={{ width: '24px', height: '24px', color: 'white' }}>-</button>
+                      <button onClick={() => updateWidgetSize(w.id, 'rowSpan', 1)} style={{ width: '24px', height: '24px', color: 'white' }}>+</button>
+                    </div>
+                  </div>
+                )}
               </div>
             </motion.div>
           ))}
@@ -470,10 +470,16 @@ export default function WorkspacePage() {
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
               className="glass-card"
-              style={{ width: '100%', maxWidth: '500px', padding: '32px' }}
+              style={{ width: '100%', maxWidth: '500px', padding: '32px', position: 'relative' }}
             >
-              <h3 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '24px' }}>Adicionar Widget</h3>
+              <button onClick={() => setIsAddModalOpen(false)} style={{ position: 'absolute', top: '24px', right: '24px', color: 'var(--text-secondary)' }}>
+                <X size={24} />
+              </button>
+              <h3 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '8px' }}>Adicionar Widget</h3>
+              <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '0.9rem' }}>Escolha um bloco para adicionar ao seu workspace.</p>
+              
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 {AVAILABLE_WIDGETS.map(w => (
                   <button
@@ -485,21 +491,17 @@ export default function WorkspacePage() {
                       background: widgets.find(widget => widget.id === w.id) ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.05)',
                       color: widgets.find(widget => widget.id === w.id) ? 'var(--text-secondary)' : 'var(--text-primary)',
                       cursor: widgets.find(widget => widget.id === w.id) ? 'not-allowed' : 'pointer',
-                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px'
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px',
+                      transition: 'all 0.2s ease'
                     }}
+                    onMouseEnter={(e) => !widgets.find(widget => widget.id === w.id) && (e.currentTarget.style.borderColor = 'var(--accent)')}
+                    onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--border)'}
                   >
-                    <w.icon size={24} color={widgets.find(widget => widget.id === w.id) ? 'var(--text-secondary)' : 'var(--accent)'} />
-                    <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>{w.title}</span>
+                    <w.icon size={28} color={widgets.find(widget => widget.id === w.id) ? 'var(--text-secondary)' : 'var(--accent)'} />
+                    <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>{w.title}</span>
                   </button>
                 ))}
               </div>
-              <button
-                onClick={() => setIsAddModalOpen(false)}
-                className="btn btn-secondary"
-                style={{ width: '100%', marginTop: '24px' }}
-              >
-                Fechar
-              </button>
             </motion.div>
           </div>
         )}
@@ -513,34 +515,46 @@ function StatsWidget({ colSpan, demandsCount, todayHours }: { colSpan: number, d
   const gridCols = colSpan > 8 ? 'repeat(4, 1fr)' : colSpan > 5 ? 'repeat(3, 1fr)' : colSpan > 2 ? 'repeat(2, 1fr)' : '1fr';
 
   const items = [
-    { label: "Demandas", value: demandsCount, color: "var(--accent)" },
-    { label: "Finalizadas", value: "0", color: "#10B981" },
-    { label: "Horas Hoje", value: todayHours, color: "#3B82F6" },
-    { label: "Alertas", value: "0", color: "#EF4444" }
+    { label: "Demandas", value: demandsCount, icon: CheckCircle2, color: "var(--accent)", gradient: "linear-gradient(135deg, rgba(217, 72, 15, 0.2), transparent)" },
+    { label: "Finalizadas", value: "0", icon: CheckCircle2, color: "#10B981", gradient: "linear-gradient(135deg, rgba(16, 185, 129, 0.2), transparent)" },
+    { label: "Tempo Hoje", value: todayHours.split(' ')[0], sub: todayHours.split(' ')[1], icon: Clock, color: "#3B82F6", gradient: "linear-gradient(135deg, rgba(59, 130, 246, 0.2), transparent)" },
+    { label: "Alertas", value: "0", icon: Zap, color: "#EF4444", gradient: "linear-gradient(135deg, rgba(239, 68, 68, 0.2), transparent)" }
   ];
 
   return (
     <div style={{
       display: 'grid',
       gridTemplateColumns: gridCols,
-      gap: '12px',
+      gap: '16px',
       height: '100%',
-      alignItems: 'center'
     }}>
       {items.slice(0, colSpan > 8 ? 4 : colSpan > 5 ? 3 : 2).map((item, i) => (
         <div key={i} style={{ 
           background: 'var(--card-inner-bg)',
-          padding: '12px 16px',
-          borderRadius: '12px',
-          borderLeft: `3px solid ${item.color}`,
+          padding: '20px',
+          borderRadius: '20px',
+          border: '1px solid var(--border)',
+          position: 'relative',
+          overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
-          gap: '2px'
+          justifyContent: 'center'
         }}>
-          <p style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            {item.label}
-          </p>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0 }}>{item.value}</h2>
+          <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: item.gradient, opacity: 0.5, pointerEvents: 'none' }} />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px', position: 'relative' }}>
+            <div style={{ padding: '8px', borderRadius: '12px', background: 'rgba(255,255,255,0.05)', color: item.color }}>
+              <item.icon size={20} />
+            </div>
+          </div>
+          <div style={{ position: 'relative' }}>
+            <p style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>
+              {item.label}
+            </p>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+              <h2 style={{ fontSize: '1.75rem', fontWeight: 900, margin: 0, color: 'var(--text-primary)' }}>{item.value}</h2>
+              {item.sub && <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>{item.sub}</span>}
+            </div>
+          </div>
         </div>
       ))}
     </div>
@@ -572,31 +586,94 @@ function TimeTrackerWidget({ isTracking, todayHours, todayMinutes, currentSessio
   }, [isTracking, currentSession]);
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <Timer size={18} color={isTracking ? '#22C55E' : 'var(--text-secondary)'} />
-        <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '0.05em' }}>Meu Registro</span>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+      {/* Background Pulse Animation when tracking */}
+      <AnimatePresence>
+        {isTracking && (
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1.5, opacity: 0.15 }}
+            exit={{ scale: 0.8, opacity: 0 }}
+            transition={{ repeat: Infinity, duration: 2, ease: "easeOut" }}
+            style={{
+              position: 'absolute',
+              width: '120px',
+              height: '120px',
+              borderRadius: '50%',
+              background: 'var(--accent)',
+              zIndex: 0
+            }}
+          />
+        )}
+      </AnimatePresence>
+
+      <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+        <div style={{ 
+          width: '60px', 
+          height: '60px', 
+          borderRadius: '20px', 
+          background: isTracking ? 'rgba(34, 197, 94, 0.1)' : 'rgba(255,255,255,0.05)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: isTracking ? '#22C55E' : 'var(--text-tertiary)',
+          marginBottom: '8px',
+          border: `1px solid ${isTracking ? 'rgba(34, 197, 94, 0.2)' : 'var(--border)'}`
+        }}>
+          <Timer size={28} className={isTracking ? "animate-pulse" : ""} />
+        </div>
+
+        <div style={{ textAlign: 'center' }}>
+          <p style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>
+            Sessão Atual
+          </p>
+          <h2 style={{ 
+            fontFamily: 'monospace', 
+            fontSize: '2.5rem', 
+            fontWeight: 800, 
+            letterSpacing: '-0.02em',
+            color: isTracking ? 'var(--text-primary)' : 'var(--text-tertiary)',
+            lineHeight: 1,
+            margin: 0
+          }}>
+            {elapsed}
+          </h2>
+        </div>
+
+        <div style={{ 
+          marginTop: '16px',
+          padding: '4px 12px',
+          borderRadius: '10px',
+          background: 'rgba(255,255,255,0.03)',
+          border: '1px solid var(--border)',
+          fontSize: '0.8rem',
+          color: 'var(--text-secondary)',
+          fontWeight: 600
+        }}>
+          Hoje: <span style={{ color: 'var(--text-primary)' }}>{todayHours}</span>
+        </div>
+
+        <button
+          onClick={isTracking ? clockOut : clockIn}
+          style={{
+            marginTop: '20px',
+            padding: '10px 28px',
+            borderRadius: '14px',
+            background: isTracking ? 'rgba(239, 68, 68, 0.1)' : 'var(--accent)',
+            color: isTracking ? '#EF4444' : 'white',
+            fontSize: '0.9rem',
+            fontWeight: 700,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            transition: 'all 0.3s ease',
+            border: isTracking ? '1px solid rgba(239, 68, 68, 0.2)' : 'none'
+          }}
+        >
+          {isTracking ? <><Square size={16} fill="currentColor" /> Parar Sessão</> : <><Play size={16} fill="currentColor" /> Iniciar Agora</>}
+        </button>
       </div>
-
-      <div style={{ fontFamily: 'monospace', fontSize: '2rem', fontWeight: 800, letterSpacing: '0.05em', color: isTracking ? '#22C55E' : 'var(--text-primary)' }}>
-        {elapsed}
-      </div>
-
-      <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Total hoje: {todayHours}</span>
-
-      <button
-        onClick={isTracking ? clockOut : clockIn}
-        style={{
-          padding: '8px 24px', borderRadius: '10px', border: 'none',
-          background: isTracking ? 'rgba(239, 68, 68, 0.12)' : 'rgba(34, 197, 94, 0.12)',
-          color: isTracking ? '#EF4444' : '#22C55E',
-          fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer',
-          display: 'flex', alignItems: 'center', gap: '6px',
-          transition: 'all 0.2s'
-        }}
-      >
-        {isTracking ? <><Square size={14} /> Parar</> : <><Play size={14} /> Iniciar</>}
-      </button>
     </div>
   );
 }
@@ -604,29 +681,73 @@ function TimeTrackerWidget({ isTracking, todayHours, todayMinutes, currentSessio
 function DemandsWidget({ demands, loading }: { demands: any[], loading: boolean }) {
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <CheckCircle2 size={18} color="var(--accent)" /> Minhas Demandas
-      </h3>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', overflowY: 'auto', flex: 1 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h3 style={{ fontSize: '1.1rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <CheckCircle2 size={20} color="var(--accent)" /> Minhas Demandas
+        </h3>
+        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.05)', padding: '4px 10px', borderRadius: '10px' }}>
+          {demands.length} Pendentes
+        </span>
+      </div>
+      
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', overflowY: 'auto', flex: 1, paddingRight: '4px' }}>
         {loading ? (
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
             <Loader2 size={24} className="animate-spin" color="var(--accent)" />
           </div>
         ) : demands.length > 0 ? demands.map(d => (
-          <div key={d.id} style={{ padding: '12px 16px', borderRadius: '12px', background: 'var(--card-inner-bg)', border: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', flexShrink: 0 }}>
-            <span style={{ fontWeight: 600 }}>{d.title}</span>
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{new Date(d.due_date || d.created_at).toLocaleDateString()}</span>
-          </div>
+          <motion.div 
+            key={d.id} 
+            whileHover={{ x: 4 }}
+            style={{ 
+              padding: '16px', 
+              borderRadius: '16px', 
+              background: 'rgba(255,255,255,0.02)', 
+              border: '1px solid var(--border)', 
+              display: 'flex', 
+              flexDirection: 'column',
+              gap: '8px',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>{d.title}</span>
+              <span style={{ 
+                fontSize: '0.65rem', 
+                fontWeight: 800, 
+                padding: '3px 8px', 
+                borderRadius: '6px',
+                background: d.status === 'in_production' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(234, 179, 8, 0.15)',
+                color: d.status === 'in_production' ? '#3B82F6' : '#EAB308',
+                textTransform: 'uppercase'
+              }}>
+                {d.status === 'in_production' ? 'Em Produção' : 'Pendente'}
+              </span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
+                <Calendar size={12} />
+                <span>{new Date(d.due_date || d.created_at).toLocaleDateString('pt-BR')}</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
+                <Activity size={12} />
+                <span style={{ textTransform: 'capitalize' }}>{d.type || 'Geral'}</span>
+              </div>
+            </div>
+          </motion.div>
         )) : (
           <div style={{
             textAlign: 'center', padding: '40px 20px', color: 'var(--text-secondary)',
-            fontSize: '0.85rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px'
+            fontSize: '0.85rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px'
           }}>
-            <div style={{ width: '50px', height: '50px', borderRadius: '50%', background: 'var(--card-inner-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '8px' }}>
-              <Inbox size={24} strokeWidth={1.5} />
+            <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'rgba(255,255,255,0.03)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Inbox size={32} strokeWidth={1} color="var(--text-tertiary)" />
             </div>
-            <p style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Tudo limpo!</p>
-            <p>Você não tem demandas pendentes para hoje.</p>
+            <div>
+              <p style={{ fontWeight: 800, color: 'var(--text-primary)', marginBottom: '4px' }}>Tudo em dia!</p>
+              <p style={{ opacity: 0.7 }}>Você não tem demandas pendentes para hoje.</p>
+            </div>
           </div>
         )}
       </div>
@@ -635,16 +756,41 @@ function DemandsWidget({ demands, loading }: { demands: any[], loading: boolean 
 }
 
 function NotesWidget({ myNote, setMyNote }: any) {
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      // Aqui simularia o salvamento automático
+      setIsSaving(false);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [myNote]);
+
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <MessageSquare size={18} color="var(--accent)" /> Notas Rápidas
-      </h3>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+        <h3 style={{ fontSize: '1.1rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <MessageSquare size={18} color="var(--accent)" /> Notas Rápidas
+        </h3>
+        {isSaving && <span style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)' }}>Salvando...</span>}
+      </div>
       <textarea
         value={myNote}
-        onChange={(e) => setMyNote(e.target.value)}
+        onChange={(e) => { setMyNote(e.target.value); setIsSaving(true); }}
         className="input-dark"
-        style={{ flex: 1, fontSize: '0.9rem', resize: 'none', minHeight: '100px' }}
+        style={{ 
+          flex: 1, 
+          fontSize: '0.9rem', 
+          resize: 'none', 
+          minHeight: '100px',
+          background: 'rgba(255,255,255,0.02)',
+          border: '1px solid var(--border)',
+          borderRadius: '16px',
+          padding: '16px',
+          color: 'var(--text-primary)',
+          lineHeight: '1.6'
+        }}
+        placeholder="Escreva algo aqui..."
       />
     </div>
   );
@@ -655,26 +801,46 @@ function LinksWidget() {
 
   useEffect(() => {
     async function fetchLinks() {
-      // In a real app, this could be a 'links' table.
-      // For now, let's keep it empty or hardcode standard real links.
       setLinks([
         { name: "Google Drive", url: "https://drive.google.com", icon: "📁" },
         { name: "Meta Ads", url: "https://adsmanager.facebook.com", icon: "📈" },
+        { name: "Brandbook", url: "#", icon: "🎨" },
+        { name: "Manual", url: "#", icon: "📖" },
       ]);
     }
     fetchLinks();
   }, []);
 
   return (
-    <div>
-      <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <h3 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
         <Star size={18} color="#F59E0B" /> Links Úteis
       </h3>
-      <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px' }}>
         {links.length > 0 ? links.map(link => (
-          <a key={link.name} href={link.url} target="_blank" rel="noopener noreferrer" style={{ padding: '8px 16px', borderRadius: '10px', background: 'var(--card-inner-bg)', border: '1px solid var(--border)', textDecoration: 'none', color: 'var(--text-primary)', fontSize: '0.8rem', fontWeight: 600 }}>
-            {link.icon} {link.name}
-          </a>
+          <motion.a 
+            key={link.name} 
+            href={link.url} 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            whileHover={{ y: -2, background: 'rgba(255,255,255,0.05)' }}
+            style={{ 
+              padding: '12px 16px', 
+              borderRadius: '14px', 
+              background: 'rgba(255,255,255,0.03)', 
+              border: '1px solid var(--border)', 
+              textDecoration: 'none', 
+              color: 'var(--text-primary)', 
+              fontSize: '0.85rem', 
+              fontWeight: 700,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px'
+            }}
+          >
+            <span style={{ fontSize: '1.2rem' }}>{link.icon}</span> 
+            {link.name}
+          </motion.a>
         )) : (
           <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Nenhum link pinado.</p>
         )}
@@ -689,7 +855,6 @@ function TeamWidget({ isUserOnline, onlineUsers }: { isUserOnline: (id: string) 
   const [activePopover, setActivePopover] = useState<string | null>(null);
 
   const teamMembers = users.filter(u => u.id !== currentUser?.id && ['admin', 'board', 'social_media', 'filmmaker'].includes(u.role));
-  // Ordena: online primeiro
   const sorted = [...teamMembers].sort((a, b) => {
     const aOnline = isUserOnline(a.id) ? 1 : 0;
     const bOnline = isUserOnline(b.id) ? 1 : 0;
@@ -698,91 +863,111 @@ function TeamWidget({ isUserOnline, onlineUsers }: { isUserOnline: (id: string) 
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <User size={18} color="var(--accent)" /> Equipe
-        <span style={{ fontSize: '0.7rem', color: '#22C55E', fontWeight: 600, marginLeft: 'auto' }}>
-          {onlineUsers.length} online
-        </span>
-      </h3>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', overflowY: 'auto', flex: 1 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h3 style={{ fontSize: '1.1rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <User size={18} color="var(--accent)" /> Equipe
+        </h3>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(34, 197, 94, 0.1)', padding: '4px 10px', borderRadius: '10px' }}>
+          <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22C55E' }} />
+          <span style={{ fontSize: '0.7rem', color: '#22C55E', fontWeight: 800 }}>
+            {onlineUsers.length} ON
+          </span>
+        </div>
+      </div>
+      
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto', flex: 1, paddingRight: '4px' }}>
         {sorted.length > 0 ? sorted.map((m: any) => {
           const online = isUserOnline(m.id);
           return (
             <div key={m.id} style={{ position: 'relative' }}>
               <motion.div
-                whileHover={{ background: 'rgba(255,255,255,0.04)' }}
+                whileHover={{ background: 'rgba(255,255,255,0.04)', x: 4 }}
                 onClick={() => setActivePopover(activePopover === m.id ? null : m.id)}
                 style={{
                   display: 'flex', alignItems: 'center', gap: '12px',
-                  padding: '8px', borderRadius: '12px', cursor: 'pointer',
-                  opacity: online ? 1 : 0.5
+                  padding: '10px', borderRadius: '16px', cursor: 'pointer',
+                  border: '1px solid transparent',
+                  transition: 'all 0.2s ease',
+                  background: activePopover === m.id ? 'rgba(255,255,255,0.05)' : 'transparent'
                 }}
               >
                 <div style={{ position: 'relative', flexShrink: 0 }}>
                   <div style={{
-                    width: '36px', height: '36px', borderRadius: '10px',
+                    width: '42px', height: '42px', borderRadius: '14px',
                     background: 'var(--accent)', overflow: 'hidden',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontWeight: 700, fontSize: '0.75rem', color: 'white'
+                    fontWeight: 800, fontSize: '0.9rem', color: 'white',
+                    border: online ? '2px solid #22C55E' : '2px solid transparent'
                   }}>
                     {m.avatar_url
                       ? <img src={m.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
                       : m.name.substring(0, 2).toUpperCase()}
                   </div>
-                  <div style={{
-                    position: 'absolute', bottom: -2, right: -2, width: '10px', height: '10px',
-                    background: online ? '#22C55E' : '#6B7280', borderRadius: '50%',
-                    border: '2px solid var(--bg-primary)'
-                  }} />
+                  {online && (
+                    <motion.div 
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      style={{
+                        position: 'absolute', bottom: -2, right: -2, width: '14px', height: '14px',
+                        background: '#22C55E', borderRadius: '50%',
+                        border: '3px solid var(--bg-primary)',
+                        zIndex: 2
+                      }} 
+                    />
+                  )}
                 </div>
                 <div style={{ flex: 1, overflow: 'hidden' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <p style={{ fontWeight: 600, fontSize: '0.85rem' }}>{m.name}</p>
-                    <span style={{ fontSize: '0.9rem' }}>{m.emoji}</span>
+                    <p style={{ fontWeight: 700, fontSize: '0.9rem', color: online ? 'var(--text-primary)' : 'var(--text-secondary)' }}>{m.name}</p>
+                    <span style={{ fontSize: '1rem' }}>{m.emoji}</span>
                   </div>
-                  <p style={{ fontSize: '0.65rem', color: online ? '#22C55E' : '#6B7280', fontWeight: 500 }}>
-                    {online ? 'Online' : 'Offline'}
+                  <p style={{ fontSize: '0.7rem', color: online ? '#22C55E' : 'var(--text-tertiary)', fontWeight: 600 }}>
+                    {online ? 'Ativo agora' : 'Indisponível'}
                   </p>
                 </div>
+                <MoreHorizontal size={16} color="var(--text-tertiary)" style={{ opacity: 0.5 }} />
               </motion.div>
 
               {/* Popover de ações */}
               <AnimatePresence>
                 {activePopover === m.id && (
                   <motion.div
-                    initial={{ opacity: 0, scale: 0.92, y: -4 }}
+                    initial={{ opacity: 0, scale: 0.95, y: -10 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.92, y: -4 }}
+                    exit={{ opacity: 0, scale: 0.95, y: -10 }}
                     style={{
-                      position: 'absolute', top: '100%', left: '8px', zIndex: 50, marginTop: '4px',
-                      background: 'rgba(18,18,18,0.98)', border: '1px solid var(--border)',
-                      borderRadius: '12px', padding: '6px', width: '180px',
-                      boxShadow: '0 10px 30px rgba(0,0,0,0.4)'
+                      position: 'absolute', top: '100%', left: '0', right: '0', zIndex: 50, marginTop: '8px',
+                      background: 'rgba(18,18,18,0.95)', backdropFilter: 'blur(10px)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '16px', padding: '8px',
+                      boxShadow: '0 10px 40px rgba(0,0,0,0.5)'
                     }}
                   >
                     <button
                       onClick={() => { router.push(`/admin/chat`); setActivePopover(null); }}
                       style={{
-                        width: '100%', padding: '8px 12px', border: 'none', borderRadius: '8px',
+                        width: '100%', padding: '12px', border: 'none', borderRadius: '12px',
                         background: 'transparent', color: 'var(--text-primary)', textAlign: 'left',
-                        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem'
+                        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.85rem',
+                        fontWeight: 600
                       }}
                       onMouseEnter={e => (e.currentTarget.style.background = 'rgba(217,72,15,0.1)')}
                       onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                     >
-                      <MessageSquare size={14} color="var(--accent)" /> Enviar Mensagem
+                      <MessageSquare size={16} color="var(--accent)" /> Enviar Mensagem
                     </button>
                     <button
                       onClick={() => { router.push(`/admin/users/${m.id}`); setActivePopover(null); }}
                       style={{
-                        width: '100%', padding: '8px 12px', border: 'none', borderRadius: '8px',
+                        width: '100%', padding: '12px', border: 'none', borderRadius: '12px',
                         background: 'transparent', color: 'var(--text-primary)', textAlign: 'left',
-                        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem'
+                        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.85rem',
+                        fontWeight: 600
                       }}
                       onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
                       onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                     >
-                      <User size={14} /> Ver Perfil
+                      <User size={16} color="var(--text-secondary)" /> Ver Perfil Completo
                     </button>
                   </motion.div>
                 )}
@@ -792,10 +977,10 @@ function TeamWidget({ isUserOnline, onlineUsers }: { isUserOnline: (id: string) 
         }) : (
           <div style={{
             textAlign: 'center', padding: '40px 20px', color: 'var(--text-secondary)',
-            fontSize: '0.85rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px'
+            fontSize: '0.85rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px'
           }}>
-            <UserX size={32} strokeWidth={1.5} opacity={0.5} />
-            <p>Ninguém na equipe ainda.</p>
+            <UserX size={40} strokeWidth={1} opacity={0.3} />
+            <p>Ninguém na equipe no momento.</p>
           </div>
         )}
       </div>

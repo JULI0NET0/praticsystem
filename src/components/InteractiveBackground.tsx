@@ -37,6 +37,7 @@ export default function InteractiveBackground() {
       zIndex: -1,
       overflow: 'hidden',
       backgroundColor: '#0A0A0A', // Fallback color
+      pointerEvents: 'none'
     }}>
       <div style={{
         position: 'absolute',

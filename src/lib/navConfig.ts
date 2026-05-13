@@ -38,7 +38,7 @@ export const NAV_GROUPS: NavGroup[] = [
     title: "Administrativo",
     roles: ['admin', 'board'],
     items: [
-      { href: "/admin/dashboard", label: "Financeiro", icon: CreditCard, roles: ['admin', 'board'] },
+      { href: "/admin/billing", label: "Financeiro", icon: CreditCard, roles: ['admin', 'board'] },
       { href: "/admin/registrations", label: "Cadastros", icon: FileText, roles: ['admin', 'board'] },
       { href: "/admin/users", label: "Equipe", icon: ShieldAlert, roles: ['admin', 'board'] },
       { href: "/admin/management", label: "Gestão", icon: Activity, roles: ['admin', 'board'] },
@@ -63,5 +63,5 @@ export const MOBILE_NAV_ITEMS: NavItem[] = [
   { href: "/admin/workspace", label: "Work", icon: LayoutDashboard, roles: ['admin', 'board', 'social_media', 'filmmaker'] },
   { href: "/admin/clients", label: "Clientes", icon: Users, roles: ['admin', 'board', 'social_media'] },
   { href: "/admin/chat", label: "Chat", icon: MessageSquare, roles: ['admin', 'board', 'social_media', 'filmmaker'] },
-  { href: "/admin/dashboard", label: "Financeiro", icon: CreditCard, roles: ['admin', 'board'] },
+  { href: "/admin/billing", label: "Financeiro", icon: CreditCard, roles: ['admin', 'board'] },
 ];

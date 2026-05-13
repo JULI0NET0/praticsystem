@@ -39,14 +39,11 @@ export default function MobileMenuDrawer({ isOpen, onClose }: MobileMenuDrawerPr
   // Focus search ao abrir
   useEffect(() => {
     if (isOpen) {
-      document.body.style.overflow = 'hidden';
       setTimeout(() => searchInputRef.current?.focus(), 300);
     } else {
-      document.body.style.overflow = '';
       setSearchQuery("");
       setSearchResults([]);
     }
-    return () => { document.body.style.overflow = ''; };
   }, [isOpen]);
 
   // Busca
