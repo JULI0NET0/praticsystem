@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
-import { Plus, Search, Filter, MoreHorizontal, ArrowUpRight, Loader2, Link as LinkIcon, Copy } from "lucide-react";
+import { Plus, Search, Filter, MoreHorizontal, ArrowUpRight, Loader2, Link as LinkIcon, Copy, X, Share2 } from "lucide-react";
 import { ServiceStats } from "@/components/ServiceStats";
 
 export default function ServicesPage() {
@@ -15,6 +15,7 @@ export default function ServicesPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingService, setEditingService] = useState<any>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchData() {
@@ -25,10 +26,15 @@ export default function ServicesPage() {
           supabase.from('contracts').select('*')
         ]);
         
+        if (servicesRes.error) throw servicesRes.error;
+        if (contractsRes.error) throw contractsRes.error;
+
         if (servicesRes.data) setServices(servicesRes.data);
         if (contractsRes.data) setContracts(contractsRes.data);
-      } catch (err) {
+        setError(null);
+      } catch (err: any) {
         console.error("Erro ao buscar serviços:", err);
+        setError(err.message || "Erro desconhecido ao carregar dados.");
       } finally {
         setLoading(false);
       }
@@ -179,87 +185,112 @@ export default function ServicesPage() {
 
         {/* Enhanced Table */}
         <div className="table-container">
+          {error && (
+            <div style={{ padding: '20px', margin: '20px', borderRadius: '12px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', color: '#ef4444', textAlign: 'center' }}>
+              {error}
+            </div>
+          )}
           <table className="table">
             <thead>
               <tr>
                 <th style={{ paddingLeft: '24px' }}>Serviço</th>
                 <th>Categoria</th>
                 <th>Tipo</th>
-                <th>Clientes Ativos</th>
-                <th>Receita (Mensal)</th>
+                <th>Valor</th>
+                <th>Clientes</th>
+                <th>Receita</th>
                 <th style={{ paddingRight: '24px', textAlign: 'right' }}>Ações</th>
               </tr>
             </thead>
             <tbody>
-              {filteredServices.map((service) => {
-                const metrics = getServiceMetrics(service.id);
-                return (
-                  <tr key={service.id} className="hover-row">
-                    <td style={{ paddingLeft: '24px' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                        <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>{service.name}</span>
-                        <span style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', maxWidth: '280px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {service.description}
-                        </span>
-                      </div>
-                    </td>
-                    <td>
-                      <span style={{ 
-                        fontSize: '0.75rem', 
-                        padding: '4px 10px', 
-                        borderRadius: '6px', 
-                        backgroundColor: 'rgba(255,255,255,0.05)',
-                        color: 'var(--text-secondary)',
-                        border: '1px solid rgba(255,255,255,0.08)'
-                      }}>
-                        {service.category}
-                      </span>
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        <span className={`badge ${service.is_recurring ? 'badge-success' : 'badge-warning'}`} style={{ fontSize: '0.7rem', width: 'fit-content' }}>
-                          {service.is_recurring ? 'RECORRENTE' : 'AVULSO'}
-                        </span>
-                        {service.is_recurring && service.billing_cycle && (
-                          <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', paddingLeft: '4px' }}>
-                            {service.billing_cycle === 'monthly' ? 'Mensal' : 
-                             service.billing_cycle === 'quarterly' ? 'Trimestral' : 
-                             service.billing_cycle === 'yearly' ? 'Anual' : ''}
+              {loading ? (
+                <tr>
+                  <td colSpan={7} style={{ padding: '40px', textAlign: 'center' }}>
+                    <Loader2 size={24} className="animate-spin" style={{ margin: '0 auto', color: 'var(--accent)' }} />
+                  </td>
+                </tr>
+              ) : filteredServices.length > 0 ? (
+                filteredServices.map((service) => {
+                  const metrics = getServiceMetrics(service.id);
+                  return (
+                    <tr key={service.id} className="hover-row">
+                      <td style={{ paddingLeft: '24px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                          <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>{service.name}</span>
+                          <span style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', maxWidth: '280px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {service.description}
                           </span>
-                        )}
-                      </div>
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontWeight: 600 }}>{metrics.clientCount}</span>
-                        {metrics.clientCount > 0 && <ArrowUpRight size={14} color="#10b981" />}
-                      </div>
-                    </td>
-                    <td>
-                      <div style={{ fontWeight: 600 }}>
-                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(metrics.totalRevenue)}
-                      </div>
-                    </td>
-                     <td style={{ paddingRight: '24px', textAlign: 'right' }}>
-                      <button 
-                        onClick={() => handleOpenEdit(service)}
-                        style={{ 
-                          padding: '8px 16px', 
-                          borderRadius: '8px', 
-                          backgroundColor: 'var(--accent)',
-                          border: 'none',
-                          color: 'white',
-                          fontSize: '0.8rem',
-                          fontWeight: 600,
-                          cursor: 'pointer'
-                        }}
-                      >
-                        Editar
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
+                        </div>
+                      </td>
+                      <td>
+                        <span style={{ 
+                          fontSize: '0.75rem', 
+                          padding: '4px 10px', 
+                          borderRadius: '6px', 
+                          backgroundColor: 'rgba(255,255,255,0.05)',
+                          color: 'var(--text-secondary)',
+                          border: '1px solid rgba(255,255,255,0.08)'
+                        }}>
+                          {service.category}
+                        </span>
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <span className={`badge ${service.is_recurring ? 'badge-success' : 'badge-warning'}`} style={{ fontSize: '0.7rem', width: 'fit-content' }}>
+                            {service.is_recurring ? 'RECORRENTE' : 'AVULSO'}
+                          </span>
+                          {service.is_recurring && service.billing_cycle && (
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', paddingLeft: '4px' }}>
+                              {service.billing_cycle === 'monthly' ? 'Mensal' : 
+                               service.billing_cycle === 'quarterly' ? 'Trimestral' : 
+                               service.billing_cycle === 'yearly' ? 'Anual' : ''}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td>
+                        <div style={{ fontWeight: 600 }}>
+                          {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(service.price || 0))}
+                        </div>
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontWeight: 600 }}>{metrics.clientCount}</span>
+                          {metrics.clientCount > 0 && <ArrowUpRight size={14} color="#10b981" />}
+                        </div>
+                      </td>
+                      <td>
+                        <div style={{ fontWeight: 600 }}>
+                          {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(metrics.totalRevenue)}
+                        </div>
+                      </td>
+                       <td style={{ paddingRight: '24px', textAlign: 'right' }}>
+                        <button 
+                          onClick={() => handleOpenEdit(service)}
+                          style={{ 
+                            padding: '8px 16px', 
+                            borderRadius: '8px', 
+                            backgroundColor: 'var(--accent)',
+                            border: 'none',
+                            color: 'white',
+                            fontSize: '0.8rem',
+                            fontWeight: 600,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Editar
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                    {error ? 'Erro ao carregar dados' : 'Nenhum serviço encontrado.'}
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -272,7 +303,14 @@ export default function ServicesPage() {
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           padding: '24px', backgroundColor: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)'
         }}>
-          <div className="glass-card" style={{ width: '100%', maxWidth: '900px', padding: '32px', maxHeight: '95vh', overflowY: 'auto' }}>
+          <div className="glass-card animate-fade-in-up" style={{ 
+            width: '100%', 
+            maxWidth: '1000px', 
+            padding: '40px', 
+            maxHeight: '90vh', 
+            overflowY: 'auto',
+            position: 'relative'
+          }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
               <h2 style={{ fontSize: '1.75rem', fontWeight: 800 }}>Gestão do Serviço</h2>
               <button onClick={() => setIsEditModalOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
@@ -280,9 +318,9 @@ export default function ServicesPage() {
               </button>
             </div>
             
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '40px' }}>
+            <div className="mobile-stack" style={{ display: 'flex', gap: '48px' }}>
               {/* Coluna Esquerda: Configurações */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '32px' }}>
                 <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--accent)', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '12px' }}>
                   Configurações do Catálogo
                 </h3>
@@ -316,35 +354,75 @@ export default function ServicesPage() {
                     </div>
                   </div>
 
-                  <div style={{ padding: '20px', background: 'rgba(217, 72, 15, 0.05)', borderRadius: '16px', border: '1px solid rgba(217, 72, 15, 0.1)' }}>
-                    <p style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '16px' }}>
-                      Pré-configurações (Personalização no Lançamento)
-                    </p>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Posts Semanais</label>
-                        <input 
-                          type="number" className="input-dark" 
-                          value={editingService.default_posts_per_week || 0}
-                          onChange={(e) => setEditingService({ ...editingService, default_posts_per_week: Number(e.target.value) })}
-                        />
+                  <div style={{ padding: '24px', background: 'rgba(217, 72, 15, 0.05)', borderRadius: '20px', border: '1px solid rgba(217, 72, 15, 0.1)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
+                      <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
+                        <Share2 size={16} />
                       </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Captação Ativa?</label>
+                      <p style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        Configurações de Entrega (Social Media)
+                      </p>
+                    </div>
+                    
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Posts por Semana (Padrão)</label>
+                        <div style={{ position: 'relative' }}>
+                          <input 
+                            type="number" className="input-dark" 
+                            style={{ paddingRight: '100px' }}
+                            value={editingService.default_posts_per_week || 0}
+                            onChange={(e) => setEditingService({ ...editingService, default_posts_per_week: Number(e.target.value) })}
+                          />
+                          <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '0.7rem', color: 'var(--text-tertiary)', fontWeight: 700 }}>
+                            { (editingService.default_posts_per_week || 0) * 4 } / MÊS
+                          </span>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Captação de Conteúdo</label>
                         <select 
                           className="input-dark"
                           value={editingService.default_content_capture ? 'sim' : 'nao'}
                           onChange={(e) => setEditingService({ ...editingService, default_content_capture: e.target.value === 'sim' })}
                         >
-                          <option value="nao">Não</option>
-                          <option value="sim">Sim</option>
+                          <option value="nao">Não incluso</option>
+                          <option value="sim">Incluso no pacote</option>
                         </select>
                       </div>
                     </div>
+
+                    {editingService.default_content_capture && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '16px' }}>
+                        <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Frequência de Captação Padrão</label>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
+                          {['1 meia diária', '1 diária inteira', '2 meias diárias', '2 diárias inteiras'].map(opt => (
+                            <button
+                              key={opt}
+                              onClick={() => setEditingService({ ...editingService, default_capture_frequency: opt })}
+                              style={{
+                                padding: '10px',
+                                borderRadius: '10px',
+                                fontSize: '0.75rem',
+                                fontWeight: 700,
+                                background: editingService.default_capture_frequency === opt ? 'var(--accent)' : 'rgba(255,255,255,0.03)',
+                                color: editingService.default_capture_frequency === opt ? 'white' : 'var(--text-secondary)',
+                                border: '1px solid rgba(255,255,255,0.05)',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s'
+                              }}
+                            >
+                              {opt}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: '12px', marginTop: 'auto' }}>
+                <div style={{ display: 'flex', gap: '12px', marginTop: '32px', position: 'sticky', bottom: 0, background: 'var(--glass-bg)', padding: '16px 0', borderTop: '1px solid var(--border)' }}>
                   <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setIsEditModalOpen(false)}>Cancelar</button>
                   <button className="btn btn-accent" style={{ flex: 1 }} onClick={handleSaveService} disabled={isSaving}>
                     {isSaving ? 'Salvando...' : 'Salvar Alterações'}
@@ -353,7 +431,7 @@ export default function ServicesPage() {
               </div>
 
               {/* Coluna Direita: Visão Interna de Lançamentos */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              <div style={{ flex: 1.2, display: 'flex', flexDirection: 'column', gap: '24px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                     Visão Interna de Lançamentos
@@ -396,11 +474,23 @@ export default function ServicesPage() {
                   )}
                 </div>
 
-                <div style={{ marginTop: 'auto', padding: '20px', background: 'rgba(255,255,255,0.03)', borderRadius: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <p style={{ fontSize: '0.875rem', fontWeight: 600 }}>Receita Mensal Acumulada</p>
-                  <p style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--accent)' }}>
-                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(getServiceMetrics(editingService.id).totalRevenue)}
-                  </p>
+                <div style={{ 
+                  marginTop: 'auto', 
+                  padding: '24px', 
+                  background: 'linear-gradient(135deg, rgba(217, 72, 15, 0.1) 0%, rgba(217, 72, 15, 0.02) 100%)', 
+                  borderRadius: '20px', 
+                  border: '1px solid rgba(217, 72, 15, 0.15)',
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center',
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.2)'
+                }}>
+                  <div>
+                    <p style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '4px' }}>Receita Mensal Acumulada</p>
+                    <p style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--accent)', letterSpacing: '-0.02em' }}>
+                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(getServiceMetrics(editingService.id).totalRevenue)}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>

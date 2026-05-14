@@ -41,29 +41,35 @@ import {
   MoreVertical,
   MapPin,
   Layout,
-  Target
+  Target,
+  TrendingUp,
+  Activity
 } from "lucide-react";
 import Spotlight from "@/components/Spotlight";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/components/CustomToast";
 
 const TABS = [
+  { id: 'dashboard', label: 'Dashboard', icon: Layout },
   { id: 'dados', label: 'Dados', icon: User },
-  { id: 'briefing', label: 'Briefing', icon: Layout },
+  { id: 'briefing', label: 'Briefing', icon: FileText },
   { id: 'demandas', label: 'Demandas', icon: ClipboardList },
   { id: 'notas', label: 'Notas', icon: MessageSquare },
   { id: 'access', label: 'Acessos', icon: ShieldCheck },
   { id: 'contracts', label: 'Contratos', icon: FileText },
   { id: 'finance', label: 'Financeiro', icon: CreditCard },
-  { id: 'docs', label: 'Docs', icon: Folder },
 ];
 
 export default function ClientDetailPage() {
   const { id } = useParams();
   const router = useRouter();
   const { showToast } = useToast();
-  const [activeTab, setActiveTab] = useState('dados');
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
+  const [dateRange, setDateRange] = useState({
+    start: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
+    end: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0]
+  });
 
   const [clientData, setClientData] = useState<any>(null);
   const [localDemands, setLocalDemands] = useState<any[]>([]);
@@ -189,9 +195,42 @@ export default function ClientDetailPage() {
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '-';
-    // Para datas YYYY-MM-DD, forçamos o meio-dia para evitar que o fuso horário mude o dia
     const date = dateStr.includes('T') ? new Date(dateStr) : new Date(`${dateStr}T12:00:00`);
     return date.toLocaleDateString('pt-BR');
+  };
+
+  const getFinanceMetrics = () => {
+    const rangeInvoices = clientInvoices.filter(i => {
+      return i.due_date >= dateRange.start && i.due_date <= dateRange.end;
+    });
+
+    const mrr = rangeInvoices
+      .filter(i => {
+        const contract = clientContracts.find(c => c.id === i.contract_id);
+        return contract?.billing_cycle !== 'one_time';
+      })
+      .reduce((acc, curr) => acc + Number(curr.amount || 0), 0);
+
+    const avulsos = rangeInvoices
+      .filter(i => {
+        const contract = clientContracts.find(c => c.id === i.contract_id);
+        return contract?.billing_cycle === 'one_time';
+      })
+      .reduce((acc, curr) => acc + Number(curr.amount || 0), 0);
+
+    const totalReceived = rangeInvoices
+      .filter(i => i.status === 'paid')
+      .reduce((acc, curr) => acc + Number(curr.amount || 0), 0);
+
+    const overdue = rangeInvoices
+      .filter(i => i.status === 'pending' && new Date(`${i.due_date}T23:59:59`) < new Date())
+      .reduce((acc, curr) => acc + Number(curr.amount || 0), 0);
+
+    const upcoming = rangeInvoices
+      .filter(i => i.status === 'pending' && new Date(`${i.due_date}T23:59:59`) >= new Date())
+      .reduce((acc, curr) => acc + Number(curr.amount || 0), 0);
+
+    return { mrr, avulsos, totalReceived, overdue, upcoming, count: rangeInvoices.length, rangeInvoices };
   };
 
   const handleMarkAsPaid = async (invoiceId: string) => {
@@ -694,6 +733,112 @@ export default function ClientDetailPage() {
       {/* Content Area */}
       <div className="animate-fade-in">
         <AnimatePresence mode="wait">
+          {activeTab === 'dashboard' && (
+            <motion.div
+              key="dashboard"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}
+            >
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px' }}>
+                <Spotlight className="glass-card" style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ width: '48px', height: '48px', borderRadius: '16px', background: 'rgba(34, 197, 94, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#22C55E' }}>
+                      <TrendingUp size={24} />
+                    </div>
+                    <div>
+                      <p style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Prev. MRR</p>
+                      <h4 style={{ fontSize: '1.75rem', fontWeight: 800 }}>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(getFinanceMetrics().mrr)}</h4>
+                    </div>
+                  </div>
+                </Spotlight>
+
+                <Spotlight className="glass-card" style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ width: '48px', height: '48px', borderRadius: '16px', background: 'rgba(217, 72, 15, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
+                      <ClipboardList size={24} />
+                    </div>
+                    <div>
+                      <p style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Demandas Abertas</p>
+                      <h4 style={{ fontSize: '1.75rem', fontWeight: 800 }}>{localDemands.filter(d => d.status !== 'completed').length}</h4>
+                    </div>
+                  </div>
+                </Spotlight>
+
+                <Spotlight className="glass-card" style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ width: '48px', height: '48px', borderRadius: '16px', background: 'rgba(59, 130, 246, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3B82F6' }}>
+                      <Activity size={24} />
+                    </div>
+                    <div>
+                      <p style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status do Onboarding</p>
+                      <h4 style={{ fontSize: '1.2rem', fontWeight: 700 }}>{clientData.briefing_completed ? '✅ Concluído' : '⏳ Em Andamento'}</h4>
+                    </div>
+                  </div>
+                </Spotlight>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '24px' }}>
+                <Spotlight className="glass-card" style={{ padding: '24px' }}>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <CreditCard size={18} color="var(--accent)" /> Visão Financeira do Período
+                  </h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '20px' }}>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: '10px 16px', borderRadius: '16px', border: '1px solid var(--border)' }}>
+                      <Calendar size={16} color="var(--accent)" style={{ marginRight: '4px', opacity: 0.7 }} />
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
+                        <span style={{ fontSize: '0.55rem', color: 'var(--text-tertiary)', fontWeight: 800, textTransform: 'uppercase' }}>Início</span>
+                        <input 
+                          type="date" className="input-dark" 
+                          style={{ border: 'none', background: 'transparent', padding: 0, fontSize: '0.8rem', width: '100px', fontWeight: 600 }}
+                          value={dateRange.start}
+                          onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
+                        />
+                      </div>
+                      <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)', margin: '0 8px' }} />
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
+                        <span style={{ fontSize: '0.55rem', color: 'var(--text-tertiary)', fontWeight: 800, textTransform: 'uppercase' }}>Fim</span>
+                        <input 
+                          type="date" className="input-dark" 
+                          style={{ border: 'none', background: 'transparent', padding: 0, fontSize: '0.8rem', width: '100px', fontWeight: 600 }}
+                          value={dateRange.end}
+                          onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
+                    <div style={{ padding: '20px', background: 'rgba(34, 197, 94, 0.05)', borderRadius: '16px', border: '1px solid rgba(34, 197, 94, 0.1)' }}>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Total Recebido</p>
+                      <p style={{ fontSize: '1.5rem', fontWeight: 800, color: '#22C55E' }}>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(getFinanceMetrics().totalReceived)}</p>
+                    </div>
+                    <div style={{ padding: '20px', background: 'rgba(239, 68, 68, 0.05)', borderRadius: '16px', border: '1px solid rgba(239, 68, 68, 0.1)' }}>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Total Pendente</p>
+                      <p style={{ fontSize: '1.5rem', fontWeight: 800, color: '#EF4444' }}>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(getFinanceMetrics().overdue)}</p>
+                    </div>
+                  </div>
+                </Spotlight>
+
+                <Spotlight className="glass-card" style={{ padding: '24px' }}>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '20px' }}>Contratos Vigentes</h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {clientContracts.filter(c => c.status === 'active').length > 0 ? (
+                      clientContracts.filter(c => c.status === 'active').map(c => (
+                        <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: 'rgba(255,255,255,0.02)', borderRadius: '10px' }}>
+                          <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>{availableServices.find(s => s.id === c.service_id)?.name}</span>
+                          <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--accent)' }}>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(c.value)}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <p style={{ fontSize: '0.875rem', color: 'var(--text-tertiary)', textAlign: 'center', padding: '20px' }}>Nenhum contrato ativo.</p>
+                    )}
+                  </div>
+                </Spotlight>
+              </div>
+            </motion.div>
+          )}
+
           {activeTab === 'dados' && (
             <motion.div
               key="dados"
@@ -1364,40 +1509,81 @@ export default function ClientDetailPage() {
               exit={{ opacity: 0, y: -10 }}
               style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}
             >
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px' }}>
-                <Spotlight className="glass-card" style={{ padding: '24px' }}>
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Total Pago</p>
-                  <h4 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#22C55E' }}>
-                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(clientInvoices.filter(i => i.status === 'paid').reduce((acc, curr) => acc + curr.amount, 0))}
+               {/* Filtros Financeiros */}
+               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: '10px 20px', borderRadius: '16px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-glow)' }}>
+                   <Calendar size={18} color="var(--accent)" style={{ marginRight: '8px', opacity: 0.8 }} />
+                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
+                     <span style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Período Inicial</span>
+                     <input 
+                       type="date" className="input-dark" 
+                       style={{ border: 'none', background: 'transparent', padding: 0, fontSize: '0.85rem', width: '110px', fontWeight: 600 }}
+                       value={dateRange.start}
+                       onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
+                     />
+                   </div>
+                   <div style={{ width: '1px', height: '28px', background: 'rgba(255,255,255,0.1)', margin: '0 8px' }} />
+                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
+                     <span style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Período Final</span>
+                     <input 
+                       type="date" className="input-dark" 
+                       style={{ border: 'none', background: 'transparent', padding: 0, fontSize: '0.85rem', width: '110px', fontWeight: 600 }}
+                       value={dateRange.end}
+                       onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
+                     />
+                   </div>
+                 </div>
+                <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+                  Exibindo {getFinanceMetrics().count} faturas encontradas
+                </p>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '16px' }}>
+                <Spotlight className="glass-card" style={{ padding: '20px' }}>
+                  <p style={{ color: 'var(--text-tertiary)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase' }}>Prev. MRR</p>
+                  <h4 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#3B82F6' }}>
+                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(getFinanceMetrics().mrr)}
                   </h4>
                 </Spotlight>
-                <Spotlight className="glass-card" style={{ padding: '24px' }}>
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Pendente (Atrasado)</p>
-                  <h4 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#EF4444' }}>
-                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(clientInvoices.filter(i => i.status === 'pending' && new Date(`${i.due_date}T23:59:59`) <= new Date()).reduce((acc, curr) => acc + curr.amount, 0))}
+                <Spotlight className="glass-card" style={{ padding: '20px' }}>
+                  <p style={{ color: 'var(--text-tertiary)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase' }}>Avulsos</p>
+                  <h4 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#A855F7' }}>
+                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(getFinanceMetrics().avulsos)}
                   </h4>
                 </Spotlight>
-                <Spotlight className="glass-card" style={{ padding: '24px' }}>
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>A Vencer</p>
-                  <h4 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--accent)' }}>
-                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(clientInvoices.filter(i => i.status === 'pending' && new Date(`${i.due_date}T23:59:59`) > new Date()).reduce((acc, curr) => acc + curr.amount, 0))}
+                <Spotlight className="glass-card" style={{ padding: '20px' }}>
+                  <p style={{ color: 'var(--text-tertiary)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase' }}>A Vencer</p>
+                  <h4 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--accent)' }}>
+                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(getFinanceMetrics().upcoming)}
+                  </h4>
+                </Spotlight>
+                <Spotlight className="glass-card" style={{ padding: '20px' }}>
+                  <p style={{ color: 'var(--text-tertiary)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase' }}>Recebido</p>
+                  <h4 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#22C55E' }}>
+                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(getFinanceMetrics().totalReceived)}
+                  </h4>
+                </Spotlight>
+                <Spotlight className="glass-card" style={{ padding: '20px' }}>
+                  <p style={{ color: 'var(--text-tertiary)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase' }}>Pendente</p>
+                  <h4 style={{ fontSize: '1.25rem', fontWeight: 800 }}>
+                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(getFinanceMetrics().overdue)}
                   </h4>
                 </Spotlight>
               </div>
 
               <Spotlight className="glass-card" style={{ padding: '0' }}>
-                <table className="table">
+                <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 8px' }}>
                   <thead>
-                    <tr>
-                      <th style={{ paddingLeft: '24px' }}>Fatura</th>
-                      <th>Data de Vencimento</th>
-                      <th>Valor</th>
-                      <th>Status</th>
-                      <th style={{ paddingRight: '24px', textAlign: 'right' }}>Ações</th>
+                    <tr style={{ color: 'var(--text-tertiary)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase' }}>
+                      <th style={{ textAlign: 'left', padding: '16px 24px' }}>Fatura</th>
+                      <th style={{ textAlign: 'left', padding: '16px 24px' }}>Data de Vencimento</th>
+                      <th style={{ textAlign: 'left', padding: '16px 24px' }}>Valor</th>
+                      <th style={{ textAlign: 'left', padding: '16px 24px' }}>Status</th>
+                      <th style={{ textAlign: 'right', padding: '16px 24px' }}>Ações</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {clientInvoices.sort((a, b) => new Date(b.due_date).getTime() - new Date(a.due_date).getTime()).map(invoice => {
+                    {getFinanceMetrics().rangeInvoices.sort((a: any, b: any) => new Date(b.due_date).getTime() - new Date(a.due_date).getTime()).map((invoice: any) => {
                       const isUpcoming = invoice.status === 'pending' && new Date(`${invoice.due_date}T23:59:59`) > new Date();
                       
                       return (

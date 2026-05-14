@@ -76,10 +76,19 @@ export default function SchedulePage() {
                   padding: '12px', 
                   borderRadius: '8px', 
                   backgroundColor: 'var(--bg-secondary)',
-                  borderLeft: `4px solid ${event.type === 'meeting' ? '#3B82F6' : event.type === 'payment' ? '#22C55E' : '#EAB308'}`
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '12px'
                 }}>
-                  <p style={{ fontWeight: 600, fontSize: '0.875rem' }}>{new Date(event.date).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}</p>
-                  <p style={{ fontWeight: 500, marginTop: '4px' }}>{event.title}</p>
+                  <span style={{ 
+                    color: event.type === 'meeting' ? '#3B82F6' : event.type === 'payment' ? '#22C55E' : '#EAB308',
+                    fontSize: '1rem',
+                    lineHeight: '1.2'
+                  }}>●</span>
+                  <div>
+                    <p style={{ fontWeight: 600, fontSize: '0.875rem' }}>{new Date(event.date).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}</p>
+                    <p style={{ fontWeight: 500, marginTop: '4px' }}>{event.title}</p>
+                  </div>
                 </div>
               ))}
               {events.length === 0 && <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Nenhum compromisso agendado.</p>}

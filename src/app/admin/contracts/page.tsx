@@ -16,9 +16,12 @@ export default function ContractsPage() {
   const [clients, setClients] = useState<any[]>([]);
   const [services, setServices] = useState<any[]>([]);
   const [invoices, setInvoices] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [selectedContract, setSelectedContract] = useState<any | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [dateRange, setDateRange] = useState({
+    start: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
+    end: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0]
+  });
 
   useEffect(() => {
     async function fetchData() {
@@ -49,10 +52,23 @@ export default function ContractsPage() {
     setIsModalOpen(true);
   };
 
-  const activeContracts = contracts.filter(c => c.status === 'active');
-  const mrrTotal = activeContracts.reduce((acc, curr) => acc + Number(curr.value), 0);
+  const rangeInvoices = invoices.filter(i => {
+    // Fix timezone shift (dia -01) by ensuring local date parsing
+    const dueDateStr = i.due_date.includes('T') ? i.due_date : `${i.due_date}T12:00:00`;
+    const d = new Date(dueDateStr).toISOString().split('T')[0];
+    return d >= dateRange.start && d <= dateRange.end;
+  });
+
+  const mrrTotal = rangeInvoices
+    .filter(i => {
+      const contract = contracts.find(c => c.id === i.contract_id);
+      return contract?.billing_cycle !== 'one_time';
+    })
+    .reduce((acc, curr) => acc + Number(curr.amount || 0), 0);
+
+  const activeContractsCount = contracts.filter(c => c.status === 'active').length;
   const expiringSoon = contracts.filter(c => c.status === 'expiring').length;
-  const pendingInvoicesCount = invoices.filter(i => i.status === 'pending').length;
+  const pendingInvoicesCount = rangeInvoices.filter(i => i.status === 'pending').length;
 
   const filteredContracts = contracts.filter(contract => {
     const client = clients.find(c => c.id === contract.client_id);
@@ -95,12 +111,30 @@ export default function ContractsPage() {
             Gerencie a receita recorrente e o ciclo de vida dos seus clientes.
           </p>
         </div>
-        <div className="mobile-stack" style={{ display: 'flex', gap: '12px' }}>
-          <button className="btn btn-secondary" style={{ minHeight: '44px' }}>
-            Exportar CSV
-          </button>
+        <div className="mobile-stack" style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: '8px 16px', borderRadius: '14px', border: '1px solid var(--border)' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+              <span style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)', fontWeight: 700, textTransform: 'uppercase' }}>Início</span>
+              <input 
+                type="date" className="input-dark" 
+                style={{ border: 'none', background: 'transparent', padding: 0, fontSize: '0.85rem', width: '105px' }}
+                value={dateRange.start}
+                onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
+              />
+            </div>
+            <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)' }} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+              <span style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)', fontWeight: 700, textTransform: 'uppercase' }}>Fim</span>
+              <input 
+                type="date" className="input-dark" 
+                style={{ border: 'none', background: 'transparent', padding: 0, fontSize: '0.85rem', width: '105px' }}
+                value={dateRange.end}
+                onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
+              />
+            </div>
+          </div>
           <Link href="/admin/contracts/create">
-            <Spotlight as="div" className="btn btn-accent" style={{ display: 'flex', alignItems: 'center', gap: '8px', minHeight: '44px' }}>
+            <Spotlight as="div" className="btn btn-accent" style={{ display: 'flex', alignItems: 'center', gap: '8px', minHeight: '48px', borderRadius: '14px' }}>
               <Plus size={18} /> Novo Contrato
             </Spotlight>
           </Link>
@@ -114,21 +148,19 @@ export default function ContractsPage() {
         gap: '16px'
       }}>
         <KPICard
-          title="MRR Total"
+          title="MRR do Período"
           value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(mrrTotal)}
           numericValue={mrrTotal}
           prefix="R$ "
-          subtitle="Receita Mensal Recorrente"
+          subtitle="Receita Recorrente no intervalo"
           icon={<TrendingUp size={24} />}
-          trend="up"
-          trendValue="12%"
           index={0}
         />
         <KPICard
           title="Contratos Ativos"
-          value={activeContracts.length.toString()}
-          numericValue={activeContracts.length}
-          subtitle="Em vigência no momento"
+          value={activeContractsCount.toString()}
+          numericValue={activeContractsCount}
+          subtitle="Total em vigência global"
           icon={<CheckCircle2 size={24} />}
           index={1}
         />
@@ -136,16 +168,15 @@ export default function ContractsPage() {
           title="A Vencer"
           value={expiringSoon.toString()}
           numericValue={expiringSoon}
-          subtitle="Expiram em 30 dias"
+          subtitle="Expirações próximas"
           icon={<AlertCircle size={24} />}
-          trend="neutral"
           index={2}
         />
         <KPICard
-          title="Faturas Pendentes"
-          value={pendingInvoicesCount.toString()}
-          numericValue={pendingInvoicesCount}
-          subtitle="Aguardando pagamento"
+          title="Faturas no Período"
+          value={rangeInvoices.length.toString()}
+          numericValue={rangeInvoices.length}
+          subtitle={`${pendingInvoicesCount} pendentes no intervalo`}
           icon={<DollarSign size={24} />}
           index={3}
         />
@@ -160,40 +191,29 @@ export default function ContractsPage() {
           marginBottom: '24px',
           gap: '16px'
         }}>
-          <div style={{ position: 'relative', flex: 1, width: '100%', maxWidth: '400px' }}>
-            <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+          <div className="search-wrapper">
+            <Search size={18} />
             <input
               type="text"
               placeholder="Buscar por cliente ou serviço..."
-              className="input-field"
-              style={{ paddingLeft: '40px', width: '100%', minHeight: '44px' }}
+              className="input-dark"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
 
-          <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px', width: '100%', scrollbarWidth: 'none' }} className="client-tabs-scroll">
-            {['all', 'active', 'expiring', 'expired'].map((status) => (
-              <button
-                key={status}
-                onClick={() => setFilterStatus(status)}
-                style={{
-                  padding: '8px 16px',
-                  borderRadius: '100px',
-                  fontSize: '0.875rem',
-                  fontWeight: 500,
-                  transition: 'all 0.2s ease',
-                  backgroundColor: filterStatus === status ? 'var(--accent)' : 'var(--card-inner-bg)',
-                  color: filterStatus === status ? 'white' : 'var(--text-secondary)',
-                  border: '1px solid transparent',
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                  minHeight: '36px'
-                }}
-              >
-                {status === 'all' ? 'Todos' : status === 'active' ? 'Ativos' : status === 'expiring' ? 'A Vencer' : 'Encerrados'}
-              </button>
-            ))}
+          <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px', width: 'auto', scrollbarWidth: 'none' }} className="client-tabs-scroll">
+            <select 
+              className="input-dark" 
+              style={{ width: '180px' }}
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+            >
+              <option value="all">Todos Status</option>
+              <option value="active">Ativos</option>
+              <option value="expiring">A Vencer</option>
+              <option value="expired">Encerrados</option>
+            </select>
           </div>
         </div>
 
@@ -253,10 +273,10 @@ export default function ContractsPage() {
                       <td>
                         <div style={{ display: 'flex', flexDirection: 'column', fontSize: '0.875rem' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <Calendar size={12} /> {new Date(contract.start_date).toLocaleDateString('pt-BR')}
+                            <Calendar size={12} /> {new Date(`${contract.start_date}T12:00:00`).toLocaleDateString('pt-BR')}
                           </div>
                           <div style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>
-                            Até {new Date(contract.end_date).toLocaleDateString('pt-BR')}
+                            Até {new Date(`${contract.end_date}T12:00:00`).toLocaleDateString('pt-BR')}
                           </div>
                         </div>
                       </td>
@@ -401,7 +421,7 @@ export default function ContractsPage() {
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '20px' }}>
             Como os contratos se conectam com o onboarding e demandas.
           </p>
-          <div style={{ position: 'relative', paddingLeft: '24px', borderLeft: '2px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div style={{ position: 'relative', paddingLeft: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <div>
               <div style={{ position: 'absolute', left: '-7px', width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#22C55E' }}></div>
               <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>Assinatura do Contrato</div>

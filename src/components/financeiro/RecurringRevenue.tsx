@@ -19,7 +19,7 @@ export function RecurringRevenue({ contracts, clients, services }: RecurringReve
     <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
       {/* MRR Highlights */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
-        <div className="glass-card" style={{ padding: '24px', borderLeft: '4px solid var(--accent)' }}>
+        <div className="glass-card" style={{ padding: '24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
             <div style={{ background: 'rgba(var(--accent-rgb, 124, 58, 237), 0.1)', padding: '8px', borderRadius: '8px' }}>
               <Repeat size={20} color="var(--accent)" />
@@ -77,7 +77,7 @@ export function RecurringRevenue({ contracts, clients, services }: RecurringReve
                           <span>{service?.name || 'Serviço'}</span>
                         </div>
                       </td>
-                      <td>{new Date(contract.start_date || contract.created_at).toLocaleDateString('pt-BR')}</td>
+                      <td>{new Date(`${contract.start_date || contract.created_at}T12:00:00`).toLocaleDateString('pt-BR')}</td>
                       <td style={{ fontWeight: 600, color: 'var(--accent)' }}>
                         {formatCurrency(Number(contract.value))}
                       </td>

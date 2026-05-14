@@ -60,7 +60,8 @@ export default function OnboardingPage() {
       google: { ativo: false, usuario: '', senha: '', email: '' },
       linkedin: { ativo: false, usuario: '', senha: '', email: '' },
       tiktok: { ativo: false, usuario: '', senha: '', email: '' },
-    }
+    },
+    portal_password: ""
   });
 
   const updateForm = (field: string, value: any) => {
@@ -212,29 +213,34 @@ export default function OnboardingPage() {
   };
 
   const nextStep = async () => {
-    if (step === 4) {
-      // Submeter ao Supabase no último passo (Redes Sociais agora é o último)
+    if (step === 5) {
+      // Submeter ao Supabase no último passo (Redes Sociais agora é o último - Step 5)
       const success = await handleSubmit();
-      if (success) setStep(5);
+      if (success) setStep(6);
     } else {
-      setStep((p) => Math.min(p + 1, 5));
+      setStep((p) => Math.min(p + 1, 6));
     }
   };
 
   const handleSubmit = async () => {
-    setIsLoadingCnpj(true); // Reusando o loading state ou criando um novo se preferir
+    setIsLoadingCnpj(true);
     try {
-      const tempPassword = `Pratic@${Math.floor(1000 + Math.random() * 9000)}`;
+      // Define a senha final (preferencialmente a do usuário)
+      const finalPassword = formData.portal_password || `Pratic@${Math.floor(1000 + Math.random() * 9000)}`;
+      
+      // Remove campos que não devem ir no spread principal ou que precisam de tratamento
+      const { portal_password, ...dataToInsert } = formData;
+
       const { error } = await supabase.from('clients').insert([{
-        ...formData,
+        ...dataToInsert,
         portal_email: formData.email,
-        portal_password: tempPassword,
+        portal_password: finalPassword,
         status: 'prospect'
       }]);
 
       if (error) throw error;
       
-      setGeneratedCredentials({ email: formData.email, password: tempPassword });
+      setGeneratedCredentials({ email: formData.email, password: finalPassword });
       return true;
     } catch (err) {
       console.error("Erro ao salvar onboarding:", err);
@@ -337,16 +343,17 @@ export default function OnboardingPage() {
                   }
                 }}
                 style={{
-                  fontSize: '2.5rem',
+                  fontSize: 'clamp(1.75rem, 8vw, 2.5rem)',
                   fontWeight: 600,
                   color: '#FFFFFF',
-                  marginBottom: '50px',
+                  marginBottom: '40px',
                   textAlign: 'center',
                   letterSpacing: '-0.5px',
-                  height: '60px' // Mantém o espaço para o botão não pular
+                  minHeight: '80px',
+                  padding: '0 20px'
                 }}
               >
-                {"Pronto para ativar o modo Pratic?".split('').map((char, index) => (
+                {"Pronto para ativar o modo Prátic?".split('').map((char, index) => (
                   <motion.span
                     key={index}
                     variants={{
@@ -433,9 +440,9 @@ export default function OnboardingPage() {
             <div style={{ padding: 'clamp(20px, 4vw, 32px) clamp(16px, 4vw, 40px)', flex: 1, display: 'flex', flexDirection: 'column' }}>
 
               {/* Progress Bar */}
-              {step < 5 && (
-                <div style={{ display: 'flex', gap: '8px', marginBottom: '40px' }}>
-                  {[1, 2, 3, 4].map((s) => (
+              {step < 6 && (
+                <div style={{ display: 'flex', gap: '8px', marginBottom: 'clamp(24px, 5vw, 40px)' }}>
+                  {[1, 2, 3, 4, 5].map((s) => (
                     <div key={s} style={{
                       flex: 1,
                       height: '4px',
@@ -621,34 +628,34 @@ export default function OnboardingPage() {
                           </div>
                         </div>
 
-                        <div style={{ display: 'flex', gap: '16px' }}>
-                          <div style={{ flex: 2 }}>
+                        <div className="onboarding-form-grid" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px' }}>
+                          <div>
                             <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Logradouro</label>
                             <input type="text" className="input-dark" value={formData.address.logradouro} onChange={(e) => updateAddress("logradouro", e.target.value)} placeholder="Rua / Avenida" />
                           </div>
-                          <div style={{ flex: 1 }}>
+                          <div>
                             <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Número</label>
                             <input type="text" className="input-dark" value={formData.address.numero} onChange={(e) => updateAddress("numero", e.target.value)} placeholder="123" />
                           </div>
                         </div>
 
-                        <div style={{ display: 'flex', gap: '16px' }}>
-                          <div style={{ flex: 1 }}>
+                        <div className="onboarding-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                          <div>
                             <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Complemento</label>
                             <input type="text" className="input-dark" value={formData.address.complemento} onChange={(e) => updateAddress("complemento", e.target.value)} placeholder="Sala, Andar..." />
                           </div>
-                          <div style={{ flex: 1 }}>
+                          <div>
                             <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Bairro</label>
                             <input type="text" className="input-dark" value={formData.address.bairro} onChange={(e) => updateAddress("bairro", e.target.value)} placeholder="Centro" />
                           </div>
                         </div>
 
-                        <div style={{ display: 'flex', gap: '16px' }}>
-                          <div style={{ flex: 2 }}>
+                        <div className="onboarding-form-grid" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px' }}>
+                          <div>
                             <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Cidade</label>
                             <input type="text" className="input-dark" value={formData.address.cidade} onChange={(e) => updateAddress("cidade", e.target.value)} placeholder="Sua Cidade" />
                           </div>
-                          <div style={{ flex: 1 }}>
+                          <div>
                             <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>UF</label>
                             <input type="text" className="input-dark" value={formData.address.uf} onChange={(e) => updateAddress("uf", e.target.value)} placeholder="SP" maxLength={2} style={{ textTransform: 'uppercase' }} />
                           </div>
@@ -683,12 +690,12 @@ export default function OnboardingPage() {
                           <input type="text" className="input-dark" value={formData.contact_name} onChange={(e) => updateForm("contact_name", e.target.value)} placeholder="Ex: João da Silva" />
                         </div>
 
-                        <div style={{ display: 'flex', gap: '16px' }}>
-                          <div style={{ flex: 1 }}>
+                        <div className="onboarding-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                          <div>
                             <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>WhatsApp</label>
                             <input type="text" className="input-dark" value={formData.phone} onChange={(e) => updateForm("phone", formatPhone(e.target.value))} placeholder="(00) 00000-0000" />
                           </div>
-                          <div style={{ flex: 1 }}>
+                          <div>
                             <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Telefone Fixo</label>
                             <input type="text" className="input-dark" value={formData.telefone_fixo} onChange={(e) => updateForm("telefone_fixo", formatPhone(e.target.value))} placeholder="(00) 0000-0000" />
                           </div>
@@ -716,9 +723,62 @@ export default function OnboardingPage() {
                     </motion.div>
                   )}
 
-                  {/* STEP 4: Redes Sociais */}
+                  {/* STEP 4: Acesso ao Portal */}
                   {step === 4 && (
                     <motion.div key="step4" variants={pageVariants} initial="initial" animate="in" exit="out" transition={{ type: "tween", ease: "anticipate", duration: 0.4 }} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '8px' }}>
+                        <div style={{ padding: '12px', background: 'rgba(217, 72, 15, 0.1)', color: 'var(--accent)', borderRadius: '16px' }}>
+                          <Lock size={24} />
+                        </div>
+                        <h2 style={{ fontSize: '1.75rem', fontWeight: 700 }}>Acesso ao Portal</h2>
+                      </div>
+                      <p style={{ color: 'var(--text-secondary)', marginBottom: '32px' }}>Crie sua senha para acessar o Portal do Cliente.</p>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', flex: 1 }}>
+                        <div>
+                          <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>E-mail de Acesso</label>
+                          <input type="email" className="input-dark" value={formData.email} disabled style={{ opacity: 0.6, cursor: 'not-allowed' }} />
+                          <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: '8px' }}>Usaremos o e-mail principal informado anteriormente.</p>
+                        </div>
+
+                        <div>
+                          <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Defina sua Senha</label>
+                          <div style={{ position: 'relative' }}>
+                            <input
+                              type="password"
+                              className="input-dark"
+                              value={formData.portal_password}
+                              onChange={(e) => updateForm("portal_password", e.target.value)}
+                              placeholder="••••••••"
+                              style={{ letterSpacing: formData.portal_password ? '4px' : 'normal' }}
+                            />
+                            <div style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }}>
+                              <Lock size={18} />
+                            </div>
+                          </div>
+                        </div>
+
+                        <div style={{ padding: '16px', borderRadius: '12px', background: 'rgba(217, 72, 15, 0.05)', border: '1px solid rgba(217, 72, 15, 0.1)' }}>
+                          <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
+                            Com esse acesso, você poderá acompanhar o status dos seus projetos, aprovar briefings e visualizar faturas.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div style={{ marginTop: '32px', display: 'flex', justifyContent: 'space-between' }}>
+                        <button onClick={prevStep} className="btn btn-secondary" style={{ border: 'none', background: 'transparent' }}>
+                          <ArrowLeft size={18} /> Voltar
+                        </button>
+                        <button onClick={nextStep} className="btn btn-accent" disabled={!formData.portal_password || formData.portal_password.length < 6}>
+                          Próximo <ArrowRight size={18} />
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {/* STEP 5: Redes Sociais */}
+                  {step === 5 && (
+                    <motion.div key="step5" variants={pageVariants} initial="initial" animate="in" exit="out" transition={{ type: "tween", ease: "anticipate", duration: 0.4 }} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '8px' }}>
                         <div style={{ padding: '12px', background: 'rgba(249, 115, 22, 0.1)', color: 'var(--accent)', borderRadius: '16px' }}>
                           <Share2 size={24} />
@@ -844,9 +904,9 @@ export default function OnboardingPage() {
                     </motion.div>
                   )}
 
-                  {/* STEP 5: Sucesso */}
-                  {step === 5 && (
-                    <motion.div key="step5" variants={pageVariants} initial="initial" animate="in" exit="out" transition={{ type: "tween", ease: "anticipate", duration: 0.4 }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', textAlign: 'center' }}>
+                  {/* STEP 6: Sucesso */}
+                  {step === 6 && (
+                    <motion.div key="step6" variants={pageVariants} initial="initial" animate="in" exit="out" transition={{ type: "tween", ease: "anticipate", duration: 0.4 }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', textAlign: 'center' }}>
                       <motion.div
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}

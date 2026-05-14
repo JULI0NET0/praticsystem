@@ -15,6 +15,8 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const brandName = "Agência Prátic"; // Pode ser trazido de um config ou banco
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -77,7 +79,7 @@ export default function LoginPage() {
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '24px' }}>
             <ThemeLogo />
           </div>
-          <h1 style={{ fontSize: '1.75rem', fontWeight: 700, marginBottom: '8px' }}>Bem-vindo de volta</h1>
+          <h1 style={{ fontSize: '1.75rem', fontWeight: 700, marginBottom: '8px' }}>Bem-vindo à {brandName}</h1>
           <p style={{ color: 'var(--text-secondary)' }}>Acesse o seu workspace administrativo</p>
         </div>
 
@@ -143,7 +145,7 @@ export default function LoginPage() {
         </Spotlight>
 
         <p style={{ textAlign: 'center', marginTop: '32px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-          © 2026 Agência Prátic. Área restrita.
+          © 2026 {brandName}. Área restrita.
         </p>
       </motion.div>
     </div>

@@ -31,20 +31,19 @@ export function InvoicesList({ invoices, clients }: InvoicesListProps) {
       {/* Filters Bar */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', gap: '12px', flex: 1, minWidth: '300px' }}>
-          <div style={{ position: 'relative', flex: 1 }}>
-            <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+          <div className="search-wrapper">
+            <Search size={18} />
             <input 
               type="text" 
-              className="input" 
+              className="input-dark" 
               placeholder="Buscar por descrição ou cliente..." 
-              style={{ paddingLeft: '40px' }}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
           <select 
-            className="input" 
-            style={{ width: '150px' }}
+            className="input-dark" 
+            style={{ width: '180px' }}
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
           >
@@ -83,7 +82,7 @@ export function InvoicesList({ invoices, clients }: InvoicesListProps) {
                           <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{client?.name || 'Cliente não encontrado'}</p>
                         </div>
                       </td>
-                      <td>{new Date(invoice.due_date).toLocaleDateString('pt-BR')}</td>
+                      <td>{new Date(`${invoice.due_date}T12:00:00`).toLocaleDateString('pt-BR')}</td>
                       <td style={{ fontWeight: 500 }}>
                         {formatCurrency(Number(invoice.amount))}
                       </td>

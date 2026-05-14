@@ -72,7 +72,7 @@ export default function WorkspacePage() {
       if (hour >= 12 && hour < 18) { greet = "Boa tarde"; emoji = "⛅"; }
       else if (hour >= 18 || hour < 5) { greet = "Boa noite"; emoji = "🌙"; }
       const firstName = currentUser.name?.split(' ')[0] || "";
-      setGreeting(`${greet}, ${firstName}! Como estão as coisas hoje? ${emoji}`);
+      setGreeting(`${greet}, ${firstName}!`);
 
       if (currentUser.workspace_settings?.layout) {
         setWidgets(currentUser.workspace_settings.layout);
@@ -237,137 +237,142 @@ export default function WorkspacePage() {
       transition={{ duration: 0.5 }}
       style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}
     >
-      {/* Header Principal */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '24px' }}>
-        <div style={{ flex: 1, minWidth: '300px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '4px' }}>
-            <div style={{ position: 'relative' }}>
-              <span 
-                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                style={{ fontSize: '2.5rem', cursor: 'pointer', display: 'block', transition: 'transform 0.2s' }}
-                onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
-                onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-              >
-                {currentUser?.emoji || "☀️"}
-              </span>
-              
-              <AnimatePresence>
-                {showEmojiPicker && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10, scale: 0.9 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 10, scale: 0.9 }}
-                    className="glass-card"
-                    style={{
-                      position: 'absolute', top: '100%', left: 0, zIndex: 100,
-                      marginTop: '12px', padding: '16px', display: 'grid',
-                      gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px',
-                      boxShadow: '0 20px 50px rgba(0,0,0,0.4)',
-                      width: '200px',
-                      background: 'rgba(20, 20, 20, 0.95)',
-                      backdropFilter: 'blur(20px)'
-                    }}
-                  >
-                    {EMOJIS.map(e => (
-                      <button
-                        key={e}
-                        onClick={() => updateEmoji(e)}
-                        style={{ fontSize: '1.5rem', padding: '8px', background: 'none', border: 'none', cursor: 'pointer', borderRadius: '12px', transition: 'background 0.2s' }}
-                        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
-                        onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
-                      >
-                        {e}
-                      </button>
-                    ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-            <h1 className="workspace-title" style={{ fontSize: 'clamp(1.5rem, 5vw, 2.5rem)', fontWeight: 800, letterSpacing: '-0.02em', margin: 0 }}>
-              {greeting.split('!')[0]}!
-            </h1>
-          </div>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem', fontWeight: 500, opacity: 0.9, marginLeft: '4px' }}>
-            {greeting.split('?')[1] || "Pronto para um dia produtivo?"}
-          </p>
-        </div>
-
-        {/* Quick Time Tracker in Header */}
-        <div className="glass-card" style={{ 
-          padding: '8px 8px 8px 16px', 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: '20px',
-          borderRadius: '20px',
-          background: 'rgba(255, 255, 255, 0.03)',
-          border: '1px solid var(--border)'
-        }}>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Hoje</span>
-            <span style={{ fontSize: '1.1rem', fontWeight: 800, color: isTracking ? '#22C55E' : 'var(--text-primary)' }}>{todayHours}</span>
-          </div>
-          <button
-            onClick={isTracking ? clockOut : clockIn}
-            style={{
-              padding: '10px 24px',
-              borderRadius: '14px',
-              background: isTracking ? 'rgba(239, 68, 68, 0.1)' : 'var(--accent)',
-              color: isTracking ? '#EF4444' : 'white',
-              fontSize: '0.85rem',
-              fontWeight: 700,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              transition: 'all 0.3s ease',
-              boxShadow: isTracking ? 'none' : '0 4px 15px rgba(217, 72, 15, 0.3)'
-            }}
-          >
-            {isTracking ? <><Square size={16} fill="currentColor" /> Parar</> : <><Play size={16} fill="currentColor" /> Iniciar</>}
-          </button>
-        </div>
-
-        <div className="hide-mobile" style={{ display: 'flex', gap: '12px' }}>
-          {isEditing ? (
-            <div style={{ display: 'flex', gap: '8px', background: 'rgba(255,255,255,0.05)', padding: '6px', borderRadius: '16px', border: '1px solid var(--border)' }}>
-              <button onClick={() => setIsAddModalOpen(true)} className="btn btn-secondary btn-sm" style={{ height: '36px' }}>
-                <Plus size={16} /> Widget
-              </button>
-              <div style={{ width: '1px', background: 'var(--border)', margin: '4px 8px' }} />
-              <Spotlight as="button" onClick={() => saveLayout()} className="btn btn-accent btn-sm" style={{ height: '36px', padding: '0 20px' }}>
-                <CheckCircle2 size={16} /> Salvar Layout
-              </Spotlight>
-            </div>
-          ) : (
-            <button onClick={() => setIsEditing(true)} className="btn btn-secondary btn-sm" style={{ height: '40px', borderRadius: '14px', padding: '0 16px', gap: '8px' }}>
-              <LayoutGrid size={18} /> Personalizar
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Status Bar */}
+      {/* Header Principal - Linha Única */}
       <div style={{ 
         display: 'flex', 
         alignItems: 'center', 
-        gap: '12px',
-        background: 'rgba(255,255,255,0.02)',
+        gap: '16px', 
+        flexWrap: 'nowrap',
+        background: 'rgba(255, 255, 255, 0.02)',
         padding: '12px 20px',
-        borderRadius: '16px',
+        borderRadius: '24px',
         border: '1px solid var(--border)',
-        maxWidth: 'fit-content'
+        backdropFilter: 'blur(10px)'
       }}>
-        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22C55E', boxShadow: '0 0 10px #22C55E' }} />
-        <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Status:</span>
-        <input
-          value={status}
-          onChange={(e) => setStatus(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && updateStatusInDB()}
-          style={{ background: 'none', border: 'none', color: 'var(--text-primary)', fontSize: '0.85rem', outline: 'none', width: '250px' }}
-          placeholder="No que você está trabalhando?"
-        />
-        <button onClick={updateStatusInDB} style={{ color: 'var(--accent)', padding: '4px', opacity: status !== (currentUser?.workspace_settings?.status || "") ? 1 : 0.4 }}>
-          <Save size={16} />
-        </button>
+        {/* Emoji e Saudação */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ position: 'relative' }}>
+            <span 
+              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+              style={{ fontSize: '1.8rem', cursor: 'pointer', display: 'block', transition: 'transform 0.2s' }}
+              onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+              onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+            >
+              {currentUser?.emoji || "☀️"}
+            </span>
+            
+            <AnimatePresence>
+              {showEmojiPicker && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.9 }}
+                  className="glass-card"
+                  style={{
+                    position: 'absolute', top: '100%', left: 0, zIndex: 100,
+                    marginTop: '12px', padding: '16px', display: 'grid',
+                    gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px',
+                    boxShadow: '0 20px 50px rgba(0,0,0,0.4)',
+                    width: '200px',
+                    background: 'rgba(20, 20, 20, 0.95)',
+                    backdropFilter: 'blur(20px)'
+                  }}
+                >
+                  {EMOJIS.map(e => (
+                    <button
+                      key={e}
+                      onClick={() => updateEmoji(e)}
+                      style={{ fontSize: '1.5rem', padding: '8px', background: 'none', border: 'none', cursor: 'pointer', borderRadius: '12px', transition: 'background 0.2s' }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                    >
+                      {e}
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+          <h1 className="workspace-title" style={{ fontSize: '1.2rem', fontWeight: 800, letterSpacing: '-0.02em', margin: 0, whiteSpace: 'nowrap' }}>
+            {greeting}
+          </h1>
+        </div>
+
+        <div style={{ width: '1px', height: '24px', background: 'var(--border)', margin: '0 8px' }} />
+
+        {/* Status Bar Integrada */}
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '10px',
+          flex: 1,
+          minWidth: '200px'
+        }}>
+          <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22C55E', boxShadow: '0 0 10px #22C55E', flexShrink: 0 }} />
+          <input
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && updateStatusInDB()}
+            style={{ background: 'none', border: 'none', color: 'var(--text-primary)', fontSize: '0.85rem', outline: 'none', width: '100%', fontWeight: 500 }}
+            placeholder="No que você está trabalhando?"
+          />
+          {status !== (currentUser?.workspace_settings?.status || "") && (
+            <button onClick={updateStatusInDB} style={{ color: 'var(--accent)', padding: '4px' }}>
+              <Save size={14} />
+            </button>
+          )}
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto' }}>
+          {/* Timer Compacto */}
+          <button
+            onClick={isTracking ? clockOut : clockIn}
+            title={isTracking ? "Parar Timer" : "Iniciar Timer"}
+            style={{
+              width: '40px',
+              height: '40px',
+              borderRadius: '12px',
+              background: isTracking ? 'rgba(239, 68, 68, 0.1)' : 'rgba(34, 197, 94, 0.1)',
+              color: isTracking ? '#EF4444' : '#22C55E',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.3s ease',
+              border: `1px solid ${isTracking ? 'rgba(239, 68, 68, 0.2)' : 'rgba(34, 197, 94, 0.2)'}`
+            }}
+          >
+            {isTracking ? <Square size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" />}
+          </button>
+
+          {/* Botão Personalizar (Apenas Ícone) */}
+          <button 
+            onClick={() => isEditing ? saveLayout() : setIsEditing(true)} 
+            className={`btn ${isEditing ? 'btn-accent' : 'btn-secondary'}`}
+            title="Personalizar Layout"
+            style={{ 
+              width: '40px', 
+              height: '40px', 
+              borderRadius: '12px', 
+              padding: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+          >
+            {isEditing ? <CheckCircle2 size={20} /> : <LayoutGrid size={20} />}
+          </button>
+
+          {isEditing && (
+            <button 
+              onClick={() => setIsAddModalOpen(true)} 
+              className="btn btn-secondary"
+              title="Adicionar Widget"
+              style={{ width: '40px', height: '40px', borderRadius: '12px', padding: 0 }}
+            >
+              <Plus size={20} />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Grid de Widgets Configurável */}
@@ -436,7 +441,7 @@ export default function WorkspacePage() {
                 )}
 
                 <div style={{ opacity: isEditing ? 0.3 : 1, transition: 'opacity 0.3s', flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                  {w.id === 'stats' && <StatsWidget colSpan={w.colSpan} demandsCount={demands.length} todayHours={todayHours} />}
+                  {w.id === 'stats' && <StatsWidget colSpan={w.colSpan} demandsCount={demands.length} todayHours={todayHours} isTracking={isTracking} onTimerToggle={isTracking ? clockOut : clockIn} />}
                   {w.id === 'timetracker' && <TimeTrackerWidget isTracking={isTracking} todayHours={todayHours} todayMinutes={todayMinutes} currentSession={currentSession} clockIn={clockIn} clockOut={clockOut} />}
                   {w.id === 'demands' && <DemandsWidget demands={demands} loading={loadingDemands} />}
                   {w.id === 'notes' && <NotesWidget myNote={myNote} setMyNote={setMyNote} />}
@@ -511,48 +516,62 @@ export default function WorkspacePage() {
 }
 
 // Sub-componentes
-function StatsWidget({ colSpan, demandsCount, todayHours }: { colSpan: number, demandsCount: number, todayHours: string }) {
+function StatsWidget({ colSpan, demandsCount, todayHours, isTracking, onTimerToggle }: { colSpan: number, demandsCount: number, todayHours: string, isTracking: boolean, onTimerToggle: () => void }) {
   const gridCols = colSpan > 8 ? 'repeat(4, 1fr)' : colSpan > 5 ? 'repeat(3, 1fr)' : colSpan > 2 ? 'repeat(2, 1fr)' : '1fr';
 
   const items = [
-    { label: "Demandas", value: demandsCount, icon: CheckCircle2, color: "var(--accent)", gradient: "linear-gradient(135deg, rgba(217, 72, 15, 0.2), transparent)" },
-    { label: "Finalizadas", value: "0", icon: CheckCircle2, color: "#10B981", gradient: "linear-gradient(135deg, rgba(16, 185, 129, 0.2), transparent)" },
-    { label: "Tempo Hoje", value: todayHours.split(' ')[0], sub: todayHours.split(' ')[1], icon: Clock, color: "#3B82F6", gradient: "linear-gradient(135deg, rgba(59, 130, 246, 0.2), transparent)" },
-    { label: "Alertas", value: "0", icon: Zap, color: "#EF4444", gradient: "linear-gradient(135deg, rgba(239, 68, 68, 0.2), transparent)" }
+    { id: 'demands', label: "Demandas", value: demandsCount, icon: CheckCircle2, color: "var(--accent)", gradient: "linear-gradient(135deg, rgba(217, 72, 15, 0.2), transparent)" },
+    { id: 'finished', label: "Finalizadas", value: "0", icon: CheckCircle2, color: "#10B981", gradient: "linear-gradient(135deg, rgba(16, 185, 129, 0.2), transparent)" },
+    { id: 'timer', label: "Tempo Hoje", value: todayHours.split(' ')[0], sub: todayHours.split(' ')[1], icon: isTracking ? Timer : Clock, color: isTracking ? "#22C55E" : "#3B82F6", gradient: isTracking ? "linear-gradient(135deg, rgba(34, 197, 94, 0.2), transparent)" : "linear-gradient(135deg, rgba(59, 130, 246, 0.2), transparent)", interactive: true },
+    { id: 'alerts', label: "Alertas", value: "0", icon: Zap, color: "#EF4444", gradient: "linear-gradient(135deg, rgba(239, 68, 68, 0.2), transparent)" }
   ];
 
   return (
     <div style={{
       display: 'grid',
       gridTemplateColumns: gridCols,
-      gap: '16px',
+      gap: '12px',
       height: '100%',
     }}>
       {items.slice(0, colSpan > 8 ? 4 : colSpan > 5 ? 3 : 2).map((item, i) => (
-        <div key={i} style={{ 
-          background: 'var(--card-inner-bg)',
-          padding: '20px',
-          borderRadius: '20px',
-          border: '1px solid var(--border)',
-          position: 'relative',
-          overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center'
-        }}>
+        <div 
+          key={i} 
+          onClick={item.interactive ? onTimerToggle : undefined}
+          style={{ 
+            background: 'var(--card-inner-bg)',
+            padding: '16px',
+            borderRadius: '16px',
+            border: item.id === 'timer' && isTracking ? '1px solid rgba(34, 197, 94, 0.3)' : '1px solid var(--border)',
+            position: 'relative',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            cursor: item.interactive ? 'pointer' : 'default',
+            transition: 'all 0.3s ease',
+            boxShadow: item.id === 'timer' && isTracking ? '0 0 20px rgba(34, 197, 94, 0.1)' : 'none'
+          }}
+          onMouseEnter={(e) => item.interactive && (e.currentTarget.style.borderColor = 'var(--accent)')}
+          onMouseLeave={(e) => item.interactive && (e.currentTarget.style.borderColor = item.id === 'timer' && isTracking ? 'rgba(34, 197, 94, 0.3)' : 'var(--border)')}
+        >
           <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: item.gradient, opacity: 0.5, pointerEvents: 'none' }} />
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px', position: 'relative' }}>
-            <div style={{ padding: '8px', borderRadius: '12px', background: 'rgba(255,255,255,0.05)', color: item.color }}>
-              <item.icon size={20} />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px', position: 'relative' }}>
+            <div style={{ padding: '6px', borderRadius: '10px', background: 'rgba(255,255,255,0.05)', color: item.color }}>
+              <item.icon size={16} className={item.id === 'timer' && isTracking ? 'animate-pulse' : ''} />
             </div>
+            {item.id === 'timer' && (
+              <div style={{ fontSize: '0.6rem', fontWeight: 800, color: isTracking ? '#22C55E' : 'var(--text-tertiary)', textTransform: 'uppercase' }}>
+                {isTracking ? 'Ativo' : 'Iniciar'}
+              </div>
+            )}
           </div>
           <div style={{ position: 'relative' }}>
-            <p style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>
+            <p style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>
               {item.label}
             </p>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-              <h2 style={{ fontSize: '1.75rem', fontWeight: 900, margin: 0, color: 'var(--text-primary)' }}>{item.value}</h2>
-              {item.sub && <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>{item.sub}</span>}
+              <h2 style={{ fontSize: '1.4rem', fontWeight: 900, margin: 0, color: 'var(--text-primary)' }}>{item.value}</h2>
+              {item.sub && <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-secondary)' }}>{item.sub}</span>}
             </div>
           </div>
         </div>

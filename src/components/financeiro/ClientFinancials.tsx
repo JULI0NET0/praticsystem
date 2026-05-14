@@ -1,6 +1,7 @@
 "use client";
 
-import { User, ArrowUpRight, TrendingUp } from "lucide-react";
+import { User, ArrowUpRight, TrendingUp, Search, Download } from "lucide-react";
+import { useState } from "react";
 
 interface ClientFinancialsProps {
   invoices: any[];
@@ -9,6 +10,9 @@ interface ClientFinancialsProps {
 }
 
 export function ClientFinancials({ invoices, clients, contracts }: ClientFinancialsProps) {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterStatus, setFilterStatus] = useState("all");
+
   const clientStats = clients.map(client => {
     const clientInvoices = invoices.filter(i => i.client_id === client.id);
     const clientContracts = contracts.filter(c => c.client_id === client.id && c.status === 'active');
@@ -25,13 +29,50 @@ export function ClientFinancials({ invoices, clients, contracts }: ClientFinanci
       mrr,
       health: totalPending > 0 ? 'warning' : 'healthy'
     };
-  }).sort((a, b) => (b.totalPaid + b.mrr) - (a.totalPaid + a.mrr));
+  })
+  .filter(stat => {
+    const matchesSearch = stat.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = filterStatus === 'all' || 
+                         (filterStatus === 'healthy' && stat.health === 'healthy') ||
+                         (filterStatus === 'warning' && stat.health === 'warning');
+    return matchesSearch && matchesStatus;
+  })
+  .sort((a, b) => (b.totalPaid + b.mrr) - (a.totalPaid + a.mrr));
 
   const formatCurrency = (value: number) => 
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      {/* Filters Bar */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '12px', flex: 1, minWidth: '300px' }}>
+          <div className="search-wrapper">
+            <Search size={18} />
+            <input 
+              type="text" 
+              className="input-dark" 
+              placeholder="Buscar por cliente..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <select 
+            className="input-dark" 
+            style={{ width: '180px' }}
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+          >
+            <option value="all">Todos Status</option>
+            <option value="healthy">Em dia</option>
+            <option value="warning">Com Pendências</option>
+          </select>
+        </div>
+        <button className="btn btn-secondary">
+          <Download size={18} /> Exportar Relatório
+        </button>
+      </div>
+
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px' }}>
         {clientStats.slice(0, 6).map((stat) => (
           <div key={stat.id} className="glass-card" style={{ padding: '20px', display: 'flex', gap: '16px', alignItems: 'center' }}>

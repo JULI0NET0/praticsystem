@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Briefcase, FileText, DollarSign, Tag, Layers, Save } from "lucide-react";
+import { ArrowLeft, Briefcase, FileText, DollarSign, Tag, Layers, Save, Share2 } from "lucide-react";
 import Spotlight from "@/components/Spotlight";
 import { motion } from "framer-motion";
 import { useState } from "react";
@@ -17,7 +17,10 @@ export default function CreateServicePage() {
     price: 0,
     is_recurring: true,
     billing_cycle: "monthly",
-    minimum_term: 0
+    minimum_term: 0,
+    default_posts_per_week: 0,
+    default_content_capture: false,
+    default_capture_frequency: "1 meia diária"
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -166,6 +169,87 @@ export default function CreateServicePage() {
             </div>
           </div>
         )}
+
+        {/* Configurações de Entrega (Social Media) */}
+        <div style={{ 
+          padding: '24px', 
+          background: 'rgba(217, 72, 15, 0.05)', 
+          borderRadius: '20px', 
+          border: '1px solid rgba(217, 72, 15, 0.1)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '20px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
+              <Share2 size={16} />
+            </div>
+            <p style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+              Configurações de Entrega (Social Media)
+            </p>
+          </div>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Posts por Semana (Padrão)</label>
+              <div style={{ position: 'relative' }}>
+                <input 
+                  type="number" className="input-dark" 
+                  style={{ paddingRight: '100px' }}
+                  value={formData.default_posts_per_week}
+                  onChange={(e) => setFormData({ ...formData, default_posts_per_week: Number(e.target.value) })}
+                />
+                <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '0.7rem', color: 'var(--text-tertiary)', fontWeight: 700 }}>
+                  { (formData.default_posts_per_week || 0) * 4 } / MÊS
+                </span>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Captação de Conteúdo</label>
+              <select 
+                className="input-dark"
+                value={formData.default_content_capture ? 'sim' : 'nao'}
+                onChange={(e) => setFormData({ ...formData, default_content_capture: e.target.value === 'sim' })}
+              >
+                <option value="nao">Não incluso</option>
+                <option value="sim">Incluso no pacote</option>
+              </select>
+            </div>
+          </div>
+
+          {formData.default_content_capture && (
+            <motion.div 
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}
+            >
+              <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Frequência de Captação Padrão</label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px' }}>
+                {['1 meia diária', '1 diária inteira', '2 meias diárias', '2 diárias inteiras'].map(opt => (
+                  <button
+                    key={opt}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, default_capture_frequency: opt })}
+                    style={{
+                      padding: '10px',
+                      borderRadius: '10px',
+                      fontSize: '0.75rem',
+                      fontWeight: 700,
+                      background: formData.default_capture_frequency === opt ? 'var(--accent)' : 'rgba(255,255,255,0.03)',
+                      color: formData.default_capture_frequency === opt ? 'white' : 'var(--text-secondary)',
+                      border: '1px solid rgba(255,255,255,0.05)',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    {opt}
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </div>
 
         {/* Ações */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '16px', paddingTop: '24px', borderTop: '1px solid var(--border)' }}>

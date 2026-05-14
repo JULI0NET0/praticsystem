@@ -139,7 +139,7 @@ export default function DashboardPage() {
               <h3 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '24px' }}>Agenda de Hoje</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 {todayEvents.length > 0 ? todayEvents.map(event => (
-                  <div key={event.id} style={{ display: 'flex', gap: '16px', borderLeft: '2px solid var(--accent)', paddingLeft: '12px' }}>
+                  <div key={event.id} style={{ display: 'flex', gap: '16px', paddingLeft: '12px' }}>
                     <p style={{ fontWeight: 600, width: '48px', flexShrink: 0 }}>{event.time || 'All Day'}</p>
                     <div>
                       <p style={{ fontWeight: 500 }}>{event.title}</p>
