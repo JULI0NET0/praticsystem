@@ -49,6 +49,14 @@ export interface Client {
   portal_password?: string;
   briefing?: string;
   servico_interesse?: string;
+  onboarding_date?: string;
+  google_drive_url?: string;
+  essential_links?: { id: string; title: string; url: string; icon?: string }[];
+  drive_settings?: {
+    auto_create_folder: boolean;
+    auto_backup: boolean;
+    folder_id?: string;
+  };
 }
 
 export interface Demand {
@@ -71,6 +79,8 @@ export interface Service {
   category: string;
   billing_cycle?: 'monthly' | 'quarterly' | 'yearly' | 'one_time';
   minimum_term?: number; // em meses
+  observations?: string;
+  descriptive?: string;
 }
 
 export interface Contract {
@@ -122,6 +132,8 @@ export interface AgendaEvent {
   client_id?: string;
   assigned_to: string;
   status: 'scheduled' | 'completed' | 'cancelled';
+  visibility: 'public' | 'private';
+  google_event_id?: string;
 }
 
 export interface PortfolioCase {

@@ -18,6 +18,7 @@ export default function ContractsPage() {
   const [invoices, setInvoices] = useState<any[]>([]);
   const [selectedContract, setSelectedContract] = useState<any | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState({
     start: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
     end: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0]

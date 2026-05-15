@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
-import { Plus, Search, Filter, MoreHorizontal, ArrowUpRight, Loader2, Link as LinkIcon, Copy, X, Share2 } from "lucide-react";
+import { Plus, Search, Filter, MoreHorizontal, ArrowUpRight, Loader2, Link as LinkIcon, Copy, X, Share2, MessageSquare, FileText, DollarSign } from "lucide-react";
 import { ServiceStats } from "@/components/ServiceStats";
 
 export default function ServicesPage() {
@@ -76,6 +76,8 @@ export default function ServicesPage() {
           category: editingService.category,
           is_recurring: editingService.is_recurring,
           billing_cycle: editingService.billing_cycle,
+          observations: editingService.observations,
+          descriptive: editingService.descriptive,
           default_posts_per_week: editingService.default_posts_per_week,
           default_content_capture: editingService.default_content_capture,
           default_capture_frequency: editingService.default_capture_frequency
@@ -337,11 +339,17 @@ export default function ServicesPage() {
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Preço Base (R$)</label>
+                      <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <DollarSign size={14} /> Preço Base (R$)
+                      </label>
                       <input 
-                        type="number" className="input-dark" 
-                        value={editingService.price}
-                        onChange={(e) => setEditingService({ ...editingService, price: Number(e.target.value) })}
+                        type="text" className="input-dark" 
+                        value={new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2 }).format(editingService.price || 0)}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, "");
+                          const numVal = Number(val) / 100;
+                          setEditingService({ ...editingService, price: numVal });
+                        }}
                       />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -350,6 +358,46 @@ export default function ServicesPage() {
                         type="text" className="input-dark" 
                         value={editingService.category}
                         onChange={(e) => setEditingService({ ...editingService, category: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Novos Campos: Descritivo e Observações */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <FileText size={14} /> Descrição Curta
+                      </label>
+                      <input 
+                        type="text" className="input-dark" 
+                        value={editingService.description || ""}
+                        onChange={(e) => setEditingService({ ...editingService, description: e.target.value })}
+                      />
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <FileText size={14} /> Descritivo do Serviço
+                      </label>
+                      <textarea
+                        className="input-dark"
+                        style={{ minHeight: '100px', resize: 'vertical', padding: '16px' }}
+                        placeholder="Descreva detalhadamente o serviço..."
+                        value={editingService.descriptive || ""}
+                        onChange={(e) => setEditingService({ ...editingService, descriptive: e.target.value })}
+                      />
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <MessageSquare size={14} /> Observações Internas
+                      </label>
+                      <textarea
+                        className="input-dark"
+                        style={{ minHeight: '80px', resize: 'vertical', padding: '16px' }}
+                        placeholder="Notas ou observações importantes..."
+                        value={editingService.observations || ""}
+                        onChange={(e) => setEditingService({ ...editingService, observations: e.target.value })}
                       />
                     </div>
                   </div>

@@ -48,6 +48,14 @@ import {
 import Spotlight from "@/components/Spotlight";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/components/CustomToast";
+import { 
+  InstagramIcon, 
+  FacebookIcon, 
+  LinkedInIcon, 
+  TikTokIcon, 
+  GoogleIcon 
+} from "@/components/SocialIcons";
+
 
 const TABS = [
   { id: 'dashboard', label: 'Dashboard', icon: Layout },
@@ -58,6 +66,7 @@ const TABS = [
   { id: 'access', label: 'Acessos', icon: ShieldCheck },
   { id: 'contracts', label: 'Contratos', icon: FileText },
   { id: 'finance', label: 'Financeiro', icon: CreditCard },
+  { id: 'docs', label: 'Documentos', icon: Folder },
 ];
 
 export default function ClientDetailPage() {
@@ -88,6 +97,9 @@ export default function ClientDetailPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [editFormData, setEditFormData] = useState<any>(null);
+  const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
+  const [linkFormData, setLinkFormData] = useState({ title: '', url: '' });
+  const [isSavingLink, setIsSavingLink] = useState(false);
   const [availableServices, setAvailableServices] = useState<any[]>([]);
   const [isActionModalOpen, setIsActionModalOpen] = useState(false);
   const [actionFormData, setActionFormData] = useState({
@@ -292,7 +304,8 @@ export default function ClientDetailPage() {
           servico_interesse: editFormData.servico_interesse,
           social_access: editFormData.social_access,
           portal_email: editFormData.portal_email,
-          portal_password: editFormData.portal_password
+          portal_password: editFormData.portal_password,
+          onboarding_date: editFormData.onboarding_date
         })
         .eq('id', id);
 
@@ -316,7 +329,7 @@ export default function ClientDetailPage() {
     setIsSaving(true);
     try {
       const selectedService = availableServices.find(s => s.id === actionFormData.service_id);
-      
+
       // 1. Criar o Contrato
       const startDate = new Date(`${actionFormData.start_date}T12:00:00`);
       const endDate = new Date(startDate);
@@ -347,8 +360,8 @@ export default function ClientDetailPage() {
       const totalValue = actionFormData.value || Number(selectedService?.price || 0);
 
       // Buscar o último número de fatura sequencial para este cliente (simulado ou do banco se houver coluna)
-      const lastInvoiceNumber = clientInvoices.length > 0 
-        ? Math.max(...clientInvoices.map(i => i.invoice_number || 0)) 
+      const lastInvoiceNumber = clientInvoices.length > 0
+        ? Math.max(...clientInvoices.map(i => i.invoice_number || 0))
         : 0;
 
       if (actionFormData.billing_cycle === 'one_time') {
@@ -399,7 +412,7 @@ export default function ClientDetailPage() {
 
       showToast('Serviço ativado e fatura gerada!', 'success');
       setIsActionModalOpen(false);
-      fetchClientDetails(); 
+      fetchClientDetails();
     } catch (err) {
       console.error("Erro ao criar ação:", err);
       showToast('Erro ao ativar serviço. Verifique os dados.', 'error');
@@ -506,6 +519,61 @@ export default function ClientDetailPage() {
     }
   };
 
+  const handleSaveLink = async () => {
+    if (!linkFormData.title || !linkFormData.url) {
+      showToast('Preencha o título e o link.', 'error');
+      return;
+    }
+    
+    setIsSavingLink(true);
+    try {
+      const newLink = {
+        id: Math.random().toString(36).substr(2, 9),
+        title: linkFormData.title,
+        url: linkFormData.url.startsWith('http') ? linkFormData.url : `https://${linkFormData.url}`
+      };
+      
+      const currentLinks = clientData.essential_links || [];
+      const updatedLinks = [...currentLinks, newLink];
+      
+      const { error } = await supabase
+        .from('clients')
+        .update({ essential_links: updatedLinks })
+        .eq('id', id);
+        
+      if (error) throw error;
+      
+      setClientData({ ...clientData, essential_links: updatedLinks });
+      setIsLinkModalOpen(false);
+      setLinkFormData({ title: '', url: '' });
+      showToast('Link essencial adicionado!', 'success');
+    } catch (err) {
+      console.error('Erro ao salvar link:', err);
+      showToast('Erro ao salvar link.', 'error');
+    } finally {
+      setIsSavingLink(false);
+    }
+  };
+  
+  const handleDeleteLink = async (linkId: string) => {
+    try {
+      const updatedLinks = (clientData.essential_links || []).filter((l: any) => l.id !== linkId);
+      
+      const { error } = await supabase
+        .from('clients')
+        .update({ essential_links: updatedLinks })
+        .eq('id', id);
+        
+      if (error) throw error;
+      
+      setClientData({ ...clientData, essential_links: updatedLinks });
+      showToast('Link removido.', 'success');
+    } catch (err) {
+      console.error('Erro ao excluir link:', err);
+      showToast('Erro ao excluir link.', 'error');
+    }
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* Header */}
@@ -523,11 +591,11 @@ export default function ClientDetailPage() {
         </motion.button>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <h1 
+            <h1
               title={clientData.nome_fantasia || clientData.name}
               className="hover-text-accent"
-              style={{ 
-                fontSize: 'clamp(1.3rem, 4vw, 2rem)', 
+              style={{
+                fontSize: 'clamp(1.3rem, 4vw, 2rem)',
                 fontWeight: 700,
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
@@ -540,7 +608,7 @@ export default function ClientDetailPage() {
             <span className={`badge ${clientData.status === 'active' ? 'badge-success' : 'badge-warning'}`}>
               {clientData.status === 'active' ? 'Ativo' : 'Prospect'}
             </span>
-            <span style={{ 
+            <span style={{
               fontFamily: 'monospace', fontSize: '0.85rem', fontWeight: 600, color: 'var(--accent)',
               background: 'rgba(217, 72, 15, 0.05)', padding: '4px 8px', borderRadius: '6px', border: '1px solid rgba(217, 72, 15, 0.1)'
             }}>
@@ -549,10 +617,10 @@ export default function ClientDetailPage() {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '4px' }}>
             {clientData.nome_fantasia && (
-              <p 
+              <p
                 title={clientData.name}
-                style={{ 
-                  color: 'var(--text-secondary)', 
+                style={{
+                  color: 'var(--text-secondary)',
                   fontSize: '0.95rem',
                   whiteSpace: 'nowrap',
                   overflow: 'hidden',
@@ -564,12 +632,12 @@ export default function ClientDetailPage() {
               </p>
             )}
             <span style={{ color: 'rgba(255,255,255,0.1)' }}>•</span>
-            <p 
+            <p
               title={clientContracts.find(c => c.status === 'active') ? availableServices.find(s => s.id === clientContracts.find(c => c.status === 'active').service_id)?.name : (clientData.servico_interesse || 'Sem serviço definido')}
-              style={{ 
-                color: 'var(--text-secondary)', 
-                display: 'flex', 
-                alignItems: 'center', 
+              style={{
+                color: 'var(--text-secondary)',
+                display: 'flex',
+                alignItems: 'center',
                 gap: '6px',
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
@@ -577,97 +645,97 @@ export default function ClientDetailPage() {
                 maxWidth: '300px'
               }}
             >
-              <Briefcase size={14} style={{ color: 'var(--accent)' }} /> 
-              {clientContracts.find(c => c.status === 'active') 
-                ? availableServices.find(s => s.id === clientContracts.find(c => c.status === 'active').service_id)?.name 
+              <Briefcase size={14} style={{ color: 'var(--accent)' }} />
+              {clientContracts.find(c => c.status === 'active')
+                ? availableServices.find(s => s.id === clientContracts.find(c => c.status === 'active').service_id)?.name
                 : (clientData.servico_interesse || 'Sem serviço definido')}
             </p>
           </div>
-            <div className="hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: '16px', marginTop: '12px' }}>
-              {/* Quick Access Icons */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                {clientData.social_access?.instagram?.usuario && (
-                  <button 
-                    onClick={() => window.open(`https://instagram.com/${clientData.social_access.instagram.usuario}`, '_blank')}
-                    title={`Instagram: @${clientData.social_access.instagram.usuario}`}
-                    style={{ padding: '8px', borderRadius: '8px', backgroundColor: 'var(--card-inner-bg)', border: '1px solid var(--border)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', transition: '0.2s' }}
-                    className="hover-accent"
-                  >
-                    <Camera size={16} />
-                  </button>
-                )}
-                {clientData.social_access?.facebook?.usuario && (
-                  <button 
-                    onClick={() => window.open(`https://facebook.com/${clientData.social_access.facebook.usuario}`, '_blank')}
-                    title={`Facebook: ${clientData.social_access.facebook.usuario}`}
-                    style={{ padding: '8px', borderRadius: '8px', backgroundColor: 'var(--card-inner-bg)', border: '1px solid var(--border)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', transition: '0.2s' }}
-                    className="hover-accent"
-                  >
-                    <Globe size={16} />
-                  </button>
-                )}
-                {clientData.social_access?.linkedin?.usuario && (
-                  <button 
-                    onClick={() => window.open(`https://linkedin.com/in/${clientData.social_access.linkedin.usuario}`, '_blank')}
-                    title={`LinkedIn: ${clientData.social_access.linkedin.usuario}`}
-                    style={{ padding: '8px', borderRadius: '8px', backgroundColor: 'var(--card-inner-bg)', border: '1px solid var(--border)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', transition: '0.2s' }}
-                    className="hover-accent"
-                  >
-                    <Briefcase size={16} />
-                  </button>
-                )}
-                {clientData.social_access?.tiktok?.usuario && (
-                  <button 
-                    onClick={() => window.open(`https://tiktok.com/@${clientData.social_access.tiktok.usuario}`, '_blank')}
-                    title={`TikTok: @${clientData.social_access.tiktok.usuario}`}
-                    style={{ padding: '8px', borderRadius: '8px', backgroundColor: 'var(--card-inner-bg)', border: '1px solid var(--border)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', transition: '0.2s' }}
-                    className="hover-accent"
-                  >
-                    <Share2 size={16} />
-                  </button>
-                )}
-                {clientData.social_access?.google?.usuario && (
-                  <button 
-                    title={`Google Meu Negócio: ${clientData.social_access.google.usuario}`}
-                    style={{ padding: '8px', borderRadius: '8px', backgroundColor: 'var(--card-inner-bg)', border: '1px solid var(--border)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', transition: '0.2s' }}
-                    className="hover-accent"
-                  >
-                    <MapPin size={16} />
-                  </button>
-                )}
-                <button 
-                  onClick={() => window.open(`/client/dashboard?simulate=${clientData.id}`, '_blank')}
-                  title="Visão do Cliente"
-                  style={{ padding: '8px', borderRadius: '8px', backgroundColor: 'rgba(217, 72, 15, 0.05)', border: '1px solid rgba(217, 72, 15, 0.2)', color: 'var(--accent)', display: 'flex', alignItems: 'center', transition: '0.2s' }}
+          <div className="hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: '16px', marginTop: '12px' }}>
+            {/* Quick Access Icons */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {clientData.social_access?.instagram?.usuario && (
+                <button
+                  onClick={() => window.open(`https://instagram.com/${clientData.social_access.instagram.usuario}`, '_blank')}
+                  title={`Instagram: @${clientData.social_access.instagram.usuario}`}
+                  style={{ padding: '8px', borderRadius: '8px', backgroundColor: 'var(--card-inner-bg)', border: '1px solid var(--border)', color: '#E1306C', display: 'flex', alignItems: 'center', transition: '0.2s' }}
                   className="hover-accent"
                 >
-                  <Eye size={16} />
+                  <InstagramIcon size={16} />
                 </button>
-              </div>
-
-              <span style={{ color: 'rgba(255,255,255,0.1)' }}>•</span>
-              
-              <div
-                title={`Cadastrado em ${new Date(clientData.created_at).toLocaleDateString('pt-BR')} às ${new Date(clientData.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`}
-                style={{ 
-                  color: 'var(--text-secondary)', 
-                  fontSize: '0.75rem', 
-                  fontWeight: 600,
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '6px',
-                  backgroundColor: 'var(--card-inner-bg)',
-                  padding: '4px 10px',
-                  borderRadius: '8px',
-                  border: '1px solid var(--border)',
-                  cursor: 'default',
-                  transition: '0.2s'
-                }}
+              )}
+              {clientData.social_access?.facebook?.usuario && (
+                <button
+                  onClick={() => window.open(`https://facebook.com/${clientData.social_access.facebook.usuario}`, '_blank')}
+                  title={`Facebook: ${clientData.social_access.facebook.usuario}`}
+                  style={{ padding: '8px', borderRadius: '8px', backgroundColor: 'var(--card-inner-bg)', border: '1px solid var(--border)', color: '#1877F2', display: 'flex', alignItems: 'center', transition: '0.2s' }}
+                  className="hover-accent"
+                >
+                  <FacebookIcon size={16} />
+                </button>
+              )}
+              {clientData.social_access?.linkedin?.usuario && (
+                <button
+                  onClick={() => window.open(`https://linkedin.com/in/${clientData.social_access.linkedin.usuario}`, '_blank')}
+                  title={`LinkedIn: ${clientData.social_access.linkedin.usuario}`}
+                  style={{ padding: '8px', borderRadius: '8px', backgroundColor: 'var(--card-inner-bg)', border: '1px solid var(--border)', color: '#0A66C2', display: 'flex', alignItems: 'center', transition: '0.2s' }}
+                  className="hover-accent"
+                >
+                  <LinkedInIcon size={16} />
+                </button>
+              )}
+              {clientData.social_access?.tiktok?.usuario && (
+                <button
+                  onClick={() => window.open(`https://tiktok.com/@${clientData.social_access.tiktok.usuario}`, '_blank')}
+                  title={`TikTok: @${clientData.social_access.tiktok.usuario}`}
+                  style={{ padding: '8px', borderRadius: '8px', backgroundColor: 'var(--card-inner-bg)', border: '1px solid var(--border)', color: '#FFF', display: 'flex', alignItems: 'center', transition: '0.2s' }}
+                  className="hover-accent"
+                >
+                  <TikTokIcon size={16} />
+                </button>
+              )}
+              {clientData.social_access?.google?.usuario && (
+                <button
+                  title={`Google Meu Negócio: ${clientData.social_access.google.usuario}`}
+                  style={{ padding: '8px', borderRadius: '8px', backgroundColor: 'var(--card-inner-bg)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', transition: '0.2s' }}
+                  className="hover-accent"
+                >
+                  <GoogleIcon size={16} />
+                </button>
+              )}
+              <button
+                onClick={() => window.open(`/client/dashboard?simulate=${clientData.id}`, '_blank')}
+                title="Visão do Cliente"
+                style={{ padding: '8px', borderRadius: '8px', backgroundColor: 'rgba(217, 72, 15, 0.05)', border: '1px solid rgba(217, 72, 15, 0.2)', color: 'var(--accent)', display: 'flex', alignItems: 'center', transition: '0.2s' }}
                 className="hover-accent"
               >
-                <Calendar size={14} /> CAD {clientData.created_at ? formatDate(clientData.created_at).split('/').slice(0, 2).join('/') : '-'}
-              </div>
+                <Eye size={16} />
+              </button>
             </div>
+
+            <span style={{ color: 'rgba(255,255,255,0.1)' }}>•</span>
+
+            <div
+              title={`Cadastrado em ${new Date(clientData.created_at).toLocaleDateString('pt-BR')} às ${new Date(clientData.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`}
+              style={{
+                color: 'var(--text-secondary)',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                backgroundColor: 'var(--card-inner-bg)',
+                padding: '4px 10px',
+                borderRadius: '8px',
+                border: '1px solid var(--border)',
+                cursor: 'default',
+                transition: '0.2s'
+              }}
+              className="hover-accent"
+            >
+              <Calendar size={14} /> CAD {clientData.created_at ? formatDate(clientData.created_at).split('/').slice(0, 2).join('/') : '-'}
+            </div>
+          </div>
         </div>
         <div className="mobile-stack" style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
           <button className="btn btn-secondary" onClick={() => setIsDeleteModalOpen(true)} style={{ color: '#EF4444', minHeight: '44px' }}><Trash2 size={18} /></button>
@@ -741,41 +809,35 @@ export default function ClientDetailPage() {
               exit={{ opacity: 0, y: -10 }}
               style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}
             >
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px' }}>
-                <Spotlight className="glass-card" style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ width: '48px', height: '48px', borderRadius: '16px', background: 'rgba(34, 197, 94, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#22C55E' }}>
-                      <TrendingUp size={24} />
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
+                <Spotlight className="glass-card" style={{ flex: '1 1 120px', maxWidth: '200px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: 'rgba(34, 197, 94, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#22C55E' }}>
+                      <TrendingUp size={14} />
                     </div>
-                    <div>
-                      <p style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Prev. MRR</p>
-                      <h4 style={{ fontSize: '1.75rem', fontWeight: 800 }}>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(getFinanceMetrics().mrr)}</h4>
-                    </div>
+                    <p style={{ fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Prev. MRR</p>
                   </div>
+                  <h4 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0 }}>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(getFinanceMetrics().mrr)}</h4>
                 </Spotlight>
 
-                <Spotlight className="glass-card" style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ width: '48px', height: '48px', borderRadius: '16px', background: 'rgba(217, 72, 15, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
-                      <ClipboardList size={24} />
+                <Spotlight className="glass-card" style={{ flex: '1 1 120px', maxWidth: '200px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: 'rgba(217, 72, 15, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
+                      <ClipboardList size={14} />
                     </div>
-                    <div>
-                      <p style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Demandas Abertas</p>
-                      <h4 style={{ fontSize: '1.75rem', fontWeight: 800 }}>{localDemands.filter(d => d.status !== 'completed').length}</h4>
-                    </div>
+                    <p style={{ fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Demandas</p>
                   </div>
+                  <h4 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0 }}>{localDemands.filter(d => d.status !== 'completed').length}</h4>
                 </Spotlight>
 
-                <Spotlight className="glass-card" style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ width: '48px', height: '48px', borderRadius: '16px', background: 'rgba(59, 130, 246, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3B82F6' }}>
-                      <Activity size={24} />
+                <Spotlight className="glass-card" style={{ flex: '1 1 120px', maxWidth: '200px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: 'rgba(59, 130, 246, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3B82F6' }}>
+                      <Activity size={14} />
                     </div>
-                    <div>
-                      <p style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status do Onboarding</p>
-                      <h4 style={{ fontSize: '1.2rem', fontWeight: 700 }}>{clientData.briefing_completed ? '✅ Concluído' : '⏳ Em Andamento'}</h4>
-                    </div>
+                    <p style={{ fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Onboarding</p>
                   </div>
+                  <h4 style={{ fontSize: '0.9rem', fontWeight: 700, margin: 0 }}>{clientData.briefing_completed ? '✅ Concluído' : '⏳ Em Fila'}</h4>
                 </Spotlight>
               </div>
 
@@ -789,8 +851,8 @@ export default function ClientDetailPage() {
                       <Calendar size={16} color="var(--accent)" style={{ marginRight: '4px', opacity: 0.7 }} />
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
                         <span style={{ fontSize: '0.55rem', color: 'var(--text-tertiary)', fontWeight: 800, textTransform: 'uppercase' }}>Início</span>
-                        <input 
-                          type="date" className="input-dark" 
+                        <input
+                          type="date" className="input-dark"
                           style={{ border: 'none', background: 'transparent', padding: 0, fontSize: '0.8rem', width: '100px', fontWeight: 600 }}
                           value={dateRange.start}
                           onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
@@ -799,8 +861,8 @@ export default function ClientDetailPage() {
                       <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)', margin: '0 8px' }} />
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
                         <span style={{ fontSize: '0.55rem', color: 'var(--text-tertiary)', fontWeight: 800, textTransform: 'uppercase' }}>Fim</span>
-                        <input 
-                          type="date" className="input-dark" 
+                        <input
+                          type="date" className="input-dark"
                           style={{ border: 'none', background: 'transparent', padding: 0, fontSize: '0.8rem', width: '100px', fontWeight: 600 }}
                           value={dateRange.end}
                           onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
@@ -884,9 +946,13 @@ export default function ClientDetailPage() {
                       <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>E-mail Principal</p>
                       <p style={{ fontWeight: 500 }}>{clientData.email}</p>
                     </div>
-                    <div style={{ gridColumn: 'span 2' }}>
+                    <div>
                       <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>E-mail Financeiro</p>
                       <p style={{ fontWeight: 500 }}>{clientData.email_financeiro || clientData.email}</p>
+                    </div>
+                    <div>
+                      <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Data de Onboarding</p>
+                      <p style={{ fontWeight: 500 }}>{formatDate(clientData.onboarding_date)}</p>
                     </div>
                   </div>
                 </Spotlight>
@@ -1067,7 +1133,7 @@ export default function ClientDetailPage() {
                                     if (!data[field]) return null;
                                     const value = data[field];
                                     const displayValue = Array.isArray(value) ? value.join(', ') : value;
-                                    
+
                                     return (
                                       <div key={field} style={{ backgroundColor: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
                                         <p style={{ color: 'var(--text-secondary)', fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
@@ -1082,20 +1148,20 @@ export default function ClientDetailPage() {
                             );
                           });
                         })()}
-                        
+
                         {clientData.briefing && !clientData.briefing_data && (
-                           <div style={{ marginTop: '20px' }}>
-                             <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', marginBottom: '8px' }}>Briefing (Texto Consolidado)</p>
-                             <div style={{ whiteSpace: 'pre-wrap', padding: '16px', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', fontSize: '0.9rem' }}>
-                               {clientData.briefing}
-                             </div>
-                           </div>
+                          <div style={{ marginTop: '20px' }}>
+                            <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', marginBottom: '8px' }}>Briefing (Texto Consolidado)</p>
+                            <div style={{ whiteSpace: 'pre-wrap', padding: '16px', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', fontSize: '0.9rem' }}>
+                              {clientData.briefing}
+                            </div>
+                          </div>
                         )}
                       </div>
                     </Spotlight>
                   ) : (
                     <Spotlight className="glass-card" style={{ padding: '40px', textAlign: 'center' }}>
-                      <div style={{ 
+                      <div style={{
                         width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(217, 72, 15, 0.1)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)',
                         margin: '0 auto 24px'
@@ -1106,9 +1172,9 @@ export default function ClientDetailPage() {
                       <p style={{ color: 'var(--text-secondary)', marginBottom: '32px', maxWidth: '400px', margin: '0 auto 32px' }}>
                         O cliente ainda não preencheu o briefing. Envie o link personalizado para coletar as informações necessárias para o projeto.
                       </p>
-                      
+
                       <div style={{ display: 'flex', justifyContent: 'center', gap: '16px' }}>
-                        <button 
+                        <button
                           className="btn btn-accent"
                           onClick={() => {
                             const briefingUrl = `${window.location.origin}/briefing/${clientData.id}`;
@@ -1118,7 +1184,7 @@ export default function ClientDetailPage() {
                         >
                           <Copy size={18} /> Copiar Link de Briefing
                         </button>
-                        <button 
+                        <button
                           className="btn btn-secondary"
                           onClick={() => window.open(`/briefing/${clientData.id}`, '_blank')}
                         >
@@ -1139,9 +1205,9 @@ export default function ClientDetailPage() {
                           {clientData.briefing_completed ? 'Concluído' : 'Pendente'}
                         </span>
                       </div>
-                      
-                      <button 
-                        className="btn btn-secondary" 
+
+                      <button
+                        className="btn btn-secondary"
                         style={{ width: '100%', fontSize: '0.875rem' }}
                         onClick={() => {
                           const briefingUrl = `${window.location.origin}/briefing/${clientData.id}`;
@@ -1151,14 +1217,14 @@ export default function ClientDetailPage() {
                       >
                         <Copy size={16} /> Copiar Link p/ WhatsApp
                       </button>
-                      
+
                       {clientData.briefing_completed && (
-                        <button 
-                          className="btn btn-secondary" 
+                        <button
+                          className="btn btn-secondary"
                           style={{ width: '100%', fontSize: '0.875rem' }}
                           onClick={() => {
-                             // Resetar briefing (opcional, pode ser perigoso sem confirmação)
-                             showToast('Funcionalidade de editar briefing em breve.', 'info');
+                            // Resetar briefing (opcional, pode ser perigoso sem confirmação)
+                            showToast('Funcionalidade de editar briefing em breve.', 'info');
                           }}
                         >
                           <Edit2 size={16} /> Editar Respostas
@@ -1339,8 +1405,8 @@ export default function ClientDetailPage() {
                   </div>
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '8px' }}>
-                    <button 
-                      className="btn btn-accent" 
+                    <button
+                      className="btn btn-accent"
                       style={{ fontSize: '0.75rem', height: '36px', display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}
                       onClick={() => {
                         window.open(`/client/dashboard?simulate=${clientData.id}`, '_blank');
@@ -1348,8 +1414,8 @@ export default function ClientDetailPage() {
                     >
                       <Eye size={14} /> Visão do Cliente
                     </button>
-                    <button 
-                      className="btn btn-secondary" 
+                    <button
+                      className="btn btn-secondary"
                       style={{ fontSize: '0.75rem', height: '36px', display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}
                       onClick={() => {
                         const cleanPhone = clientData.phone.replace(/\D/g, '');
@@ -1374,10 +1440,12 @@ export default function ClientDetailPage() {
                           width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(217, 72, 15, 0.1)',
                           display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)'
                         }}>
-                          {key === 'instagram' ? <Camera size={20} /> :
-                            key === 'facebook' ? <Globe size={20} /> :
-                              key === 'linkedin' ? <Briefcase size={20} /> :
-                                <Globe size={20} />}
+                          {key === 'instagram' ? <InstagramIcon size={20} style={{ color: '#E1306C' }} /> :
+                            key === 'facebook' ? <FacebookIcon size={20} style={{ color: '#1877F2' }} /> :
+                              key === 'linkedin' ? <LinkedInIcon size={20} style={{ color: '#0A66C2' }} /> :
+                                key === 'tiktok' ? <TikTokIcon size={20} style={{ color: '#FFF' }} /> :
+                                  key === 'google' ? <GoogleIcon size={20} /> :
+                                    <Globe size={20} />}
                         </div>
                         <h4 style={{ fontWeight: 700, fontSize: '1.1rem', textTransform: 'capitalize' }}>{key}</h4>
                       </div>
@@ -1509,63 +1577,88 @@ export default function ClientDetailPage() {
               exit={{ opacity: 0, y: -10 }}
               style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}
             >
-               {/* Filtros Financeiros */}
-               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: '10px 20px', borderRadius: '16px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-glow)' }}>
-                   <Calendar size={18} color="var(--accent)" style={{ marginRight: '8px', opacity: 0.8 }} />
-                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
-                     <span style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Período Inicial</span>
-                     <input 
-                       type="date" className="input-dark" 
-                       style={{ border: 'none', background: 'transparent', padding: 0, fontSize: '0.85rem', width: '110px', fontWeight: 600 }}
-                       value={dateRange.start}
-                       onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
-                     />
-                   </div>
-                   <div style={{ width: '1px', height: '28px', background: 'rgba(255,255,255,0.1)', margin: '0 8px' }} />
-                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
-                     <span style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Período Final</span>
-                     <input 
-                       type="date" className="input-dark" 
-                       style={{ border: 'none', background: 'transparent', padding: 0, fontSize: '0.85rem', width: '110px', fontWeight: 600 }}
-                       value={dateRange.end}
-                       onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
-                     />
-                   </div>
-                 </div>
+              {/* Filtros Financeiros */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: '10px 20px', borderRadius: '16px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-glow)' }}>
+                  <Calendar size={18} color="var(--accent)" style={{ marginRight: '8px', opacity: 0.8 }} />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
+                    <span style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Período Inicial</span>
+                    <input
+                      type="date" className="input-dark"
+                      style={{ border: 'none', background: 'transparent', padding: 0, fontSize: '0.85rem', width: '110px', fontWeight: 600 }}
+                      value={dateRange.start}
+                      onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
+                    />
+                  </div>
+                  <div style={{ width: '1px', height: '28px', background: 'rgba(255,255,255,0.1)', margin: '0 8px' }} />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
+                    <span style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Período Final</span>
+                    <input
+                      type="date" className="input-dark"
+                      style={{ border: 'none', background: 'transparent', padding: 0, fontSize: '0.85rem', width: '110px', fontWeight: 600 }}
+                      value={dateRange.end}
+                      onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
+                    />
+                  </div>
+                </div>
                 <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
                   Exibindo {getFinanceMetrics().count} faturas encontradas
                 </p>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '16px' }}>
-                <Spotlight className="glass-card" style={{ padding: '20px' }}>
-                  <p style={{ color: 'var(--text-tertiary)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase' }}>Prev. MRR</p>
-                  <h4 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#3B82F6' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+                <Spotlight className="glass-card" style={{ flex: '1 1 120px', maxWidth: '180px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: 'rgba(59, 130, 246, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3B82F6' }}>
+                      <TrendingUp size={12} />
+                    </div>
+                    <p style={{ color: 'var(--text-tertiary)', fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', margin: 0 }}>MRR</p>
+                  </div>
+                  <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#3B82F6', margin: 0 }}>
                     {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(getFinanceMetrics().mrr)}
                   </h4>
                 </Spotlight>
-                <Spotlight className="glass-card" style={{ padding: '20px' }}>
-                  <p style={{ color: 'var(--text-tertiary)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase' }}>Avulsos</p>
-                  <h4 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#A855F7' }}>
+                <Spotlight className="glass-card" style={{ flex: '1 1 120px', maxWidth: '180px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: 'rgba(168, 85, 247, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#A855F7' }}>
+                      <Plus size={12} />
+                    </div>
+                    <p style={{ color: 'var(--text-tertiary)', fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', margin: 0 }}>Avulsos</p>
+                  </div>
+                  <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#A855F7', margin: 0 }}>
                     {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(getFinanceMetrics().avulsos)}
                   </h4>
                 </Spotlight>
-                <Spotlight className="glass-card" style={{ padding: '20px' }}>
-                  <p style={{ color: 'var(--text-tertiary)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase' }}>A Vencer</p>
-                  <h4 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--accent)' }}>
+                <Spotlight className="glass-card" style={{ flex: '1 1 120px', maxWidth: '180px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: 'rgba(217, 72, 15, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
+                      <Clock size={12} />
+                    </div>
+                    <p style={{ color: 'var(--text-tertiary)', fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', margin: 0 }}>A Vencer</p>
+                  </div>
+                  <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--accent)', margin: 0 }}>
                     {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(getFinanceMetrics().upcoming)}
                   </h4>
                 </Spotlight>
-                <Spotlight className="glass-card" style={{ padding: '20px' }}>
-                  <p style={{ color: 'var(--text-tertiary)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase' }}>Recebido</p>
-                  <h4 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#22C55E' }}>
+                <Spotlight className="glass-card" style={{ flex: '1 1 120px', maxWidth: '180px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: 'rgba(34, 197, 94, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#22C55E' }}>
+                      <CheckCircle2 size={12} />
+                    </div>
+                    <p style={{ color: 'var(--text-tertiary)', fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', margin: 0 }}>Recebido</p>
+                  </div>
+                  <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#22C55E', margin: 0 }}>
                     {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(getFinanceMetrics().totalReceived)}
                   </h4>
                 </Spotlight>
-                <Spotlight className="glass-card" style={{ padding: '20px' }}>
-                  <p style={{ color: 'var(--text-tertiary)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase' }}>Pendente</p>
-                  <h4 style={{ fontSize: '1.25rem', fontWeight: 800 }}>
+                <Spotlight className="glass-card" style={{ flex: '1 1 120px', maxWidth: '180px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: 'rgba(239, 68, 68, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#EF4444' }}>
+                      <AlertCircle size={12} />
+                    </div>
+                    <p style={{ color: 'var(--text-tertiary)', fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', margin: 0 }}>Pendente</p>
+                  </div>
+                  <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#EF4444', margin: 0 }}>
                     {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(getFinanceMetrics().overdue)}
                   </h4>
                 </Spotlight>
@@ -1585,37 +1678,36 @@ export default function ClientDetailPage() {
                   <tbody>
                     {getFinanceMetrics().rangeInvoices.sort((a: any, b: any) => new Date(b.due_date).getTime() - new Date(a.due_date).getTime()).map((invoice: any) => {
                       const isUpcoming = invoice.status === 'pending' && new Date(`${invoice.due_date}T23:59:59`) > new Date();
-                      
+
                       return (
                         <tr key={invoice.id}>
                           <td style={{ paddingLeft: '24px' }}>
                             <p style={{ fontWeight: 500 }}>{invoice.description}</p>
                             <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                              Fatura #{String(invoice.invoice_number || 0).padStart(3, '0')} 
+                              Fatura #{String(invoice.invoice_number || 0).padStart(3, '0')}
                               <span style={{ opacity: 0.3, marginLeft: '8px' }}>#{invoice.id.slice(-6).toUpperCase()}</span>
                             </p>
                           </td>
                           <td>{formatDate(invoice.due_date)}</td>
                           <td style={{ fontWeight: 600 }}>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(invoice.amount)}</td>
                           <td>
-                            <span className={`badge ${
-                              invoice.status === 'paid' ? 'badge-success' :
-                              isUpcoming ? 'badge-warning' : 'badge-danger'
-                            }`}>
+                            <span className={`badge ${invoice.status === 'paid' ? 'badge-success' :
+                                isUpcoming ? 'badge-warning' : 'badge-danger'
+                              }`}>
                               {invoice.status === 'paid' ? 'Pago' : isUpcoming ? 'A Vencer' : 'Pendente'}
                             </span>
                           </td>
                           <td style={{ paddingRight: '24px', textAlign: 'right' }}>
                             {invoice.status !== 'paid' && (
-                              <button 
+                              <button
                                 onClick={() => handleMarkAsPaid(invoice.id)}
                                 title="Marcar como Pago"
-                                style={{ 
-                                  color: 'var(--accent)', 
-                                  padding: '8px', 
-                                  borderRadius: '8px', 
-                                  background: 'rgba(217, 72, 15, 0.1)', 
-                                  border: 'none', 
+                                style={{
+                                  color: 'var(--accent)',
+                                  padding: '8px',
+                                  borderRadius: '8px',
+                                  background: 'rgba(217, 72, 15, 0.1)',
+                                  border: 'none',
                                   cursor: 'pointer',
                                   marginRight: '8px'
                                 }}
@@ -1623,7 +1715,7 @@ export default function ClientDetailPage() {
                                 <CheckCircle2 size={16} />
                               </button>
                             )}
-                            <button 
+                            <button
                               style={{ color: 'var(--text-secondary)', padding: '8px', background: 'none', border: 'none', cursor: 'pointer' }}
                               onClick={() => showToast('Recibo indisponível no momento.', 'info')}
                             >
@@ -1654,6 +1746,60 @@ export default function ClientDetailPage() {
               exit={{ opacity: 0, y: -10 }}
               style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}
             >
+              {/* Essential Links Section */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(217, 72, 15, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
+                      <LinkIcon size={18} />
+                    </div>
+                    <h3 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Links Essenciais</h3>
+                  </div>
+                  <button 
+                    onClick={() => setIsLinkModalOpen(true)}
+                    className="btn btn-secondary btn-sm" 
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                  >
+                    <Plus size={16} /> Adicionar Link
+                  </button>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '16px' }}>
+                  {clientData.essential_links?.map((link: any) => (
+                    <Spotlight key={link.id} className="glass-card" style={{ padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                      <div 
+                        onClick={() => window.open(link.url, '_blank')}
+                        style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', flex: 1, minWidth: 0 }}
+                      >
+                        <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(255,255,255,0.03)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
+                          {link.url.includes('canva.com') ? <Sparkles size={20} /> : 
+                           link.url.includes('trello.com') ? <Layout size={20} /> :
+                           link.url.includes('figma.com') ? <Target size={20} /> :
+                           <ExternalLink size={20} />}
+                        </div>
+                        <div style={{ minWidth: 0 }}>
+                          <p style={{ fontWeight: 600, fontSize: '0.9rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{link.title}</p>
+                          <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{new URL(link.url).hostname}</p>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => handleDeleteLink(link.id)}
+                        style={{ color: 'var(--text-tertiary)', padding: '8px', background: 'none', border: 'none', cursor: 'pointer' }}
+                        className="hover-danger"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </Spotlight>
+                  ))}
+                  
+                  {(!clientData.essential_links || clientData.essential_links.length === 0) && (
+                    <div style={{ gridColumn: '1 / -1', padding: '32px', textAlign: 'center', background: 'rgba(255,255,255,0.01)', borderRadius: '16px', border: '1px dashed var(--border)' }}>
+                      <p style={{ color: 'var(--text-tertiary)', fontSize: '0.875rem' }}>Nenhum link essencial cadastrado.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {/* Google Drive Section */}
               <Spotlight className="glass-card" style={{ padding: '32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid rgba(66, 133, 244, 0.2)', background: 'rgba(66, 133, 244, 0.03)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
@@ -1662,23 +1808,30 @@ export default function ClientDetailPage() {
                   </div>
                   <div>
                     <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '4px' }}>Pasta do Google Drive</h3>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
-                      {clientData.google_drive_url ? 'Acesse todos os documentos na pasta sincronizada.' : 'Vincule uma pasta do Google Drive para este cliente.'}
-                    </p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
+                        {clientData.google_drive_url ? 'Acesse todos os documentos na pasta sincronizada.' : 'Vincule uma pasta do Google Drive para este cliente.'}
+                      </p>
+                      {clientData.drive_settings?.auto_backup && (
+                        <span style={{ fontSize: '0.65rem', background: 'rgba(34, 197, 94, 0.1)', color: '#22C55E', padding: '2px 8px', borderRadius: '100px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <CheckCircle2 size={10} /> BACKUP ATIVO
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
-                
+
                 <div style={{ display: 'flex', gap: '12px' }}>
                   {clientData.google_drive_url ? (
                     <>
-                      <button 
+                      <button
                         onClick={() => window.open(clientData.google_drive_url, '_blank')}
                         className="btn btn-secondary"
                         style={{ display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid rgba(66, 133, 244, 0.3)', color: '#4285F4' }}
                       >
                         <ExternalLink size={18} /> Abrir Pasta
                       </button>
-                      <button 
+                      <button
                         onClick={() => {
                           setTempGoogleDriveUrl(clientData.google_drive_url || "");
                           setIsGoogleDriveModalOpen(true);
@@ -1690,7 +1843,7 @@ export default function ClientDetailPage() {
                       </button>
                     </>
                   ) : (
-                    <button 
+                    <button
                       onClick={() => setIsGoogleDriveModalOpen(true)}
                       className="btn btn-accent"
                       style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#4285F4', borderColor: '#4285F4' }}
@@ -1704,23 +1857,28 @@ export default function ClientDetailPage() {
               {/* Attachments Section */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Anexos Diretos</h3>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(255, 255, 255, 0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
+                      <FilePlus size={18} />
+                    </div>
+                    <h3 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Anexos Diretos</h3>
+                  </div>
                   <div style={{ position: 'relative' }}>
-                    <input 
-                      type="file" 
-                      id="doc-upload" 
-                      style={{ display: 'none' }} 
+                    <input
+                      type="file"
+                      id="doc-upload"
+                      style={{ display: 'none' }}
                       onChange={handleUploadDocument}
                       disabled={isUploading}
                     />
-                    <label 
-                      htmlFor="doc-upload" 
+                    <label
+                      htmlFor="doc-upload"
                       className={`btn ${isUploading ? 'btn-secondary' : 'btn-accent'}`}
                       style={{ cursor: isUploading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
                     >
                       {isUploading ? (
                         <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }}>
-                          <Plus size={18} />
+                          <Loader2 size={18} />
                         </motion.div>
                       ) : (
                         <Upload size={18} />
@@ -1733,9 +1891,9 @@ export default function ClientDetailPage() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
                   {clientDocuments.map(doc => (
                     <Spotlight key={doc.id} className="glass-card" style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-                      <div style={{ 
-                        width: '48px', height: '48px', borderRadius: '12px', 
-                        backgroundColor: 'rgba(255,255,255,0.03)', 
+                      <div style={{
+                        width: '48px', height: '48px', borderRadius: '12px',
+                        backgroundColor: 'rgba(255,255,255,0.03)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         color: doc.file_type?.includes('pdf') ? '#EF4444' : doc.file_type?.includes('image') ? '#3B82F6' : 'var(--accent)'
                       }}>
@@ -1750,7 +1908,7 @@ export default function ClientDetailPage() {
                         </p>
                       </div>
                       <div style={{ display: 'flex', gap: '4px' }}>
-                        <button 
+                        <button
                           onClick={() => {
                             const { data } = supabase.storage.from('client-documents').getPublicUrl(doc.file_path);
                             window.open(data.publicUrl, '_blank');
@@ -1760,7 +1918,7 @@ export default function ClientDetailPage() {
                         >
                           <Eye size={16} />
                         </button>
-                        <button 
+                        <button
                           onClick={() => handleDeleteDocument(doc.id, doc.file_path)}
                           style={{ padding: '8px', color: 'var(--text-secondary)', background: 'none', border: 'none', cursor: 'pointer' }}
                           title="Excluir"
@@ -1773,8 +1931,8 @@ export default function ClientDetailPage() {
                   ))}
 
                   {clientDocuments.length === 0 && !isUploading && (
-                    <div style={{ 
-                      gridColumn: '1 / -1', padding: '48px', textAlign: 'center', 
+                    <div style={{
+                      gridColumn: '1 / -1', padding: '48px', textAlign: 'center',
                       backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '24px',
                       border: '2px dashed var(--border)'
                     }}>
@@ -1815,13 +1973,13 @@ export default function ClientDetailPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Selecione o Serviço</label>
-                  <select 
+                  <select
                     className="input-dark"
                     value={actionFormData.service_id}
                     onChange={(e) => {
                       const service = availableServices.find(s => s.id === e.target.value);
-                      setActionFormData({ 
-                        ...actionFormData, 
+                      setActionFormData({
+                        ...actionFormData,
                         service_id: e.target.value,
                         value: Number(service?.price || 0),
                         billing_cycle: service?.billing_cycle || 'monthly',
@@ -1841,7 +1999,7 @@ export default function ClientDetailPage() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Valor Personalizado</label>
-                    <input 
+                    <input
                       type="number" className="input-dark"
                       value={actionFormData.value}
                       onChange={(e) => setActionFormData({ ...actionFormData, value: Number(e.target.value) })}
@@ -1849,7 +2007,7 @@ export default function ClientDetailPage() {
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Ciclo de Cobrança</label>
-                    <select 
+                    <select
                       className="input-dark"
                       value={actionFormData.billing_cycle}
                       onChange={(e) => setActionFormData({ ...actionFormData, billing_cycle: e.target.value })}
@@ -1866,7 +2024,7 @@ export default function ClientDetailPage() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Data de Início</label>
-                    <input 
+                    <input
                       type="date" className="input-dark"
                       value={actionFormData.start_date}
                       onChange={(e) => setActionFormData({ ...actionFormData, start_date: e.target.value })}
@@ -1874,7 +2032,7 @@ export default function ClientDetailPage() {
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Dia de Vencimento</label>
-                    <select 
+                    <select
                       className="input-dark"
                       value={actionFormData.due_day}
                       onChange={(e) => setActionFormData({ ...actionFormData, due_day: Number(e.target.value) })}
@@ -1889,7 +2047,7 @@ export default function ClientDetailPage() {
                 {actionFormData.billing_cycle !== 'one_time' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Duração do Contrato (Fidelidade)</label>
-                    <select 
+                    <select
                       className="input-dark"
                       value={actionFormData.contract_duration}
                       onChange={(e) => setActionFormData({ ...actionFormData, contract_duration: Number(e.target.value) })}
@@ -1903,56 +2061,56 @@ export default function ClientDetailPage() {
                 )}
 
                 {/* Campos de Redes Sociais */}
-                {(availableServices.find(s => s.id === actionFormData.service_id)?.name?.toLowerCase().includes('redes') || 
+                {(availableServices.find(s => s.id === actionFormData.service_id)?.name?.toLowerCase().includes('redes') ||
                   availableServices.find(s => s.id === actionFormData.service_id)?.name?.toLowerCase().includes('social')) && (
-                  <motion.div 
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    style={{ background: 'rgba(217, 72, 15, 0.05)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(217, 72, 15, 0.1)', display: 'flex', flexDirection: 'column', gap: '16px' }}
-                  >
-                    <p style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '1px' }}>Especificações de Gestão</p>
-                    
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Posts Semanais</label>
-                        <input 
-                          type="number" className="input-dark" style={{ height: '36px' }}
-                          value={actionFormData.posts_per_week}
-                          onChange={(e) => setActionFormData({ ...actionFormData, posts_per_week: Number(e.target.value) })}
-                        />
-                        <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>{actionFormData.posts_per_week * 4} posts mensais</span>
-                      </div>
-                      
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Captação de Conteúdo?</label>
-                        <select 
-                          className="input-dark" style={{ height: '36px' }}
-                          value={actionFormData.content_capture ? 'sim' : 'nao'}
-                          onChange={(e) => setActionFormData({ ...actionFormData, content_capture: e.target.value === 'sim' })}
-                        >
-                          <option value="nao">Não</option>
-                          <option value="sim">Sim</option>
-                        </select>
-                      </div>
-                    </div>
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      style={{ background: 'rgba(217, 72, 15, 0.05)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(217, 72, 15, 0.1)', display: 'flex', flexDirection: 'column', gap: '16px' }}
+                    >
+                      <p style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '1px' }}>Especificações de Gestão</p>
 
-                    {actionFormData.content_capture && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Frequência de Captação</label>
-                        <select 
-                          className="input-dark" style={{ height: '36px' }}
-                          value={actionFormData.capture_frequency}
-                          onChange={(e) => setActionFormData({ ...actionFormData, capture_frequency: e.target.value })}
-                        >
-                          <option value="1 meia diária">1 meia diária</option>
-                          <option value="1 diária inteira">1 diária inteira</option>
-                          <option value="2 meias diárias">2 meias diárias</option>
-                          <option value="2 diárias inteiras">2 diárias inteiras</option>
-                        </select>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Posts Semanais</label>
+                          <input
+                            type="number" className="input-dark" style={{ height: '36px' }}
+                            value={actionFormData.posts_per_week}
+                            onChange={(e) => setActionFormData({ ...actionFormData, posts_per_week: Number(e.target.value) })}
+                          />
+                          <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>{actionFormData.posts_per_week * 4} posts mensais</span>
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Captação de Conteúdo?</label>
+                          <select
+                            className="input-dark" style={{ height: '36px' }}
+                            value={actionFormData.content_capture ? 'sim' : 'nao'}
+                            onChange={(e) => setActionFormData({ ...actionFormData, content_capture: e.target.value === 'sim' })}
+                          >
+                            <option value="nao">Não</option>
+                            <option value="sim">Sim</option>
+                          </select>
+                        </div>
                       </div>
-                    )}
-                  </motion.div>
-                )}
+
+                      {actionFormData.content_capture && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Frequência de Captação</label>
+                          <select
+                            className="input-dark" style={{ height: '36px' }}
+                            value={actionFormData.capture_frequency}
+                            onChange={(e) => setActionFormData({ ...actionFormData, capture_frequency: e.target.value })}
+                          >
+                            <option value="1 meia diária">1 meia diária</option>
+                            <option value="1 diária inteira">1 diária inteira</option>
+                            <option value="2 meias diárias">2 meias diárias</option>
+                            <option value="2 diárias inteiras">2 diárias inteiras</option>
+                          </select>
+                        </div>
+                      )}
+                    </motion.div>
+                  )}
 
                 {/* Resumo Visual */}
                 <div style={{ padding: '16px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', marginTop: '8px' }}>
@@ -2029,7 +2187,7 @@ export default function ClientDetailPage() {
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Serviço de Interesse</label>
-                      <select 
+                      <select
                         className="input-dark"
                         value={editFormData.servico_interesse || ''}
                         onChange={(e) => setEditFormData({ ...editFormData, servico_interesse: e.target.value })}
@@ -2037,6 +2195,10 @@ export default function ClientDetailPage() {
                         <option value="">Selecione um serviço</option>
                         {availableServices.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
                       </select>
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                      <label style={{ fontSize: "0.875rem", color: "var(--text-secondary)" }}>Data de Onboarding</label>
+                      <input type="date" className="input-dark" value={editFormData.onboarding_date || ""} onChange={(e) => setEditFormData({ ...editFormData, onboarding_date: e.target.value })} />
                     </div>
                   </div>
                 </section>
@@ -2088,15 +2250,32 @@ export default function ClientDetailPage() {
                     <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--accent)', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '12px' }}>
                       Redes Sociais
                     </h3>
-                    {['instagram', 'facebook', 'google', 'linkedin', 'tiktok'].map(social => (
-                      <div key={social} style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '16px', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid var(--border)' }}>
-                        <p style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-secondary)' }}>{social.replace('_', ' ')}</p>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                          <input placeholder="Usuário" type="text" className="input-dark" value={editFormData.social_access?.[social]?.usuario || ''} onChange={(e) => setEditFormData({ ...editFormData, social_access: { ...editFormData.social_access, [social]: { ...editFormData.social_access?.[social], usuario: e.target.value, ativo: !!e.target.value } } })} />
-                          <input placeholder="Senha" type="text" className="input-dark" value={editFormData.social_access?.[social]?.senha || ''} onChange={(e) => setEditFormData({ ...editFormData, social_access: { ...editFormData.social_access, [social]: { ...editFormData.social_access?.[social], senha: e.target.value } } })} />
+                    {['instagram', 'facebook', 'google', 'linkedin', 'tiktok'].map(social => {
+                      const Icon = social === 'instagram' ? InstagramIcon :
+                        social === 'facebook' ? FacebookIcon :
+                          social === 'linkedin' ? LinkedInIcon :
+                            social === 'tiktok' ? TikTokIcon :
+                              GoogleIcon;
+
+                      const color = social === 'instagram' ? '#E1306C' :
+                        social === 'facebook' ? '#1877F2' :
+                          social === 'linkedin' ? '#0A66C2' :
+                            social === 'tiktok' ? '#FFF' :
+                              '#EA4335';
+
+                      return (
+                        <div key={social} style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '16px', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <Icon size={16} style={{ color }} />
+                            <p style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-secondary)' }}>{social.replace('_', ' ')}</p>
+                          </div>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                            <input placeholder="Usuário" type="text" className="input-dark" value={editFormData.social_access?.[social]?.usuario || ''} onChange={(e) => setEditFormData({ ...editFormData, social_access: { ...editFormData.social_access, [social]: { ...editFormData.social_access?.[social], usuario: e.target.value, ativo: !!e.target.value } } })} />
+                            <input placeholder="Senha" type="text" className="input-dark" value={editFormData.social_access?.[social]?.senha || ''} onChange={(e) => setEditFormData({ ...editFormData, social_access: { ...editFormData.social_access, [social]: { ...editFormData.social_access?.[social], senha: e.target.value } } })} />
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </section>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '16px', borderTop: '1px solid var(--border)', paddingTop: '24px' }}>
@@ -2189,15 +2368,15 @@ export default function ClientDetailPage() {
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: '1.6' }}>
                   Cole o link da pasta do Google Drive dedicada a este cliente. Isso permitirá acesso rápido direto pelo sistema.
                 </p>
-                
+
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Link da Pasta</label>
                   <div style={{ position: 'relative' }}>
                     <Link size={18} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
-                    <input 
-                      type="url" 
-                      className="input-dark" 
-                      placeholder="https://drive.google.com/drive/folders/..." 
+                    <input
+                      type="url"
+                      className="input-dark"
+                      placeholder="https://drive.google.com/drive/folders/..."
                       style={{ paddingLeft: '48px' }}
                       value={tempGoogleDriveUrl}
                       onChange={(e) => setTempGoogleDriveUrl(e.target.value)}
@@ -2209,6 +2388,56 @@ export default function ClientDetailPage() {
                   <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setIsGoogleDriveModalOpen(false)}>Cancelar</button>
                   <button className="btn btn-accent" style={{ flex: 1, backgroundColor: '#4285F4', borderColor: '#4285F4' }} onClick={handleSaveGoogleDrive}>
                     Salvar Vínculo
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Link Modal */}
+      <AnimatePresence>
+        {isLinkModalOpen && (
+          <div style={{
+            position: 'fixed', inset: 0, zIndex: 110,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '24px', backgroundColor: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)'
+          }}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="glass-card"
+              style={{ width: '100%', maxWidth: '450px', padding: '32px' }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Adicionar Link Essencial</h2>
+                <button onClick={() => setIsLinkModalOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                  <X size={24} />
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Título do Link</label>
+                  <input 
+                    type="text" className="input-dark" placeholder="Ex: Projeto Canva, Quadro Trello..."
+                    value={linkFormData.title} onChange={(e) => setLinkFormData({ ...linkFormData, title: e.target.value })}
+                  />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>URL</label>
+                  <input 
+                    type="url" className="input-dark" placeholder="https://..."
+                    value={linkFormData.url} onChange={(e) => setLinkFormData({ ...linkFormData, url: e.target.value })}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
+                  <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setIsLinkModalOpen(false)}>Cancelar</button>
+                  <button className="btn btn-accent" style={{ flex: 1 }} onClick={handleSaveLink} disabled={isSavingLink}>
+                    {isSavingLink ? 'Salvando...' : 'Salvar Link'}
                   </button>
                 </div>
               </div>

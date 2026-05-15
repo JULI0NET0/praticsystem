@@ -10,6 +10,14 @@ import { useRouter } from "next/navigation";
 import { formatCPFOrCNPJ, formatCEP, formatPhone } from "@/utils/masks";
 import { useToast } from "@/components/CustomToast";
 import CustomModal from "@/components/CustomModal";
+import { 
+  InstagramIcon, 
+  FacebookIcon, 
+  LinkedInIcon, 
+  TikTokIcon, 
+  GoogleIcon 
+} from "@/components/SocialIcons";
+
 
 export default function CreateClientPage() {
   const router = useRouter();
@@ -42,7 +50,11 @@ export default function CreateClientPage() {
       website: ""
     },
     portal_email: "",
-    portal_password: ""
+    portal_password: "",
+    drive_settings: {
+      auto_create_folder: true,
+      auto_backup: true
+    }
   });
 
   const [loading, setLoading] = useState(false);
@@ -450,7 +462,9 @@ export default function CreateClientPage() {
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Instagram (@usuario)</label>
+                    <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <InstagramIcon size={14} style={{ color: '#E1306C' }} /> Instagram (@usuario)
+                    </label>
                     <input
                       type="text" className="input-dark" placeholder="@agenciapratic"
                       value={formData.social_access.instagram.usuario} onChange={(e) => setFormData({ ...formData, social_access: { ...formData.social_access, instagram: { ...formData.social_access.instagram, usuario: e.target.value } } })}
@@ -465,6 +479,48 @@ export default function CreateClientPage() {
                   </div>
                 </div>
 
+
+                {/* Google Drive Automation */}
+                <div style={{ borderTop: '1px solid var(--border)', paddingTop: '24px', marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  <h3 style={{ fontSize: '1rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <HardDrive size={18} style={{ color: '#4285F4' }} /> Integração Google Drive
+                  </h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+                    <label style={{ 
+                      display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', 
+                      background: 'rgba(66, 133, 244, 0.05)', borderRadius: '12px', border: '1px solid rgba(66, 133, 244, 0.1)',
+                      cursor: 'pointer'
+                    }}>
+                      <input 
+                        type="checkbox" 
+                        checked={formData.drive_settings.auto_create_folder}
+                        onChange={(e) => setFormData({ ...formData, drive_settings: { ...formData.drive_settings, auto_create_folder: e.target.checked } })}
+                        style={{ width: '18px', height: '18px', accentColor: '#4285F4' }}
+                      />
+                      <div>
+                        <p style={{ fontSize: '0.875rem', fontWeight: 600 }}>Criar pasta automaticamente</p>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Cria a pasta do cliente dentro de "Clientes PRÁTIC"</p>
+                      </div>
+                    </label>
+
+                    <label style={{ 
+                      display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', 
+                      background: 'rgba(66, 133, 244, 0.05)', borderRadius: '12px', border: '1px solid rgba(66, 133, 244, 0.1)',
+                      cursor: 'pointer'
+                    }}>
+                      <input 
+                        type="checkbox" 
+                        checked={formData.drive_settings.auto_backup}
+                        onChange={(e) => setFormData({ ...formData, drive_settings: { ...formData.drive_settings, auto_backup: e.target.checked } })}
+                        style={{ width: '18px', height: '18px', accentColor: '#4285F4' }}
+                      />
+                      <div>
+                        <p style={{ fontSize: '0.875rem', fontWeight: 600 }}>Sincronizar anexos</p>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Faz backup automático de novos documentos no Drive</p>
+                      </div>
+                    </label>
+                  </div>
+                </div>
 
                 {/* Portal Access Credentials */}
                 <div style={{ borderTop: '1px solid var(--border)', paddingTop: '24px', marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '20px' }}>

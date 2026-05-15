@@ -23,6 +23,14 @@ import { formatCPFOrCNPJ, formatCEP, formatPhone } from "@/utils/masks";
 import ThemeLogo from "@/components/ThemeLogo";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/components/CustomToast";
+import { 
+  InstagramIcon, 
+  FacebookIcon, 
+  LinkedInIcon, 
+  TikTokIcon, 
+  GoogleIcon 
+} from "@/components/SocialIcons";
+
 
 export default function OnboardingPage() {
   const [step, setStep] = useState(0); // Começa em 0: Splash Screen
@@ -262,11 +270,11 @@ export default function OnboardingPage() {
 
 
   const RedesSociaisList = [
-    { id: 'instagram', label: 'Instagram', color: '#E1306C' },
-    { id: 'facebook', label: 'Facebook', color: '#1877F2' },
-    { id: 'google', label: 'Google Meu Negócio', color: '#EA4335' },
-    { id: 'linkedin', label: 'LinkedIn', color: '#0A66C2' },
-    { id: 'tiktok', label: 'TikTok', color: '#000000' }
+    { id: 'instagram', label: 'Instagram', color: '#E1306C', icon: InstagramIcon },
+    { id: 'facebook', label: 'Facebook', color: '#1877F2', icon: FacebookIcon },
+    { id: 'google', label: 'Google Meu Negócio', color: '#EA4335', icon: GoogleIcon },
+    { id: 'linkedin', label: 'LinkedIn', color: '#0A66C2', icon: LinkedInIcon },
+    { id: 'tiktok', label: 'TikTok', color: '#000000', icon: TikTokIcon }
   ];
 
   return (
@@ -353,17 +361,21 @@ export default function OnboardingPage() {
                   padding: '0 20px'
                 }}
               >
-                {"Pronto para ativar o modo Prátic?".split('').map((char, index) => (
-                  <motion.span
-                    key={index}
-                    variants={{
-                      hidden: { opacity: 0, y: 10, filter: 'blur(5px)' },
-                      visible: { opacity: 1, y: 0, filter: 'blur(0px)' }
-                    }}
-                    style={{ display: 'inline-block', whiteSpace: char === ' ' ? 'pre' : 'normal' }}
-                  >
-                    {char}
-                  </motion.span>
+                {"Pronto para ativar \no modo Prátic?".split('').map((char, index) => (
+                  char === '\n' ? (
+                    <br key={index} className="br-mobile" />
+                  ) : (
+                    <motion.span
+                      key={index}
+                      variants={{
+                        hidden: { opacity: 0, y: 10, filter: 'blur(5px)' },
+                        visible: { opacity: 1, y: 0, filter: 'blur(0px)' }
+                      }}
+                      style={{ display: 'inline-block', whiteSpace: char === ' ' ? 'pre' : 'normal' }}
+                    >
+                      {char}
+                    </motion.span>
+                  )
                 ))}
               </motion.h1>
 
@@ -826,9 +838,14 @@ export default function OnboardingPage() {
                               >
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                   <div style={{
-                                    width: '12px', height: '12px', borderRadius: '50%',
-                                    backgroundColor: isActive ? rede.color : 'rgba(255,255,255,0.2)'
-                                  }} />
+                                    width: '32px', height: '32px', borderRadius: '10px',
+                                    backgroundColor: isActive ? rede.color : 'rgba(255,255,255,0.05)',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    color: isActive ? '#FFF' : 'rgba(255,255,255,0.3)',
+                                    transition: 'all 0.3s'
+                                  }}>
+                                    <rede.icon size={18} />
+                                  </div>
                                   <span style={{ fontWeight: 500 }}>{rede.label}</span>
                                 </div>
                                 <div style={{

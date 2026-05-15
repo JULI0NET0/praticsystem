@@ -56,7 +56,7 @@ export default function WorkspacePage() {
   const [myNote, setMyNote] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const EMOJIS = ["☀️", "🌙", "🚀", "🔥", "☕", "💻", "🎨", "📈", "🎯", "✨", "✅", "⚡"];
+  const EMOJIS = ["☀️", "🌙", "🚀", "🔥", "☕", "💻", "🎨", "📈", "🎯", "✨", "✅", "⚡", "🌟", "🛠️", "📅", "💡", "🧠", "💼", "🤝", "🌈", "🍀", "💎", "🏆", "📣", "📝", "🌍", "🍕", "🦾", "💪", "🏄", "🧘", "🚲"];
   const [demands, setDemands] = useState<any[]>([]);
   const [loadingDemands, setLoadingDemands] = useState(true);
 
@@ -251,15 +251,38 @@ export default function WorkspacePage() {
       }}>
         {/* Emoji e Saudação */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ position: 'relative' }}>
-            <span 
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <motion.button 
+              key={currentUser?.emoji}
+              initial={{ scale: 0.5, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: "spring", stiffness: 300, damping: 20 }}
               onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-              style={{ fontSize: '1.8rem', cursor: 'pointer', display: 'block', transition: 'transform 0.2s' }}
-              onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
-              onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+              style={{ 
+                fontSize: '2rem', 
+                background: 'rgba(255,255,255,0.03)', 
+                border: '1px solid rgba(255,255,255,0.05)',
+                borderRadius: '16px',
+                width: '52px',
+                height: '52px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                padding: 0
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
+                e.currentTarget.style.transform = 'scale(1.05)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
+                e.currentTarget.style.transform = 'scale(1)';
+              }}
             >
               {currentUser?.emoji || "☀️"}
-            </span>
+            </motion.button>
             
             <AnimatePresence>
               {showEmojiPicker && (
@@ -269,26 +292,52 @@ export default function WorkspacePage() {
                   exit={{ opacity: 0, y: 10, scale: 0.9 }}
                   className="glass-card"
                   style={{
-                    position: 'absolute', top: '100%', left: 0, zIndex: 100,
-                    marginTop: '12px', padding: '16px', display: 'grid',
-                    gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px',
-                    boxShadow: '0 20px 50px rgba(0,0,0,0.4)',
-                    width: '200px',
-                    background: 'rgba(20, 20, 20, 0.95)',
-                    backdropFilter: 'blur(20px)'
+                    position: 'absolute', top: '100%', left: 0, zIndex: 999,
+                    marginTop: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px',
+                    boxShadow: '0 20px 50px rgba(0,0,0,0.6)',
+                    width: '260px',
+                    background: '#141414',
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    borderRadius: '24px'
                   }}
                 >
-                  {EMOJIS.map(e => (
-                    <button
-                      key={e}
-                      onClick={() => updateEmoji(e)}
-                      style={{ fontSize: '1.5rem', padding: '8px', background: 'none', border: 'none', cursor: 'pointer', borderRadius: '12px', transition: 'background 0.2s' }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
-                      onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
-                    >
-                      {e}
-                    </button>
-                  ))}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '6px' }}>
+                    {EMOJIS.map(e => (
+                      <button
+                        key={e}
+                        onClick={() => updateEmoji(e)}
+                        style={{ fontSize: '1.2rem', padding: '6px', background: 'none', border: 'none', cursor: 'pointer', borderRadius: '10px', transition: 'all 0.2s' }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                      >
+                        {e}
+                      </button>
+                    ))}
+                  </div>
+                  
+                  <div style={{ height: '1px', background: 'rgba(255,255,255,0.1)', margin: '4px 0' }} />
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '4px' }}>
+                    <p style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Qualquer Emoji</p>
+                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                      <input 
+                        type="text"
+                        placeholder="Cole aqui..."
+                        className="input-dark"
+                        maxLength={8}
+                        style={{ height: '38px', fontSize: '0.9rem', padding: '0 12px', width: '100%', borderRadius: '12px' }}
+                        onChange={(e) => {
+                          const val = e.target.value.trim();
+                          if (val && val.length >= 1) {
+                            updateEmoji(val);
+                          }
+                        }}
+                      />
+                      <div style={{ position: 'absolute', right: '12px', color: 'var(--text-tertiary)', pointerEvents: 'none' }}>
+                        <Plus size={14} />
+                      </div>
+                    </div>
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -528,8 +577,8 @@ function StatsWidget({ colSpan, demandsCount, todayHours, isTracking, onTimerTog
 
   return (
     <div style={{
-      display: 'grid',
-      gridTemplateColumns: gridCols,
+      display: 'flex',
+      flexWrap: 'wrap',
       gap: '12px',
       height: '100%',
     }}>
@@ -539,7 +588,7 @@ function StatsWidget({ colSpan, demandsCount, todayHours, isTracking, onTimerTog
           onClick={item.interactive ? onTimerToggle : undefined}
           style={{ 
             background: 'var(--card-inner-bg)',
-            padding: '16px',
+            padding: '10px 14px',
             borderRadius: '16px',
             border: item.id === 'timer' && isTracking ? '1px solid rgba(34, 197, 94, 0.3)' : '1px solid var(--border)',
             position: 'relative',
@@ -549,26 +598,23 @@ function StatsWidget({ colSpan, demandsCount, todayHours, isTracking, onTimerTog
             justifyContent: 'center',
             cursor: item.interactive ? 'pointer' : 'default',
             transition: 'all 0.3s ease',
-            boxShadow: item.id === 'timer' && isTracking ? '0 0 20px rgba(34, 197, 94, 0.1)' : 'none'
+            boxShadow: item.id === 'timer' && isTracking ? '0 0 20px rgba(34, 197, 94, 0.1)' : 'none',
+            flex: '1 1 100px',
+            maxWidth: '160px'
           }}
           onMouseEnter={(e) => item.interactive && (e.currentTarget.style.borderColor = 'var(--accent)')}
           onMouseLeave={(e) => item.interactive && (e.currentTarget.style.borderColor = item.id === 'timer' && isTracking ? 'rgba(34, 197, 94, 0.3)' : 'var(--border)')}
         >
           <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: item.gradient, opacity: 0.5, pointerEvents: 'none' }} />
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px', position: 'relative' }}>
-            <div style={{ padding: '6px', borderRadius: '10px', background: 'rgba(255,255,255,0.05)', color: item.color }}>
-              <item.icon size={16} className={item.id === 'timer' && isTracking ? 'animate-pulse' : ''} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', position: 'relative' }}>
+            <div style={{ padding: '6px', borderRadius: '10px', background: 'rgba(255,255,255,0.05)', color: item.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <item.icon size={14} className={item.id === 'timer' && isTracking ? 'animate-pulse' : ''} />
             </div>
-            {item.id === 'timer' && (
-              <div style={{ fontSize: '0.6rem', fontWeight: 800, color: isTracking ? '#22C55E' : 'var(--text-tertiary)', textTransform: 'uppercase' }}>
-                {isTracking ? 'Ativo' : 'Iniciar'}
-              </div>
-            )}
-          </div>
-          <div style={{ position: 'relative' }}>
-            <p style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>
+            <p style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
               {item.label}
             </p>
+          </div>
+          <div style={{ position: 'relative' }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
               <h2 style={{ fontSize: '1.4rem', fontWeight: 900, margin: 0, color: 'var(--text-primary)' }}>{item.value}</h2>
               {item.sub && <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-secondary)' }}>{item.sub}</span>}

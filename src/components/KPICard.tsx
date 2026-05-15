@@ -43,23 +43,12 @@ export default function KPICard({ title, value, numericValue, prefix = "", subti
       transition={{ duration: 0.5, delay: index * 0.1, ease: "easeOut" }}
       style={{ height: '100%' }}
     >
-      <Spotlight className="glass-card" style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '8px', height: '100%' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', fontWeight: 600 }}>{title}</p>
-            <motion.h3
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5, delay: 0.2 + (index * 0.1), type: "spring", stiffness: 100 }}
-              style={{ fontSize: '1.25rem', fontWeight: 700, color: '#FFFFFF', marginTop: '2px', margin: 0 }}
-            >
-              {numericValue !== undefined ? displayValue : value}
-            </motion.h3>
-          </div>
+      <Spotlight className="glass-card" style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '4px', height: '100%' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
           <div style={{
-            width: '32px',
-            height: '32px',
-            borderRadius: '8px',
+            width: '24px',
+            height: '24px',
+            borderRadius: '6px',
             backgroundColor: 'rgba(255, 255, 255, 0.05)',
             display: 'flex',
             alignItems: 'center',
@@ -67,9 +56,19 @@ export default function KPICard({ title, value, numericValue, prefix = "", subti
             color: 'var(--accent)',
             flexShrink: 0
           }}>
-            {icon}
+            <div style={{ transform: 'scale(0.8)', display: 'flex' }}>{icon}</div>
           </div>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.65rem', fontWeight: 600, margin: 0 }}>{title}</p>
         </div>
+
+        <motion.h3
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5, delay: 0.2 + (index * 0.1), type: "spring", stiffness: 100 }}
+          style={{ fontSize: '1.1rem', fontWeight: 700, color: '#FFFFFF', margin: 0 }}
+        >
+          {numericValue !== undefined ? displayValue : value}
+        </motion.h3>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.7rem' }}>
           {trend && trendValue && (

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Briefcase, FileText, DollarSign, Tag, Layers, Save, Share2 } from "lucide-react";
+import { ArrowLeft, Briefcase, FileText, DollarSign, Tag, Layers, Save, Share2, MessageSquare } from "lucide-react";
 import Spotlight from "@/components/Spotlight";
 import { motion } from "framer-motion";
 import { useState } from "react";
@@ -18,6 +18,8 @@ export default function CreateServicePage() {
     is_recurring: true,
     billing_cycle: "monthly",
     minimum_term: 0,
+    observations: "",
+    descriptive: "",
     default_posts_per_week: 0,
     default_content_capture: false,
     default_capture_frequency: "1 meia diária"
@@ -67,13 +69,35 @@ export default function CreateServicePage() {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <FileText size={14} /> Descrição Detalhada
+              <FileText size={14} /> Descrição Curta
+            </label>
+            <input
+              type="text" className="input-dark" placeholder="Ex: Gestão completa de redes sociais" required
+              value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            />
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <FileText size={14} /> Descritivo do Serviço
             </label>
             <textarea
               className="input-dark"
-              style={{ minHeight: '100px', resize: 'vertical', padding: '16px' }}
-              placeholder="O que está incluso neste serviço?" required
-              value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              style={{ minHeight: '120px', resize: 'vertical', padding: '16px' }}
+              placeholder="Descreva detalhadamente o serviço..."
+              value={formData.descriptive} onChange={(e) => setFormData({ ...formData, descriptive: e.target.value })}
+            />
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <MessageSquare size={14} /> Observações Internas
+            </label>
+            <textarea
+              className="input-dark"
+              style={{ minHeight: '80px', resize: 'vertical', padding: '16px' }}
+              placeholder="Notas ou observações importantes..."
+              value={formData.observations} onChange={(e) => setFormData({ ...formData, observations: e.target.value })}
             />
           </div>
         </div>
@@ -104,8 +128,13 @@ export default function CreateServicePage() {
             <div style={{ position: 'relative' }}>
               <span style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)', fontWeight: 600 }}>R$</span>
               <input
-                type="number" className="input-dark" style={{ paddingLeft: '44px' }} placeholder="0.00" required
-                value={formData.price} onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
+                type="text" className="input-dark" style={{ paddingLeft: '44px' }} placeholder="0,00" required
+                value={new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2 }).format(formData.price || 0)}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/\D/g, "");
+                  const numVal = Number(val) / 100;
+                  setFormData({ ...formData, price: numVal });
+                }}
               />
             </div>
           </div>
