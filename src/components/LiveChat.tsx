@@ -1,23 +1,16 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { MessageSquare, X, Send, Hash, Clock } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 import { usePresence } from "@/hooks/usePresence";
 import { useTimeTracker } from "@/hooks/useTimeTracker";
+import { useRealtimeChat, type ChatMessage } from "@/hooks/useRealtimeChat";
+import { useChatScroll } from "@/hooks/useChatScroll";
+import { ChatMessageItem } from "@/components/ChatMessageItem";
 import { supabase } from "@/lib/supabase";
 import { usePathname } from "next/navigation";
-
-interface ChatMessage {
-  id: string;
-  sender_id: string;
-  receiver_id: string | null;
-  content: string;
-  channel: string;
-  message_type: string;
-  timestamp: string;
-}
 
 export default function LiveChat() {
   const { currentUser, users } = useAuth();
@@ -28,59 +21,103 @@ export default function LiveChat() {
   const [isOpen, setIsOpen] = useState(false);
   const [activeChat, setActiveChat] = useState<'general' | string>('general');
   const [message, setMessage] = useState("");
-  const [localMessages, setLocalMessages] = useState<ChatMessage[]>([]);
+  const [dbMessages, setDbMessages] = useState<ChatMessage[]>([]);
   const [isTyping, setIsTyping] = useState<string | null>(null);
   const [showMentions, setShowMentions] = useState(false);
   const [mentionFilter, setMentionFilter] = useState("");
   const [unreadCount, setUnreadCount] = useState(0);
   const [showSidebar, setShowSidebar] = useState(true);
-  const scrollRef = useRef<HTMLDivElement>(null);
+
   const inputRef = useRef<HTMLInputElement>(null);
   const typingChannelRef = useRef<any>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { containerRef, scrollToBottom } = useChatScroll();
 
-  const teamUsers = users.filter(u => u.id !== currentUser?.id && ['admin', 'board', 'social_media', 'filmmaker'].includes(u.role));
+  const teamUsers = useMemo(
+    () => users.filter(u => u.id !== currentUser?.id && ['admin', 'board', 'social_media', 'filmmaker'].includes(u.role)),
+    [users, currentUser?.id]
+  );
 
-  // Buscar mensagens
-  const fetchMessages = useCallback(async () => {
-    const { data } = await supabase
-      .from('chat_messages')
-      .select('*')
-      .order('timestamp', { ascending: true })
-      .limit(200);
-    if (data) setLocalMessages(data);
-  }, []);
+  // Canal de broadcast por conversa ativa
+  const roomName = activeChat === 'general' ? 'chat:general' : `chat:dm:${[currentUser?.id, activeChat].sort().join(':')}`
 
-  // Setup realtime
+  const { messages: realtimeMessages, sendMessage, isConnected } = useRealtimeChat({
+    roomName,
+    username: currentUser?.name ?? '',
+    userId: currentUser?.id ?? '',
+    onMessage: (msg) => {
+      if (!isOpen) setUnreadCount(prev => prev + 1);
+      persistNotification(msg);
+    },
+  });
+
+  const persistNotification = useCallback(async (msg: ChatMessage) => {
+    if (!currentUser) return;
+    const sender = users.find(u => u.id === msg.user.id);
+    await supabase.from('notifications').insert([{
+      user_id: currentUser.id,
+      title: msg.user.id ? `Mensagem de ${sender?.name}` : 'Nova mensagem no Canal Geral',
+      message: msg.content.substring(0, 80),
+      type: 'mention',
+    }]);
+  }, [currentUser, users]);
+
+  // Carregar mensagens do banco ao abrir ou trocar de conversa
   useEffect(() => {
+    if (!currentUser) return;
+
+    const fetchMessages = async () => {
+      let query = supabase
+        .from('chat_messages')
+        .select('*')
+        .order('timestamp', { ascending: true })
+        .limit(200);
+
+      if (activeChat === 'general') {
+        query = query.eq('channel', 'general').is('receiver_id', null);
+      } else {
+        query = query.or(
+          `and(sender_id.eq.${currentUser.id},receiver_id.eq.${activeChat}),and(sender_id.eq.${activeChat},receiver_id.eq.${currentUser.id})`
+        );
+      }
+
+      const { data } = await query;
+      if (data) {
+        setDbMessages(data.map(m => ({
+          id: m.id,
+          content: m.content,
+          user: { name: users.find(u => u.id === m.sender_id)?.name ?? 'Desconhecido', id: m.sender_id },
+          createdAt: m.timestamp,
+          ...m,
+        })));
+      }
+    };
+
     fetchMessages();
+  }, [activeChat, currentUser?.id, users]);
 
-    const channel = supabase
-      .channel('chat_realtime')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, payload => {
-        const newMsg = payload.new as ChatMessage;
-        setLocalMessages(prev => [...prev, newMsg]);
+  // Mesclar mensagens do banco + realtime sem duplicatas
+  const allMessages = useMemo(() => {
+    const merged = [...dbMessages, ...realtimeMessages];
+    const seen = new Set<string>();
+    return merged
+      .filter(m => { if (seen.has(m.id)) return false; seen.add(m.id); return true; })
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  }, [dbMessages, realtimeMessages]);
 
-        // Notificação se a mensagem não é minha
-        if (newMsg.sender_id !== currentUser?.id) {
-          if (!isOpen) setUnreadCount(prev => prev + 1);
+  // Scroll ao receber mensagem
+  useEffect(() => {
+    scrollToBottom();
+  }, [allMessages, isOpen, activeChat]);
 
-          // Criar notificação no banco
-          if (newMsg.receiver_id === currentUser?.id || (!newMsg.receiver_id && newMsg.channel === 'general')) {
-            const sender = users.find(u => u.id === newMsg.sender_id);
-            supabase.from('notifications').insert([{
-              user_id: currentUser?.id,
-              title: newMsg.receiver_id ? `Mensagem de ${sender?.name}` : `Nova mensagem no Canal Geral`,
-              message: newMsg.content.substring(0, 80),
-              type: 'mention'
-            }]);
-          }
-        }
-      })
-      .subscribe();
+  // Limpar unread ao abrir
+  useEffect(() => {
+    if (isOpen) setUnreadCount(0);
+  }, [isOpen]);
 
-    // Canal de broadcast para typing
-    const typingChannel = supabase.channel('chat:typing');
+  // Canal de typing
+  useEffect(() => {
+    const typingChannel = supabase.channel('chat:typing:widget');
     typingChannel
       .on('broadcast', { event: 'typing' }, ({ payload }) => {
         if (payload.user_id !== currentUser?.id) {
@@ -92,71 +129,50 @@ export default function LiveChat() {
       .subscribe();
     typingChannelRef.current = typingChannel;
 
-    return () => {
-      supabase.removeChannel(channel);
-      supabase.removeChannel(typingChannel);
-    };
+    return () => { supabase.removeChannel(typingChannel); };
   }, [currentUser?.id]);
 
-  // Filtrar mensagens
-  const filteredMessages = localMessages.filter(msg => {
-    if (activeChat === 'general') return msg.channel === 'general' && !msg.receiver_id;
-    return (
-      (msg.sender_id === currentUser?.id && msg.receiver_id === activeChat) ||
-      (msg.sender_id === activeChat && msg.receiver_id === currentUser?.id)
-    );
-  });
-
-  const activeMember = activeChat === 'general' ? null : users.find(u => u.id === activeChat);
-
-  // Scroll automático
-  useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-  }, [filteredMessages, isOpen, activeChat]);
-
-  // Limpar unread ao abrir
-  useEffect(() => {
-    if (isOpen) setUnreadCount(0);
-  }, [isOpen]);
-
-  // Enviar mensagem
-  const handleSendMessage = async (e: React.FormEvent) => {
+  const handleSendMessage = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!message.trim() || !currentUser) return;
+    if (!message.trim() || !currentUser || !isConnected) return;
 
-    const mentionRegex = /@(\S+)/g;
-    const mentions = message.match(mentionRegex);
-
-    await supabase.from('chat_messages').insert([{
-      sender_id: currentUser.id,
-      receiver_id: activeChat === 'general' ? null : activeChat,
-      content: message,
-      channel: activeChat === 'general' ? 'general' : 'dm',
-      message_type: mentions ? 'mention' : 'text',
-      timestamp: new Date().toISOString()
-    }]);
-
-    // Notificação para menções @
-    if (mentions) {
-      for (const mention of mentions) {
-        const username = mention.replace('@', '');
-        const mentioned = users.find(u => u.name.toLowerCase().includes(username.toLowerCase()));
-        if (mentioned && mentioned.id !== currentUser.id) {
-          await supabase.from('notifications').insert([{
-            user_id: mentioned.id,
-            title: 'Menção no Chat',
-            message: `${currentUser.name} mencionou você: "${message.substring(0, 60)}"`,
-            type: 'mention'
-          }]);
-        }
-      }
-    }
-
+    const content = message.trim();
     setMessage("");
     setShowMentions(false);
-  };
 
-  // Typing broadcast
+    // 1. Broadcast instantâneo via Supabase Realtime (já faz optimistic update internamente)
+    const sent = await sendMessage(content);
+    if (!sent) return;
+
+    // 2. Persistir no banco em background
+    supabase.from('chat_messages').insert([{
+      id: sent.id,
+      sender_id: currentUser.id,
+      receiver_id: activeChat === 'general' ? null : activeChat,
+      content,
+      channel: activeChat === 'general' ? 'general' : 'dm',
+      message_type: content.includes('@') ? 'mention' : 'text',
+      timestamp: sent.createdAt,
+    }]).then(async () => {
+      // Notificações de @ menção
+      const mentions = content.match(/@(\S+)/g);
+      if (mentions) {
+        for (const mention of mentions) {
+          const username = mention.replace('@', '');
+          const mentioned = users.find(u => u.name.toLowerCase().includes(username.toLowerCase()));
+          if (mentioned && mentioned.id !== currentUser.id) {
+            await supabase.from('notifications').insert([{
+              user_id: mentioned.id,
+              title: 'Menção no Chat',
+              message: `${currentUser.name} mencionou você: "${content.substring(0, 60)}"`,
+              type: 'mention',
+            }]);
+          }
+        }
+      }
+    });
+  }, [message, currentUser, activeChat, isConnected, sendMessage, users]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setMessage(val);
@@ -171,7 +187,7 @@ export default function LiveChat() {
 
     typingChannelRef.current?.send({
       type: 'broadcast', event: 'typing',
-      payload: { user_id: currentUser?.id, name: currentUser?.name }
+      payload: { user_id: currentUser?.id, name: currentUser?.name },
     });
   };
 
@@ -182,11 +198,9 @@ export default function LiveChat() {
     inputRef.current?.focus();
   };
 
-  const formatTime = (ts: string) => new Date(ts).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
-
   const filteredMentionUsers = teamUsers.filter(u => u.name.toLowerCase().includes(mentionFilter.toLowerCase()));
+  const activeMember = activeChat === 'general' ? null : users.find(u => u.id === activeChat);
 
-  // Não renderizar para clientes ou na página /admin/chat
   if (!currentUser || !['admin', 'board', 'social_media', 'filmmaker'].includes(currentUser.role)) return null;
   if (pathname === '/admin/chat') return null;
 
@@ -195,11 +209,8 @@ export default function LiveChat() {
       <AnimatePresence>
         {!isOpen && (
           <motion.button
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            exit={{ scale: 0 }}
-            whileHover={{ scale: 1.08 }}
-            whileTap={{ scale: 0.92 }}
+            initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}
+            whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.92 }}
             onClick={() => setIsOpen(true)}
             style={{
               width: '52px', height: '52px', borderRadius: '16px',
@@ -207,7 +218,7 @@ export default function LiveChat() {
               color: 'white', border: 'none',
               boxShadow: '0 6px 20px rgba(217, 72, 15, 0.35)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', position: 'relative'
+              cursor: 'pointer', position: 'relative',
             }}
           >
             <MessageSquare size={22} />
@@ -218,7 +229,7 @@ export default function LiveChat() {
                 background: unreadCount > 0 ? '#EF4444' : '#22C55E',
                 color: 'white', fontSize: '0.6rem', fontWeight: 800,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                padding: '0 5px', border: '2px solid var(--bg-primary)'
+                padding: '0 5px', border: '2px solid var(--bg-primary)',
               }}>
                 {unreadCount > 0 ? unreadCount : onlineUsers.length}
               </div>
@@ -243,19 +254,18 @@ export default function LiveChat() {
               border: '1px solid var(--border)',
               display: 'flex',
               boxShadow: '0 16px 48px rgba(0,0,0,0.5)',
-              overflow: 'hidden'
+              overflow: 'hidden',
             }}
           >
-            {/* Sidebar (esconde em mobile) */}
+            {/* Sidebar */}
             {showSidebar && (
               <div style={{
                 width: '220px', minWidth: '220px', borderRight: '1px solid var(--border)',
-                display: 'flex', flexDirection: 'column', background: 'rgba(255,255,255,0.015)'
+                display: 'flex', flexDirection: 'column', background: 'rgba(255,255,255,0.015)',
               }}>
-                {/* Timer mini */}
                 <div style={{
                   padding: '12px', borderBottom: '1px solid var(--border)',
-                  background: isTracking ? 'rgba(34, 197, 94, 0.04)' : 'transparent'
+                  background: isTracking ? 'rgba(34, 197, 94, 0.04)' : 'transparent',
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
                     <span style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: 'var(--text-secondary)', letterSpacing: '0.05em', fontWeight: 600 }}>
@@ -269,7 +279,7 @@ export default function LiveChat() {
                       width: '100%', padding: '6px', borderRadius: '8px', border: 'none',
                       background: isTracking ? 'rgba(239, 68, 68, 0.12)' : 'rgba(34, 197, 94, 0.12)',
                       color: isTracking ? '#EF4444' : '#22C55E',
-                      fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer'
+                      fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer',
                     }}
                   >
                     {isTracking ? '⏹ Parar' : '▶ Iniciar'}
@@ -288,7 +298,7 @@ export default function LiveChat() {
                       background: activeChat === 'general' ? 'rgba(217, 72, 15, 0.12)' : 'transparent',
                       color: activeChat === 'general' ? 'var(--accent)' : 'var(--text-secondary)',
                       display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer',
-                      marginBottom: '6px', fontSize: '0.85rem', fontWeight: 600
+                      marginBottom: '6px', fontSize: '0.85rem', fontWeight: 600,
                     }}
                   >
                     <Hash size={16} /> Canal Geral
@@ -309,21 +319,21 @@ export default function LiveChat() {
                           background: activeChat === user.id ? 'rgba(217, 72, 15, 0.12)' : 'transparent',
                           color: activeChat === user.id ? 'var(--text-primary)' : 'var(--text-secondary)',
                           display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer',
-                          marginBottom: '2px', opacity: online ? 1 : 0.5
+                          marginBottom: '2px', opacity: online ? 1 : 0.5,
                         }}
                       >
                         <div style={{ position: 'relative', flexShrink: 0 }}>
                           <div style={{
                             width: '28px', height: '28px', borderRadius: '50%',
                             background: 'var(--accent)', fontSize: '0.7rem',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700,
                           }}>
                             {user.name.substring(0, 2).toUpperCase()}
                           </div>
                           <div style={{
                             position: 'absolute', bottom: -1, right: -1, width: '8px', height: '8px',
                             background: online ? '#22C55E' : '#6B7280', borderRadius: '50%',
-                            border: '2px solid rgba(12,12,12,0.96)'
+                            border: '2px solid rgba(12,12,12,0.96)',
                           }} />
                         </div>
                         <span style={{ fontWeight: 500, fontSize: '0.8rem', textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -341,14 +351,16 @@ export default function LiveChat() {
               {/* Header */}
               <div style={{
                 padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                borderBottom: '1px solid var(--border)', background: 'rgba(217,72,15,0.03)'
+                borderBottom: '1px solid var(--border)', background: 'rgba(217,72,15,0.03)',
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <button
                     onClick={() => setShowSidebar(!showSidebar)}
                     style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', padding: '4px' }}
                   >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></svg>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
+                    </svg>
                   </button>
                   {activeChat === 'general'
                     ? <Hash size={16} color="var(--accent)" />
@@ -377,55 +389,24 @@ export default function LiveChat() {
               </div>
 
               {/* Messages */}
-              <div ref={scrollRef} style={{ flex: 1, padding: '16px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {filteredMessages.length === 0 && (
+              <div ref={containerRef} style={{ flex: 1, padding: '12px 16px', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+                {allMessages.length === 0 && (
                   <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '8px', opacity: 0.4 }}>
                     <MessageSquare size={28} />
                     <p style={{ fontSize: '0.8rem' }}>Nenhuma mensagem</p>
                   </div>
                 )}
-                {filteredMessages.map((msg) => {
-                  const isMe = msg.sender_id === currentUser?.id;
-                  const sender = users.find(u => u.id === msg.sender_id);
+                {allMessages.map((msg, index) => {
+                  const prev = index > 0 ? allMessages[index - 1] : null;
+                  const showHeader = !prev || prev.user.id !== msg.user.id;
                   return (
-                    <div
+                    <ChatMessageItem
                       key={msg.id}
-                      style={{
-                        display: 'flex', gap: '8px',
-                        flexDirection: isMe ? 'row-reverse' : 'row',
-                        alignItems: 'flex-end'
-                      }}
-                    >
-                      {!isMe && (
-                        <div style={{
-                          width: '26px', height: '26px', borderRadius: '50%', flexShrink: 0,
-                          background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          color: 'white', fontSize: '0.6rem', fontWeight: 700
-                        }}>
-                          {sender?.name?.substring(0, 2).toUpperCase() || '??'}
-                        </div>
-                      )}
-                      <div style={{ maxWidth: '75%' }}>
-                        {!isMe && activeChat === 'general' && (
-                          <span style={{ fontSize: '0.65rem', color: 'var(--accent)', fontWeight: 600, marginLeft: '2px' }}>
-                            {sender?.name?.split(' ')[0]}
-                          </span>
-                        )}
-                        <div style={{
-                          padding: '8px 12px',
-                          borderRadius: isMe ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
-                          background: isMe ? 'var(--accent)' : 'rgba(255,255,255,0.06)',
-                          color: isMe ? 'white' : 'var(--text-primary)',
-                          fontSize: '0.82rem', lineHeight: 1.4,
-                          border: isMe ? 'none' : '1px solid var(--border)'
-                        }}>
-                          {msg.content}
-                        </div>
-                        <span style={{ fontSize: '0.55rem', color: 'var(--text-secondary)', marginLeft: '4px', marginTop: '2px', display: 'block' }}>
-                          {formatTime(msg.timestamp)}
-                        </span>
-                      </div>
-                    </div>
+                      message={msg}
+                      isOwnMessage={msg.user.id === currentUser?.id}
+                      showHeader={showHeader}
+                      compact
+                    />
                   );
                 })}
               </div>
@@ -442,24 +423,21 @@ export default function LiveChat() {
                 <AnimatePresence>
                   {showMentions && filteredMentionUsers.length > 0 && (
                     <motion.div
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 8 }}
+                      initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}
                       style={{
                         position: 'absolute', bottom: '100%', left: '12px', right: '64px',
                         background: 'rgba(18,18,18,0.98)', border: '1px solid var(--border)',
                         borderRadius: '10px', padding: '6px', maxHeight: '130px', overflowY: 'auto',
-                        boxShadow: '0 -8px 24px rgba(0,0,0,0.3)'
+                        boxShadow: '0 -8px 24px rgba(0,0,0,0.3)',
                       }}
                     >
                       {filteredMentionUsers.map(u => (
                         <button
-                          key={u.id} type="button"
-                          onClick={() => insertMention(u.name)}
+                          key={u.id} type="button" onClick={() => insertMention(u.name)}
                           style={{
                             width: '100%', padding: '6px 10px', border: 'none', borderRadius: '6px',
                             background: 'transparent', color: 'var(--text-primary)', textAlign: 'left',
-                            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem'
+                            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem',
                           }}
                           onMouseEnter={e => (e.currentTarget.style.background = 'rgba(217,72,15,0.1)')}
                           onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
@@ -477,16 +455,25 @@ export default function LiveChat() {
                 <input
                   ref={inputRef}
                   type="text" value={message} onChange={handleInputChange}
-                  placeholder="Mensagem... (@ para mencionar)"
+                  placeholder={isConnected ? "Mensagem... (@ para mencionar)" : "Conectando..."}
+                  disabled={!isConnected}
                   style={{
                     flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)',
-                    borderRadius: '10px', padding: '8px 14px', color: 'white', outline: 'none', fontSize: '0.82rem'
+                    borderRadius: '10px', padding: '8px 14px', color: 'white', outline: 'none', fontSize: '0.82rem',
+                    opacity: isConnected ? 1 : 0.5,
                   }}
                 />
-                <button type="submit" style={{
-                  width: '36px', height: '36px', borderRadius: '10px', background: 'var(--accent)',
-                  border: 'none', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0
-                }}>
+                <button
+                  type="submit"
+                  disabled={!isConnected || !message.trim()}
+                  style={{
+                    width: '36px', height: '36px', borderRadius: '10px',
+                    background: isConnected && message.trim() ? 'var(--accent)' : 'rgba(255,255,255,0.05)',
+                    border: 'none', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    cursor: isConnected && message.trim() ? 'pointer' : 'default', flexShrink: 0,
+                    transition: 'background 0.2s',
+                  }}
+                >
                   <Send size={16} />
                 </button>
               </form>
