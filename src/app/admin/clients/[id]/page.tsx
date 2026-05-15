@@ -43,17 +43,18 @@ import {
   Layout,
   Target,
   TrendingUp,
-  Activity
+  Activity,
+  Loader2
 } from "lucide-react";
 import Spotlight from "@/components/Spotlight";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/components/CustomToast";
-import { 
-  InstagramIcon, 
-  FacebookIcon, 
-  LinkedInIcon, 
-  TikTokIcon, 
-  GoogleIcon 
+import {
+  InstagramIcon,
+  FacebookIcon,
+  LinkedInIcon,
+  TikTokIcon,
+  GoogleIcon
 } from "@/components/SocialIcons";
 
 
@@ -524,7 +525,7 @@ export default function ClientDetailPage() {
       showToast('Preencha o título e o link.', 'error');
       return;
     }
-    
+
     setIsSavingLink(true);
     try {
       const newLink = {
@@ -532,17 +533,17 @@ export default function ClientDetailPage() {
         title: linkFormData.title,
         url: linkFormData.url.startsWith('http') ? linkFormData.url : `https://${linkFormData.url}`
       };
-      
+
       const currentLinks = clientData.essential_links || [];
       const updatedLinks = [...currentLinks, newLink];
-      
+
       const { error } = await supabase
         .from('clients')
         .update({ essential_links: updatedLinks })
         .eq('id', id);
-        
+
       if (error) throw error;
-      
+
       setClientData({ ...clientData, essential_links: updatedLinks });
       setIsLinkModalOpen(false);
       setLinkFormData({ title: '', url: '' });
@@ -554,18 +555,18 @@ export default function ClientDetailPage() {
       setIsSavingLink(false);
     }
   };
-  
+
   const handleDeleteLink = async (linkId: string) => {
     try {
       const updatedLinks = (clientData.essential_links || []).filter((l: any) => l.id !== linkId);
-      
+
       const { error } = await supabase
         .from('clients')
         .update({ essential_links: updatedLinks })
         .eq('id', id);
-        
+
       if (error) throw error;
-      
+
       setClientData({ ...clientData, essential_links: updatedLinks });
       showToast('Link removido.', 'success');
     } catch (err) {
@@ -1692,7 +1693,7 @@ export default function ClientDetailPage() {
                           <td style={{ fontWeight: 600 }}>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(invoice.amount)}</td>
                           <td>
                             <span className={`badge ${invoice.status === 'paid' ? 'badge-success' :
-                                isUpcoming ? 'badge-warning' : 'badge-danger'
+                              isUpcoming ? 'badge-warning' : 'badge-danger'
                               }`}>
                               {invoice.status === 'paid' ? 'Pago' : isUpcoming ? 'A Vencer' : 'Pendente'}
                             </span>
@@ -1751,13 +1752,13 @@ export default function ClientDetailPage() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(217, 72, 15, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
-                      <LinkIcon size={18} />
+                      <Link size={18} />
                     </div>
                     <h3 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Links Essenciais</h3>
                   </div>
-                  <button 
+                  <button
                     onClick={() => setIsLinkModalOpen(true)}
-                    className="btn btn-secondary btn-sm" 
+                    className="btn btn-secondary btn-sm"
                     style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
                   >
                     <Plus size={16} /> Adicionar Link
@@ -1767,22 +1768,22 @@ export default function ClientDetailPage() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '16px' }}>
                   {clientData.essential_links?.map((link: any) => (
                     <Spotlight key={link.id} className="glass-card" style={{ padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
-                      <div 
+                      <div
                         onClick={() => window.open(link.url, '_blank')}
                         style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', flex: 1, minWidth: 0 }}
                       >
                         <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(255,255,255,0.03)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
-                          {link.url.includes('canva.com') ? <Sparkles size={20} /> : 
-                           link.url.includes('trello.com') ? <Layout size={20} /> :
-                           link.url.includes('figma.com') ? <Target size={20} /> :
-                           <ExternalLink size={20} />}
+                          {link.url.includes('canva.com') ? <Sparkles size={20} /> :
+                            link.url.includes('trello.com') ? <Layout size={20} /> :
+                              link.url.includes('figma.com') ? <Target size={20} /> :
+                                <ExternalLink size={20} />}
                         </div>
                         <div style={{ minWidth: 0 }}>
                           <p style={{ fontWeight: 600, fontSize: '0.9rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{link.title}</p>
                           <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{new URL(link.url).hostname}</p>
                         </div>
                       </div>
-                      <button 
+                      <button
                         onClick={() => handleDeleteLink(link.id)}
                         style={{ color: 'var(--text-tertiary)', padding: '8px', background: 'none', border: 'none', cursor: 'pointer' }}
                         className="hover-danger"
@@ -1791,7 +1792,7 @@ export default function ClientDetailPage() {
                       </button>
                     </Spotlight>
                   ))}
-                  
+
                   {(!clientData.essential_links || clientData.essential_links.length === 0) && (
                     <div style={{ gridColumn: '1 / -1', padding: '32px', textAlign: 'center', background: 'rgba(255,255,255,0.01)', borderRadius: '16px', border: '1px dashed var(--border)' }}>
                       <p style={{ color: 'var(--text-tertiary)', fontSize: '0.875rem' }}>Nenhum link essencial cadastrado.</p>
@@ -2421,14 +2422,14 @@ export default function ClientDetailPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Título do Link</label>
-                  <input 
+                  <input
                     type="text" className="input-dark" placeholder="Ex: Projeto Canva, Quadro Trello..."
                     value={linkFormData.title} onChange={(e) => setLinkFormData({ ...linkFormData, title: e.target.value })}
                   />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>URL</label>
-                  <input 
+                  <input
                     type="url" className="input-dark" placeholder="https://..."
                     value={linkFormData.url} onChange={(e) => setLinkFormData({ ...linkFormData, url: e.target.value })}
                   />

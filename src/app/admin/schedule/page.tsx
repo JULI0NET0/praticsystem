@@ -163,7 +163,7 @@ export default function SchedulePage() {
     const { event } = arg;
     if (event.id.startsWith('inv-')) {
       arg.revert();
-      showToast("Não é possível mover faturas pelo calendário", "warning");
+      showToast("Não é possível mover faturas pelo calendário", "info");
       return;
     }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, Building2, Mail, Phone, User, Globe, MessageSquare, Save, X, MapPin, Briefcase, Loader2, CheckCircle2, Lock } from "lucide-react";
+import { ArrowLeft, ArrowRight, Building2, Mail, Phone, User, Globe, MessageSquare, Save, X, MapPin, Briefcase, Loader2, CheckCircle2, Lock, HardDrive } from "lucide-react";
 import Spotlight from "@/components/Spotlight";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
@@ -10,12 +10,12 @@ import { useRouter } from "next/navigation";
 import { formatCPFOrCNPJ, formatCEP, formatPhone } from "@/utils/masks";
 import { useToast } from "@/components/CustomToast";
 import CustomModal from "@/components/CustomModal";
-import { 
-  InstagramIcon, 
-  FacebookIcon, 
-  LinkedInIcon, 
-  TikTokIcon, 
-  GoogleIcon 
+import {
+  InstagramIcon,
+  FacebookIcon,
+  LinkedInIcon,
+  TikTokIcon,
+  GoogleIcon
 } from "@/components/SocialIcons";
 
 
@@ -486,13 +486,13 @@ export default function CreateClientPage() {
                     <HardDrive size={18} style={{ color: '#4285F4' }} /> Integração Google Drive
                   </h3>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-                    <label style={{ 
-                      display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', 
+                    <label style={{
+                      display: 'flex', alignItems: 'center', gap: '12px', padding: '16px',
                       background: 'rgba(66, 133, 244, 0.05)', borderRadius: '12px', border: '1px solid rgba(66, 133, 244, 0.1)',
                       cursor: 'pointer'
                     }}>
-                      <input 
-                        type="checkbox" 
+                      <input
+                        type="checkbox"
                         checked={formData.drive_settings.auto_create_folder}
                         onChange={(e) => setFormData({ ...formData, drive_settings: { ...formData.drive_settings, auto_create_folder: e.target.checked } })}
                         style={{ width: '18px', height: '18px', accentColor: '#4285F4' }}
@@ -503,13 +503,13 @@ export default function CreateClientPage() {
                       </div>
                     </label>
 
-                    <label style={{ 
-                      display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', 
+                    <label style={{
+                      display: 'flex', alignItems: 'center', gap: '12px', padding: '16px',
                       background: 'rgba(66, 133, 244, 0.05)', borderRadius: '12px', border: '1px solid rgba(66, 133, 244, 0.1)',
                       cursor: 'pointer'
                     }}>
-                      <input 
-                        type="checkbox" 
+                      <input
+                        type="checkbox"
                         checked={formData.drive_settings.auto_backup}
                         onChange={(e) => setFormData({ ...formData, drive_settings: { ...formData.drive_settings, auto_backup: e.target.checked } })}
                         style={{ width: '18px', height: '18px', accentColor: '#4285F4' }}
@@ -542,7 +542,7 @@ export default function CreateClientPage() {
                           type="text" className="input-dark" placeholder="Senha inicial"
                           value={formData.portal_password} onChange={(e) => updateFormData("portal_password", e.target.value)}
                         />
-                        <button 
+                        <button
                           type="button"
                           className="btn"
                           onClick={() => updateFormData("portal_password", `Pratic@${Math.floor(1000 + Math.random() * 9000)}`)}
