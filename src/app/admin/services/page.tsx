@@ -5,6 +5,8 @@ import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { Plus, Search, Filter, MoreHorizontal, ArrowUpRight, Loader2, Link as LinkIcon, Copy, X, Share2, MessageSquare, FileText, DollarSign } from "lucide-react";
 import { ServiceStats } from "@/components/ServiceStats";
+import SearchInput from "@/components/ui/SearchInput";
+import { useToast } from "@/components/CustomToast";
 
 export default function ServicesPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -16,6 +18,7 @@ export default function ServicesPage() {
   const [editingService, setEditingService] = useState<any>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { showToast } = useToast();
 
   useEffect(() => {
     async function fetchData() {
@@ -25,7 +28,7 @@ export default function ServicesPage() {
           supabase.from('services').select('*'),
           supabase.from('contracts').select('*')
         ]);
-        
+
         if (servicesRes.error) throw servicesRes.error;
         if (contractsRes.error) throw contractsRes.error;
 
@@ -45,8 +48,8 @@ export default function ServicesPage() {
   const categories = ["Todos", ...new Set(services.map(s => s.category))];
 
   const filteredServices = services.filter(service => {
-    const matchesSearch = service.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          service.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = service.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      service.description.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = categoryFilter === "Todos" || service.category === categoryFilter;
     return matchesSearch && matchesCategory;
   });
@@ -85,11 +88,13 @@ export default function ServicesPage() {
         .eq('id', editingService.id);
 
       if (error) throw error;
-      
+
       setServices(services.map(s => s.id === editingService.id ? editingService : s));
       setIsEditModalOpen(false);
+      showToast("Serviço atualizado com sucesso!", "success");
     } catch (err) {
       console.error("Erro ao salvar serviço:", err);
+      showToast("Erro ao atualizar serviço.", "error");
     } finally {
       setIsSaving(false);
     }
@@ -108,16 +113,16 @@ export default function ServicesPage() {
           </p>
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
-          <button 
+          <button
             onClick={() => {
               const url = `${window.location.origin}/onboarding`;
               navigator.clipboard.writeText(url);
-              alert("Link de onboarding copiado!");
+              showToast("Link de onboarding copiado!", "success");
             }}
-            className="btn btn-secondary" 
+            className="btn btn-secondary"
             style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px' }}
           >
-            <Copy size={20} /> Copiar Onboarding
+            <Copy size={20} /> Onboarding
           </button>
           <Link href="/admin/services/create" className="btn btn-accent" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px', textDecoration: 'none' }}>
             <Plus size={20} /> Novo Serviço
@@ -131,8 +136,8 @@ export default function ServicesPage() {
       {/* Filters & Table Section */}
       <div className="glass-card" style={{ padding: '0', overflow: 'hidden' }}>
         {/* Table Toolbar */}
-        <div style={{ 
-          padding: '20px 24px', 
+        <div style={{
+          padding: '20px 24px',
           borderBottom: '1px solid rgba(255,255,255,0.05)',
           display: 'flex',
           justifyContent: 'space-between',
@@ -140,35 +145,22 @@ export default function ServicesPage() {
           gap: '20px',
           flexWrap: 'wrap'
         }}>
-          <div style={{ position: 'relative', flex: 1, minWidth: '200px' }}>
-            <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
-            <input 
-              type="text" 
-              placeholder="Buscar serviço..." 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ 
-                width: '100%', 
-                padding: '10px 12px 10px 40px', 
-                backgroundColor: 'rgba(255,255,255,0.03)', 
-                border: '1px solid rgba(255,255,255,0.08)',
-                borderRadius: '12px',
-                color: 'white',
-                outline: 'none'
-              }}
-            />
-          </div>
-          
+          <SearchInput
+            value={searchTerm}
+            onChange={setSearchTerm}
+            placeholder="Buscar serviço..."
+          />
+
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
             <Filter size={18} style={{ color: 'var(--text-tertiary)' }} />
             <div style={{ display: 'flex', gap: '4px', overflowX: 'auto', paddingBottom: '4px' }}>
               {categories.map(cat => (
-                <button 
+                <button
                   key={cat}
                   onClick={() => setCategoryFilter(cat)}
-                  style={{ 
-                    padding: '6px 14px', 
-                    borderRadius: '20px', 
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: '20px',
                     fontSize: '0.875rem',
                     backgroundColor: categoryFilter === cat ? 'var(--accent)' : 'rgba(255,255,255,0.05)',
                     color: categoryFilter === cat ? 'white' : 'var(--text-secondary)',
@@ -225,10 +217,10 @@ export default function ServicesPage() {
                         </div>
                       </td>
                       <td>
-                        <span style={{ 
-                          fontSize: '0.75rem', 
-                          padding: '4px 10px', 
-                          borderRadius: '6px', 
+                        <span style={{
+                          fontSize: '0.75rem',
+                          padding: '4px 10px',
+                          borderRadius: '6px',
                           backgroundColor: 'rgba(255,255,255,0.05)',
                           color: 'var(--text-secondary)',
                           border: '1px solid rgba(255,255,255,0.08)'
@@ -243,9 +235,9 @@ export default function ServicesPage() {
                           </span>
                           {service.is_recurring && service.billing_cycle && (
                             <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', paddingLeft: '4px' }}>
-                              {service.billing_cycle === 'monthly' ? 'Mensal' : 
-                               service.billing_cycle === 'quarterly' ? 'Trimestral' : 
-                               service.billing_cycle === 'yearly' ? 'Anual' : ''}
+                              {service.billing_cycle === 'monthly' ? 'Mensal' :
+                                service.billing_cycle === 'quarterly' ? 'Trimestral' :
+                                  service.billing_cycle === 'yearly' ? 'Anual' : ''}
                             </span>
                           )}
                         </div>
@@ -266,12 +258,12 @@ export default function ServicesPage() {
                           {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(metrics.totalRevenue)}
                         </div>
                       </td>
-                       <td style={{ paddingRight: '24px', textAlign: 'right' }}>
-                        <button 
+                      <td style={{ paddingRight: '24px', textAlign: 'right' }}>
+                        <button
                           onClick={() => handleOpenEdit(service)}
-                          style={{ 
-                            padding: '8px 16px', 
-                            borderRadius: '8px', 
+                          style={{
+                            padding: '8px 16px',
+                            borderRadius: '8px',
                             backgroundColor: 'var(--accent)',
                             border: 'none',
                             color: 'white',
@@ -305,11 +297,11 @@ export default function ServicesPage() {
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           padding: '24px', backgroundColor: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)'
         }}>
-          <div className="glass-card animate-fade-in-up" style={{ 
-            width: '100%', 
-            maxWidth: '1000px', 
-            padding: '40px', 
-            maxHeight: '90vh', 
+          <div className="glass-card animate-fade-in-up" style={{
+            width: '100%',
+            maxWidth: '1000px',
+            padding: '40px',
+            maxHeight: '90vh',
             overflowY: 'auto',
             position: 'relative'
           }}>
@@ -319,19 +311,19 @@ export default function ServicesPage() {
                 <X size={24} />
               </button>
             </div>
-            
+
             <div className="mobile-stack" style={{ display: 'flex', gap: '48px' }}>
               {/* Coluna Esquerda: Configurações */}
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '32px' }}>
                 <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--accent)', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '12px' }}>
                   Configurações do Catálogo
                 </h3>
-                
+
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Nome do Serviço</label>
-                    <input 
-                      type="text" className="input-dark" 
+                    <input
+                      type="text" className="input-dark"
                       value={editingService.name}
                       onChange={(e) => setEditingService({ ...editingService, name: e.target.value })}
                     />
@@ -342,8 +334,8 @@ export default function ServicesPage() {
                       <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <DollarSign size={14} /> Preço Base (R$)
                       </label>
-                      <input 
-                        type="text" className="input-dark" 
+                      <input
+                        type="text" className="input-dark"
                         value={new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2 }).format(editingService.price || 0)}
                         onChange={(e) => {
                           const val = e.target.value.replace(/\D/g, "");
@@ -354,8 +346,8 @@ export default function ServicesPage() {
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Categoria</label>
-                      <input 
-                        type="text" className="input-dark" 
+                      <input
+                        type="text" className="input-dark"
                         value={editingService.category}
                         onChange={(e) => setEditingService({ ...editingService, category: e.target.value })}
                       />
@@ -368,8 +360,8 @@ export default function ServicesPage() {
                       <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <FileText size={14} /> Descrição Curta
                       </label>
-                      <input 
-                        type="text" className="input-dark" 
+                      <input
+                        type="text" className="input-dark"
                         value={editingService.description || ""}
                         onChange={(e) => setEditingService({ ...editingService, description: e.target.value })}
                       />
@@ -411,26 +403,26 @@ export default function ServicesPage() {
                         Configurações de Entrega (Social Media)
                       </p>
                     </div>
-                    
+
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Posts por Semana (Padrão)</label>
                         <div style={{ position: 'relative' }}>
-                          <input 
-                            type="number" className="input-dark" 
+                          <input
+                            type="number" className="input-dark"
                             style={{ paddingRight: '100px' }}
                             value={editingService.default_posts_per_week || 0}
                             onChange={(e) => setEditingService({ ...editingService, default_posts_per_week: Number(e.target.value) })}
                           />
                           <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '0.7rem', color: 'var(--text-tertiary)', fontWeight: 700 }}>
-                            { (editingService.default_posts_per_week || 0) * 4 } / MÊS
+                            {(editingService.default_posts_per_week || 0) * 4} / MÊS
                           </span>
                         </div>
                       </div>
 
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Captação de Conteúdo</label>
-                        <select 
+                        <select
                           className="input-dark"
                           value={editingService.default_content_capture ? 'sim' : 'nao'}
                           onChange={(e) => setEditingService({ ...editingService, default_content_capture: e.target.value === 'sim' })}
@@ -492,10 +484,10 @@ export default function ServicesPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '500px', overflowY: 'auto', paddingRight: '8px' }}>
                   {getServiceMetrics(editingService.id).contracts.length > 0 ? (
                     getServiceMetrics(editingService.id).contracts.map((c: any) => (
-                      <div key={c.id} style={{ 
-                        padding: '16px', 
-                        borderRadius: '16px', 
-                        background: 'rgba(255,255,255,0.02)', 
+                      <div key={c.id} style={{
+                        padding: '16px',
+                        borderRadius: '16px',
+                        background: 'rgba(255,255,255,0.02)',
                         border: '1px solid var(--border)',
                         display: 'flex',
                         justifyContent: 'space-between',
@@ -522,14 +514,14 @@ export default function ServicesPage() {
                   )}
                 </div>
 
-                <div style={{ 
-                  marginTop: 'auto', 
-                  padding: '24px', 
-                  background: 'linear-gradient(135deg, rgba(217, 72, 15, 0.1) 0%, rgba(217, 72, 15, 0.02) 100%)', 
-                  borderRadius: '20px', 
+                <div style={{
+                  marginTop: 'auto',
+                  padding: '24px',
+                  background: 'linear-gradient(135deg, rgba(217, 72, 15, 0.1) 0%, rgba(217, 72, 15, 0.02) 100%)',
+                  borderRadius: '20px',
                   border: '1px solid rgba(217, 72, 15, 0.15)',
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
+                  display: 'flex',
+                  justifyContent: 'space-between',
                   alignItems: 'center',
                   boxShadow: '0 8px 32px rgba(0,0,0,0.2)'
                 }}>

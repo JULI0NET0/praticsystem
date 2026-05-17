@@ -94,6 +94,9 @@ export interface Contract {
   auto_renew: boolean;
   billing_cycle?: 'monthly' | 'quarterly' | 'yearly' | 'one_time';
   minimum_term?: number; // em meses
+  posts_per_week?: number;
+  content_capture?: boolean;
+  capture_frequency?: string;
 }
 
 export interface Notification {
@@ -133,6 +136,7 @@ export interface AgendaEvent {
   assigned_to: string;
   status: 'scheduled' | 'completed' | 'cancelled';
   visibility: 'public' | 'private';
+  description?: string;
   google_event_id?: string;
 }
 

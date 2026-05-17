@@ -25,7 +25,7 @@ export default function LoginPage() {
     try {
       // 1. Find email by username
       const cleanUsername = username.replace('@', '').toLowerCase();
-      
+
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('email')
@@ -51,7 +51,7 @@ export default function LoginPage() {
 
       // 3. Redirect to dashboard on success
       router.push("/admin/dashboard");
-      
+
     } catch (err: any) {
       setError(err.message || "Erro ao realizar o login. Tente novamente.");
     } finally {
@@ -60,16 +60,16 @@ export default function LoginPage() {
   };
 
   return (
-    <div style={{ 
-      minHeight: '100vh', 
-      display: 'flex', 
-      alignItems: 'center', 
-      justifyContent: 'center', 
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
       backgroundColor: 'var(--bg-primary)',
       backgroundImage: 'radial-gradient(circle at 50% -20%, rgba(217, 72, 15, 0.15), transparent 60%)',
       padding: '24px'
     }}>
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 30, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
@@ -85,9 +85,9 @@ export default function LoginPage() {
 
         <Spotlight className="glass-card" style={{ padding: '32px' }}>
           <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            
+
             {error && (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 style={{ padding: '12px', borderRadius: '12px', background: 'rgba(239, 68, 68, 0.1)', color: '#EF4444', fontSize: '0.875rem', textAlign: 'center', border: '1px solid rgba(239, 68, 68, 0.2)' }}
@@ -100,10 +100,10 @@ export default function LoginPage() {
               <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <User size={14} /> Usuário
               </label>
-              <input 
-                type="text" 
-                className="input-dark" 
-                placeholder="@seunome" 
+              <input
+                type="text"
+                className="input-dark"
+                placeholder="@seunome"
                 required
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
@@ -118,10 +118,10 @@ export default function LoginPage() {
                 </label>
                 <a href="#" style={{ fontSize: '0.75rem', color: 'var(--accent)', textDecoration: 'none' }}>Esqueci a senha</a>
               </div>
-              <input 
-                type="password" 
-                className="input-dark" 
-                placeholder="••••••••" 
+              <input
+                type="password"
+                className="input-dark"
+                placeholder="••••••••"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -129,9 +129,9 @@ export default function LoginPage() {
               />
             </div>
 
-            <button 
-              type="submit" 
-              className="btn btn-accent" 
+            <button
+              type="submit"
+              className="btn btn-accent"
               disabled={isLoading}
               style={{ width: '100%', marginTop: '8px', padding: '14px', fontSize: '1rem', display: 'flex', justifyContent: 'center', gap: '8px', opacity: isLoading ? 0.7 : 1 }}
             >

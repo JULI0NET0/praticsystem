@@ -189,8 +189,12 @@ export default function ContractDetailsModal({ isOpen, onClose, contract, client
 
               {/* Actions */}
               <div style={{ marginTop: 'auto', display: 'flex', gap: '12px', paddingTop: '20px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                <button className="btn btn-accent" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                  <FileText size={18} /> Baixar PDF do Contrato
+                <button
+                  className="btn btn-accent"
+                  style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                  onClick={() => window.open(`/admin/contracts/${contract.id}/document`, '_blank')}
+                >
+                  <FileText size={18} /> Visualizar / Baixar PDF
                 </button>
                 <button className="btn btn-secondary" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                   <Calendar size={18} /> Agendar Renovação

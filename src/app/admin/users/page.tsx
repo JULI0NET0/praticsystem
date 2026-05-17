@@ -6,8 +6,9 @@ import Spotlight from "@/components/Spotlight";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-
 import Link from "next/link";
+import SearchInput from "@/components/ui/SearchInput";
+import { useToast } from "@/components/CustomToast";
 
 export default function UsersPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -15,6 +16,10 @@ export default function UsersPage() {
   const [roles, setRoles] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [userToDelete, setUserToDelete] = useState<any | null>(null);
+  const [userToReset, setUserToReset] = useState<any | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const { showToast } = useToast();
 
   useEffect(() => {
     fetchInitialData();
@@ -54,24 +59,39 @@ export default function UsersPage() {
     }
   };
 
-  const handleDeleteUser = async (user: any) => {
-    if (!confirm(`Tem certeza que deseja excluir o usuário ${user.name}? Esta ação não pode ser desfeita.`)) {
-      return;
-    }
-
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return;
+    setIsProcessing(true);
     try {
       const { error } = await supabase
         .from('users')
         .delete()
-        .eq('id', user.id);
+        .eq('id', userToDelete.id);
 
       if (error) throw error;
 
-      setUsers(users.filter(u => u.id !== user.id));
-      alert('Usuário excluído com sucesso!');
+      setUsers(users.filter(u => u.id !== userToDelete.id));
+      showToast('Usuário excluído com sucesso!', 'success');
+      setUserToDelete(null);
     } catch (err) {
       console.error("Erro ao excluir usuário:", err);
-      alert('Erro ao excluir usuário. Verifique as permissões.');
+      showToast('Erro ao excluir usuário. Verifique as permissões.', 'error');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!userToReset) return;
+    setIsProcessing(true);
+    try {
+      showToast('Senha resetada com sucesso!', 'success');
+      setUserToReset(null);
+    } catch (err) {
+      console.error("Erro ao resetar senha:", err);
+      showToast('Erro ao resetar senha.', 'error');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -107,17 +127,11 @@ export default function UsersPage() {
 
       <div className="glass-card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
         <div className="mobile-stack" style={{ display: 'flex', gap: '16px' }}>
-          <div style={{ position: 'relative', flex: 1, width: '100%' }}>
-            <Search size={18} color="var(--text-secondary)" style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)' }} />
-            <input
-              type="text"
-              placeholder="Buscar por nome, email ou @usuario..."
-              className="input-dark"
-              style={{ paddingLeft: '48px', minHeight: '44px' }}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
+          <SearchInput
+            value={searchTerm}
+            onChange={setSearchTerm}
+            placeholder="Buscar por nome, email ou @usuario..."
+          />
           <select
             className="input-dark"
             style={{ width: '100%', maxWidth: '200px', minHeight: '44px' }}
@@ -223,11 +237,7 @@ export default function UsersPage() {
                             <motion.button
                               whileHover={{ scale: 1.1 }}
                               whileTap={{ scale: 0.9 }}
-                              onClick={() => {
-                                if (confirm(`Resetar senha de ${user.name}?`)) {
-                                  alert('Senha resetada com sucesso.');
-                                }
-                              }}
+                              onClick={() => setUserToReset(user)}
                               title="Redefinir Senha"
                               style={{
                                 width: '32px', height: '32px', borderRadius: '8px',
@@ -241,7 +251,7 @@ export default function UsersPage() {
                             <motion.button
                               whileHover={{ scale: 1.1 }}
                               whileTap={{ scale: 0.9 }}
-                              onClick={() => handleDeleteUser(user)}
+                              onClick={() => setUserToDelete(user)}
                               title="Excluir Usuário"
                               style={{
                                 width: '32px', height: '32px', borderRadius: '8px',
@@ -349,6 +359,104 @@ export default function UsersPage() {
           )}
         </div>
       </div>
+
+      {/* Delete User Modal */}
+      <AnimatePresence>
+        {userToDelete && (
+          <div style={{
+            position: 'fixed', inset: 0, zIndex: 110,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '24px', backgroundColor: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)'
+          }}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="glass-card"
+              style={{ width: '100%', maxWidth: '450px', padding: '32px', textAlign: 'center' }}
+            >
+              <div style={{
+                width: '64px', height: '64px', borderRadius: '50%', backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#EF4444', margin: '0 auto 24px'
+              }}>
+                <Trash2 size={32} />
+              </div>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '12px' }}>Excluir Usuário?</h2>
+              <p style={{ color: 'var(--text-secondary)', marginBottom: '32px', lineHeight: '1.6' }}>
+                Tem certeza que deseja excluir o usuário <strong>{userToDelete.name}</strong>? Esta ação não pode ser desfeita.
+              </p>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <button
+                  className="btn"
+                  style={{ backgroundColor: '#EF4444', color: 'white', width: '100%' }}
+                  onClick={handleDeleteUser}
+                  disabled={isProcessing}
+                >
+                  {isProcessing ? "Excluindo..." : "Sim, Excluir"}
+                </button>
+                <button
+                  className="btn btn-secondary"
+                  style={{ width: '100%' }}
+                  onClick={() => setUserToDelete(null)}
+                  disabled={isProcessing}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Reset Password Modal */}
+      <AnimatePresence>
+        {userToReset && (
+          <div style={{
+            position: 'fixed', inset: 0, zIndex: 110,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '24px', backgroundColor: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)'
+          }}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="glass-card"
+              style={{ width: '100%', maxWidth: '450px', padding: '32px', textAlign: 'center' }}
+            >
+              <div style={{
+                width: '64px', height: '64px', borderRadius: '50%', backgroundColor: 'rgba(217, 72, 15, 0.1)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)', margin: '0 auto 24px'
+              }}>
+                <Shield size={32} />
+              </div>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '12px' }}>Redefinir Senha?</h2>
+              <p style={{ color: 'var(--text-secondary)', marginBottom: '32px', lineHeight: '1.6' }}>
+                Tem certeza que deseja redefinir a senha do usuário <strong>{userToReset.name}</strong>?
+              </p>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <button
+                  className="btn btn-accent"
+                  style={{ width: '100%' }}
+                  onClick={handleResetPassword}
+                  disabled={isProcessing}
+                >
+                  {isProcessing ? "Processando..." : "Sim, Redefinir Senha"}
+                </button>
+                <button
+                  className="btn btn-secondary"
+                  style={{ width: '100%' }}
+                  onClick={() => setUserToReset(null)}
+                  disabled={isProcessing}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

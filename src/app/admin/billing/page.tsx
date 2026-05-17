@@ -30,7 +30,7 @@ export default function BillingPage() {
           supabase.from('contracts').select('*'),
           supabase.from('services').select('*')
         ]);
-        
+
         if (invoicesRes.data) setInvoices(invoicesRes.data);
         if (clientsRes.data) setClients(clientsRes.data);
         if (contractsRes.data) setContracts(contractsRes.data);
@@ -110,8 +110,8 @@ export default function BillingPage() {
             <Calendar size={18} color="var(--accent)" style={{ marginRight: '8px', opacity: 0.8 }} />
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
               <span style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Período Inicial</span>
-              <input 
-                type="date" className="input-dark" 
+              <input
+                type="date" className="input-dark"
                 style={{ border: 'none', background: 'transparent', padding: 0, fontSize: '0.9rem', width: '115px', fontWeight: 600 }}
                 value={dateRange.start}
                 onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
@@ -120,8 +120,8 @@ export default function BillingPage() {
             <div style={{ width: '1px', height: '28px', background: 'rgba(255,255,255,0.1)', margin: '0 8px' }} />
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
               <span style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Período Final</span>
-              <input 
-                type="date" className="input-dark" 
+              <input
+                type="date" className="input-dark"
                 style={{ border: 'none', background: 'transparent', padding: 0, fontSize: '0.9rem', width: '115px', fontWeight: 600 }}
                 value={dateRange.end}
                 onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
@@ -157,9 +157,9 @@ export default function BillingPage() {
       </div>
 
       {/* Tabs Navigation */}
-      <div style={{ 
-        display: 'flex', 
-        gap: '8px', 
+      <div style={{
+        display: 'flex',
+        gap: '8px',
         borderBottom: '1px solid rgba(255,255,255,0.1)',
         paddingBottom: '2px'
       }}>

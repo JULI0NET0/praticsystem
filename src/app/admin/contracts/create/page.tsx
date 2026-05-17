@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/CustomToast";
 
 export default function CreateContractPage() {
   const router = useRouter();
@@ -14,6 +15,7 @@ export default function CreateContractPage() {
   const [services, setServices] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
+  const { showToast } = useToast();
 
   const [formData, setFormData] = useState({
     client_id: "",
@@ -60,10 +62,11 @@ export default function CreateContractPage() {
         .insert([formData]);
 
       if (error) throw error;
+      showToast("Contrato criado com sucesso!", "success");
       router.push("/admin/contracts");
     } catch (err) {
       console.error("Erro ao criar contrato:", err);
-      alert("Erro ao criar contrato. Verifique o console.");
+      showToast("Erro ao criar contrato. Verifique os dados.", "error");
     } finally {
       setLoading(false);
     }

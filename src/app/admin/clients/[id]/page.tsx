@@ -95,6 +95,7 @@ export default function ClientDetailPage() {
   const [loading, setLoading] = useState(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [contractToDelete, setContractToDelete] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [editFormData, setEditFormData] = useState<any>(null);
@@ -334,7 +335,7 @@ export default function ClientDetailPage() {
       // 1. Criar o Contrato
       const startDate = new Date(`${actionFormData.start_date}T12:00:00`);
       const endDate = new Date(startDate);
-      endDate.setFullYear(endDate.getFullYear() + 1); // Contrato padrão de 1 ano
+      endDate.setMonth(endDate.getMonth() + actionFormData.contract_duration);
 
       const { data: contract, error: contractError } = await supabase
         .from('contracts')
@@ -360,11 +361,6 @@ export default function ClientDetailPage() {
       let invoicesToCreate = [];
       const totalValue = actionFormData.value || Number(selectedService?.price || 0);
 
-      // Buscar o último número de fatura sequencial para este cliente (simulado ou do banco se houver coluna)
-      const lastInvoiceNumber = clientInvoices.length > 0
-        ? Math.max(...clientInvoices.map(i => i.invoice_number || 0))
-        : 0;
-
       if (actionFormData.billing_cycle === 'one_time') {
         const numInstallments = actionFormData.installments;
         const installmentValue = totalValue / numInstallments;
@@ -376,7 +372,6 @@ export default function ClientDetailPage() {
             amount: installmentValue,
             due_date: dueDate.toISOString().split('T')[0],
             status: 'pending',
-            invoice_number: lastInvoiceNumber + i + 1,
             description: `${selectedService?.name || 'Serviço'} (Parcela ${i + 1}/${numInstallments})`
           });
         }
@@ -398,7 +393,6 @@ export default function ClientDetailPage() {
             amount: totalValue,
             due_date: dueDate.toISOString().split('T')[0],
             status: 'pending',
-            invoice_number: lastInvoiceNumber + i + 1,
             description: `Mensalidade: ${selectedService?.name || 'Serviço'} (${i + 1}/${numInvoices})`
           });
         }
@@ -414,9 +408,9 @@ export default function ClientDetailPage() {
       showToast('Serviço ativado e fatura gerada!', 'success');
       setIsActionModalOpen(false);
       fetchClientDetails();
-    } catch (err) {
+    } catch (err: any) {
       console.error("Erro ao criar ação:", err);
-      showToast('Erro ao ativar serviço. Verifique os dados.', 'error');
+      showToast('Erro: ' + (err?.message || err?.error_description || JSON.stringify(err)), 'error');
     } finally {
       setIsSaving(false);
     }
@@ -572,6 +566,36 @@ export default function ClientDetailPage() {
     } catch (err) {
       console.error('Erro ao excluir link:', err);
       showToast('Erro ao excluir link.', 'error');
+    }
+  };
+
+  const handleDeleteContract = async () => {
+    if (!contractToDelete) return;
+    setIsDeleting(true);
+    try {
+      // Exclui as faturas associadas primeiro para evitar erro de foreign key
+      const { error: invoiceError } = await supabase
+        .from('invoices')
+        .delete()
+        .eq('contract_id', contractToDelete);
+
+      if (invoiceError) throw invoiceError;
+
+      const { error } = await supabase
+        .from('contracts')
+        .delete()
+        .eq('id', contractToDelete);
+
+      if (error) throw error;
+
+      showToast('Serviço/Contrato excluído com sucesso!', 'success');
+      setContractToDelete(null);
+      fetchClientDetails();
+    } catch (err) {
+      console.error('Erro ao excluir contrato:', err);
+      showToast('Erro ao excluir contrato.', 'error');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -1560,7 +1584,16 @@ export default function ClientDetailPage() {
                           </span>
                         </td>
                         <td style={{ paddingRight: '24px', textAlign: 'right' }}>
-                          <button style={{ color: 'var(--text-secondary)' }}><ExternalLink size={16} /></button>
+                          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                            <button style={{ color: 'var(--text-secondary)' }}><ExternalLink size={16} /></button>
+                            <button
+                              style={{ color: '#EF4444' }}
+                              onClick={() => setContractToDelete(contract.id)}
+                              title="Excluir Serviço/Contrato"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -1677,15 +1710,16 @@ export default function ClientDetailPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {getFinanceMetrics().rangeInvoices.sort((a: any, b: any) => new Date(b.due_date).getTime() - new Date(a.due_date).getTime()).map((invoice: any) => {
+                    {getFinanceMetrics().rangeInvoices.sort((a: any, b: any) => new Date(b.due_date).getTime() - new Date(a.due_date).getTime()).map((invoice: any, index: number) => {
                       const isUpcoming = invoice.status === 'pending' && new Date(`${invoice.due_date}T23:59:59`) > new Date();
+                      const totalInvoicesCount = getFinanceMetrics().rangeInvoices.length;
 
                       return (
                         <tr key={invoice.id}>
                           <td style={{ paddingLeft: '24px' }}>
                             <p style={{ fontWeight: 500 }}>{invoice.description}</p>
                             <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                              Fatura #{String(invoice.invoice_number || 0).padStart(3, '0')}
+                              Fatura #{String(totalInvoicesCount - index).padStart(3, '0')}
                               <span style={{ opacity: 0.3, marginLeft: '8px' }}>#{invoice.id.slice(-6).toUpperCase()}</span>
                             </p>
                           </td>
@@ -1962,174 +1996,230 @@ export default function ClientDetailPage() {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               className="glass-card"
-              style={{ width: '100%', maxWidth: '500px', padding: '32px' }}
+              style={{ width: '100%', maxWidth: '800px', maxHeight: '90vh', overflowY: 'auto', padding: '32px' }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Nova Ação / Serviço</h2>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '28px' }}>
+                <h2 style={{ fontSize: '1.5rem', fontWeight: 700 }}>Nova Ação / Serviço</h2>
                 <button onClick={() => setIsActionModalOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
                   <X size={24} />
                 </button>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Selecione o Serviço</label>
-                  <select
-                    className="input-dark"
-                    value={actionFormData.service_id}
-                    onChange={(e) => {
-                      const service = availableServices.find(s => s.id === e.target.value);
-                      setActionFormData({
-                        ...actionFormData,
-                        service_id: e.target.value,
-                        value: Number(service?.price || 0),
-                        billing_cycle: service?.billing_cycle || 'monthly',
-                        posts_per_week: service?.default_posts_per_week || 3,
-                        content_capture: service?.default_content_capture || false,
-                        capture_frequency: service?.default_capture_frequency || '1 meia diária'
-                      });
-                    }}
-                  >
-                    <option value="">Selecione um serviço cadastrado</option>
-                    {availableServices.map(s => (
-                      <option key={s.id} value={s.id}>{s.name} - {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(s.price)}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '32px' }}>
+                {/* Coluna da Esquerda: Configurações Básicas */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Valor Personalizado</label>
-                    <input
-                      type="number" className="input-dark"
-                      value={actionFormData.value}
-                      onChange={(e) => setActionFormData({ ...actionFormData, value: Number(e.target.value) })}
-                    />
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Ciclo de Cobrança</label>
+                    <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Selecione o Serviço</label>
                     <select
                       className="input-dark"
-                      value={actionFormData.billing_cycle}
-                      onChange={(e) => setActionFormData({ ...actionFormData, billing_cycle: e.target.value })}
+                      style={{ height: '42px', padding: '0 14px', fontSize: '0.9rem', boxSizing: 'border-box', borderRadius: '12px', textAlign: 'left', width: '100%' }}
+                      value={actionFormData.service_id}
+                      onChange={(e) => {
+                        const service = availableServices.find(s => s.id === e.target.value);
+                        setActionFormData({
+                          ...actionFormData,
+                          service_id: e.target.value,
+                          value: Number(service?.price || 0),
+                          billing_cycle: service?.billing_cycle || 'monthly',
+                          installments: 1,
+                          posts_per_week: service?.default_posts_per_week || 3,
+                          content_capture: service?.default_content_capture || false,
+                          capture_frequency: service?.default_capture_frequency || '1 meia diária'
+                        });
+                      }}
                     >
-                      <option value="monthly">Mensal</option>
-                      <option value="quarterly">Trimestral</option>
-                      <option value="semiannual">Semestral</option>
-                      <option value="annual">Anual</option>
-                      <option value="one_time">Avulso (Único)</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Data de Início</label>
-                    <input
-                      type="date" className="input-dark"
-                      value={actionFormData.start_date}
-                      onChange={(e) => setActionFormData({ ...actionFormData, start_date: e.target.value })}
-                    />
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Dia de Vencimento</label>
-                    <select
-                      className="input-dark"
-                      value={actionFormData.due_day}
-                      onChange={(e) => setActionFormData({ ...actionFormData, due_day: Number(e.target.value) })}
-                    >
-                      {[5, 10, 15, 20, 25, 30].map(day => (
-                        <option key={day} value={day}>Todo dia {day}</option>
+                      <option value="">Selecione um serviço cadastrado</option>
+                      {availableServices.map(s => (
+                        <option key={s.id} value={s.id}>{s.name} - {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(s.price)}</option>
                       ))}
                     </select>
                   </div>
-                </div>
 
-                {actionFormData.billing_cycle !== 'one_time' && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Duração do Contrato (Fidelidade)</label>
-                    <select
-                      className="input-dark"
-                      value={actionFormData.contract_duration}
-                      onChange={(e) => setActionFormData({ ...actionFormData, contract_duration: Number(e.target.value) })}
-                    >
-                      <option value={3}>3 meses</option>
-                      <option value={6}>6 meses</option>
-                      <option value={12}>12 meses</option>
-                      <option value={24}>24 meses</option>
-                    </select>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Valor Personalizado</label>
+                      <input
+                        type="number" className="input-dark"
+                        style={{ height: '42px', padding: '0 14px', fontSize: '0.9rem', boxSizing: 'border-box', borderRadius: '12px', textAlign: 'left', width: '100%' }}
+                        value={actionFormData.value}
+                        onChange={(e) => setActionFormData({ ...actionFormData, value: Number(e.target.value) })}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Ciclo de Cobrança</label>
+                      <select
+                        className="input-dark"
+                        style={{ height: '42px', padding: '0 14px', fontSize: '0.9rem', boxSizing: 'border-box', borderRadius: '12px', textAlign: 'left', width: '100%' }}
+                        value={actionFormData.billing_cycle}
+                        onChange={(e) => setActionFormData({ 
+                          ...actionFormData, 
+                          billing_cycle: e.target.value,
+                          installments: e.target.value === 'one_time' ? actionFormData.installments || 1 : 1
+                        })}
+                      >
+                        <option value="monthly">Mensal</option>
+                        <option value="quarterly">Trimestral</option>
+                        <option value="semiannual">Semestral</option>
+                        <option value="annual">Anual</option>
+                        <option value="one_time">Avulso (Único)</option>
+                      </select>
+                    </div>
                   </div>
-                )}
 
-                {/* Campos de Redes Sociais */}
-                {(availableServices.find(s => s.id === actionFormData.service_id)?.name?.toLowerCase().includes('redes') ||
-                  availableServices.find(s => s.id === actionFormData.service_id)?.name?.toLowerCase().includes('social')) && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      style={{ background: 'rgba(217, 72, 15, 0.05)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(217, 72, 15, 0.1)', display: 'flex', flexDirection: 'column', gap: '16px' }}
+                  {actionFormData.billing_cycle === 'one_time' && (
+                    <motion.div 
+                      initial={{ opacity: 0, height: 0 }} 
+                      animate={{ opacity: 1, height: 'auto' }} 
+                      style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}
                     >
-                      <p style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '1px' }}>Especificações de Gestão</p>
-
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                          <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Posts Semanais</label>
-                          <input
-                            type="number" className="input-dark" style={{ height: '36px' }}
-                            value={actionFormData.posts_per_week}
-                            onChange={(e) => setActionFormData({ ...actionFormData, posts_per_week: Number(e.target.value) })}
-                          />
-                          <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>{actionFormData.posts_per_week * 4} posts mensais</span>
-                        </div>
-
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                          <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Captação de Conteúdo?</label>
-                          <select
-                            className="input-dark" style={{ height: '36px' }}
-                            value={actionFormData.content_capture ? 'sim' : 'nao'}
-                            onChange={(e) => setActionFormData({ ...actionFormData, content_capture: e.target.value === 'sim' })}
-                          >
-                            <option value="nao">Não</option>
-                            <option value="sim">Sim</option>
-                          </select>
-                        </div>
-                      </div>
-
-                      {actionFormData.content_capture && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                          <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Frequência de Captação</label>
-                          <select
-                            className="input-dark" style={{ height: '36px' }}
-                            value={actionFormData.capture_frequency}
-                            onChange={(e) => setActionFormData({ ...actionFormData, capture_frequency: e.target.value })}
-                          >
-                            <option value="1 meia diária">1 meia diária</option>
-                            <option value="1 diária inteira">1 diária inteira</option>
-                            <option value="2 meias diárias">2 meias diárias</option>
-                            <option value="2 diárias inteiras">2 diárias inteiras</option>
-                          </select>
-                        </div>
-                      )}
+                      <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Número de Parcelas</label>
+                      <select
+                        className="input-dark"
+                        style={{ height: '42px', padding: '0 14px', fontSize: '0.9rem', boxSizing: 'border-box', borderRadius: '12px', textAlign: 'left', width: '100%' }}
+                        value={actionFormData.installments}
+                        onChange={(e) => setActionFormData({ ...actionFormData, installments: Number(e.target.value) })}
+                      >
+                        <option value={1}>1x (À vista)</option>
+                        {[2, 3, 4, 5, 6, 10, 12].map(num => (
+                          <option key={num} value={num}>
+                            {num}x de {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format((actionFormData.value || 0) / num)}
+                          </option>
+                        ))}
+                      </select>
                     </motion.div>
                   )}
 
-                {/* Resumo Visual */}
-                <div style={{ padding: '16px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', marginTop: '8px' }}>
-                  <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>Resumo do Contrato</p>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <p style={{ fontWeight: 600 }}>{availableServices.find(s => s.id === actionFormData.service_id)?.name || 'Nenhum serviço'}</p>
-                    <p style={{ fontWeight: 700, color: 'var(--accent)' }}>
-                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(actionFormData.value)}
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 400 }}> /mês</span>
-                    </p>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Data de Início</label>
+                      <input
+                        type="date" className="input-dark"
+                        style={{ height: '42px', padding: '0 14px', fontSize: '0.9rem', boxSizing: 'border-box', borderRadius: '12px', textAlign: 'left', width: '100%' }}
+                        value={actionFormData.start_date}
+                        onChange={(e) => setActionFormData({ ...actionFormData, start_date: e.target.value })}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Dia de Vencimento</label>
+                      <select
+                        className="input-dark"
+                        style={{ height: '42px', padding: '0 14px', fontSize: '0.9rem', boxSizing: 'border-box', borderRadius: '12px', textAlign: 'left', width: '100%' }}
+                        value={actionFormData.due_day}
+                        onChange={(e) => setActionFormData({ ...actionFormData, due_day: Number(e.target.value) })}
+                      >
+                        {[5, 10, 15, 20, 25, 30].map(day => (
+                          <option key={day} value={day}>Todo dia {day}</option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
+
+                  {actionFormData.billing_cycle !== 'one_time' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Duração do Contrato (Fidelidade)</label>
+                      <select
+                        className="input-dark"
+                        style={{ height: '42px', padding: '0 14px', fontSize: '0.9rem', boxSizing: 'border-box', borderRadius: '12px', textAlign: 'left', width: '100%' }}
+                        value={actionFormData.contract_duration}
+                        onChange={(e) => setActionFormData({ ...actionFormData, contract_duration: Number(e.target.value) })}
+                      >
+                        <option value={3}>3 meses</option>
+                        <option value={6}>6 meses</option>
+                        <option value={12}>12 meses</option>
+                        <option value={24}>24 meses</option>
+                      </select>
+                    </div>
+                  )}
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '12px' }}>
-                  <button className="btn btn-secondary" onClick={() => setIsActionModalOpen(false)}>Cancelar</button>
-                  <button className="btn btn-accent" onClick={handleCreateAction} disabled={isSaving}>
-                    {isSaving ? 'Salvando...' : 'Confirmar e Ativar'}
-                  </button>
+                {/* Coluna da Direita: Especificações e Resumo */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    {/* Campos de Redes Sociais */}
+                    {(availableServices.find(s => s.id === actionFormData.service_id)?.name?.toLowerCase().includes('redes') ||
+                      availableServices.find(s => s.id === actionFormData.service_id)?.name?.toLowerCase().includes('social')) && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          style={{ background: 'rgba(217, 72, 15, 0.05)', padding: '20px', borderRadius: '16px', border: '1px solid rgba(217, 72, 15, 0.15)', display: 'flex', flexDirection: 'column', gap: '16px' }}
+                        >
+                          <p style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '1px' }}>Especificações de Gestão</p>
+
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                              <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Posts Semanais</label>
+                              <input
+                                type="number" className="input-dark"
+                                style={{ height: '42px', padding: '0 14px', fontSize: '0.9rem', boxSizing: 'border-box', borderRadius: '12px', textAlign: 'left', width: '100%' }}
+                                value={actionFormData.posts_per_week}
+                                onChange={(e) => setActionFormData({ ...actionFormData, posts_per_week: Number(e.target.value) })}
+                              />
+                              <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>{actionFormData.posts_per_week * 4} posts mensais</span>
+                            </div>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                              <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Captação de Conteúdo?</label>
+                              <select
+                                className="input-dark"
+                                style={{ height: '42px', padding: '0 14px', fontSize: '0.9rem', boxSizing: 'border-box', borderRadius: '12px', textAlign: 'left', width: '100%' }}
+                                value={actionFormData.content_capture ? 'sim' : 'nao'}
+                                onChange={(e) => setActionFormData({ ...actionFormData, content_capture: e.target.value === 'sim' })}
+                              >
+                                <option value="nao">Não</option>
+                                <option value="sim">Sim</option>
+                              </select>
+                            </div>
+                          </div>
+
+                          {actionFormData.content_capture && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                              <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Frequência de Captação</label>
+                              <select
+                                className="input-dark"
+                                style={{ height: '42px', padding: '0 14px', fontSize: '0.9rem', boxSizing: 'border-box', borderRadius: '12px', textAlign: 'left', width: '100%' }}
+                                value={actionFormData.capture_frequency}
+                                onChange={(e) => setActionFormData({ ...actionFormData, capture_frequency: e.target.value })}
+                              >
+                                <option value="1 meia diária">1 meia diária</option>
+                                <option value="1 diária inteira">1 diária inteira</option>
+                                <option value="2 meias diárias">2 meias diárias</option>
+                                <option value="2 diárias inteiras">2 diárias inteiras</option>
+                              </select>
+                            </div>
+                          )}
+                        </motion.div>
+                      )}
+                  </div>
+
+                  {/* Resumo Visual e Botões */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginTop: 'auto' }}>
+                    <div style={{ padding: '20px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', borderRadius: '16px' }}>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700 }}>Resumo do Contrato</p>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                        <p style={{ fontWeight: 700, fontSize: '1.1rem' }}>{availableServices.find(s => s.id === actionFormData.service_id)?.name || 'Nenhum serviço'}</p>
+                        <div style={{ textAlign: 'right' }}>
+                          <p style={{ fontWeight: 800, fontSize: '1.25rem', color: 'var(--accent)' }}>
+                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(actionFormData.value)}
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                              {actionFormData.billing_cycle === 'one_time' ? (actionFormData.installments > 1 ? ` (em ${actionFormData.installments}x)` : ' (À vista)') : ' /mês'}
+                            </span>
+                          </p>
+                          {actionFormData.billing_cycle === 'one_time' && actionFormData.installments > 1 && (
+                            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                              {actionFormData.installments} parcelas de {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format((actionFormData.value || 0) / actionFormData.installments)}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                      <button className="btn btn-secondary" onClick={() => setIsActionModalOpen(false)}>Cancelar</button>
+                      <button className="btn btn-accent" onClick={handleCreateAction} disabled={isSaving}>
+                        {isSaving ? 'Salvando...' : 'Confirmar e Ativar'}
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </motion.div>
@@ -2330,6 +2420,55 @@ export default function ClientDetailPage() {
                   className="btn btn-secondary"
                   style={{ width: '100%' }}
                   onClick={() => setIsDeleteModalOpen(false)}
+                  disabled={isDeleting}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Contract Modal */}
+      <AnimatePresence>
+        {contractToDelete && (
+          <div style={{
+            position: 'fixed', inset: 0, zIndex: 110,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '24px', backgroundColor: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)'
+          }}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="glass-card"
+              style={{ width: '100%', maxWidth: '450px', padding: '32px', textAlign: 'center' }}
+            >
+              <div style={{
+                width: '64px', height: '64px', borderRadius: '50%', backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#EF4444', margin: '0 auto 24px'
+              }}>
+                <Trash2 size={32} />
+              </div>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '12px' }}>Excluir Serviço/Contrato?</h2>
+              <p style={{ color: 'var(--text-secondary)', marginBottom: '32px', lineHeight: '1.6' }}>
+                Tem certeza que deseja excluir este serviço/contrato? As faturas associadas também serão excluídas.
+              </p>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <button
+                  className="btn"
+                  style={{ backgroundColor: '#EF4444', color: 'white', width: '100%' }}
+                  onClick={handleDeleteContract}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? "Excluindo..." : "Sim, Excluir"}
+                </button>
+                <button
+                  className="btn btn-secondary"
+                  style={{ width: '100%' }}
+                  onClick={() => setContractToDelete(null)}
                   disabled={isDeleting}
                 >
                   Cancelar

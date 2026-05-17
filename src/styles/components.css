@@ -92,7 +92,9 @@ select {
 }
 
 @media (max-width: 768px) {
-  .input-dark, select {
+
+  .input-dark,
+  select {
     font-size: 16px !important;
     min-height: 48px;
     padding: 12px 14px;
@@ -135,7 +137,7 @@ input[type="date"] {
   transition: color 0.2s;
 }
 
-.search-wrapper input:focus + svg {
+.search-wrapper input:focus+svg {
   color: var(--accent);
 }
 

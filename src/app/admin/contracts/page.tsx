@@ -1,13 +1,15 @@
 "use client";
 
 import { supabase } from "@/lib/supabase";
-import { Plus, Search, FileText, Calendar, MoreVertical, DollarSign, TrendingUp, AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
+import { Plus, Search, FileText, Calendar, MoreVertical, DollarSign, TrendingUp, AlertCircle, CheckCircle2, Loader2, Trash2, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import KPICard from "@/components/KPICard";
 import { motion, AnimatePresence } from "framer-motion";
 import ContractDetailsModal from "@/components/admin/contracts/ContractDetailsModal";
 import Link from "next/link";
 import Spotlight from "@/components/Spotlight";
+import SearchInput from "@/components/ui/SearchInput";
+import { useToast } from "@/components/CustomToast";
 
 export default function ContractsPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -18,7 +20,10 @@ export default function ContractsPage() {
   const [invoices, setInvoices] = useState<any[]>([]);
   const [selectedContract, setSelectedContract] = useState<any | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [contractToDelete, setContractToDelete] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [loading, setLoading] = useState(true);
+  const { showToast } = useToast();
   const [dateRange, setDateRange] = useState({
     start: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
     end: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0]
@@ -51,6 +56,31 @@ export default function ContractsPage() {
   const handleOpenDetails = (contract: any) => {
     setSelectedContract(contract);
     setIsModalOpen(true);
+  };
+
+  const handleDeleteContract = async () => {
+    if (!contractToDelete) return;
+    setIsDeleting(true);
+    try {
+      // Exclui as faturas associadas primeiro
+      await supabase.from('invoices').delete().eq('contract_id', contractToDelete);
+
+      const { error } = await supabase
+        .from('contracts')
+        .delete()
+        .eq('id', contractToDelete);
+
+      if (error) throw error;
+
+      showToast('Contrato excluído com sucesso!', 'success');
+      setContracts(prev => prev.filter(c => c.id !== contractToDelete));
+      setContractToDelete(null);
+    } catch (err) {
+      console.error('Erro ao excluir contrato:', err);
+      showToast('Erro ao excluir contrato.', 'error');
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const rangeInvoices = invoices.filter(i => {
@@ -116,8 +146,8 @@ export default function ContractsPage() {
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: '8px 16px', borderRadius: '14px', border: '1px solid var(--border)' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
               <span style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)', fontWeight: 700, textTransform: 'uppercase' }}>Início</span>
-              <input 
-                type="date" className="input-dark" 
+              <input
+                type="date" className="input-dark"
                 style={{ border: 'none', background: 'transparent', padding: 0, fontSize: '0.85rem', width: '105px' }}
                 value={dateRange.start}
                 onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
@@ -126,8 +156,8 @@ export default function ContractsPage() {
             <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)' }} />
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
               <span style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)', fontWeight: 700, textTransform: 'uppercase' }}>Fim</span>
-              <input 
-                type="date" className="input-dark" 
+              <input
+                type="date" className="input-dark"
                 style={{ border: 'none', background: 'transparent', padding: 0, fontSize: '0.85rem', width: '105px' }}
                 value={dateRange.end}
                 onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
@@ -186,147 +216,147 @@ export default function ContractsPage() {
       {/* Table Section */}
       <div className="glass-card" style={{ padding: '24px', overflow: 'hidden' }}>
         <div className="mobile-stack" style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '24px',
-          gap: '16px'
-        }}>
-          <div className="search-wrapper">
-            <Search size={18} />
-            <input
-              type="text"
-              placeholder="Buscar por cliente ou serviço..."
-              className="input-dark"
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '24px',
+            gap: '16px'
+          }}>
+            <SearchInput
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={setSearchTerm}
+              placeholder="Buscar por cliente ou serviço..."
             />
+
+            <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px', width: 'auto', scrollbarWidth: 'none' }} className="client-tabs-scroll">
+              <select
+                className="input-dark"
+                style={{ width: '180px' }}
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+              >
+                <option value="all">Todos Status</option>
+                <option value="active">Ativos</option>
+                <option value="expiring">A Vencer</option>
+                <option value="expired">Encerrados</option>
+              </select>
+            </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px', width: 'auto', scrollbarWidth: 'none' }} className="client-tabs-scroll">
-            <select 
-              className="input-dark" 
-              style={{ width: '180px' }}
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-            >
-              <option value="all">Todos Status</option>
-              <option value="active">Ativos</option>
-              <option value="expiring">A Vencer</option>
-              <option value="expired">Encerrados</option>
-            </select>
-          </div>
-        </div>
+          <div className="table-container hide-mobile">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Cliente</th>
+                  <th>Serviço / Plano</th>
+                  <th>Início / Fim</th>
+                  <th>Valor Mensal</th>
+                  <th>Auto-Renovação</th>
+                  <th>Status</th>
+                  <th style={{ textAlign: 'right' }}>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                <AnimatePresence mode="popLayout">
+                  {filteredContracts.map((contract, i) => {
+                    const client = clients.find(c => c.id === contract.client_id);
+                    const service = services.find(s => s.id === contract.service_id);
 
-        <div className="table-container hide-mobile">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Cliente</th>
-                <th>Serviço / Plano</th>
-                <th>Início / Fim</th>
-                <th>Valor Mensal</th>
-                <th>Auto-Renovação</th>
-                <th>Status</th>
-                <th style={{ textAlign: 'right' }}>Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              <AnimatePresence mode="popLayout">
-                {filteredContracts.map((contract, i) => {
-                  const client = clients.find(c => c.id === contract.client_id);
-                  const service = services.find(s => s.id === contract.service_id);
-
-                  return (
-                    <motion.tr
-                      key={contract.id}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 10 }}
-                      transition={{ duration: 0.2, delay: i * 0.05 }}
-                    >
-                      <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <div style={{
-                            width: '32px',
-                            height: '32px',
-                            borderRadius: '8px',
-                            backgroundColor: 'rgba(217, 72, 15, 0.1)',
-                            border: '1px solid rgba(217, 72, 15, 0.2)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontWeight: 700,
-                            color: 'var(--accent)',
-                            fontSize: '0.75rem'
+                    return (
+                      <motion.tr
+                        key={contract.id}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 10 }}
+                        transition={{ duration: 0.2, delay: i * 0.05 }}
+                      >
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <div style={{
+                              width: '32px',
+                              height: '32px',
+                              borderRadius: '8px',
+                              backgroundColor: 'rgba(217, 72, 15, 0.1)',
+                              border: '1px solid rgba(217, 72, 15, 0.2)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontWeight: 700,
+                              color: 'var(--accent)',
+                              fontSize: '0.75rem'
+                            }}>
+                              {client?.name.substring(0, 2).toUpperCase()}
+                            </div>
+                            <span style={{ fontWeight: 600 }}>{client?.name}</span>
+                          </div>
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span style={{ fontWeight: 500 }}>{service?.name}</span>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{service?.category}</span>
+                          </div>
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', flexDirection: 'column', fontSize: '0.875rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <Calendar size={12} /> {new Date(`${contract.start_date}T12:00:00`).toLocaleDateString('pt-BR')}
+                            </div>
+                            <div style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>
+                              Até {new Date(`${contract.end_date}T12:00:00`).toLocaleDateString('pt-BR')}
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
+                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(contract.value)}
+                          </span>
+                        </td>
+                        <td>
+                          <span style={{
+                            color: contract.auto_renew ? '#22C55E' : 'var(--text-secondary)',
+                            fontSize: '0.875rem',
+                            fontWeight: 500
                           }}>
-                            {client?.name.substring(0, 2).toUpperCase()}
-                          </div>
-                          <span style={{ fontWeight: 600 }}>{client?.name}</span>
-                        </div>
-                      </td>
-                      <td>
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                          <span style={{ fontWeight: 500 }}>{service?.name}</span>
-                          <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{service?.category}</span>
-                        </div>
-                      </td>
-                      <td>
-                        <div style={{ display: 'flex', flexDirection: 'column', fontSize: '0.875rem' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <Calendar size={12} /> {new Date(`${contract.start_date}T12:00:00`).toLocaleDateString('pt-BR')}
-                          </div>
-                          <div style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>
-                            Até {new Date(`${contract.end_date}T12:00:00`).toLocaleDateString('pt-BR')}
-                          </div>
-                        </div>
-                      </td>
-                      <td>
-                        <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
-                          {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(contract.value)}
-                        </span>
-                      </td>
-                      <td>
-                        <span style={{
-                          color: contract.auto_renew ? '#22C55E' : 'var(--text-secondary)',
-                          fontSize: '0.875rem',
-                          fontWeight: 500
-                        }}>
-                          {contract.auto_renew ? 'Sim' : 'Não'}
-                        </span>
-                      </td>
-                      <td>
-                        <span className={`badge ${contract.status === 'active' ? 'badge-success' :
+                            {contract.auto_renew ? 'Sim' : 'Não'}
+                          </span>
+                        </td>
+                        <td>
+                          <span className={`badge ${contract.status === 'active' ? 'badge-success' :
                             contract.status === 'expiring' ? 'badge-warning' : 'badge-danger'
-                          }`} style={{ padding: '4px 12px', fontSize: '0.75rem' }}>
-                          {contract.status === 'active' ? 'Ativo' : contract.status === 'expiring' ? 'Vencendo' : 'Encerrado'}
-                        </span>
-                      </td>
-                      <td style={{ textAlign: 'right' }}>
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                          <button
-                            className="btn-icon"
-                            title="Ver detalhes"
-                            onClick={() => handleOpenDetails(contract)}
-                            style={{ width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--card-inner-bg)', color: 'var(--text-primary)', border: 'none', cursor: 'pointer' }}
-                          >
-                            <FileText size={16} />
-                          </button>
-                          <button
-                            className="btn-icon"
-                            title="Mais opções"
-                            style={{ width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--card-inner-bg)', color: 'var(--text-primary)', border: 'none', cursor: 'pointer' }}
-                          >
-                            <MoreVertical size={16} />
-                          </button>
-                        </div>
-                      </td>
-                    </motion.tr>
-                  );
-                })}
-              </AnimatePresence>
-            </tbody>
-          </table>
+                            }`} style={{ padding: '4px 12px', fontSize: '0.75rem' }}>
+                            {contract.status === 'active' ? 'Ativo' : contract.status === 'expiring' ? 'Vencendo' : 'Encerrado'}
+                          </span>
+                        </td>
+                        <td style={{ textAlign: 'right' }}>
+                          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                            <button
+                              className="btn-icon"
+                              title="Ver detalhes"
+                              onClick={() => handleOpenDetails(contract)}
+                              style={{ width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--card-inner-bg)', color: 'var(--text-primary)', border: 'none', cursor: 'pointer' }}
+                            >
+                              <FileText size={16} />
+                            </button>
+                            <button
+                              className="btn-icon hover-accent"
+                              title="Excluir Contrato"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setContractToDelete(contract.id);
+                              }}
+                              style={{ width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--card-inner-bg)', color: '#EF4444', border: 'none', cursor: 'pointer' }}
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </td>
+                      </motion.tr>
+                    );
+                  })}
+                </AnimatePresence>
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {/* Mobile: Card List */}
@@ -369,7 +399,7 @@ export default function ContractsPage() {
                       </div>
                     </div>
                     <span className={`badge ${contract.status === 'active' ? 'badge-success' :
-                        contract.status === 'expiring' ? 'badge-warning' : 'badge-danger'
+                      contract.status === 'expiring' ? 'badge-warning' : 'badge-danger'
                       }`} style={{ fontSize: '0.7rem' }}>
                       {contract.status === 'active' ? 'Ativo' : contract.status === 'expiring' ? 'Vencendo' : 'Encerrado'}
                     </span>
@@ -379,16 +409,28 @@ export default function ContractsPage() {
                       <p>Início: {new Date(contract.start_date).toLocaleDateString('pt-BR')}</p>
                       <p>Valor: <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(contract.value)}</span></p>
                     </div>
-                    <button className="btn-icon" style={{ backgroundColor: 'var(--card-inner-bg)' }}>
-                      <FileText size={16} />
-                    </button>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button className="btn-icon" style={{ backgroundColor: 'var(--card-inner-bg)' }}>
+                        <FileText size={16} />
+                      </button>
+                      <button
+                        className="btn-icon"
+                        title="Excluir Contrato"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setContractToDelete(contract.id);
+                        }}
+                        style={{ backgroundColor: 'var(--card-inner-bg)', color: '#EF4444' }}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </div>
                 </motion.div>
               );
             })}
           </AnimatePresence>
         </div>
-      </div>
 
       {/* Relationship Detail Section */}
       <div className="mobile-grid-1" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
@@ -441,6 +483,55 @@ export default function ContractsPage() {
           </div>
         </div>
       </div>
+
+      {/* Delete Contract Modal */}
+      <AnimatePresence>
+        {contractToDelete && (
+          <div style={{
+            position: 'fixed', inset: 0, zIndex: 110,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '24px', backgroundColor: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)'
+          }}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="glass-card"
+              style={{ width: '100%', maxWidth: '450px', padding: '32px', textAlign: 'center' }}
+            >
+              <div style={{
+                width: '64px', height: '64px', borderRadius: '50%', backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#EF4444', margin: '0 auto 24px'
+              }}>
+                <Trash2 size={32} />
+              </div>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '12px' }}>Excluir Contrato?</h2>
+              <p style={{ color: 'var(--text-secondary)', marginBottom: '32px', lineHeight: '1.6' }}>
+                Tem certeza que deseja excluir este contrato? As faturas associadas também serão excluídas.
+              </p>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <button
+                  className="btn"
+                  style={{ backgroundColor: '#EF4444', color: 'white', width: '100%' }}
+                  onClick={handleDeleteContract}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? "Excluindo..." : "Sim, Excluir"}
+                </button>
+                <button
+                  className="btn btn-secondary"
+                  style={{ width: '100%' }}
+                  onClick={() => setContractToDelete(null)}
+                  disabled={isDeleting}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

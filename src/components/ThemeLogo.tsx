@@ -12,9 +12,9 @@ interface ThemeLogoProps {
   isCollapsed?: boolean;
 }
 
-export default function ThemeLogo({ 
-  width = 200, 
-  height = 48, 
+export default function ThemeLogo({
+  width = 200,
+  height = 48,
   align = 'center',
   isCollapsed = false
 }: ThemeLogoProps) {
@@ -30,7 +30,9 @@ export default function ThemeLogo({
     return <div style={{ width: isCollapsed ? 40 : width, height }} />;
   }
 
-  const logoSrc = resolvedTheme === 'light' ? '/logo-horizontal-preta.png' : '/logo-horizontal-branca.png';
+  const fullLogo = resolvedTheme === 'light' ? '/logo-horizontal-preta.png' : '/logo-horizontal-branca.png';
+  const symbolLogo = resolvedTheme === 'light' ? '/simbolo-preto.png' : '/simbolo-branco.png';
+  const logoSrc = isCollapsed ? symbolLogo : fullLogo;
 
   const alignmentMap = {
     left: 'flex-start',
@@ -39,41 +41,41 @@ export default function ThemeLogo({
   };
 
   return (
-    <motion.div 
+    <motion.div
       initial={false}
-      animate={{ 
+      animate={{
         width: isCollapsed ? 40 : '100%',
         maxWidth: isCollapsed ? 40 : width,
       }}
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-      style={{ 
-        height, 
-        display: 'flex', 
-        alignItems: 'center', 
+      style={{
+        height,
+        display: 'flex',
+        alignItems: 'center',
         justifyContent: isCollapsed ? 'center' : alignmentMap[align],
         overflow: 'hidden',
         position: 'relative'
       }}
     >
-      <div style={{ 
-        minWidth: isCollapsed ? 40 : width, 
-        height: '100%', 
+      <div style={{
+        minWidth: isCollapsed ? 40 : width,
+        height: '100%',
         position: 'relative',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: alignmentMap[align],
+        justifyContent: isCollapsed ? 'center' : alignmentMap[align],
         transition: 'min-width 0.3s ease'
       }}>
-        <Image 
-          src={logoSrc} 
-          alt="Prátic Logo" 
-          width={width} 
-          height={height} 
-          style={{ 
-            width: isCollapsed ? 'auto' : '100%',
-            height: '100%',
-            objectFit: isCollapsed ? 'cover' : 'contain',
-            objectPosition: 'left center',
+        <Image
+          src={logoSrc}
+          alt="Prátic Logo"
+          width={isCollapsed ? 32 : width}
+          height={isCollapsed ? 32 : height}
+          style={{
+            width: isCollapsed ? '32px' : '100%',
+            height: isCollapsed ? '32px' : '100%',
+            objectFit: 'contain',
+            objectPosition: isCollapsed ? 'center' : alignmentMap[align],
           }}
           priority
         />

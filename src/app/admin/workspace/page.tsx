@@ -53,6 +53,7 @@ export default function WorkspacePage() {
   const [status, setStatus] = useState("");
   const [greeting, setGreeting] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [currentEmoji, setCurrentEmoji] = useState("☀️");
   const [myNote, setMyNote] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -73,6 +74,9 @@ export default function WorkspacePage() {
       else if (hour >= 18 || hour < 5) { greet = "Boa noite"; emoji = "🌙"; }
       const firstName = currentUser.name?.split(' ')[0] || "";
       setGreeting(`${greet}, ${firstName}!`);
+      if (currentUser.emoji) {
+        setCurrentEmoji(currentUser.emoji);
+      }
 
       if (currentUser.workspace_settings?.layout) {
         setWidgets(currentUser.workspace_settings.layout);
@@ -179,6 +183,8 @@ export default function WorkspacePage() {
 
   const updateEmoji = async (newEmoji: string) => {
     if (!currentUser) return;
+    setCurrentEmoji(newEmoji);
+    setShowEmojiPicker(false);
     try {
       const { error } = await supabase
         .from('users')
@@ -186,11 +192,15 @@ export default function WorkspacePage() {
         .eq('id', currentUser.id);
 
       if (!error) {
-        setShowEmojiPicker(false);
         showToast("Emoji do dia atualizado!", "success");
+      } else {
+        setCurrentEmoji(currentUser.emoji || "☀️");
+        showToast("Erro ao atualizar emoji", "error");
       }
     } catch (err) {
       console.error("Erro ao atualizar emoji:", err);
+      setCurrentEmoji(currentUser.emoji || "☀️");
+      showToast("Erro ao atualizar emoji", "error");
     }
   };
 
@@ -238,10 +248,12 @@ export default function WorkspacePage() {
       style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}
     >
       {/* Header Principal - Linha Única */}
-      <div style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: '16px', 
+      <div style={{
+        position: 'relative',
+        zIndex: 999999,
+        display: 'flex',
+        alignItems: 'center',
+        gap: '16px',
         flexWrap: 'nowrap',
         background: 'rgba(255, 255, 255, 0.02)',
         padding: '12px 20px',
@@ -252,75 +264,93 @@ export default function WorkspacePage() {
         {/* Emoji e Saudação */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <motion.button 
-              key={currentUser?.emoji}
+            <motion.button
+              key={currentEmoji}
               initial={{ scale: 0.5, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ type: "spring", stiffness: 300, damping: 20 }}
-              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-              style={{ 
-                fontSize: '2rem', 
-                background: 'rgba(255,255,255,0.03)', 
-                border: '1px solid rgba(255,255,255,0.05)',
-                borderRadius: '16px',
-                width: '52px',
-                height: '52px',
+              onClick={(e) => { e.stopPropagation(); setShowEmojiPicker(!showEmojiPicker); }}
+              style={{
+                fontSize: '2.2rem',
+                background: 'rgba(255,255,255,0.05)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: '18px',
+                width: '56px',
+                height: '56px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 cursor: 'pointer',
                 transition: 'all 0.2s ease',
-                padding: 0
+                padding: 0,
+                boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
-                e.currentTarget.style.transform = 'scale(1.05)';
+                e.currentTarget.style.background = 'rgba(255,255,255,0.12)';
+                e.currentTarget.style.transform = 'scale(1.08)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
+                e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
                 e.currentTarget.style.transform = 'scale(1)';
               }}
             >
-              {currentUser?.emoji || "☀️"}
+              {currentEmoji}
             </motion.button>
-            
+
             <AnimatePresence>
               {showEmojiPicker && (
                 <motion.div
                   initial={{ opacity: 0, y: 10, scale: 0.9 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 10, scale: 0.9 }}
-                  className="glass-card"
+                  onClick={(e) => e.stopPropagation()}
                   style={{
-                    position: 'absolute', top: '100%', left: 0, zIndex: 999,
-                    marginTop: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px',
-                    boxShadow: '0 20px 50px rgba(0,0,0,0.6)',
-                    width: '260px',
-                    background: '#141414',
-                    border: '1px solid rgba(255,255,255,0.15)',
+                    position: 'absolute', top: '100%', left: 0, zIndex: 99999,
+                    marginTop: '12px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px',
+                    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(255, 255, 255, 0.1)',
+                    width: '320px',
+                    backgroundColor: '#18181b',
+                    border: '1px solid rgba(255,255,255,0.2)',
                     borderRadius: '24px'
                   }}
                 >
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '6px' }}>
-                    {EMOJIS.map(e => (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '8px' }}>
+                    {EMOJIS.map(emojiStr => (
                       <button
-                        key={e}
-                        onClick={() => updateEmoji(e)}
-                        style={{ fontSize: '1.2rem', padding: '6px', background: 'none', border: 'none', cursor: 'pointer', borderRadius: '10px', transition: 'all 0.2s' }}
-                        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
-                        onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                        key={emojiStr}
+                        onClick={(ev) => { ev.stopPropagation(); updateEmoji(emojiStr); }}
+                        style={{ 
+                          fontSize: '1.5rem', 
+                          height: '44px', 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center', 
+                          background: 'rgba(255,255,255,0.03)', 
+                          border: '1px solid rgba(255,255,255,0.05)', 
+                          cursor: 'pointer', 
+                          borderRadius: '12px', 
+                          transition: 'all 0.2s' 
+                        }}
+                        onMouseEnter={(ev) => {
+                          ev.currentTarget.style.background = 'rgba(255,255,255,0.15)';
+                          ev.currentTarget.style.transform = 'scale(1.15)';
+                        }}
+                        onMouseLeave={(ev) => {
+                          ev.currentTarget.style.background = 'rgba(255,255,255,0.03)';
+                          ev.currentTarget.style.transform = 'scale(1)';
+                        }}
                       >
-                        {e}
+                        {emojiStr}
                       </button>
                     ))}
                   </div>
-                  
+
                   <div style={{ height: '1px', background: 'rgba(255,255,255,0.1)', margin: '4px 0' }} />
-                  
+
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '4px' }}>
                     <p style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Qualquer Emoji</p>
                     <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                      <input 
+                      <input
                         type="text"
                         placeholder="Cole aqui..."
                         className="input-dark"
@@ -350,9 +380,9 @@ export default function WorkspacePage() {
         <div style={{ width: '1px', height: '24px', background: 'var(--border)', margin: '0 8px' }} />
 
         {/* Status Bar Integrada */}
-        <div style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
           gap: '10px',
           flex: 1,
           minWidth: '200px'
@@ -394,14 +424,14 @@ export default function WorkspacePage() {
           </button>
 
           {/* Botão Personalizar (Apenas Ícone) */}
-          <button 
-            onClick={() => isEditing ? saveLayout() : setIsEditing(true)} 
+          <button
+            onClick={() => isEditing ? saveLayout() : setIsEditing(true)}
             className={`btn ${isEditing ? 'btn-accent' : 'btn-secondary'}`}
             title="Personalizar Layout"
-            style={{ 
-              width: '40px', 
-              height: '40px', 
-              borderRadius: '12px', 
+            style={{
+              width: '40px',
+              height: '40px',
+              borderRadius: '12px',
               padding: 0,
               display: 'flex',
               alignItems: 'center',
@@ -412,8 +442,8 @@ export default function WorkspacePage() {
           </button>
 
           {isEditing && (
-            <button 
-              onClick={() => setIsAddModalOpen(true)} 
+            <button
+              onClick={() => setIsAddModalOpen(true)}
               className="btn btn-secondary"
               title="Adicionar Widget"
               style={{ width: '40px', height: '40px', borderRadius: '12px', padding: 0 }}
@@ -533,7 +563,7 @@ export default function WorkspacePage() {
               </button>
               <h3 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '8px' }}>Adicionar Widget</h3>
               <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '0.9rem' }}>Escolha um bloco para adicionar ao seu workspace.</p>
-              
+
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 {AVAILABLE_WIDGETS.map(w => (
                   <button
@@ -583,10 +613,10 @@ function StatsWidget({ colSpan, demandsCount, todayHours, isTracking, onTimerTog
       height: '100%',
     }}>
       {items.slice(0, colSpan > 8 ? 4 : colSpan > 5 ? 3 : 2).map((item, i) => (
-        <div 
-          key={i} 
+        <div
+          key={i}
           onClick={item.interactive ? onTimerToggle : undefined}
-          style={{ 
+          style={{
             background: 'var(--card-inner-bg)',
             padding: '10px 14px',
             borderRadius: '16px',
@@ -642,7 +672,7 @@ function TimeTrackerWidget({ isTracking, todayHours, todayMinutes, currentSessio
       const h = Math.floor(diff / 3600000);
       const m = Math.floor((diff % 3600000) / 60000);
       const s = Math.floor((diff % 60000) / 1000);
-      setElapsed(`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`);
+      setElapsed(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`);
     };
 
     tick();
@@ -673,10 +703,10 @@ function TimeTrackerWidget({ isTracking, todayHours, todayMinutes, currentSessio
       </AnimatePresence>
 
       <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-        <div style={{ 
-          width: '60px', 
-          height: '60px', 
-          borderRadius: '20px', 
+        <div style={{
+          width: '60px',
+          height: '60px',
+          borderRadius: '20px',
           background: isTracking ? 'rgba(34, 197, 94, 0.1)' : 'rgba(255,255,255,0.05)',
           display: 'flex',
           alignItems: 'center',
@@ -692,10 +722,10 @@ function TimeTrackerWidget({ isTracking, todayHours, todayMinutes, currentSessio
           <p style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>
             Sessão Atual
           </p>
-          <h2 style={{ 
-            fontFamily: 'monospace', 
-            fontSize: '2.5rem', 
-            fontWeight: 800, 
+          <h2 style={{
+            fontFamily: 'monospace',
+            fontSize: '2.5rem',
+            fontWeight: 800,
             letterSpacing: '-0.02em',
             color: isTracking ? 'var(--text-primary)' : 'var(--text-tertiary)',
             lineHeight: 1,
@@ -705,7 +735,7 @@ function TimeTrackerWidget({ isTracking, todayHours, todayMinutes, currentSessio
           </h2>
         </div>
 
-        <div style={{ 
+        <div style={{
           marginTop: '16px',
           padding: '4px 12px',
           borderRadius: '10px',
@@ -754,22 +784,22 @@ function DemandsWidget({ demands, loading }: { demands: any[], loading: boolean 
           {demands.length} Pendentes
         </span>
       </div>
-      
+
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', overflowY: 'auto', flex: 1, paddingRight: '4px' }}>
         {loading ? (
           <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
             <Loader2 size={24} className="animate-spin" color="var(--accent)" />
           </div>
         ) : demands.length > 0 ? demands.map(d => (
-          <motion.div 
-            key={d.id} 
+          <motion.div
+            key={d.id}
             whileHover={{ x: 4 }}
-            style={{ 
-              padding: '16px', 
-              borderRadius: '16px', 
-              background: 'rgba(255,255,255,0.02)', 
-              border: '1px solid var(--border)', 
-              display: 'flex', 
+            style={{
+              padding: '16px',
+              borderRadius: '16px',
+              background: 'rgba(255,255,255,0.02)',
+              border: '1px solid var(--border)',
+              display: 'flex',
               flexDirection: 'column',
               gap: '8px',
               cursor: 'pointer',
@@ -778,10 +808,10 @@ function DemandsWidget({ demands, loading }: { demands: any[], loading: boolean 
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>{d.title}</span>
-              <span style={{ 
-                fontSize: '0.65rem', 
-                fontWeight: 800, 
-                padding: '3px 8px', 
+              <span style={{
+                fontSize: '0.65rem',
+                fontWeight: 800,
+                padding: '3px 8px',
                 borderRadius: '6px',
                 background: d.status === 'in_production' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(234, 179, 8, 0.15)',
                 color: d.status === 'in_production' ? '#3B82F6' : '#EAB308',
@@ -843,10 +873,10 @@ function NotesWidget({ myNote, setMyNote }: any) {
         value={myNote}
         onChange={(e) => { setMyNote(e.target.value); setIsSaving(true); }}
         className="input-dark"
-        style={{ 
-          flex: 1, 
-          fontSize: '0.9rem', 
-          resize: 'none', 
+        style={{
+          flex: 1,
+          fontSize: '0.9rem',
+          resize: 'none',
           minHeight: '100px',
           background: 'rgba(255,255,255,0.02)',
           border: '1px solid var(--border)',
@@ -883,27 +913,27 @@ function LinksWidget() {
       </h3>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px' }}>
         {links.length > 0 ? links.map(link => (
-          <motion.a 
-            key={link.name} 
-            href={link.url} 
-            target="_blank" 
-            rel="noopener noreferrer" 
+          <motion.a
+            key={link.name}
+            href={link.url}
+            target="_blank"
+            rel="noopener noreferrer"
             whileHover={{ y: -2, background: 'rgba(255,255,255,0.05)' }}
-            style={{ 
-              padding: '12px 16px', 
-              borderRadius: '14px', 
-              background: 'rgba(255,255,255,0.03)', 
-              border: '1px solid var(--border)', 
-              textDecoration: 'none', 
-              color: 'var(--text-primary)', 
-              fontSize: '0.85rem', 
+            style={{
+              padding: '12px 16px',
+              borderRadius: '14px',
+              background: 'rgba(255,255,255,0.03)',
+              border: '1px solid var(--border)',
+              textDecoration: 'none',
+              color: 'var(--text-primary)',
+              fontSize: '0.85rem',
               fontWeight: 700,
               display: 'flex',
               alignItems: 'center',
               gap: '10px'
             }}
           >
-            <span style={{ fontSize: '1.2rem' }}>{link.icon}</span> 
+            <span style={{ fontSize: '1.2rem' }}>{link.icon}</span>
             {link.name}
           </motion.a>
         )) : (
@@ -939,7 +969,7 @@ function TeamWidget({ isUserOnline, onlineUsers }: { isUserOnline: (id: string) 
           </span>
         </div>
       </div>
-      
+
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto', flex: 1, paddingRight: '4px' }}>
         {sorted.length > 0 ? sorted.map((m: any) => {
           const online = isUserOnline(m.id);
@@ -969,7 +999,7 @@ function TeamWidget({ isUserOnline, onlineUsers }: { isUserOnline: (id: string) 
                       : m.name.substring(0, 2).toUpperCase()}
                   </div>
                   {online && (
-                    <motion.div 
+                    <motion.div
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
                       style={{
@@ -977,7 +1007,7 @@ function TeamWidget({ isUserOnline, onlineUsers }: { isUserOnline: (id: string) 
                         background: '#22C55E', borderRadius: '50%',
                         border: '3px solid var(--bg-primary)',
                         zIndex: 2
-                      }} 
+                      }}
                     />
                   )}
                 </div>

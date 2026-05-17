@@ -7,9 +7,11 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { useToast } from "@/components/CustomToast";
 
 export default function CreateServicePage() {
   const router = useRouter();
+  const { showToast } = useToast();
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -30,10 +32,11 @@ export default function CreateServicePage() {
     try {
       const { error } = await supabase.from('services').insert([formData]);
       if (error) throw error;
+      showToast("Serviço cadastrado com sucesso!", "success");
       router.push("/admin/services");
     } catch (err: any) {
       console.error("Erro ao criar serviço:", err.message || err);
-      alert("Erro ao criar serviço: " + (err.message || "Erro desconhecido"));
+      showToast("Erro ao criar serviço: " + (err.message || "Erro desconhecido"), "error");
     }
   };
 
@@ -180,9 +183,9 @@ export default function CreateServicePage() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', padding: '20px', background: 'rgba(255,255,255,0.02)', borderRadius: '16px', border: '1px solid var(--border)' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Ciclo de Faturamento</label>
-              <select 
+              <select
                 className="input-dark"
-                value={formData.billing_cycle} onChange={(e) => setFormData({...formData, billing_cycle: e.target.value as any})}
+                value={formData.billing_cycle} onChange={(e) => setFormData({ ...formData, billing_cycle: e.target.value as any })}
               >
                 <option value="monthly">Mensal</option>
                 <option value="quarterly">Trimestral</option>
@@ -191,19 +194,19 @@ export default function CreateServicePage() {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Fidelidade Mínima (Meses)</label>
-              <input 
+              <input
                 type="number" className="input-dark" placeholder="0 para sem fidelidade"
-                value={formData.minimum_term} onChange={(e) => setFormData({...formData, minimum_term: Number(e.target.value)})}
+                value={formData.minimum_term} onChange={(e) => setFormData({ ...formData, minimum_term: Number(e.target.value) })}
               />
             </div>
           </div>
         )}
 
         {/* Configurações de Entrega (Social Media) */}
-        <div style={{ 
-          padding: '24px', 
-          background: 'rgba(217, 72, 15, 0.05)', 
-          borderRadius: '20px', 
+        <div style={{
+          padding: '24px',
+          background: 'rgba(217, 72, 15, 0.05)',
+          borderRadius: '20px',
           border: '1px solid rgba(217, 72, 15, 0.1)',
           display: 'flex',
           flexDirection: 'column',
@@ -217,26 +220,26 @@ export default function CreateServicePage() {
               Configurações de Entrega (Social Media)
             </p>
           </div>
-          
+
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Posts por Semana (Padrão)</label>
               <div style={{ position: 'relative' }}>
-                <input 
-                  type="number" className="input-dark" 
+                <input
+                  type="number" className="input-dark"
                   style={{ paddingRight: '100px' }}
                   value={formData.default_posts_per_week}
                   onChange={(e) => setFormData({ ...formData, default_posts_per_week: Number(e.target.value) })}
                 />
                 <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '0.7rem', color: 'var(--text-tertiary)', fontWeight: 700 }}>
-                  { (formData.default_posts_per_week || 0) * 4 } / MÊS
+                  {(formData.default_posts_per_week || 0) * 4} / MÊS
                 </span>
               </div>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Captação de Conteúdo</label>
-              <select 
+              <select
                 className="input-dark"
                 value={formData.default_content_capture ? 'sim' : 'nao'}
                 onChange={(e) => setFormData({ ...formData, default_content_capture: e.target.value === 'sim' })}
@@ -248,7 +251,7 @@ export default function CreateServicePage() {
           </div>
 
           {formData.default_content_capture && (
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}

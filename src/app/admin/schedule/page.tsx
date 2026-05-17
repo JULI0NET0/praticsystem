@@ -2,8 +2,8 @@
 
 import { supabase } from "@/lib/supabase";
 import { useState, useEffect, useCallback, useRef } from "react";
-import { 
-  Plus, Loader2, Shield, ShieldOff, Trash2, X, CheckCircle2, Clock, 
+import {
+  Plus, Loader2, Shield, ShieldOff, Trash2, X, CheckCircle2, Clock,
   Calendar as CalendarIcon, Filter, Info, Users, MapPin, ExternalLink,
   ChevronLeft, ChevronRight, Search, LayoutGrid, List, Edit2, Share2
 } from "lucide-react";
@@ -17,6 +17,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/components/CustomToast";
 import { motion, AnimatePresence } from "framer-motion";
 import Spotlight from "@/components/Spotlight";
+import SearchInput from "@/components/ui/SearchInput";
 
 const CATEGORIES = [
   { id: 'meeting', label: 'Reunião', color: '#3B82F6', icon: Users },
@@ -32,7 +33,7 @@ export default function SchedulePage() {
   const { currentUser } = useAuth();
   const { showToast } = useToast();
   const calendarRef = useRef<any>(null);
-  
+
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -49,7 +50,7 @@ export default function SchedulePage() {
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
-  
+
   const [formData, setFormData] = useState({
     title: '',
     type: 'meeting',
@@ -68,13 +69,13 @@ export default function SchedulePage() {
   const fetchEvents = useCallback(async () => {
     try {
       setLoading(true);
-      
+
       let query = supabase.from('agenda_events').select('*');
-      
+
       if (currentUser?.role !== 'admin' && currentUser?.role !== 'board') {
         query = query.or(`visibility.eq.public,assigned_to.eq.${currentUser?.id}`);
       }
-      
+
       const { data: agendaEvents, error: agendaError } = await query;
       if (agendaError) throw agendaError;
 
@@ -84,9 +85,9 @@ export default function SchedulePage() {
           .from('invoices')
           .select('*, clients(name, nome_fantasia)')
           .order('due_date');
-        
+
         if (invoiceError) throw invoiceError;
-        
+
         if (invoices) {
           invoiceEvents = invoices.map(inv => ({
             id: `inv-${inv.id}`,
@@ -147,7 +148,7 @@ export default function SchedulePage() {
   const handleEventClick = (arg: any) => {
     const event = arg.event;
     setSelectedEvent(event);
-    
+
     setFormData({
       title: event.extendedProps.title || event.title,
       type: event.extendedProps.type,
@@ -282,7 +283,7 @@ export default function SchedulePage() {
     const type = eventInfo.event.extendedProps.type;
     const category = CATEGORIES.find(c => c.id === type);
     const Icon = category?.icon || Info;
-    
+
     return (
       <div className="fc-event-premium" style={{ backgroundColor: `${category?.color}20`, color: category?.color, width: '100%' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -300,13 +301,13 @@ export default function SchedulePage() {
     );
   };
 
-  const filteredEvents = events.filter(e => 
+  const filteredEvents = events.filter(e =>
     e.title.toLowerCase().includes(searchQuery.toLowerCase()) &&
     activeFilters.includes(e.extendedProps.type)
   );
 
   const toggleFilter = (id: string) => {
-    setActiveFilters(prev => 
+    setActiveFilters(prev =>
       prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id]
     );
   };
@@ -318,12 +319,12 @@ export default function SchedulePage() {
           <h1 style={{ fontSize: '2rem', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>Agenda</h1>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginTop: '12px' }}>
             {CATEGORIES.map(cat => (
-              <button 
-                key={cat.id} 
+              <button
+                key={cat.id}
                 onClick={() => toggleFilter(cat.id)}
-                style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
                   gap: '6px',
                   padding: '6px 12px',
                   borderRadius: '20px',
@@ -340,18 +341,12 @@ export default function SchedulePage() {
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <div style={{ position: 'relative' }}>
-            <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
-            <input 
-              type="text" 
-              placeholder="Pesquisar..." 
-              className="input-dark" 
-              style={{ paddingLeft: '40px', width: '250px', height: '40px' }}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
+        <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+          <SearchInput
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder="Pesquisar..."
+          />
           <Spotlight as="button" className="btn btn-accent" onClick={() => { setSelectedEvent(null); setIsModalOpen(true); }} style={{ height: '40px' }}>
             <Plus size={18} /> Novo
           </Spotlight>
@@ -414,9 +409,9 @@ export default function SchedulePage() {
                 style={{ padding: '24px', position: 'sticky', top: '24px' }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
-                  <div style={{ 
-                    padding: '12px', 
-                    borderRadius: '16px', 
+                  <div style={{
+                    padding: '12px',
+                    borderRadius: '16px',
                     backgroundColor: `${CATEGORIES.find(c => c.id === selectedEvent.extendedProps.type)?.color}15`,
                     color: CATEGORIES.find(c => c.id === selectedEvent.extendedProps.type)?.color,
                     boxShadow: `0 8px 16px ${CATEGORIES.find(c => c.id === selectedEvent.extendedProps.type)?.color}10`
@@ -428,10 +423,10 @@ export default function SchedulePage() {
                   </div>
                   <div style={{ display: 'flex', gap: '8px' }}>
                     {selectedEvent.id.startsWith('inv-') && (
-                      <span style={{ 
-                        padding: '4px 10px', 
-                        borderRadius: '20px', 
-                        fontSize: '0.7rem', 
+                      <span style={{
+                        padding: '4px 10px',
+                        borderRadius: '20px',
+                        fontSize: '0.7rem',
                         fontWeight: 700,
                         backgroundColor: selectedEvent.extendedProps.status === 'paid' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
                         color: selectedEvent.extendedProps.status === 'paid' ? '#22C55E' : '#EF4444',
@@ -487,23 +482,23 @@ export default function SchedulePage() {
 
                 {!selectedEvent.id.startsWith('inv-') && (
                   <div style={{ display: 'flex', gap: '12px', marginTop: '32px' }}>
-                    <button 
+                    <button
                       onClick={handleToggleComplete}
-                      className="btn btn-secondary" 
+                      className="btn btn-secondary"
                       style={{ flex: 1, height: '40px', fontSize: '0.85rem' }}
                     >
                       {formData.status === 'completed' ? 'Pendente' : 'Concluir'}
                     </button>
-                    <button 
+                    <button
                       onClick={() => setIsModalOpen(true)}
-                      className="btn btn-secondary" 
+                      className="btn btn-secondary"
                       style={{ padding: '8px' }}
                     >
                       <Edit2 size={18} />
                     </button>
-                    <button 
+                    <button
                       onClick={handleDeleteEvent}
-                      className="btn btn-secondary" 
+                      className="btn btn-secondary"
                       style={{ padding: '8px', color: '#EF4444' }}
                     >
                       <Trash2 size={18} />
@@ -544,13 +539,13 @@ export default function SchedulePage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Título</label>
-                  <input type="text" className="input-dark" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} placeholder="Ex: Reunião de Alinhamento..." />
+                  <input type="text" className="input-dark" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} placeholder="Ex: Reunião de Alinhamento..." />
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Tipo</label>
-                    <select className="input-dark" value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})}>
+                    <select className="input-dark" value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value })}>
                       {CATEGORIES.filter(c => c.id !== 'payment').map(cat => (
                         <option key={cat.id} value={cat.id}>{cat.label}</option>
                       ))}
@@ -558,13 +553,13 @@ export default function SchedulePage() {
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Data e Hora</label>
-                    <input type="datetime-local" className="input-dark" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} />
+                    <input type="datetime-local" className="input-dark" value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} />
                   </div>
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Cliente (Opcional)</label>
-                  <select className="input-dark" value={formData.client_id} onChange={e => setFormData({...formData, client_id: e.target.value})}>
+                  <select className="input-dark" value={formData.client_id} onChange={e => setFormData({ ...formData, client_id: e.target.value })}>
                     <option value="">Nenhum</option>
                     {clients.map(c => <option key={c.id} value={c.id}>{c.nome_fantasia || c.name}</option>)}
                   </select>
@@ -572,17 +567,17 @@ export default function SchedulePage() {
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Observações</label>
-                  <textarea 
-                    className="input-dark" 
-                    rows={3} 
-                    value={formData.description} 
-                    onChange={e => setFormData({...formData, description: e.target.value})}
+                  <textarea
+                    className="input-dark"
+                    rows={3}
+                    value={formData.description}
+                    onChange={e => setFormData({ ...formData, description: e.target.value })}
                     placeholder="Adicione detalhes extras..."
                   />
                 </div>
 
                 <div style={{ display: 'flex', gap: '12px', alignItems: 'center', padding: '12px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', flex: 1 }} onClick={() => setFormData({...formData, visibility: formData.visibility === 'public' ? 'private' : 'public'})}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', flex: 1 }} onClick={() => setFormData({ ...formData, visibility: formData.visibility === 'public' ? 'private' : 'public' })}>
                     {formData.visibility === 'public' ? <Shield size={20} color="#22C55E" /> : <ShieldOff size={20} color="#EF4444" />}
                     <div>
                       <p style={{ fontSize: '0.875rem', fontWeight: 600 }}>{formData.visibility === 'public' ? 'Público' : 'Privado'}</p>

@@ -31,6 +31,7 @@ export default function Sidebar() {
   const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [hoveredPath, setHoveredPath] = useState<string | null>(null);
+  const [activeTooltip, setActiveTooltip] = useState<{ label: string, top: number } | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -53,14 +54,49 @@ export default function Sidebar() {
     <aside
       className="sidebar-desktop"
       style={{
-        width: isExpanded ? '280px' : '80px',
+        width: isExpanded ? '210px' : '80px',
         display: 'flex',
         flexDirection: 'column',
         position: 'relative',
         background: 'transparent',
-        transition: 'width 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+        transition: 'width 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+        zIndex: 50,
       }}
     >
+      {/* Tooltip Liquid Glass Global em Position Fixed para evitar cortes */}
+      <AnimatePresence>
+        {!isExpanded && activeTooltip && (
+          <motion.div
+            initial={{ opacity: 0, x: -10, scale: 0.95 }}
+            animate={{ opacity: 1, x: 0, scale: 1 }}
+            exit={{ opacity: 0, x: -10, scale: 0.95 }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
+            style={{
+              position: 'fixed',
+              left: '90px', // 80px da barra + 10px
+              top: activeTooltip.top,
+              transform: 'translateY(-50%)',
+              background: 'rgba(15, 15, 15, 0.85)',
+              backdropFilter: 'blur(16px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(16px) saturate(180%)',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+              padding: '8px 16px',
+              borderRadius: '14px',
+              zIndex: 999999,
+              pointerEvents: 'none',
+              display: 'flex',
+              alignItems: 'center',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            <span style={{ color: '#FFFFFF', fontSize: '0.875rem', fontWeight: 600, letterSpacing: '0.02em' }}>
+              {activeTooltip.label}
+            </span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <button
         onClick={() => setIsExpanded(!isExpanded)}
         style={{
@@ -76,44 +112,58 @@ export default function Sidebar() {
           alignItems: 'center',
           justifyContent: 'center',
           color: 'var(--text-secondary)',
-          zIndex: 10
+          zIndex: 10,
+          cursor: 'pointer',
+          transition: 'transform 0.2s ease',
         }}
+        onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+        onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
       >
         {isExpanded ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
       </button>
 
       <div style={{
-        padding: isExpanded ? '32px 24px' : '32px 16px',
+        padding: isExpanded ? '32px 16px' : '32px 16px',
         display: 'flex',
         justifyContent: isExpanded ? 'flex-start' : 'center',
         alignItems: 'center',
-        height: '90px'
+        height: '90px',
+        transition: 'padding 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
       }}>
         <ThemeLogo
-          width={220}
-          height={48}
+          width={160}
+          height={35}
           align="left"
           isCollapsed={!isExpanded}
         />
       </div>
 
       <nav style={{ flex: 1, padding: '16px 0', overflowY: 'auto', overflowX: 'hidden' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', padding: '0 16px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', padding: isExpanded ? '0 16px' : '0 12px', transition: 'padding 0.4s cubic-bezier(0.16, 1, 0.3, 1)' }}>
           {NAV_GROUPS.filter(group => !currentUser || group.roles.includes(currentUser.role)).map((group) => (
             <div key={group.title} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {isExpanded && (
-                <span style={{
-                  fontSize: '0.75rem',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em',
-                  color: 'var(--text-secondary)',
-                  paddingLeft: '16px',
-                  fontWeight: 600,
-                  opacity: 0.7
-                }}>
-                  {group.title}
-                </span>
-              )}
+              <AnimatePresence initial={false}>
+                {isExpanded && (
+                  <motion.span
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 0.7, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                    style={{
+                      fontSize: '0.75rem',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
+                      color: 'var(--text-secondary)',
+                      paddingLeft: '16px',
+                      fontWeight: 600,
+                      overflow: 'hidden',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    {group.title}
+                  </motion.span>
+                )}
+              </AnimatePresence>
               <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 {group.items.filter(item => !currentUser || item.roles.includes(currentUser.role)).map((item) => {
                   const isActive = pathname.startsWith(item.href);
@@ -122,8 +172,17 @@ export default function Sidebar() {
                   return (
                     <li
                       key={item.href}
-                      onMouseEnter={() => setHoveredPath(item.href)}
-                      onMouseLeave={() => setHoveredPath(null)}
+                      onMouseEnter={(e) => {
+                        setHoveredPath(item.href);
+                        if (!isExpanded) {
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          setActiveTooltip({ label: item.label, top: rect.top + rect.height / 2 });
+                        }
+                      }}
+                      onMouseLeave={() => {
+                        setHoveredPath(null);
+                        setActiveTooltip(null);
+                      }}
                       style={{ position: 'relative' }}
                     >
                       {/* Magnetic Hover Animation */}
@@ -155,17 +214,32 @@ export default function Sidebar() {
                             display: 'flex',
                             alignItems: 'center',
                             gap: '12px',
-                            padding: '12px 16px',
+                            padding: isExpanded ? '12px 16px' : '12px 0',
                             borderRadius: 'var(--radius-input)',
                             color: isActive ? 'var(--sidebar-active-text)' : 'var(--text-secondary)',
                             backgroundColor: isActive ? 'var(--sidebar-active-bg)' : 'transparent',
                             border: isActive ? '1px solid rgba(217, 72, 15, 0.1)' : '1px solid transparent',
-                            transition: 'color 0.2s',
-                            justifyContent: isExpanded ? 'flex-start' : 'center'
+                            transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+                            justifyContent: isExpanded ? 'flex-start' : 'center',
+                            overflow: 'hidden'
                           }}
                         >
-                          <item.icon size={20} color={isActive ? 'var(--accent)' : 'currentColor'} />
-                          {isExpanded && <span style={{ fontWeight: isActive ? 600 : 500 }}>{item.label}</span>}
+                          <div style={{ minWidth: '20px', minHeight: '20px', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <item.icon size={20} color={isActive ? 'var(--accent)' : 'currentColor'} />
+                          </div>
+                          <AnimatePresence initial={false}>
+                            {isExpanded && (
+                              <motion.span
+                                initial={{ opacity: 0, width: 0 }}
+                                animate={{ opacity: 1, width: 'auto' }}
+                                exit={{ opacity: 0, width: 0 }}
+                                transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                                style={{ fontWeight: isActive ? 600 : 500, whiteSpace: 'nowrap', overflow: 'hidden' }}
+                              >
+                                {item.label}
+                              </motion.span>
+                            )}
+                          </AnimatePresence>
                         </Link>
                       </motion.div>
                     </li>
@@ -183,12 +257,22 @@ export default function Sidebar() {
         flexDirection: 'column',
         gap: '8px',
         borderTop: '1px solid var(--border)',
-        marginTop: 'auto'
+        marginTop: 'auto',
+        transition: 'padding 0.4s cubic-bezier(0.16, 1, 0.3, 1)'
       }}>
         {/* Profile Card / Link */}
         <div
-          onMouseEnter={() => setHoveredPath('profile-container')}
-          onMouseLeave={() => setHoveredPath(null)}
+          onMouseEnter={(e) => {
+            setHoveredPath('profile-container');
+            if (!isExpanded) {
+              const rect = e.currentTarget.getBoundingClientRect();
+              setActiveTooltip({ label: currentUser?.name || "Perfil do Usuário", top: rect.top + rect.height / 2 });
+            }
+          }}
+          onMouseLeave={() => {
+            setHoveredPath(null);
+            setActiveTooltip(null);
+          }}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -200,7 +284,7 @@ export default function Sidebar() {
             marginBottom: '8px',
             justifyContent: isExpanded ? 'flex-start' : 'center',
             position: 'relative',
-            transition: 'all 0.2s'
+            transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)'
           }}
         >
           <AnimatePresence>
@@ -273,110 +357,129 @@ export default function Sidebar() {
               )}
             </AnimatePresence>
           </div>
+          <AnimatePresence initial={false}>
+            {isExpanded && (
+              <motion.div
+                initial={{ opacity: 0, width: 0 }}
+                animate={{ opacity: 1, width: 'auto' }}
+                exit={{ opacity: 0, width: 0 }}
+                transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                style={{ flex: 1, overflow: 'hidden', position: 'relative', zIndex: 1 }}
+              >
+                <Link
+                  href="/admin/profile"
+                  style={{ textDecoration: 'none', display: 'block' }}
+                >
+                  <p style={{ fontSize: '0.875rem', fontWeight: 600, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    {currentUser?.name || "Usuário"} <span style={{ fontSize: '1rem' }}>{currentUser?.emoji || ""}</span>
+                  </p>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{currentUser?.role || "Indefinido"}</p>
+                </Link>
+              </motion.div>
+            )}
+          </AnimatePresence>
           {isExpanded && (
-            <>
-              <Link
-                href="/admin/profile"
-                style={{ flex: 1, overflow: 'hidden', position: 'relative', zIndex: 1, textDecoration: 'none' }}
-              >
-                <p style={{ fontSize: '0.875rem', fontWeight: 600, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  {currentUser?.name || "Usuário"} <span style={{ fontSize: '1rem' }}>{currentUser?.emoji || ""}</span>
-                </p>
-                <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{currentUser?.role || "Indefinido"}</p>
-              </Link>
-              <div
-                style={{ color: 'var(--text-secondary)', position: 'relative', zIndex: 1, cursor: 'pointer' }}
-                onClick={() => setShowNotifications(!showNotifications)}
-              >
-                <div style={{ position: 'relative' }}>
-                  <Bell size={18} color={localNotifications.some(n => !n.read) ? 'var(--accent)' : 'currentColor'} />
-                  {localNotifications.filter(n => !n.read).length > 0 && (
-                    <div style={{
-                      position: 'absolute', top: -6, right: -6,
-                      backgroundColor: 'var(--accent)', color: 'white',
-                      fontSize: '0.6rem', fontWeight: 800, width: '16px', height: '16px',
-                      borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      border: '2px solid var(--bg-secondary)'
-                    }}>
-                      {localNotifications.filter(n => !n.read).length}
-                    </div>
-                  )}
-                </div>
-
-                {/* Popover de Notificações */}
-                <AnimatePresence>
-                  {showNotifications && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                      style={{
-                        position: 'absolute', bottom: '100%', right: '-20px', marginBottom: '20px',
-                        width: '320px', background: 'rgba(15, 15, 15, 0.98)', backdropFilter: 'blur(32px)',
-                        borderRadius: '24px', border: '1px solid var(--border)', padding: '20px',
-                        boxShadow: '0 20px 50px rgba(0,0,0,0.6)', zIndex: 1000
-                      }}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                        <h4 style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)' }}>Notificações</h4>
-                        <button
-                          onClick={() => {
-                            setLocalNotifications(localNotifications.map(n => ({ ...n, read: true })));
-                          }}
-                          style={{ background: 'none', border: 'none', fontSize: '0.75rem', color: 'var(--accent)', fontWeight: 600, cursor: 'pointer' }}
-                        >
-                          Limpar tudo
-                        </button>
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '350px', overflowY: 'auto', paddingRight: '4px' }}>
-                        {localNotifications.length === 0 ? (
-                          <p style={{ textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.85rem', padding: '20px' }}>Nenhuma notificação por enquanto.</p>
-                        ) : (
-                          localNotifications.map(notif => (
-                            <motion.div
-                              key={notif.id}
-                              whileHover={{ x: 4 }}
-                              onClick={() => {
-                                setLocalNotifications(localNotifications.map(n => n.id === notif.id ? { ...n, read: true } : n));
-                              }}
-                              style={{
-                                padding: '14px', borderRadius: '16px',
-                                background: notif.read ? 'rgba(255,255,255,0.02)' : 'rgba(217, 72, 15, 0.05)',
-                                border: '1px solid var(--border)', display: 'flex', gap: '12px',
-                                cursor: 'pointer', transition: 'all 0.2s'
-                              }}
-                            >
-                              {!notif.read && (
-                                <div style={{
-                                  width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent)', marginTop: '6px', flexShrink: 0
-                                }} />
-                              )}
-                              <div style={{ flex: 1 }}>
-                                <p style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)' }}>{notif.title}</p>
-                                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '2px', lineHeight: '1.4' }}>{notif.message}</p>
-                              </div>
-                            </motion.div>
-                          ))
-                        )}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+            <div
+              style={{ color: 'var(--text-secondary)', zIndex: 1, cursor: 'pointer', flexShrink: 0 }}
+              onClick={() => setShowNotifications(!showNotifications)}
+            >
+              <div style={{ position: 'relative' }}>
+                <Bell size={18} color={localNotifications.some(n => !n.read) ? 'var(--accent)' : 'currentColor'} />
+                {localNotifications.filter(n => !n.read).length > 0 && (
+                  <div style={{
+                    position: 'absolute', top: -6, right: -6,
+                    backgroundColor: 'var(--accent)', color: 'white',
+                    fontSize: '0.6rem', fontWeight: 800, width: '16px', height: '16px',
+                    borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    border: '2px solid var(--bg-secondary)'
+                  }}>
+                    {localNotifications.filter(n => !n.read).length}
+                  </div>
+                )}
               </div>
-            </>
+
+              {/* Popover de Notificações */}
+              <AnimatePresence>
+                {showNotifications && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    style={{
+                      position: 'absolute', bottom: '100%', left: 0, marginBottom: '20px',
+                      width: '320px', background: 'rgba(15, 15, 15, 0.98)', backdropFilter: 'blur(32px)',
+                      borderRadius: '24px', border: '1px solid var(--border)', padding: '20px',
+                      boxShadow: '0 20px 50px rgba(0,0,0,0.6)', zIndex: 1000
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                      <h4 style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)' }}>Notificações</h4>
+                      <button
+                        onClick={() => {
+                          setLocalNotifications(localNotifications.map(n => ({ ...n, read: true })));
+                        }}
+                        style={{ background: 'none', border: 'none', fontSize: '0.75rem', color: 'var(--accent)', fontWeight: 600, cursor: 'pointer' }}
+                      >
+                        Limpar tudo
+                      </button>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '350px', overflowY: 'auto', paddingRight: '4px' }}>
+                      {localNotifications.length === 0 ? (
+                        <p style={{ textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.85rem', padding: '20px' }}>Nenhuma notificação por enquanto.</p>
+                      ) : (
+                        localNotifications.map(notif => (
+                          <motion.div
+                            key={notif.id}
+                            whileHover={{ x: 4 }}
+                            onClick={() => {
+                              setLocalNotifications(localNotifications.map(n => n.id === notif.id ? { ...n, read: true } : n));
+                            }}
+                            style={{
+                              padding: '14px', borderRadius: '16px',
+                              background: notif.read ? 'rgba(255,255,255,0.02)' : 'rgba(217, 72, 15, 0.05)',
+                              border: '1px solid var(--border)', display: 'flex', gap: '12px',
+                              cursor: 'pointer', transition: 'all 0.2s'
+                            }}
+                          >
+                            {!notif.read && (
+                              <div style={{
+                                width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent)', marginTop: '6px', flexShrink: 0
+                              }} />
+                            )}
+                            <div style={{ flex: 1 }}>
+                              <p style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)' }}>{notif.title}</p>
+                              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '2px', lineHeight: '1.4' }}>{notif.message}</p>
+                            </div>
+                          </motion.div>
+                        ))
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           )}
         </div>
 
         {mounted && (
           <button
             onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
-            onMouseEnter={() => setHoveredPath('theme-toggle')}
-            onMouseLeave={() => setHoveredPath(null)}
+            onMouseEnter={(e) => {
+              setHoveredPath('theme-toggle');
+              if (!isExpanded) {
+                const rect = e.currentTarget.getBoundingClientRect();
+                setActiveTooltip({ label: resolvedTheme === 'dark' ? 'Mudar para Modo Claro' : 'Mudar para Modo Escuro', top: rect.top + rect.height / 2 });
+              }
+            }}
+            onMouseLeave={() => {
+              setHoveredPath(null);
+              setActiveTooltip(null);
+            }}
             style={{
               position: 'relative',
               background: 'transparent',
-              padding: isExpanded ? '16px' : '12px',
+              padding: isExpanded ? '16px' : '12px 0',
               borderRadius: 'var(--radius-input)',
               display: 'flex',
               alignItems: 'center',
@@ -385,7 +488,9 @@ export default function Sidebar() {
               color: 'var(--text-secondary)',
               cursor: 'pointer',
               width: '100%',
-              justifyContent: isExpanded ? 'flex-start' : 'center'
+              justifyContent: isExpanded ? 'flex-start' : 'center',
+              transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+              overflow: 'hidden'
             }}
           >
             <AnimatePresence>
@@ -400,13 +505,24 @@ export default function Sidebar() {
                 />
               )}
             </AnimatePresence>
+
             <motion.div whileTap={{ scale: 0.96 }} style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', gap: '12px' }}>
-              {resolvedTheme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-              {isExpanded && (
-                <span style={{ fontSize: '0.875rem', fontWeight: 500 }}>
-                  {resolvedTheme === 'dark' ? 'Modo Claro' : 'Modo Escuro'}
-                </span>
-              )}
+              <div style={{ minWidth: '18px', minHeight: '18px', width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                {resolvedTheme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+              </div>
+              <AnimatePresence initial={false}>
+                {isExpanded && (
+                  <motion.span
+                    initial={{ opacity: 0, width: 0 }}
+                    animate={{ opacity: 1, width: 'auto' }}
+                    exit={{ opacity: 0, width: 0 }}
+                    transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                    style={{ fontSize: '0.875rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden' }}
+                  >
+                    {resolvedTheme === 'dark' ? 'Modo Claro' : 'Modo Escuro'}
+                  </motion.span>
+                )}
+              </AnimatePresence>
             </motion.div>
           </button>
         )}

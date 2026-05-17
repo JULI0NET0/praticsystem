@@ -2,6 +2,9 @@
 
 import { Search, Filter, Download } from "lucide-react";
 import { useState } from "react";
+import SearchInput from "@/components/ui/SearchInput";
+import SortFilterMenu, { SortOption } from "@/components/ui/SortFilterMenu";
+import { useToast } from "@/components/CustomToast";
 
 interface InvoicesListProps {
   invoices: any[];
@@ -11,49 +14,50 @@ interface InvoicesListProps {
 export function InvoicesList({ invoices, clients }: InvoicesListProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
+  const { showToast } = useToast();
 
   const filteredInvoices = invoices.filter(invoice => {
     const client = clients.find(c => c.id === invoice.client_id);
-    const matchesSearch = 
+    const matchesSearch =
       invoice.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
       client?.name.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     const matchesStatus = filterStatus === "all" || invoice.status === filterStatus;
-    
+
     return matchesSearch && matchesStatus;
   });
 
-  const formatCurrency = (value: number) => 
+  const formatCurrency = (value: number) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+
+  const statusOptions: SortOption[] = [
+    { label: "Todos Status", value: "all" },
+    { label: "Pagos", value: "paid" },
+    { label: "Pendentes", value: "pending" },
+    { label: "Atrasados", value: "overdue" },
+  ];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* Filters Bar */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', gap: '12px', flex: 1, minWidth: '300px' }}>
-          <div className="search-wrapper">
-            <Search size={18} />
-            <input 
-              type="text" 
-              className="input-dark" 
-              placeholder="Buscar por descrição ou cliente..." 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          <select 
-            className="input-dark" 
-            style={{ width: '180px' }}
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-          >
-            <option value="all">Todos Status</option>
-            <option value="paid">Pagos</option>
-            <option value="pending">Pendentes</option>
-            <option value="overdue">Atrasados</option>
-          </select>
+        <div style={{ display: 'flex', gap: '16px', flex: 1, minWidth: '300px', alignItems: 'center' }}>
+          <SearchInput
+            value={searchTerm}
+            onChange={setSearchTerm}
+            placeholder="Buscar por descrição ou cliente..."
+          />
+          <SortFilterMenu
+            label="Status"
+            options={statusOptions}
+            selectedValue={filterStatus}
+            onSelect={setFilterStatus}
+          />
         </div>
-        <button className="btn btn-secondary">
+        <button
+          className="btn btn-secondary"
+          onClick={() => showToast("Exportando faturas em CSV...", "info")}
+        >
           <Download size={18} /> Exportar CSV
         </button>
       </div>
@@ -87,17 +91,19 @@ export function InvoicesList({ invoices, clients }: InvoicesListProps) {
                         {formatCurrency(Number(invoice.amount))}
                       </td>
                       <td>
-                        <span className={`badge ${
-                          invoice.status === 'paid' ? 'badge-success' : 
-                          invoice.status === 'pending' ? 'badge-warning' : 'badge-danger'
-                        }`}>
+                        <span className={`badge ${invoice.status === 'paid' ? 'badge-success' :
+                            invoice.status === 'pending' ? 'badge-warning' : 'badge-danger'
+                          }`}>
                           {invoice.status === 'paid' ? 'Pago' : invoice.status === 'pending' ? 'Pendente' : 'Atrasado'}
                         </span>
                       </td>
                       <td>
                         <div style={{ display: 'flex', gap: '8px' }}>
                           {invoice.status !== 'paid' && (
-                            <button style={{ color: 'var(--accent)', fontSize: '0.875rem', fontWeight: 500 }}>
+                            <button
+                              style={{ color: 'var(--accent)', fontSize: '0.875rem', fontWeight: 500, cursor: 'pointer' }}
+                              onClick={() => showToast("Status da fatura atualizado para Pago!", "success")}
+                            >
                               Confirmar
                             </button>
                           )}

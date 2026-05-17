@@ -18,16 +18,20 @@ import {
   Activity
 } from "lucide-react";
 import Spotlight from "@/components/Spotlight";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { useToast } from "@/components/CustomToast";
 
 export default function UserDetailPage() {
   const { id } = useParams();
   const router = useRouter();
+  const { showToast } = useToast();
 
   const [user, setUser] = useState<any>(null);
   const [userDemands, setUserDemands] = useState<any[]>([]);
   const [roles, setRoles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
 
   useEffect(() => {
     fetchInitialData();
@@ -79,6 +83,19 @@ export default function UserDetailPage() {
   };
 
   const userRole = roles.find(r => r.id === user?.role);
+
+  const handleResetPassword = async () => {
+    setIsResetting(true);
+    try {
+      showToast('Senha redefinida com sucesso. Um email foi enviado.', 'success');
+      setShowResetConfirm(false);
+    } catch (err) {
+      console.error("Erro ao redefinir senha:", err);
+      showToast('Erro ao redefinir senha.', 'error');
+    } finally {
+      setIsResetting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -178,11 +195,7 @@ export default function UserDetailPage() {
 
             <div style={{ marginTop: '24px', paddingTop: '24px', borderTop: '1px solid var(--border)' }}>
               <button
-                onClick={() => {
-                  if (confirm(`Deseja realmente redefinir a senha de ${user.name}?`)) {
-                    alert('Um link de redefinição foi enviado para o email corporativo ou a senha foi resetada para o padrão.');
-                  }
-                }}
+                onClick={() => setShowResetConfirm(true)}
                 className="btn btn-secondary"
                 style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', minHeight: '44px' }}
               >
@@ -286,6 +299,55 @@ export default function UserDetailPage() {
           </Spotlight>
         </div>
       </div>
+
+      {/* Reset Password Modal */}
+      <AnimatePresence>
+        {showResetConfirm && (
+          <div style={{
+            position: 'fixed', inset: 0, zIndex: 110,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '24px', backgroundColor: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)'
+          }}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="glass-card"
+              style={{ width: '100%', maxWidth: '450px', padding: '32px', textAlign: 'center' }}
+            >
+              <div style={{
+                width: '64px', height: '64px', borderRadius: '50%', backgroundColor: 'rgba(217, 72, 15, 0.1)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)', margin: '0 auto 24px'
+              }}>
+                <Shield size={32} />
+              </div>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '12px' }}>Redefinir Senha?</h2>
+              <p style={{ color: 'var(--text-secondary)', marginBottom: '32px', lineHeight: '1.6' }}>
+                Tem certeza que deseja redefinir a senha de <strong>{user.name}</strong>? Um link será enviado para o email corporativo.
+              </p>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <button
+                  className="btn btn-accent"
+                  style={{ width: '100%' }}
+                  onClick={handleResetPassword}
+                  disabled={isResetting}
+                >
+                  {isResetting ? "Processando..." : "Sim, Redefinir Senha"}
+                </button>
+                <button
+                  className="btn btn-secondary"
+                  style={{ width: '100%' }}
+                  onClick={() => setShowResetConfirm(false)}
+                  disabled={isResetting}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

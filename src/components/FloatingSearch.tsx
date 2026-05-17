@@ -86,11 +86,11 @@ export default function FloatingSearch() {
   return (
     <div className="floating-search-container" style={{
       position: 'fixed',
-      bottom: '40px',
+      bottom: '32px',
       left: '50%',
       transform: 'translateX(-50%)',
       width: '100%',
-      maxWidth: '680px',
+      maxWidth: '510px',
       zIndex: 100,
       padding: '0 24px',
     }}>
@@ -102,15 +102,15 @@ export default function FloatingSearch() {
             exit={{ opacity: 0, y: 10, scale: 0.95 }}
             style={{
               position: 'absolute',
-              bottom: 'calc(100% + 12px)',
+              bottom: 'calc(100% + 10px)',
               left: '24px',
               right: '24px',
               background: 'var(--glass-bg)',
               backdropFilter: 'blur(32px)',
               WebkitBackdropFilter: 'blur(32px)',
-              borderRadius: '24px',
+              borderRadius: '20px',
               border: '1px solid var(--border)',
-              padding: '12px',
+              padding: '10px',
               boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
               display: 'flex',
               flexDirection: 'column',
@@ -124,9 +124,9 @@ export default function FloatingSearch() {
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '12px',
-                  padding: '12px 16px',
-                  borderRadius: '16px',
+                  gap: '10px',
+                  padding: '10px 14px',
+                  borderRadius: '14px',
                   background: 'transparent',
                   border: 'none',
                   color: 'var(--text-primary)',
@@ -137,18 +137,18 @@ export default function FloatingSearch() {
                 onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(217, 72, 15, 0.1)')}
                 onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
               >
-                <div style={{ 
-                  width: '36px', height: '36px', borderRadius: '10px', 
-                  backgroundColor: 'rgba(255,255,255,0.05)', display: 'flex', 
-                  alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' 
+                <div style={{
+                  width: '32px', height: '32px', borderRadius: '8px',
+                  backgroundColor: 'rgba(255,255,255,0.05)', display: 'flex',
+                  alignItems: 'center', justifyContent: 'center', color: 'var(--accent)'
                 }}>
-                  {result.type === 'client' ? <Building2 size={18} /> : result.type === 'user' ? <User size={18} /> : <Briefcase size={18} />}
+                  {result.type === 'client' ? <Building2 size={16} /> : result.type === 'user' ? <User size={16} /> : <Briefcase size={16} />}
                 </div>
                 <div style={{ flex: 1 }}>
-                  <p style={{ fontWeight: 600, fontSize: '0.95rem' }}>{result.title}</p>
-                  <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{result.subtitle}</p>
+                  <p style={{ fontWeight: 600, fontSize: '0.88rem' }}>{result.title}</p>
+                  <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{result.subtitle}</p>
                 </div>
-                <ArrowRight size={16} color="var(--text-secondary)" opacity={0.5} />
+                <ArrowRight size={14} color="var(--text-secondary)" opacity={0.5} />
               </button>
             ))}
           </motion.div>
@@ -158,46 +158,46 @@ export default function FloatingSearch() {
       <Spotlight className="glass-card" style={{
         display: 'flex',
         alignItems: 'center',
-        padding: '16px 24px',
+        padding: '12px 18px',
         borderRadius: '100px',
-        gap: '16px',
+        gap: '12px',
         border: '1px solid var(--border)',
         boxShadow: '0 20px 40px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255, 255, 255, 0.1)',
         background: 'var(--glass-bg)',
         backdropFilter: 'blur(32px)',
         WebkitBackdropFilter: 'blur(32px)',
       }}>
-        <SearchIcon size={20} color={query ? "var(--accent)" : "var(--text-secondary)"} />
-        <input 
+        <SearchIcon size={18} color={query ? "var(--accent)" : "var(--text-secondary)"} />
+        <input
           ref={inputRef}
-          type="text" 
+          type="text"
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
             setIsOpen(true);
           }}
-          placeholder="Busque clientes, equipe ou serviços..." 
+          placeholder="Busque clientes, equipe ou serviços..."
           style={{
             flex: 1,
             background: 'transparent',
             border: 'none',
             color: 'var(--text-primary)',
-            fontSize: '1rem',
+            fontSize: '0.9rem',
             outline: 'none'
           }}
         />
         <div className="hide-mobile" style={{
           background: 'rgba(255,255,255,0.05)',
-          padding: '4px 12px',
+          padding: '3px 10px',
           borderRadius: '100px',
-          fontSize: '0.75rem',
+          fontSize: '0.7rem',
           color: 'var(--text-secondary)',
           border: '1px solid var(--border)',
           display: 'flex',
           alignItems: 'center',
           gap: '4px'
         }}>
-          <Command size={12} /> K
+          <Command size={11} /> K
         </div>
       </Spotlight>
     </div>
