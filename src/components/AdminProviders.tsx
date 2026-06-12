@@ -11,8 +11,8 @@ function AdminProvidersInner({ children }: { children: React.ReactNode }) {
   if (loading) {
     return (
       <div style={{ 
-        height: '100vh', 
-        width: '100vw', 
+        height: '100dvh',
+        width: '100%',
         display: 'flex', 
         alignItems: 'center', 
         justifyContent: 'center',

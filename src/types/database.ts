@@ -24,8 +24,11 @@ export interface Client {
   email: string;
   email_financeiro?: string;
   phone: string; // WhatsApp
+  whatsapp_financeiro?: string;
   telefone_fixo?: string;
   setor?: string;
+  website?: string;
+  sistema_proprio?: string;
   address?: {
     cep: string;
     logradouro: string;
@@ -97,6 +100,10 @@ export interface Contract {
   posts_per_week?: number;
   content_capture?: boolean;
   capture_frequency?: string;
+  document_content?: string;
+  document_status?: 'pending' | 'generated' | 'sent' | 'signed';
+  signed_document_url?: string;
+  contract_number?: number;
 }
 
 export interface Notification {
@@ -147,5 +154,49 @@ export interface PortfolioCase {
   description: string;
   image_url: string;
   results: string[];
+}
+
+export type ExpenseCategory = 'pro_labore' | 'funcionario_pj' | 'sistema' | 'internet' | 'outros';
+export type ExpenseRecurrence = 'monthly' | 'quarterly' | 'yearly' | 'one_time';
+
+export interface Expense {
+  id: string;
+  description: string;
+  category: ExpenseCategory;
+  amount: number;
+  due_day?: number;
+  recurrence: ExpenseRecurrence;
+  status: 'active' | 'inactive';
+  related_user_id?: string;
+  notes?: string;
+  created_at: string;
+}
+
+export interface ExpenseEntry {
+  id: string;
+  expense_id?: string;
+  description: string;
+  amount: number;
+  date: string;
+  status: 'pending' | 'paid' | 'cancelled';
+  asaas_transaction_id?: string;
+  category?: ExpenseCategory | string;
+  notes?: string;
+  created_at: string;
+  expenses?: Expense;
+}
+
+export interface AsaasTransaction {
+  id: string;
+  description?: string;
+  value: number;
+  type: 'CREDIT' | 'DEBIT';
+  date: string;
+  status: string;
+  expense_entry_id?: string;
+  invoice_id?: string;
+  synced_at: string;
+  expense_entries?: ExpenseEntry;
+  invoices?: Invoice;
 }
 

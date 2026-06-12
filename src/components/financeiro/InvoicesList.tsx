@@ -1,6 +1,6 @@
 "use client";
 
-import { Search, Filter, Download } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 import { useState } from "react";
 import SearchInput from "@/components/ui/SearchInput";
 import SortFilterMenu, { SortOption } from "@/components/ui/SortFilterMenu";
@@ -9,12 +9,28 @@ import { useToast } from "@/components/CustomToast";
 interface InvoicesListProps {
   invoices: any[];
   clients: any[];
+  onRefresh?: () => void;
 }
 
-export function InvoicesList({ invoices, clients }: InvoicesListProps) {
+export function InvoicesList({ invoices, clients, onRefresh }: InvoicesListProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const { showToast } = useToast();
+
+  const handleMarkAsPaid = async (invoiceId: string) => {
+    try {
+      const { error } = await supabase
+        .from('invoices')
+        .update({ status: 'paid' })
+        .eq('id', invoiceId);
+      if (error) throw error;
+      showToast("Fatura marcada como paga!", "success");
+      if (onRefresh) onRefresh();
+    } catch (err) {
+      console.error(err);
+      showToast("Erro ao dar baixa na fatura.", "error");
+    }
+  };
 
   const filteredInvoices = invoices.filter(invoice => {
     const client = clients.find(c => c.id === invoice.client_id);
@@ -101,8 +117,8 @@ export function InvoicesList({ invoices, clients }: InvoicesListProps) {
                         <div style={{ display: 'flex', gap: '8px' }}>
                           {invoice.status !== 'paid' && (
                             <button
-                              style={{ color: 'var(--accent)', fontSize: '0.875rem', fontWeight: 500, cursor: 'pointer' }}
-                              onClick={() => showToast("Status da fatura atualizado para Pago!", "success")}
+                              style={{ color: 'var(--accent)', fontSize: '0.875rem', fontWeight: 500, cursor: 'pointer', background: 'none', border: 'none' }}
+                              onClick={() => handleMarkAsPaid(invoice.id)}
                             >
                               Confirmar
                             </button>

@@ -15,13 +15,16 @@ export default function CreateContractPage() {
   const [services, setServices] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
+  const [isEmitModalOpen, setIsEmitModalOpen] = useState(false);
+  const [createdContractId, setCreatedContractId] = useState<string | null>(null);
   const { showToast } = useToast();
 
   const [formData, setFormData] = useState({
     client_id: "",
     service_id: "",
     start_date: new Date().toISOString().split('T')[0],
-    end_date: "",
+    first_due_date: new Date().toISOString().split('T')[0],
+    duration_months: 1,
     value: 0,
     auto_renew: true,
     status: "active"
@@ -53,17 +56,84 @@ export default function CreateContractPage() {
     }
   }, [formData.service_id, services]);
 
+  const generatePreview = () => {
+    if (!formData.first_due_date || formData.duration_months < 1) return [];
+    
+    const parcels = [];
+    const baseDate = new Date(formData.first_due_date + 'T12:00:00');
+    
+    for (let i = 0; i < formData.duration_months; i++) {
+      const parcelDate = new Date(baseDate);
+      parcelDate.setMonth(baseDate.getMonth() + i);
+      parcels.push({
+        parcelNumber: i + 1,
+        dueDate: parcelDate.toISOString().split('T')[0],
+        amount: formData.value
+      });
+    }
+    return parcels;
+  };
+
+  const invoicePreview = generatePreview();
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       setLoading(true);
-      const { error } = await supabase
-        .from('contracts')
-        .insert([formData]);
 
-      if (error) throw error;
-      showToast("Contrato criado com sucesso!", "success");
-      router.push("/admin/contracts");
+      const client = clients.find(c => c.id === formData.client_id);
+      const service = services.find(s => s.id === formData.service_id);
+
+      // Calcular a data de término com base na data de início e duração
+      const endDate = new Date(formData.start_date + 'T12:00:00');
+      endDate.setMonth(endDate.getMonth() + formData.duration_months);
+
+      // Inserir contrato
+      const { data: contractData, error: contractError } = await supabase
+        .from('contracts')
+        .insert([{
+          client_id: formData.client_id,
+          service_id: formData.service_id,
+          start_date: formData.start_date,
+          end_date: endDate.toISOString().split('T')[0],
+          value: formData.value,
+          auto_renew: formData.auto_renew,
+          status: formData.status,
+          document_status: 'pending'
+        }])
+        .select()
+        .single();
+
+      if (contractError) throw contractError;
+
+      // Montar faturas a partir do preview
+      const invoicesToInsert = invoicePreview.map(parcel => ({
+        client_id: formData.client_id,
+        contract_id: contractData.id,
+        amount: parcel.amount,
+        due_date: parcel.dueDate,
+        status: 'pending',
+        description: `${client?.name || 'Cliente'} - ${service?.name || 'Serviço'} - Parcela ${parcel.parcelNumber}/${formData.duration_months}`
+      }));
+
+      // Inserir as faturas em lote
+      const { error: invoicesError } = await supabase
+        .from('invoices')
+        .insert(invoicesToInsert);
+
+      if (invoicesError) throw invoicesError;
+
+      // Se o contrato criado for ativo, atualiza o status do cliente para active
+      if (formData.status === 'active') {
+        await supabase
+          .from('clients')
+          .update({ status: 'active' })
+          .eq('id', formData.client_id);
+      }
+
+      showToast("Contrato e faturas gerados com sucesso!", "success");
+      setCreatedContractId(contractData.id);
+      setIsEmitModalOpen(true);
     } catch (err) {
       console.error("Erro ao criar contrato:", err);
       showToast("Erro ao criar contrato. Verifique os dados.", "error");
@@ -96,7 +166,7 @@ export default function CreateContractPage() {
             <FileText size={20} /> Definições de Vínculo
           </h2>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+          <div className="responsive-grid-2" style={{ gap: '24px' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <User size={14} /> Selecionar Cliente
@@ -136,7 +206,7 @@ export default function CreateContractPage() {
             <Calendar size={20} /> Vigência e Financeiro
           </h2>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '24px' }}>
+          <div className="responsive-grid-4" style={{ gap: '24px' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Data de Início</label>
               <input
@@ -145,18 +215,25 @@ export default function CreateContractPage() {
               />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Data de Término</label>
+              <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Duração (Meses)</label>
               <input
-                type="date" className="input-dark" required
-                value={formData.end_date} onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+                type="number" className="input-dark" required min="1"
+                value={formData.duration_months} onChange={(e) => setFormData({ ...formData, duration_months: Number(e.target.value) })}
               />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Valor Mensal (R$)</label>
+              <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>1º Vencimento</label>
+              <input
+                type="date" className="input-dark" required
+                value={formData.first_due_date} onChange={(e) => setFormData({ ...formData, first_due_date: e.target.value })}
+              />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Valor Mensal</label>
               <div style={{ position: 'relative' }}>
                 <DollarSign size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
                 <input
-                  type="number" className="input-dark" style={{ paddingLeft: '40px' }} placeholder="0.00" required
+                  type="number" className="input-dark" style={{ paddingLeft: '40px' }} placeholder="0.00" required min="0" step="0.01"
                   value={formData.value} onChange={(e) => setFormData({ ...formData, value: Number(e.target.value) })}
                 />
               </div>
@@ -202,6 +279,38 @@ export default function CreateContractPage() {
           </div>
         </section>
 
+        {/* Prévia Financeira */}
+        {formData.duration_months > 0 && formData.first_due_date && (
+          <section style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--accent)' }}>
+              <DollarSign size={20} /> Prévia de Lançamentos
+            </h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px' }}>
+              {invoicePreview.map((parcel, idx) => (
+                <div key={idx} style={{ 
+                  background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)', 
+                  borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '4px' 
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', fontWeight: 600, textTransform: 'uppercase' }}>
+                      Parcela {parcel.parcelNumber}
+                    </span>
+                    <span style={{ fontSize: '0.8rem', color: '#EAB308', background: 'rgba(234, 179, 8, 0.1)', padding: '2px 8px', borderRadius: '100px' }}>
+                      Pendente
+                    </span>
+                  </div>
+                  <strong style={{ fontSize: '1.1rem', marginTop: '8px' }}>
+                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(parcel.amount)}
+                  </strong>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                    Vencimento: {new Date(parcel.dueDate + 'T12:00:00').toLocaleDateString('pt-BR')}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* Ações */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '16px', paddingTop: '24px', borderTop: '1px solid var(--border)' }}>
           <Link href="/admin/contracts" className="btn" style={{ background: 'rgba(255,255,255,0.05)' }}>
@@ -209,10 +318,52 @@ export default function CreateContractPage() {
           </Link>
           <Spotlight as="button" type="submit" className="btn btn-accent" disabled={loading}>
             {loading ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-            {loading ? 'Gerando...' : 'Gerar Contrato'}
+            {loading ? 'Gerando...' : 'Lançar Serviço e Faturas'}
           </Spotlight>
         </div>
       </form>
+
+      <AnimatePresence>
+        {isEmitModalOpen && (
+          <div style={{
+            position: 'fixed', inset: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '20px'
+          }}>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)' }}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+              className="glass-card" style={{ padding: '32px', maxWidth: '450px', width: '100%', position: 'relative', display: 'flex', flexDirection: 'column', gap: '20px', textAlign: 'center' }}
+            >
+              <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(34, 197, 94, 0.1)', color: '#22C55E', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
+                <CheckCircle2 size={32} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '8px' }}>Serviço Lançado!</h3>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                  O faturamento já foi programado. Deseja emitir o documento do contrato agora mesmo?
+                </p>
+              </div>
+              <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
+                <button
+                  className="btn btn-secondary" style={{ flex: 1 }}
+                  onClick={() => router.push('/admin/contracts')}
+                >
+                  Fazer Depois
+                </button>
+                <button
+                  className="btn btn-accent" style={{ flex: 1 }}
+                  onClick={() => router.push(`/admin/clients/${formData.client_id}?openContract=${createdContractId}`)}
+                >
+                  Emitir Contrato
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       <style jsx global>{`
         @keyframes spin-slow {

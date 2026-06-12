@@ -1,0 +1,299 @@
+"use client";
+
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { RefreshCw, Link2, CheckCircle2, AlertCircle, ChevronDown } from "lucide-react";
+import { formatCurrency } from "@/lib/format";
+import DialogShell from "@/components/DialogShell";
+import type { AsaasTransaction, ExpenseEntry, Invoice } from "@/types/database";
+
+interface AsaasSyncProps {
+  asaasTransactions: AsaasTransaction[];
+  expenseEntries: ExpenseEntry[];
+  invoices: Invoice[];
+  syncing: boolean;
+  onSync: (startDate: string, endDate: string) => Promise<{ imported: number; skipped: number } | void>;
+  onLink: (asaasId: string, expenseEntryId?: string, invoiceId?: string) => Promise<void>;
+  selectedMonth: string;
+}
+
+export function AsaasSync({
+  asaasTransactions,
+  expenseEntries,
+  invoices,
+  syncing,
+  onSync,
+  onLink,
+  selectedMonth,
+}: AsaasSyncProps) {
+  const [lastSyncResult, setLastSyncResult] = useState<{ imported: number; skipped: number } | null>(null);
+  const [linkDialog, setLinkDialog] = useState<AsaasTransaction | null>(null);
+  const [linkTarget, setLinkTarget] = useState<{ type: "expense" | "invoice"; id: string } | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [filterStatus, setFilterStatus] = useState<"all" | "linked" | "unlinked">("all");
+
+  const [year, month] = selectedMonth.split("-");
+  const startDate = `${year}-${month}-01`;
+  const lastDay = new Date(Number(year), Number(month), 0).getDate();
+  const endDate = `${year}-${month}-${String(lastDay).padStart(2, "0")}`;
+
+  async function handleSync() {
+    const result = await onSync(startDate, endDate);
+    if (result) setLastSyncResult(result as { imported: number; skipped: number });
+  }
+
+  async function handleLink() {
+    if (!linkDialog || !linkTarget) return;
+    setSaving(true);
+    try {
+      await onLink(
+        linkDialog.id,
+        linkTarget.type === "expense" ? linkTarget.id : undefined,
+        linkTarget.type === "invoice" ? linkTarget.id : undefined
+      );
+      setLinkDialog(null);
+      setLinkTarget(null);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const filtered = asaasTransactions.filter((t) => {
+    if (filterStatus === "linked") return t.expense_entry_id || t.invoice_id;
+    if (filterStatus === "unlinked") return !t.expense_entry_id && !t.invoice_id;
+    return true;
+  });
+
+  const unlinkedCount = asaasTransactions.filter((t) => !t.expense_entry_id && !t.invoice_id).length;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+      {/* Sync control */}
+      <div className="glass-card" style={{ padding: "24px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "24px", flexWrap: "wrap" }}>
+        <div>
+          <h3 style={{ fontWeight: 800, fontSize: "1.1rem", marginBottom: "6px" }}>Sincronização com Asaas</h3>
+          <p style={{ fontSize: "0.875rem", color: "var(--text-secondary)" }}>
+            Importa transações do extrato bancário do Asaas para o período selecionado. Transações já importadas são ignoradas automaticamente.
+          </p>
+          {lastSyncResult && (
+            <div style={{ marginTop: "10px", display: "flex", gap: "16px" }}>
+              <span style={{ fontSize: "0.8rem", color: "#22C55E", fontWeight: 700 }}>✓ {lastSyncResult.imported} importadas</span>
+              <span style={{ fontSize: "0.8rem", color: "var(--text-tertiary)", fontWeight: 600 }}>{lastSyncResult.skipped} já existiam</span>
+            </div>
+          )}
+        </div>
+        <button
+          className="btn btn-accent"
+          onClick={handleSync}
+          disabled={syncing}
+          style={{ display: "flex", alignItems: "center", gap: "8px", whiteSpace: "nowrap" }}
+        >
+          <RefreshCw size={16} className={syncing ? "animate-spin" : ""} />
+          {syncing ? "Sincronizando..." : `Sincronizar ${month}/${year}`}
+        </button>
+      </div>
+
+      {/* Alert for unlinked */}
+      {unlinkedCount > 0 && (
+        <div className="glass-card" style={{ padding: "14px 20px", background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.2)", display: "flex", alignItems: "center", gap: "12px" }}>
+          <AlertCircle size={18} color="#F59E0B" />
+          <p style={{ fontSize: "0.875rem", color: "#F59E0B", fontWeight: 600 }}>
+            {unlinkedCount} transação(ões) ainda não foram vinculadas a um lançamento ou fatura.
+          </p>
+        </div>
+      )}
+
+      {/* Filter */}
+      <div style={{ display: "flex", gap: "8px" }}>
+        {[
+          { value: "all", label: "Todas" },
+          { value: "unlinked", label: `Sem vínculo (${unlinkedCount})` },
+          { value: "linked", label: "Vinculadas" },
+        ].map((opt) => (
+          <button
+            key={opt.value}
+            onClick={() => setFilterStatus(opt.value as typeof filterStatus)}
+            className={`btn ${filterStatus === opt.value ? "btn-accent" : "btn-secondary"}`}
+            style={{ fontSize: "0.8rem", padding: "6px 14px" }}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Transactions list */}
+      {filtered.length === 0 ? (
+        <div className="glass-card" style={{ padding: "48px", textAlign: "center" }}>
+          <p style={{ color: "var(--text-tertiary)", fontSize: "0.9rem" }}>
+            {asaasTransactions.length === 0
+              ? "Nenhuma transação importada. Clique em Sincronizar para importar."
+              : "Nenhuma transação neste filtro."}
+          </p>
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+          {filtered.map((txn, i) => {
+            const isLinked = !!(txn.expense_entry_id || txn.invoice_id);
+            const linkedEntry = txn.expense_entry_id ? expenseEntries.find((e) => e.id === txn.expense_entry_id) : null;
+            const linkedInvoice = txn.invoice_id ? invoices.find((inv) => inv.id === txn.invoice_id) : null;
+
+            return (
+              <motion.div
+                key={txn.id}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.02 }}
+                className="glass-card"
+                style={{
+                  padding: "16px 20px",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  gap: "16px",
+                  border: isLinked ? "1px solid rgba(34,197,94,0.15)" : "1px solid var(--border)",
+                  flexWrap: "wrap",
+                }}
+              >
+                <div style={{ flex: 1, minWidth: "200px" }}>
+                  <p style={{ fontWeight: 700, fontSize: "0.925rem", marginBottom: "3px" }}>
+                    {txn.description || txn.id}
+                  </p>
+                  <p style={{ fontSize: "0.75rem", color: "var(--text-tertiary)" }}>
+                    {new Date(`${txn.date}T12:00:00`).toLocaleDateString("pt-BR")} · ID: {txn.id.slice(0, 16)}…
+                  </p>
+                  {isLinked && (
+                    <p style={{ fontSize: "0.75rem", color: "#22C55E", marginTop: "4px", display: "flex", alignItems: "center", gap: "4px" }}>
+                      <CheckCircle2 size={12} />
+                      {linkedEntry ? `Vinculado a: ${linkedEntry.description}` : linkedInvoice ? `Vinculado a: ${linkedInvoice.description}` : "Vinculado"}
+                    </p>
+                  )}
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                  <div style={{ textAlign: "right" }}>
+                    <p style={{ fontWeight: 800, fontSize: "1.05rem", color: txn.type === "CREDIT" ? "#22C55E" : "#EF4444" }}>
+                      {txn.type === "DEBIT" ? "- " : "+ "}{formatCurrency(Number(txn.value))}
+                    </p>
+                    <p style={{ fontSize: "0.75rem", color: "var(--text-tertiary)" }}>
+                      {txn.type === "CREDIT" ? "Entrada" : "Saída"}
+                    </p>
+                  </div>
+
+                  {!isLinked && (
+                    <button
+                      className="btn btn-secondary"
+                      onClick={() => { setLinkDialog(txn); setLinkTarget(null); }}
+                      style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.8rem", whiteSpace: "nowrap" }}
+                    >
+                      <Link2 size={13} /> Vincular
+                    </button>
+                  )}
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Link dialog */}
+      <DialogShell
+        isOpen={!!linkDialog}
+        onClose={() => { setLinkDialog(null); setLinkTarget(null); }}
+        title="Vincular Transação"
+        maxWidth="500px"
+        footer={
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px" }}>
+            <button className="btn btn-secondary" onClick={() => { setLinkDialog(null); setLinkTarget(null); }}>Cancelar</button>
+            <button className="btn btn-accent" onClick={handleLink} disabled={saving || !linkTarget}>
+              {saving ? "Vinculando..." : "Confirmar Vínculo"}
+            </button>
+          </div>
+        }
+      >
+        {linkDialog && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            {/* Transaction summary */}
+            <div className="glass-card" style={{ padding: "16px", background: "rgba(245,158,11,0.05)", border: "1px solid rgba(245,158,11,0.15)" }}>
+              <p style={{ fontSize: "0.75rem", color: "var(--text-secondary)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "6px" }}>Transação Asaas</p>
+              <p style={{ fontWeight: 700, marginBottom: "4px" }}>{linkDialog.description || "Sem descrição"}</p>
+              <p style={{ color: linkDialog.type === "CREDIT" ? "#22C55E" : "#EF4444", fontWeight: 800, fontSize: "1.2rem" }}>
+                {linkDialog.type === "DEBIT" ? "- " : "+ "}{formatCurrency(Number(linkDialog.value))}
+              </p>
+              <p style={{ fontSize: "0.8rem", color: "var(--text-tertiary)", marginTop: "4px" }}>
+                {new Date(`${linkDialog.date}T12:00:00`).toLocaleDateString("pt-BR")}
+              </p>
+            </div>
+
+            {/* Link to expense entry */}
+            {linkDialog.type === "DEBIT" && expenseEntries.length > 0 && (
+              <div>
+                <p style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--text-secondary)", marginBottom: "8px" }}>Vincular a lançamento de saída:</p>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px", maxHeight: "200px", overflowY: "auto" }}>
+                  {expenseEntries.filter((e) => !e.asaas_transaction_id).map((e) => (
+                    <button
+                      key={e.id}
+                      onClick={() => setLinkTarget({ type: "expense", id: e.id })}
+                      style={{
+                        padding: "10px 14px",
+                        background: linkTarget?.id === e.id ? "rgba(var(--accent-rgb),0.1)" : "rgba(255,255,255,0.02)",
+                        border: `1px solid ${linkTarget?.id === e.id ? "var(--accent)" : "var(--border)"}`,
+                        borderRadius: "10px",
+                        cursor: "pointer",
+                        textAlign: "left",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        color: "var(--text-primary)",
+                      }}
+                    >
+                      <div>
+                        <p style={{ fontSize: "0.875rem", fontWeight: 600 }}>{e.description}</p>
+                        <p style={{ fontSize: "0.75rem", color: "var(--text-tertiary)" }}>
+                          {new Date(`${e.date}T12:00:00`).toLocaleDateString("pt-BR")}
+                        </p>
+                      </div>
+                      <span style={{ fontWeight: 700, color: "#EF4444", alignSelf: "center" }}>{formatCurrency(Number(e.amount))}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Link to invoice */}
+            {linkDialog.type === "CREDIT" && invoices.length > 0 && (
+              <div>
+                <p style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--text-secondary)", marginBottom: "8px" }}>Vincular a fatura de receita:</p>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px", maxHeight: "200px", overflowY: "auto" }}>
+                  {invoices.filter((inv) => inv.status === "paid").slice(0, 20).map((inv) => (
+                    <button
+                      key={inv.id}
+                      onClick={() => setLinkTarget({ type: "invoice", id: inv.id })}
+                      style={{
+                        padding: "10px 14px",
+                        background: linkTarget?.id === inv.id ? "rgba(34,197,94,0.1)" : "rgba(255,255,255,0.02)",
+                        border: `1px solid ${linkTarget?.id === inv.id ? "#22C55E" : "var(--border)"}`,
+                        borderRadius: "10px",
+                        cursor: "pointer",
+                        textAlign: "left",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        color: "var(--text-primary)",
+                      }}
+                    >
+                      <div>
+                        <p style={{ fontSize: "0.875rem", fontWeight: 600 }}>{inv.description}</p>
+                        <p style={{ fontSize: "0.75rem", color: "var(--text-tertiary)" }}>
+                          {new Date(`${inv.due_date}T12:00:00`).toLocaleDateString("pt-BR")}
+                        </p>
+                      </div>
+                      <span style={{ fontWeight: 700, color: "#22C55E", alignSelf: "center" }}>{formatCurrency(Number(inv.amount))}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </DialogShell>
+    </div>
+  );
+}

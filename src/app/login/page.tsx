@@ -23,34 +23,52 @@ export default function LoginPage() {
     setError("");
 
     try {
-      // 1. Find email by username
-      const cleanUsername = username.replace('@', '').toLowerCase();
+      // 1. Determine if input is email or username
+      let loginEmail = username.trim();
 
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('email')
-        .eq('username', cleanUsername)
-        .single();
+      if (!loginEmail.includes('@') || loginEmail.startsWith('@')) {
+        // É um username
+        const cleanUsername = loginEmail.replace('@', '').toLowerCase();
 
-      if (userError || !userData) {
-        throw new Error("Usuário não encontrado.");
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('email')
+          .eq('username', cleanUsername)
+          .single();
+
+        if (userError || !userData) {
+          throw new Error("Usuário não encontrado.");
+        }
+        loginEmail = userData.email;
       }
 
       // 2. Authenticate with Supabase Auth using the resolved email
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email: userData.email,
+        email: loginEmail,
         password: password,
       });
 
       if (authError) {
         if (authError.message === 'Invalid login credentials') {
-          throw new Error("Senha incorreta ou usuário não autorizado.");
+          throw new Error("Senha incorreta ou credenciais inválidas.");
         }
         throw new Error(authError.message);
       }
 
-      // 3. Redirect to dashboard on success
-      router.push("/admin/dashboard");
+      // 3. Verifica qual o tipo de usuário para redirecionar corretamente
+      const { data: staffData } = await supabase
+        .from('users')
+        .select('id')
+        .eq('id', authData.user?.id)
+        .single();
+
+      if (staffData) {
+        // É membro da equipe
+        router.push("/admin/dashboard");
+      } else {
+        // É cliente
+        router.push("/client/dashboard");
+      }
 
     } catch (err: any) {
       setError(err.message || "Erro ao realizar o login. Tente novamente.");
@@ -98,12 +116,12 @@ export default function LoginPage() {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <User size={14} /> Usuário
+                <User size={14} /> Usuário ou E-mail
               </label>
               <input
                 type="text"
                 className="input-dark"
-                placeholder="@seunome"
+                placeholder="@seunome ou seu@email.com"
                 required
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}

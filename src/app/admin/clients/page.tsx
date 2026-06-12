@@ -173,16 +173,24 @@ export default function ClientsPage() {
                         style={{ cursor: 'pointer', position: 'relative' }}
                       >
                         <td style={{ paddingLeft: '24px' }}>
-                          <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <p style={{ fontWeight: 600, fontSize: '0.95rem', color: 'white' }}>
-                              {client.nome_fantasia || client.name}
-                            </p>
-                            <span style={{
-                              fontFamily: 'monospace', fontSize: '0.75rem', fontWeight: 600, color: 'var(--accent)',
-                              opacity: 0.8
-                            }}>
-                              ID: #{String(client.sequential_id || idx + 1).padStart(3, '0')}
-                            </span>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <p style={{ fontWeight: 600, fontSize: '0.95rem', color: 'white' }}>
+                                {client.nome_fantasia || client.name}
+                              </p>
+                              <span style={{
+                                fontFamily: 'monospace', fontSize: '0.7rem', fontWeight: 600, color: 'var(--accent)',
+                                background: 'rgba(217, 72, 15, 0.05)', padding: '2px 6px', borderRadius: '4px', border: '1px solid rgba(217, 72, 15, 0.1)',
+                                flexShrink: 0
+                              }}>
+                                #{String(client.sequential_id || idx + 1).padStart(3, '0')}
+                              </span>
+                            </div>
+                            {client.nome_fantasia && client.name && (
+                              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '250px' }}>
+                                {client.name}
+                              </span>
+                            )}
                           </div>
                         </td>
                         <td>
@@ -249,14 +257,21 @@ export default function ClientsPage() {
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ fontWeight: 600, fontSize: '0.95rem', marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {client.nome_fantasia || client.name}
-                        </p>
-                        <span style={{
-                          fontFamily: 'monospace', fontSize: '0.7rem', fontWeight: 600, color: 'var(--accent)', opacity: 0.8
-                        }}>
-                          #{String(client.sequential_id || idx + 1).padStart(3, '0')}
-                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                          <p style={{ fontWeight: 600, fontSize: '0.95rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', margin: 0 }}>
+                            {client.nome_fantasia || client.name}
+                          </p>
+                          <span style={{
+                            fontFamily: 'monospace', fontSize: '0.7rem', fontWeight: 600, color: 'var(--accent)', opacity: 0.8
+                          }}>
+                            #{String(client.sequential_id || idx + 1).padStart(3, '0')}
+                          </span>
+                        </div>
+                        {client.nome_fantasia && client.name && (
+                          <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: '2px 0 0 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {client.name}
+                          </p>
+                        )}
                       </div>
                       <span className={`badge ${client.status === 'active' ? 'badge-success' :
                         client.status === 'prospect' ? 'badge-warning' : 'badge-danger'

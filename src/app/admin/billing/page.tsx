@@ -20,27 +20,28 @@ export default function BillingPage() {
     end: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0]
   });
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        setLoading(true);
-        const [invoicesRes, clientsRes, contractsRes, servicesRes] = await Promise.all([
-          supabase.from('invoices').select('*'),
-          supabase.from('clients').select('*'),
-          supabase.from('contracts').select('*'),
-          supabase.from('services').select('*')
-        ]);
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const [invoicesRes, clientsRes, contractsRes, servicesRes] = await Promise.all([
+        supabase.from('invoices').select('*'),
+        supabase.from('clients').select('*'),
+        supabase.from('contracts').select('*'),
+        supabase.from('services').select('*')
+      ]);
 
-        if (invoicesRes.data) setInvoices(invoicesRes.data);
-        if (clientsRes.data) setClients(clientsRes.data);
-        if (contractsRes.data) setContracts(contractsRes.data);
-        if (servicesRes.data) setServices(servicesRes.data);
-      } catch (err) {
-        console.error("Erro ao buscar dados financeiros:", err);
-      } finally {
-        setLoading(false);
-      }
+      if (invoicesRes.data) setInvoices(invoicesRes.data);
+      if (clientsRes.data) setClients(clientsRes.data);
+      if (contractsRes.data) setContracts(contractsRes.data);
+      if (servicesRes.data) setServices(servicesRes.data);
+    } catch (err) {
+      console.error("Erro ao buscar dados financeiros:", err);
+    } finally {
+      setLoading(false);
     }
+  };
+
+  useEffect(() => {
     fetchData();
   }, []);
 
@@ -196,7 +197,7 @@ export default function BillingPage() {
           <FinancialOverview invoices={metrics.rangeInvoices} contracts={contracts} />
         )}
         {activeTab === 'recebimentos' && (
-          <InvoicesList invoices={metrics.rangeInvoices} clients={clients} />
+          <InvoicesList invoices={metrics.rangeInvoices} clients={clients} onRefresh={fetchData} />
         )}
         {activeTab === 'recorrencia' && (
           <RecurringRevenue contracts={contracts} clients={clients} services={services} />

@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import {
@@ -17,6 +17,7 @@ import {
   Clock,
   ClipboardList,
   CheckCircle2,
+  FileCheck,
   AlertCircle,
   Eye,
   EyeOff,
@@ -47,6 +48,7 @@ import {
   Loader2
 } from "lucide-react";
 import Spotlight from "@/components/Spotlight";
+import DialogShell from "@/components/DialogShell";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/components/CustomToast";
 import {
@@ -56,6 +58,7 @@ import {
   TikTokIcon,
   GoogleIcon
 } from "@/components/SocialIcons";
+import ContractDetailsModal from "@/components/admin/contracts/ContractDetailsModal";
 
 
 const TABS = [
@@ -73,13 +76,42 @@ const TABS = [
 export default function ClientDetailPage() {
   const { id } = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
   const [dateRange, setDateRange] = useState({
-    start: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
-    end: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0]
+    start: "",
+    end: ""
   });
+  const [datePreset, setDatePreset] = useState<'all' | 'this_month' | 'prev_month' | 'next_month' | 'custom'>('all');
+
+  const handlePresetChange = (preset: 'all' | 'this_month' | 'prev_month' | 'next_month' | 'custom') => {
+    setDatePreset(preset);
+    if (preset !== 'custom') {
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = now.getMonth();
+      if (preset === 'all') {
+        setDateRange({ start: "", end: "" });
+      } else if (preset === 'this_month') {
+        setDateRange({
+          start: new Date(y, m, 1).toISOString().split('T')[0],
+          end: new Date(y, m + 1, 0).toISOString().split('T')[0]
+        });
+      } else if (preset === 'prev_month') {
+        setDateRange({
+          start: new Date(y, m - 1, 1).toISOString().split('T')[0],
+          end: new Date(y, m, 0).toISOString().split('T')[0]
+        });
+      } else if (preset === 'next_month') {
+        setDateRange({
+          start: new Date(y, m + 1, 1).toISOString().split('T')[0],
+          end: new Date(y, m + 2, 0).toISOString().split('T')[0]
+        });
+      }
+    }
+  };
 
   const [clientData, setClientData] = useState<any>(null);
   const [localDemands, setLocalDemands] = useState<any[]>([]);
@@ -95,10 +127,13 @@ export default function ClientDetailPage() {
   const [loading, setLoading] = useState(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [selectedContractForModal, setSelectedContractForModal] = useState<any | null>(null);
+  const [isContractModalOpen, setIsContractModalOpen] = useState(false);
   const [contractToDelete, setContractToDelete] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [editFormData, setEditFormData] = useState<any>(null);
+  const [editTab, setEditTab] = useState<'geral' | 'contato' | 'acesso' | 'redes'>('geral');
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
   const [linkFormData, setLinkFormData] = useState({ title: '', url: '' });
   const [isSavingLink, setIsSavingLink] = useState(false);
@@ -157,16 +192,61 @@ export default function ClientDetailPage() {
         supabase.from('client_documents').select('*').eq('client_id', id).order('created_at', { ascending: false })
       ]);
 
+      let finalClientStatus = client.status;
       if (demandsRes.data) setLocalDemands(demandsRes.data);
-      if (contractsRes.data) setClientContracts(contractsRes.data);
+      if (contractsRes.data) {
+        setClientContracts(contractsRes.data);
+        
+        // Se o cliente for prospect e possuir um contrato ativo, altera para active
+        if (client.status === 'prospect' && contractsRes.data.some((c: any) => c.status === 'active')) {
+          await supabase
+            .from('clients')
+            .update({ status: 'active' })
+            .eq('id', id);
+          finalClientStatus = 'active';
+        }
+      }
+      
+      setClientData({ ...client, status: finalClientStatus });
       if (invoicesRes.data) setClientInvoices(invoicesRes.data);
       if (eventsRes.data) setClientEvents(eventsRes.data);
       if (docsRes.data) setClientDocuments(docsRes.data);
+
+      const openContractId = searchParams.get('openContract');
+      if (openContractId && contractsRes.data) {
+        const cToOpen = contractsRes.data.find(c => c.id === openContractId);
+        if (cToOpen) {
+          setActiveTab('contracts');
+          setSelectedContractForModal(cToOpen);
+          setIsContractModalOpen(true);
+          // Optional: clear the query param so it doesn't reopen on refresh
+          window.history.replaceState(null, '', `/admin/clients/${id}?tab=contracts`);
+        }
+      } else if (searchParams.get('tab')) {
+        setActiveTab(searchParams.get('tab') as string);
+      }
 
     } catch (error) {
       console.error("Erro ao buscar detalhes do cliente:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const toggleClientStatus = async () => {
+    if (!clientData) return;
+    const newStatus = clientData.status === 'active' ? 'prospect' : 'active';
+    try {
+      const { error } = await supabase
+        .from('clients')
+        .update({ status: newStatus })
+        .eq('id', id);
+      if (error) throw error;
+      setClientData({ ...clientData, status: newStatus });
+      showToast(`Status alterado para ${newStatus === 'active' ? 'Ativo' : 'Prospect'}!`, 'success');
+    } catch (err) {
+      console.error(err);
+      showToast("Erro ao alternar status do cliente", "error");
     }
   };
 
@@ -215,7 +295,10 @@ export default function ClientDetailPage() {
 
   const getFinanceMetrics = () => {
     const rangeInvoices = clientInvoices.filter(i => {
-      return i.due_date >= dateRange.start && i.due_date <= dateRange.end;
+      const d = i.due_date.split('T')[0];
+      const startMatch = !dateRange.start || d >= dateRange.start;
+      const endMatch = !dateRange.end || d <= dateRange.end;
+      return startMatch && endMatch;
     });
 
     const mrr = rangeInvoices
@@ -280,6 +363,7 @@ export default function ClientDetailPage() {
 
   const handleOpenEdit = () => {
     setEditFormData({ ...clientData });
+    setEditTab('geral');
     setIsEditModalOpen(true);
   };
 
@@ -599,23 +683,32 @@ export default function ClientDetailPage() {
     }
   };
 
+  if (loading || !clientData) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: '400px' }}>
+        <Loader2 className="spinner" size={32} color="var(--accent)" />
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* Header */}
-      <div className="mobile-stack" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-        <motion.button
-          whileHover={{ x: -4 }}
-          onClick={() => router.back()}
-          style={{
-            width: '40px', height: '40px', borderRadius: '12px',
-            backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)'
-          }}
-        >
-          <ArrowLeft size={20} />
-        </motion.button>
-        <div>
+      <div className="mobile-stack" style={{ display: 'flex', alignItems: 'center', gap: '16px', width: '100%' }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <motion.button
+              whileHover={{ x: -4 }}
+              onClick={() => router.back()}
+              style={{
+                width: '36px', height: '36px', borderRadius: '10px',
+                backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)',
+                flexShrink: 0
+              }}
+            >
+              <ArrowLeft size={18} />
+            </motion.button>
             <h1
               title={clientData.nome_fantasia || clientData.name}
               className="hover-text-accent"
@@ -630,7 +723,12 @@ export default function ClientDetailPage() {
             >
               {clientData.nome_fantasia || clientData.name}
             </h1>
-            <span className={`badge ${clientData.status === 'active' ? 'badge-success' : 'badge-warning'}`}>
+            <span 
+              onClick={toggleClientStatus}
+              className={`badge ${clientData.status === 'active' ? 'badge-success' : 'badge-warning'}`}
+              style={{ cursor: 'pointer', userSelect: 'none' }}
+              title="Clique para alternar o status do cliente"
+            >
               {clientData.status === 'active' ? 'Ativo' : 'Prospect'}
             </span>
             <span style={{
@@ -871,29 +969,64 @@ export default function ClientDetailPage() {
                   <h3 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <CreditCard size={18} color="var(--accent)" /> Visão Financeira do Período
                   </h3>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '20px' }}>
-                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: '10px 16px', borderRadius: '16px', border: '1px solid var(--border)' }}>
-                      <Calendar size={16} color="var(--accent)" style={{ marginRight: '4px', opacity: 0.7 }} />
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
-                        <span style={{ fontSize: '0.55rem', color: 'var(--text-tertiary)', fontWeight: 800, textTransform: 'uppercase' }}>Início</span>
-                        <input
-                          type="date" className="input-dark"
-                          style={{ border: 'none', background: 'transparent', padding: 0, fontSize: '0.8rem', width: '100px', fontWeight: 600 }}
-                          value={dateRange.start}
-                          onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
-                        />
-                      </div>
-                      <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)', margin: '0 8px' }} />
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
-                        <span style={{ fontSize: '0.55rem', color: 'var(--text-tertiary)', fontWeight: 800, textTransform: 'uppercase' }}>Fim</span>
-                        <input
-                          type="date" className="input-dark"
-                          style={{ border: 'none', background: 'transparent', padding: 0, fontSize: '0.8rem', width: '100px', fontWeight: 600 }}
-                          value={dateRange.end}
-                          onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
-                        />
-                      </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                      {[
+                        { id: 'all', label: 'Tudo' },
+                        { id: 'this_month', label: 'Este Mês' },
+                        { id: 'prev_month', label: 'Mês Anterior' },
+                        { id: 'next_month', label: 'Próximo Mês' },
+                        { id: 'custom', label: 'Personalizado' }
+                      ].map((preset) => (
+                        <button
+                          key={preset.id}
+                          onClick={() => handlePresetChange(preset.id as any)}
+                          style={{
+                            padding: '6px 12px',
+                            borderRadius: '10px',
+                            fontSize: '0.75rem',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            border: datePreset === preset.id ? '1px solid var(--accent)' : '1px solid var(--border)',
+                            background: datePreset === preset.id ? 'rgba(217, 72, 15, 0.15)' : 'rgba(255,255,255,0.02)',
+                            color: datePreset === preset.id ? 'var(--accent)' : 'var(--text-secondary)'
+                          }}
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
                     </div>
+                    {(datePreset === 'custom' || dateRange.start || dateRange.end) && (
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: '10px 16px', borderRadius: '16px', border: '1px solid var(--border)' }}>
+                        <Calendar size={16} color="var(--accent)" style={{ marginRight: '4px', opacity: 0.7 }} />
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
+                          <span style={{ fontSize: '0.55rem', color: 'var(--text-tertiary)', fontWeight: 800, textTransform: 'uppercase' }}>Início</span>
+                          <input
+                            type="date" className="input-dark"
+                            style={{ border: 'none', background: 'transparent', padding: 0, fontSize: '0.8rem', width: '100px', fontWeight: 600 }}
+                            value={dateRange.start}
+                            onChange={(e) => {
+                              setDateRange({ ...dateRange, start: e.target.value });
+                              setDatePreset('custom');
+                            }}
+                          />
+                        </div>
+                        <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)', margin: '0 8px' }} />
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
+                          <span style={{ fontSize: '0.55rem', color: 'var(--text-tertiary)', fontWeight: 800, textTransform: 'uppercase' }}>Fim</span>
+                          <input
+                            type="date" className="input-dark"
+                            style={{ border: 'none', background: 'transparent', padding: 0, fontSize: '0.8rem', width: '100px', fontWeight: 600 }}
+                            value={dateRange.end}
+                            onChange={(e) => {
+                              setDateRange({ ...dateRange, end: e.target.value });
+                              setDatePreset('custom');
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
                     <div style={{ padding: '20px', background: 'rgba(34, 197, 94, 0.05)', borderRadius: '16px', border: '1px solid rgba(34, 197, 94, 0.1)' }}>
@@ -1079,7 +1212,7 @@ export default function ClientDetailPage() {
               exit={{ opacity: 0, y: -10 }}
               style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}
             >
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', gap: '24px' }}>
+              <div className="responsive-grid-sidebar" style={{ gap: '24px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                   {clientData.briefing_completed ? (
                     <Spotlight className="glass-card" style={{ padding: '24px' }}>
@@ -1379,7 +1512,7 @@ export default function ClientDetailPage() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '24px' }}
+              style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(350px, 100%), 1fr))', gap: '24px' }}
             >
               {/* Portal Access Card */}
               <Spotlight className="glass-card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px', border: '1px solid var(--accent)' }}>
@@ -1579,13 +1712,67 @@ export default function ClientDetailPage() {
                         <td>{formatDate(contract.end_date)}</td>
                         <td style={{ fontWeight: 600 }}>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(contract.value)}</td>
                         <td>
-                          <span className={`badge ${contract.status === 'active' ? 'badge-success' : 'badge-warning'}`}>
-                            {contract.status === 'active' ? 'Ativo' : 'Expirando'}
-                          </span>
+                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                            <span className={`badge ${contract.status === 'active' ? 'badge-success' : 'badge-warning'}`} style={{ width: 'fit-content', whiteSpace: 'nowrap' }}>
+                              {contract.status === 'active' ? 'Ativo' : 'Expirando'}
+                            </span>
+                            <span 
+                              className="badge"
+                              style={{ 
+                                width: 'fit-content',
+                                whiteSpace: 'nowrap',
+                                backgroundColor: 
+                                  contract.document_status === 'signed' ? 'rgba(34, 197, 94, 0.1)' : 
+                                  contract.document_status === 'sent' ? 'rgba(59, 130, 246, 0.1)' : 
+                                  contract.document_status === 'generated' ? 'rgba(168, 85, 247, 0.1)' : 
+                                  'rgba(255, 255, 255, 0.05)',
+                                color: 
+                                  contract.document_status === 'signed' ? '#22C55E' : 
+                                  contract.document_status === 'sent' ? '#3B82F6' : 
+                                  contract.document_status === 'generated' ? '#A855F7' : 
+                                  'var(--text-secondary)'
+                              }}
+                            >
+                              {contract.document_status === 'signed' ? 'Assinado' : 
+                               contract.document_status === 'sent' ? 'Enviado' : 
+                               contract.document_status === 'generated' ? 'Emitido' : 
+                               'Doc. Pendente'}
+                            </span>
+                          </div>
                         </td>
                         <td style={{ paddingRight: '24px', textAlign: 'right' }}>
-                          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                            <button style={{ color: 'var(--text-secondary)' }}><ExternalLink size={16} /></button>
+                          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', alignItems: 'center' }}>
+                            {contract.signed_document_url && (
+                              <a 
+                                href={contract.signed_document_url} 
+                                target="_blank" 
+                                rel="noreferrer"
+                                style={{ color: '#22C55E', display: 'flex', alignItems: 'center' }}
+                                title="Ver PDF Assinado"
+                              >
+                                <FileCheck size={16} />
+                              </a>
+                            )}
+                            <button 
+                              style={{ color: 'var(--text-secondary)' }}
+                              onClick={() => {
+                                setSelectedContractForModal(contract);
+                                setIsContractModalOpen(true);
+                              }}
+                              title="Gerenciar Documento / Detalhes"
+                            >
+                              <FileText size={16} />
+                            </button>
+                            <button 
+                              style={{ color: 'var(--text-secondary)' }}
+                              onClick={() => {
+                                setSelectedContractForModal(contract);
+                                setIsContractModalOpen(true);
+                              }}
+                              title="Visualizar Detalhes"
+                            >
+                              <ExternalLink size={16} />
+                            </button>
                             <button
                               style={{ color: '#EF4444' }}
                               onClick={() => setContractToDelete(contract.id)}
@@ -1612,28 +1799,65 @@ export default function ClientDetailPage() {
               style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}
             >
               {/* Filtros Financeiros */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: '10px 20px', borderRadius: '16px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-glow)' }}>
-                  <Calendar size={18} color="var(--accent)" style={{ marginRight: '8px', opacity: 0.8 }} />
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
-                    <span style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Período Inicial</span>
-                    <input
-                      type="date" className="input-dark"
-                      style={{ border: 'none', background: 'transparent', padding: 0, fontSize: '0.85rem', width: '110px', fontWeight: 600 }}
-                      value={dateRange.start}
-                      onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
-                    />
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                    {[
+                      { id: 'all', label: 'Tudo' },
+                      { id: 'this_month', label: 'Este Mês' },
+                      { id: 'prev_month', label: 'Mês Anterior' },
+                      { id: 'next_month', label: 'Próximo Mês' },
+                      { id: 'custom', label: 'Personalizado' }
+                    ].map((preset) => (
+                      <button
+                        key={preset.id}
+                        onClick={() => handlePresetChange(preset.id as any)}
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: '10px',
+                          fontSize: '0.75rem',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                          border: datePreset === preset.id ? '1px solid var(--accent)' : '1px solid var(--border)',
+                          background: datePreset === preset.id ? 'rgba(217, 72, 15, 0.15)' : 'rgba(255,255,255,0.02)',
+                          color: datePreset === preset.id ? 'var(--accent)' : 'var(--text-secondary)'
+                        }}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
                   </div>
-                  <div style={{ width: '1px', height: '28px', background: 'rgba(255,255,255,0.1)', margin: '0 8px' }} />
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
-                    <span style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Período Final</span>
-                    <input
-                      type="date" className="input-dark"
-                      style={{ border: 'none', background: 'transparent', padding: 0, fontSize: '0.85rem', width: '110px', fontWeight: 600 }}
-                      value={dateRange.end}
-                      onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
-                    />
-                  </div>
+                  {(datePreset === 'custom' || dateRange.start || dateRange.end) && (
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: '10px 20px', borderRadius: '16px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-glow)', width: 'fit-content' }}>
+                      <Calendar size={18} color="var(--accent)" style={{ marginRight: '8px', opacity: 0.8 }} />
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
+                        <span style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Período Inicial</span>
+                        <input
+                          type="date" className="input-dark"
+                          style={{ border: 'none', background: 'transparent', padding: 0, fontSize: '0.85rem', width: '110px', fontWeight: 600 }}
+                          value={dateRange.start}
+                          onChange={(e) => {
+                            setDateRange({ ...dateRange, start: e.target.value });
+                            setDatePreset('custom');
+                          }}
+                        />
+                      </div>
+                      <div style={{ width: '1px', height: '28px', background: 'rgba(255,255,255,0.1)', margin: '0 8px' }} />
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
+                        <span style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Período Final</span>
+                        <input
+                          type="date" className="input-dark"
+                          style={{ border: 'none', background: 'transparent', padding: 0, fontSize: '0.85rem', width: '110px', fontWeight: 600 }}
+                          value={dateRange.end}
+                          onChange={(e) => {
+                            setDateRange({ ...dateRange, end: e.target.value });
+                            setDatePreset('custom');
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
                   Exibindo {getFinanceMetrics().count} faturas encontradas
@@ -1984,28 +2208,22 @@ export default function ClientDetailPage() {
       </div>
 
       {/* Action Modal (Nova Ação) */}
-      <AnimatePresence>
-        {isActionModalOpen && (
-          <div style={{
-            position: 'fixed', inset: 0, zIndex: 110,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: '24px', backgroundColor: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)'
-          }}>
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="glass-card"
-              style={{ width: '100%', maxWidth: '800px', maxHeight: '90vh', overflowY: 'auto', padding: '32px' }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '28px' }}>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: 700 }}>Nova Ação / Serviço</h2>
-                <button onClick={() => setIsActionModalOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
-                  <X size={24} />
-                </button>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '32px' }}>
+      <DialogShell
+        isOpen={isActionModalOpen}
+        onClose={() => setIsActionModalOpen(false)}
+        title="Nova Ação / Serviço"
+        maxWidth="860px"
+        zIndex={110}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+            <button className="btn btn-secondary" onClick={() => setIsActionModalOpen(false)} style={{ padding: '8px 18px', fontSize: '0.875rem' }}>Cancelar</button>
+            <button className="btn btn-accent" onClick={handleCreateAction} disabled={isSaving} style={{ padding: '8px 18px', fontSize: '0.875rem' }}>
+              {isSaving ? 'Salvando...' : 'Confirmar e Ativar'}
+            </button>
+          </div>
+        }
+      >
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '32px' }}>
                 {/* Coluna da Esquerda: Configurações Básicas */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -2213,173 +2431,188 @@ export default function ClientDetailPage() {
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                      <button className="btn btn-secondary" onClick={() => setIsActionModalOpen(false)}>Cancelar</button>
-                      <button className="btn btn-accent" onClick={handleCreateAction} disabled={isSaving}>
-                        {isSaving ? 'Salvando...' : 'Confirmar e Ativar'}
-                      </button>
-                    </div>
                   </div>
                 </div>
               </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      </DialogShell>
 
       {/* Edit Modal */}
-      <AnimatePresence>
-        {isEditModalOpen && (
-          <div style={{
-            position: 'fixed', inset: 0, zIndex: 100,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: '24px', backgroundColor: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)'
-          }}>
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="glass-card"
-              style={{ width: '100%', maxWidth: '850px', maxHeight: '90vh', overflowY: 'auto', padding: '32px' }}
+      <DialogShell
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        title="Editar Cliente"
+        maxWidth="720px"
+        zIndex={100}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+            <button
+              className="btn btn-secondary"
+              onClick={() => setIsEditModalOpen(false)}
+              style={{ padding: '8px 18px', fontSize: '0.875rem' }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: 700 }}>Editar Cliente</h2>
-                <button onClick={() => setIsEditModalOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
-                  <X size={24} />
+              Cancelar
+            </button>
+            <Spotlight
+              as="button"
+              className="btn btn-accent"
+              onClick={handleSaveEdit}
+              disabled={isSaving}
+              style={{ padding: '8px 18px', fontSize: '0.875rem' }}
+            >
+              {isSaving ? "Salvando..." : "Salvar Alterações"}
+            </Spotlight>
+          </div>
+        }
+      >
+        {editFormData && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+            {/* Tab navigation */}
+            <div style={{ display: 'flex', gap: '6px', marginBottom: '24px', flexWrap: 'wrap' }}>
+              {([
+                { id: 'geral', label: 'Geral' },
+                { id: 'contato', label: 'Contato' },
+                { id: 'acesso', label: 'Portal' },
+                { id: 'redes', label: 'Redes Sociais' },
+              ] as const).map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setEditTab(tab.id)}
+                  style={{
+                    padding: '6px 16px',
+                    borderRadius: '20px',
+                    fontSize: '0.8rem',
+                    fontWeight: 600,
+                    background: editTab === tab.id ? 'var(--accent)' : 'rgba(255,255,255,0.06)',
+                    color: editTab === tab.id ? '#fff' : 'var(--text-secondary)',
+                    border: '1px solid',
+                    borderColor: editTab === tab.id ? 'var(--accent)' : 'var(--border)',
+                    cursor: 'pointer',
+                    transition: 'all 0.18s',
+                  }}
+                >
+                  {tab.label}
                 </button>
-              </div>
+              ))}
+            </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '40px' }}>
-                {/* Informações Cadastrais */}
-                <section style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                  <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--accent)', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '12px' }}>
-                    Informações Gerais
-                  </h3>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Nome Fantasia</label>
-                      <input type="text" className="input-dark" value={editFormData.nome_fantasia || ''} onChange={(e) => setEditFormData({ ...editFormData, nome_fantasia: e.target.value })} />
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Razão Social</label>
-                      <input type="text" className="input-dark" value={editFormData.name || ''} onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })} />
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>CNPJ / CPF</label>
-                      <input type="text" className="input-dark" value={editFormData.cnpj || ''} onChange={(e) => setEditFormData({ ...editFormData, cnpj: e.target.value })} />
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Setor / Nicho</label>
-                      <input type="text" className="input-dark" value={editFormData.setor || ''} onChange={(e) => setEditFormData({ ...editFormData, setor: e.target.value })} />
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Contato Principal</label>
-                      <input type="text" className="input-dark" value={editFormData.contact_name || ''} onChange={(e) => setEditFormData({ ...editFormData, contact_name: e.target.value })} />
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Serviço de Interesse</label>
-                      <select
-                        className="input-dark"
-                        value={editFormData.servico_interesse || ''}
-                        onChange={(e) => setEditFormData({ ...editFormData, servico_interesse: e.target.value })}
-                      >
-                        <option value="">Selecione um serviço</option>
-                        {availableServices.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
-                      </select>
-                    </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                      <label style={{ fontSize: "0.875rem", color: "var(--text-secondary)" }}>Data de Onboarding</label>
-                      <input type="date" className="input-dark" value={editFormData.onboarding_date || ""} onChange={(e) => setEditFormData({ ...editFormData, onboarding_date: e.target.value })} />
-                    </div>
-                  </div>
-                </section>
-
-                {/* Contato e Financeiro */}
-                <section style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                  <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--accent)', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '12px' }}>
-                    Contato e Financeiro
-                  </h3>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>WhatsApp / Celular</label>
-                      <input type="text" className="input-dark" value={editFormData.phone || ''} onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })} />
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>E-mail Principal</label>
-                      <input type="email" className="input-dark" value={editFormData.email || ''} onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })} />
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>E-mail Financeiro</label>
-                      <input type="email" className="input-dark" value={editFormData.email_financeiro || ''} onChange={(e) => setEditFormData({ ...editFormData, email_financeiro: e.target.value })} />
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Telefone Fixo</label>
-                      <input type="text" className="input-dark" value={editFormData.telefone_fixo || ''} onChange={(e) => setEditFormData({ ...editFormData, telefone_fixo: e.target.value })} />
-                    </div>
-                  </div>
-                </section>
-
-                {/* Redes Sociais e Acesso */}
-                <section style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                    <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--accent)', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '12px' }}>
-                      Acesso ao Portal
-                    </h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>E-mail de Login</label>
-                        <input type="email" className="input-dark" value={editFormData.portal_email || ''} onChange={(e) => setEditFormData({ ...editFormData, portal_email: e.target.value })} />
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Senha do Portal</label>
-                        <input type="text" className="input-dark" value={editFormData.portal_password || ''} onChange={(e) => setEditFormData({ ...editFormData, portal_password: e.target.value })} />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                    <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--accent)', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '12px' }}>
-                      Redes Sociais
-                    </h3>
-                    {['instagram', 'facebook', 'google', 'linkedin', 'tiktok'].map(social => {
-                      const Icon = social === 'instagram' ? InstagramIcon :
-                        social === 'facebook' ? FacebookIcon :
-                          social === 'linkedin' ? LinkedInIcon :
-                            social === 'tiktok' ? TikTokIcon :
-                              GoogleIcon;
-
-                      const color = social === 'instagram' ? '#E1306C' :
-                        social === 'facebook' ? '#1877F2' :
-                          social === 'linkedin' ? '#0A66C2' :
-                            social === 'tiktok' ? '#FFF' :
-                              '#EA4335';
-
-                      return (
-                        <div key={social} style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '16px', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid var(--border)' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <Icon size={16} style={{ color }} />
-                            <p style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-secondary)' }}>{social.replace('_', ' ')}</p>
-                          </div>
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                            <input placeholder="Usuário" type="text" className="input-dark" value={editFormData.social_access?.[social]?.usuario || ''} onChange={(e) => setEditFormData({ ...editFormData, social_access: { ...editFormData.social_access, [social]: { ...editFormData.social_access?.[social], usuario: e.target.value, ativo: !!e.target.value } } })} />
-                            <input placeholder="Senha" type="text" className="input-dark" value={editFormData.social_access?.[social]?.senha || ''} onChange={(e) => setEditFormData({ ...editFormData, social_access: { ...editFormData.social_access, [social]: { ...editFormData.social_access?.[social], senha: e.target.value } } })} />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </section>
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '16px', borderTop: '1px solid var(--border)', paddingTop: '24px' }}>
-                  <button className="btn btn-secondary" onClick={() => setIsEditModalOpen(false)}>Cancelar</button>
-                  <Spotlight as="button" className="btn btn-accent" onClick={handleSaveEdit} disabled={isSaving}>
-                    {isSaving ? "Salvando..." : "Salvar Alterações"}
-                  </Spotlight>
+            {/* Aba: Geral */}
+            {editTab === 'geral' && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '18px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Nome Fantasia</label>
+                  <input type="text" className="input-dark" value={editFormData.nome_fantasia || ''} onChange={(e) => setEditFormData({ ...editFormData, nome_fantasia: e.target.value })} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Razão Social</label>
+                  <input type="text" className="input-dark" value={editFormData.name || ''} onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>CNPJ / CPF</label>
+                  <input type="text" className="input-dark" value={editFormData.cnpj || ''} onChange={(e) => setEditFormData({ ...editFormData, cnpj: e.target.value })} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Setor / Nicho</label>
+                  <input type="text" className="input-dark" value={editFormData.setor || ''} onChange={(e) => setEditFormData({ ...editFormData, setor: e.target.value })} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Contato Principal</label>
+                  <input type="text" className="input-dark" value={editFormData.contact_name || ''} onChange={(e) => setEditFormData({ ...editFormData, contact_name: e.target.value })} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Serviço de Interesse</label>
+                  <select
+                    className="input-dark"
+                    value={editFormData.servico_interesse || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, servico_interesse: e.target.value })}
+                  >
+                    <option value="">Selecione um serviço</option>
+                    {availableServices.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+                  </select>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Data de Onboarding</label>
+                  <input type="date" className="input-dark" value={editFormData.onboarding_date || ''} onChange={(e) => setEditFormData({ ...editFormData, onboarding_date: e.target.value })} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Status</label>
+                  <select
+                    className="input-dark"
+                    value={editFormData.status || 'active'}
+                    onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value })}
+                  >
+                    <option value="active">Ativo</option>
+                    <option value="prospect">Prospect</option>
+                    <option value="inactive">Inativo</option>
+                  </select>
                 </div>
               </div>
-            </motion.div>
+            )}
+
+            {/* Aba: Contato */}
+            {editTab === 'contato' && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '18px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>WhatsApp / Celular</label>
+                  <input type="text" className="input-dark" value={editFormData.phone || ''} onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Telefone Fixo</label>
+                  <input type="text" className="input-dark" value={editFormData.telefone_fixo || ''} onChange={(e) => setEditFormData({ ...editFormData, telefone_fixo: e.target.value })} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>E-mail Principal</label>
+                  <input type="email" className="input-dark" value={editFormData.email || ''} onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>E-mail Financeiro</label>
+                  <input type="email" className="input-dark" value={editFormData.email_financeiro || ''} onChange={(e) => setEditFormData({ ...editFormData, email_financeiro: e.target.value })} />
+                </div>
+              </div>
+            )}
+
+            {/* Aba: Portal */}
+            {editTab === 'acesso' && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '18px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>E-mail de Login</label>
+                  <input type="email" className="input-dark" value={editFormData.portal_email || ''} onChange={(e) => setEditFormData({ ...editFormData, portal_email: e.target.value })} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Senha do Portal</label>
+                  <input type="text" className="input-dark" value={editFormData.portal_password || ''} onChange={(e) => setEditFormData({ ...editFormData, portal_password: e.target.value })} />
+                </div>
+              </div>
+            )}
+
+            {/* Aba: Redes Sociais */}
+            {editTab === 'redes' && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '14px' }}>
+                {(['instagram', 'facebook', 'google', 'linkedin', 'tiktok'] as const).map(social => {
+                  const Icon = social === 'instagram' ? InstagramIcon :
+                    social === 'facebook' ? FacebookIcon :
+                      social === 'linkedin' ? LinkedInIcon :
+                        social === 'tiktok' ? TikTokIcon :
+                          GoogleIcon;
+                  const color = social === 'instagram' ? '#E1306C' :
+                    social === 'facebook' ? '#1877F2' :
+                      social === 'linkedin' ? '#0A66C2' :
+                        social === 'tiktok' ? '#FFF' : '#EA4335';
+                  return (
+                    <div key={social} style={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '14px', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Icon size={14} style={{ color }} />
+                        <p style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-secondary)' }}>{social}</p>
+                      </div>
+                      <input placeholder="Usuário" type="text" className="input-dark" value={editFormData.social_access?.[social]?.usuario || ''} onChange={(e) => setEditFormData({ ...editFormData, social_access: { ...editFormData.social_access, [social]: { ...editFormData.social_access?.[social], usuario: e.target.value, ativo: !!e.target.value } } })} />
+                      <input placeholder="Senha" type="text" className="input-dark" value={editFormData.social_access?.[social]?.senha || ''} onChange={(e) => setEditFormData({ ...editFormData, social_access: { ...editFormData.social_access, [social]: { ...editFormData.social_access?.[social], senha: e.target.value } } })} />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
-      </AnimatePresence>
+      </DialogShell>
 
       {/* Delete Confirmation Modal */}
       <AnimatePresence>
@@ -2585,6 +2818,15 @@ export default function ClientDetailPage() {
           </div>
         )}
       </AnimatePresence>
+
+      <ContractDetailsModal
+        isOpen={isContractModalOpen}
+        onClose={() => setIsContractModalOpen(false)}
+        contract={selectedContractForModal}
+        client={clientData}
+        service={availableServices.find((s: Service) => s.id === selectedContractForModal?.service_id)}
+        invoices={clientInvoices.filter((i: any) => i.contract_id === selectedContractForModal?.id)}
+      />
     </div>
   );
 }

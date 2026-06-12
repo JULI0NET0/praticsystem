@@ -25,9 +25,37 @@ export default function ContractsPage() {
   const [loading, setLoading] = useState(true);
   const { showToast } = useToast();
   const [dateRange, setDateRange] = useState({
-    start: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
-    end: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0]
+    start: "",
+    end: ""
   });
+  const [datePreset, setDatePreset] = useState<'all' | 'this_month' | 'prev_month' | 'next_month' | 'custom'>('all');
+
+  const handlePresetChange = (preset: 'all' | 'this_month' | 'prev_month' | 'next_month' | 'custom') => {
+    setDatePreset(preset);
+    if (preset !== 'custom') {
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = now.getMonth();
+      if (preset === 'all') {
+        setDateRange({ start: "", end: "" });
+      } else if (preset === 'this_month') {
+        setDateRange({
+          start: new Date(y, m, 1).toISOString().split('T')[0],
+          end: new Date(y, m + 1, 0).toISOString().split('T')[0]
+        });
+      } else if (preset === 'prev_month') {
+        setDateRange({
+          start: new Date(y, m - 1, 1).toISOString().split('T')[0],
+          end: new Date(y, m, 0).toISOString().split('T')[0]
+        });
+      } else if (preset === 'next_month') {
+        setDateRange({
+          start: new Date(y, m + 1, 1).toISOString().split('T')[0],
+          end: new Date(y, m + 2, 0).toISOString().split('T')[0]
+        });
+      }
+    }
+  };
 
   useEffect(() => {
     async function fetchData() {
@@ -87,7 +115,9 @@ export default function ContractsPage() {
     // Fix timezone shift (dia -01) by ensuring local date parsing
     const dueDateStr = i.due_date.includes('T') ? i.due_date : `${i.due_date}T12:00:00`;
     const d = new Date(dueDateStr).toISOString().split('T')[0];
-    return d >= dateRange.start && d <= dateRange.end;
+    const startMatch = !dateRange.start || d >= dateRange.start;
+    const endMatch = !dateRange.end || d <= dateRange.end;
+    return startMatch && endMatch;
   });
 
   const mrrTotal = rangeInvoices
@@ -142,33 +172,69 @@ export default function ContractsPage() {
             Gerencie a receita recorrente e o ciclo de vida dos seus clientes.
           </p>
         </div>
-        <div className="mobile-stack" style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: '8px 16px', borderRadius: '14px', border: '1px solid var(--border)' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-              <span style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)', fontWeight: 700, textTransform: 'uppercase' }}>Início</span>
-              <input
-                type="date" className="input-dark"
-                style={{ border: 'none', background: 'transparent', padding: 0, fontSize: '0.85rem', width: '105px' }}
-                value={dateRange.start}
-                onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
-              />
-            </div>
-            <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)' }} />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-              <span style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)', fontWeight: 700, textTransform: 'uppercase' }}>Fim</span>
-              <input
-                type="date" className="input-dark"
-                style={{ border: 'none', background: 'transparent', padding: 0, fontSize: '0.85rem', width: '105px' }}
-                value={dateRange.end}
-                onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
-              />
-            </div>
+        <div className="mobile-stack" style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <div className="client-tabs-scroll" style={{ display: 'flex', gap: '6px', flexWrap: 'nowrap', alignItems: 'center', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none', maxWidth: '100%' }}>
+            {[
+              { id: 'all', label: 'Tudo' },
+              { id: 'this_month', label: 'Este Mês' },
+              { id: 'prev_month', label: 'Mês Anterior' },
+              { id: 'next_month', label: 'Próximo Mês' },
+              { id: 'custom', label: 'Personalizado' }
+            ].map((preset) => (
+              <button
+                key={preset.id}
+                onClick={() => handlePresetChange(preset.id as any)}
+                style={{
+                  whiteSpace: 'nowrap',
+                  padding: '6px 12px',
+                  borderRadius: '10px',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  border: datePreset === preset.id ? '1px solid var(--accent)' : '1px solid var(--border)',
+                  background: datePreset === preset.id ? 'rgba(217, 72, 15, 0.15)' : 'rgba(255,255,255,0.02)',
+                  color: datePreset === preset.id ? 'var(--accent)' : 'var(--text-secondary)'
+                }}
+              >
+                {preset.label}
+              </button>
+            ))}
+            <Link href="/admin/contracts/create" style={{ textDecoration: 'none' }}>
+              <Spotlight as="div" className="btn btn-accent" style={{ whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 16px', minHeight: 'unset', height: 'auto', borderRadius: '10px', fontSize: '0.75rem', fontWeight: 600 }}>
+                <Plus size={14} /> Novo Contrato
+              </Spotlight>
+            </Link>
           </div>
-          <Link href="/admin/contracts/create">
-            <Spotlight as="div" className="btn btn-accent" style={{ display: 'flex', alignItems: 'center', gap: '8px', minHeight: '48px', borderRadius: '14px' }}>
-              <Plus size={18} /> Novo Contrato
-            </Spotlight>
-          </Link>
+          {(datePreset === 'custom' || dateRange.start || dateRange.end) && (
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: '8px 16px', borderRadius: '14px', border: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                <span style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)', fontWeight: 700, textTransform: 'uppercase' }}>Início</span>
+                <input
+                  type="date" className="input-dark"
+                  style={{ border: 'none', background: 'transparent', padding: 0, fontSize: '0.85rem', width: '105px' }}
+                  value={dateRange.start}
+                  onChange={(e) => {
+                    setDateRange({ ...dateRange, start: e.target.value });
+                    setDatePreset('custom');
+                  }}
+                />
+              </div>
+              <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)' }} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                <span style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)', fontWeight: 700, textTransform: 'uppercase' }}>Fim</span>
+                <input
+                  type="date" className="input-dark"
+                  style={{ border: 'none', background: 'transparent', padding: 0, fontSize: '0.85rem', width: '105px' }}
+                  value={dateRange.end}
+                  onChange={(e) => {
+                    setDateRange({ ...dateRange, end: e.target.value });
+                    setDatePreset('custom');
+                  }}
+                />
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -251,7 +317,6 @@ export default function ContractsPage() {
                   <th>Serviço / Plano</th>
                   <th>Início / Fim</th>
                   <th>Valor Mensal</th>
-                  <th>Auto-Renovação</th>
                   <th>Status</th>
                   <th style={{ textAlign: 'right' }}>Ações</th>
                 </tr>
@@ -271,23 +336,22 @@ export default function ContractsPage() {
                         transition={{ duration: 0.2, delay: i * 0.05 }}
                       >
                         <td>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <div style={{
-                              width: '32px',
-                              height: '32px',
-                              borderRadius: '8px',
-                              backgroundColor: 'rgba(217, 72, 15, 0.1)',
-                              border: '1px solid rgba(217, 72, 15, 0.2)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              fontWeight: 700,
-                              color: 'var(--accent)',
-                              fontSize: '0.75rem'
-                            }}>
-                              {client?.name.substring(0, 2).toUpperCase()}
-                            </div>
-                            <span style={{ fontWeight: 600 }}>{client?.name}</span>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                            <span style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-primary)' }}>
+                              {client?.nome_fantasia || client?.name}
+                            </span>
+                            {client?.nome_fantasia && client?.name && (
+                              <span style={{
+                                fontSize: '0.75rem',
+                                color: 'var(--text-secondary)',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                maxWidth: '220px'
+                              }} title={client?.name}>
+                                {client?.name}
+                              </span>
+                            )}
                           </div>
                         </td>
                         <td>
@@ -312,20 +376,35 @@ export default function ContractsPage() {
                           </span>
                         </td>
                         <td>
-                          <span style={{
-                            color: contract.auto_renew ? '#22C55E' : 'var(--text-secondary)',
-                            fontSize: '0.875rem',
-                            fontWeight: 500
-                          }}>
-                            {contract.auto_renew ? 'Sim' : 'Não'}
-                          </span>
-                        </td>
-                        <td>
-                          <span className={`badge ${contract.status === 'active' ? 'badge-success' :
-                            contract.status === 'expiring' ? 'badge-warning' : 'badge-danger'
-                            }`} style={{ padding: '4px 12px', fontSize: '0.75rem' }}>
-                            {contract.status === 'active' ? 'Ativo' : contract.status === 'expiring' ? 'Vencendo' : 'Encerrado'}
-                          </span>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <span className={`badge ${contract.status === 'active' ? 'badge-success' :
+                              contract.status === 'expiring' ? 'badge-warning' : 'badge-danger'
+                              }`} style={{ padding: '4px 12px', fontSize: '0.75rem', width: 'fit-content' }}>
+                              {contract.status === 'active' ? 'Ativo' : contract.status === 'expiring' ? 'Vencendo' : 'Encerrado'}
+                            </span>
+                            <span 
+                              className="badge"
+                              style={{ 
+                                width: 'fit-content',
+                                padding: '4px 12px', fontSize: '0.75rem',
+                                backgroundColor: 
+                                  contract.document_status === 'signed' ? 'rgba(34, 197, 94, 0.1)' : 
+                                  contract.document_status === 'sent' ? 'rgba(59, 130, 246, 0.1)' : 
+                                  contract.document_status === 'generated' ? 'rgba(168, 85, 247, 0.1)' : 
+                                  'rgba(255, 255, 255, 0.05)',
+                                color: 
+                                  contract.document_status === 'signed' ? '#22C55E' : 
+                                  contract.document_status === 'sent' ? '#3B82F6' : 
+                                  contract.document_status === 'generated' ? '#A855F7' : 
+                                  'var(--text-secondary)'
+                              }}
+                            >
+                              {contract.document_status === 'signed' ? 'Assinado' : 
+                               contract.document_status === 'sent' ? 'Enviado' : 
+                               contract.document_status === 'generated' ? 'Emitido' : 
+                               'Doc. Pendente'}
+                            </span>
+                          </div>
                         </td>
                         <td style={{ textAlign: 'right' }}>
                           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
@@ -384,25 +463,40 @@ export default function ContractsPage() {
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <div style={{
-                        width: '32px', height: '32px', borderRadius: '8px',
-                        backgroundColor: 'rgba(217, 72, 15, 0.1)', display: 'flex',
-                        alignItems: 'center', justifyContent: 'center', color: 'var(--accent)',
-                        fontSize: '0.7rem', fontWeight: 700
-                      }}>
-                        {client?.name.substring(0, 2).toUpperCase()}
-                      </div>
-                      <div>
-                        <p style={{ fontWeight: 600, fontSize: '0.9rem' }}>{client?.name}</p>
-                        <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{service?.name}</p>
-                      </div>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <p style={{ fontWeight: 600, fontSize: '0.9rem', marginBottom: '2px' }}>
+                        {client?.nome_fantasia || client?.name}
+                      </p>
+                      {client?.nome_fantasia && client?.name && (
+                        <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '200px' }}>
+                          {client?.name}
+                        </p>
+                      )}
+                      <p style={{ fontSize: '0.75rem', color: 'var(--accent)' }}>{service?.name}</p>
                     </div>
-                    <span className={`badge ${contract.status === 'active' ? 'badge-success' :
-                      contract.status === 'expiring' ? 'badge-warning' : 'badge-danger'
-                      }`} style={{ fontSize: '0.7rem' }}>
-                      {contract.status === 'active' ? 'Ativo' : contract.status === 'expiring' ? 'Vencendo' : 'Encerrado'}
-                    </span>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                      <span className={`badge ${contract.status === 'active' ? 'badge-success' :
+                        contract.status === 'expiring' ? 'badge-warning' : 'badge-danger'
+                        }`} style={{ fontSize: '0.7rem' }}>
+                        {contract.status === 'active' ? 'Ativo' : contract.status === 'expiring' ? 'Vencendo' : 'Encerrado'}
+                      </span>
+                      <span 
+                        className="badge"
+                        style={{ 
+                          fontSize: '0.65rem', padding: '2px 8px',
+                          backgroundColor: contract.document_status === 'signed' ? 'rgba(34, 197, 94, 0.1)' : 
+                            contract.document_status === 'sent' ? 'rgba(59, 130, 246, 0.1)' : 
+                            contract.document_status === 'generated' ? 'rgba(168, 85, 247, 0.1)' : 'rgba(255, 255, 255, 0.05)',
+                          color: contract.document_status === 'signed' ? '#22C55E' : 
+                            contract.document_status === 'sent' ? '#3B82F6' : 
+                            contract.document_status === 'generated' ? '#A855F7' : 'var(--text-secondary)'
+                        }}
+                      >
+                        {contract.document_status === 'signed' ? 'Assinado' : 
+                          contract.document_status === 'sent' ? 'Enviado' : 
+                          contract.document_status === 'generated' ? 'Emitido' : 'Pendente'}
+                      </span>
+                    </div>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>

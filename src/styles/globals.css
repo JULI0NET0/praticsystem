@@ -486,3 +486,92 @@ select {
     grid-template-columns: 1fr;
   }
 }
+
+/* =============================================
+   RESPONSIVE GRID UTILITIES
+   ============================================= */
+.responsive-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+.responsive-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+}
+.responsive-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+}
+.responsive-grid-sidebar {
+  display: grid;
+  grid-template-columns: 1fr 350px;
+}
+
+@media (max-width: 1024px) {
+  .responsive-grid-sidebar { grid-template-columns: 1fr; }
+}
+@media (max-width: 768px) {
+  .responsive-grid-2 { grid-template-columns: 1fr; }
+  .responsive-grid-3 { grid-template-columns: repeat(2, 1fr); }
+  .responsive-grid-4 { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 480px) {
+  .responsive-grid-3 { grid-template-columns: 1fr; }
+  .responsive-grid-4 { grid-template-columns: 1fr; }
+}
+
+/* =============================================
+   MOBILE TABLE → CARDS
+   ============================================= */
+
+/* Esconde a tabela no mobile */
+@media (max-width: 768px) {
+  .table-container { display: none; }
+}
+
+/* Cards: ocultos no desktop, visíveis no mobile */
+.mobile-table-cards {
+  display: none;
+  flex-direction: column;
+  gap: 12px;
+}
+@media (max-width: 768px) {
+  .mobile-table-cards { display: flex; }
+}
+
+.mobile-data-card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.mobile-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+.mobile-card-title {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mobile-card-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.82rem;
+  gap: 8px;
+}
+.mobile-card-row > span:first-child {
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}

@@ -16,7 +16,9 @@ import {
   Mail,
   User,
   Plus,
-  Zap
+  Zap,
+  Eye,
+  EyeOff
 } from "lucide-react";
 import Link from "next/link";
 import { formatCPFOrCNPJ, formatCEP, formatPhone } from "@/utils/masks";
@@ -37,6 +39,8 @@ export default function OnboardingPage() {
   const [isLoadingCnpj, setIsLoadingCnpj] = useState(false);
   const [isLoadingCep, setIsLoadingCep] = useState(false);
   const [generatedCredentials, setGeneratedCredentials] = useState({ email: "", password: "" });
+  const [showPortalPassword, setShowPortalPassword] = useState(false);
+  const [showSocialPasswords, setShowSocialPasswords] = useState<Record<string, boolean>>({});
   const { showToast } = useToast();
 
   // Form Data
@@ -60,7 +64,10 @@ export default function OnboardingPage() {
     phone: "",
     telefone_fixo: "",
     email_financeiro: "",
+    whatsapp_financeiro: "",
     servico_interesse: "",
+    website: "",
+    sistema_proprio: "",
     briefing: "",
     social_access: {
       instagram: { ativo: false, usuario: '', senha: '', email: '' },
@@ -239,20 +246,39 @@ export default function OnboardingPage() {
       // Remove campos que não devem ir no spread principal ou que precisam de tratamento
       const { portal_password, ...dataToInsert } = formData;
 
+      // 1. Criar usuário no Supabase Auth via API
+      const authResponse = await fetch('/api/auth/create-client', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.email, password: finalPassword })
+      });
+
+      if (!authResponse.ok) {
+        const errorData = await authResponse.json();
+        throw new Error(errorData.error || 'Falha ao registrar cliente no Auth.');
+      }
+
+      const authData = await authResponse.json();
+
+      // 2. Salvar na tabela clients com o auth_id
       const { error } = await supabase.from('clients').insert([{
         ...dataToInsert,
+        id: authData.user?.id, // Vincula o id do auth ao client
         portal_email: formData.email,
         portal_password: finalPassword,
-        status: 'prospect'
+        status: 'prospect',
+        onboarding_date: new Date().toISOString()
       }]);
 
-      if (error) throw error;
+      if (error) {
+        throw new Error(`Erro ao salvar na tabela clients: ${error.message}. Verifique se as colunas website, sistema_proprio e whatsapp_financeiro foram criadas no banco de dados.`);
+      }
       
       setGeneratedCredentials({ email: formData.email, password: finalPassword });
       return true;
-    } catch (err) {
+    } catch (err: any) {
       console.error("Erro ao salvar onboarding:", err);
-      showToast("Houve um erro ao salvar seus dados. Por favor, tente novamente.", "error");
+      showToast(err.message || "Houve um erro ao salvar seus dados. Por favor, tente novamente.", "error");
       return false;
     } finally {
       setIsLoadingCnpj(false);
@@ -600,6 +626,29 @@ export default function OnboardingPage() {
                             </select>
                           </div>
                         </div>
+
+                        <div className="onboarding-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                          <div>
+                            <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Possui Site? (Opcional)</label>
+                            <input
+                              type="text"
+                              className="input-dark"
+                              value={formData.website}
+                              onChange={(e) => updateForm("website", e.target.value)}
+                              placeholder="Ex: www.meusite.com.br"
+                            />
+                          </div>
+                          <div>
+                            <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Possui Sistema Próprio? (Opcional)</label>
+                            <input
+                              type="text"
+                              className="input-dark"
+                              value={formData.sistema_proprio}
+                              onChange={(e) => updateForm("sistema_proprio", e.target.value)}
+                              placeholder="Ex: Sim, usamos o sistema X"
+                            />
+                          </div>
+                        </div>
                       </div>
 
                       <div style={{ marginTop: '32px', display: 'flex', justifyContent: 'flex-end' }}>
@@ -718,9 +767,34 @@ export default function OnboardingPage() {
                           <input type="email" className="input-dark" value={formData.email} onChange={(e) => updateForm("email", e.target.value)} placeholder="contato@empresa.com.br" />
                         </div>
 
-                        <div>
-                          <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>E-mail do Financeiro</label>
-                          <input type="email" className="input-dark" value={formData.email_financeiro} onChange={(e) => updateForm("email_financeiro", e.target.value)} placeholder="financeiro@empresa.com.br" />
+                        <div className="onboarding-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                          <div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                              <label style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>E-mail do Financeiro</label>
+                              <button
+                                type="button"
+                                onClick={() => updateForm("email_financeiro", formData.email)}
+                                style={{ background: 'transparent', border: 'none', color: 'var(--accent)', fontSize: '0.75rem', cursor: 'pointer', padding: 0 }}
+                              >
+                                Usar o principal
+                              </button>
+                            </div>
+                            <input type="email" className="input-dark" value={formData.email_financeiro} onChange={(e) => updateForm("email_financeiro", e.target.value)} placeholder="financeiro@empresa.com.br" />
+                          </div>
+
+                          <div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                              <label style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>WhatsApp do Financeiro</label>
+                              <button
+                                type="button"
+                                onClick={() => updateForm("whatsapp_financeiro", formData.phone)}
+                                style={{ background: 'transparent', border: 'none', color: 'var(--accent)', fontSize: '0.75rem', cursor: 'pointer', padding: 0 }}
+                              >
+                                Usar o principal
+                              </button>
+                            </div>
+                            <input type="text" className="input-dark" value={formData.whatsapp_financeiro} onChange={(e) => updateForm("whatsapp_financeiro", formatPhone(e.target.value))} placeholder="(00) 00000-0000" />
+                          </div>
                         </div>
                       </div>
 
@@ -754,19 +828,26 @@ export default function OnboardingPage() {
                         </div>
 
                         <div>
-                          <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Defina sua Senha</label>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                            <label style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Defina sua Senha</label>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Mínimo 6 caracteres</span>
+                          </div>
                           <div style={{ position: 'relative' }}>
                             <input
-                              type="password"
+                              type={showPortalPassword ? "text" : "password"}
                               className="input-dark"
                               value={formData.portal_password}
                               onChange={(e) => updateForm("portal_password", e.target.value)}
                               placeholder="••••••••"
-                              style={{ letterSpacing: formData.portal_password ? '4px' : 'normal' }}
+                              style={{ letterSpacing: (!showPortalPassword && formData.portal_password) ? '4px' : 'normal', paddingRight: '48px' }}
                             />
-                            <div style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }}>
-                              <Lock size={18} />
-                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setShowPortalPassword(!showPortalPassword)}
+                              style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', padding: 0 }}
+                            >
+                              {showPortalPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                            </button>
                           </div>
                         </div>
 
@@ -884,22 +965,41 @@ export default function OnboardingPage() {
                                         <div style={{ position: 'relative' }}>
                                           <div style={{ position: 'absolute', left: '12px', top: '12px', color: 'var(--text-secondary)' }}><Lock size={18} /></div>
                                           <input
-                                            type="password" className="input-dark" placeholder="Senha"
-                                            style={{ paddingLeft: '40px', fontSize: '0.875rem' }}
+                                            type={showSocialPasswords[redeKey] ? "text" : "password"} className="input-dark" placeholder="Senha"
+                                            style={{ paddingLeft: '40px', paddingRight: '40px', fontSize: '0.875rem' }}
                                             value={formData.social_access[redeKey].senha}
                                             onChange={(e) => updateRedeSocial(redeKey, 'senha', e.target.value)}
                                           />
+                                          <button
+                                            type="button"
+                                            onClick={() => setShowSocialPasswords(prev => ({ ...prev, [redeKey]: !prev[redeKey] }))}
+                                            style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', padding: 0 }}
+                                          >
+                                            {showSocialPasswords[redeKey] ? <EyeOff size={18} /> : <Eye size={18} />}
+                                          </button>
                                         </div>
                                       </div>
 
-                                      <div style={{ position: 'relative' }}>
-                                        <div style={{ position: 'absolute', left: '12px', top: '12px', color: 'var(--text-secondary)' }}><Mail size={18} /></div>
-                                        <input
-                                          type="email" className="input-dark" placeholder="E-mail vinculado (Opcional)"
-                                          style={{ paddingLeft: '40px', fontSize: '0.875rem' }}
-                                          value={formData.social_access[redeKey].email}
-                                          onChange={(e) => updateRedeSocial(redeKey, 'email', e.target.value)}
-                                        />
+                                      <div>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                          <label style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}></label>
+                                          <button
+                                            type="button"
+                                            onClick={() => updateRedeSocial(redeKey, 'email', formData.email)}
+                                            style={{ background: 'transparent', border: 'none', color: 'var(--accent)', fontSize: '0.75rem', cursor: 'pointer', padding: 0 }}
+                                          >
+                                            Usar o principal
+                                          </button>
+                                        </div>
+                                        <div style={{ position: 'relative' }}>
+                                          <div style={{ position: 'absolute', left: '12px', top: '12px', color: 'var(--text-secondary)' }}><Mail size={18} /></div>
+                                          <input
+                                            type="email" className="input-dark" placeholder="E-mail vinculado (Opcional)"
+                                            style={{ paddingLeft: '40px', fontSize: '0.875rem' }}
+                                            value={formData.social_access[redeKey].email}
+                                            onChange={(e) => updateRedeSocial(redeKey, 'email', e.target.value)}
+                                          />
+                                        </div>
                                       </div>
                                     </div>
                                   </motion.div>
@@ -955,9 +1055,14 @@ export default function OnboardingPage() {
                         </p>
                       </div>
 
-                      <Link href="/" className="btn btn-secondary" style={{ background: 'var(--text-primary)', color: 'var(--bg-secondary)', border: 'none' }}>
-                        Voltar para o Início
-                      </Link>
+                      <div style={{ display: 'flex', gap: '16px' }}>
+                        <Link href="/login" className="btn btn-accent" style={{ border: 'none' }}>
+                          Acessar Portal do Cliente
+                        </Link>
+                        <Link href="/" className="btn btn-secondary" style={{ background: 'var(--text-primary)', color: 'var(--bg-secondary)', border: 'none' }}>
+                          Início
+                        </Link>
+                      </div>
                     </motion.div>
                   )}
 

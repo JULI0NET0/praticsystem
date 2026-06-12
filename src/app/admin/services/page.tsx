@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { Plus, Search, Filter, MoreHorizontal, ArrowUpRight, Loader2, Link as LinkIcon, Copy, X, Share2, MessageSquare, FileText, DollarSign } from "lucide-react";
+import DialogShell from "@/components/DialogShell";
 import { ServiceStats } from "@/components/ServiceStats";
 import SearchInput from "@/components/ui/SearchInput";
 import { useToast } from "@/components/CustomToast";
@@ -291,27 +292,22 @@ export default function ServicesPage() {
       </div>
 
       {/* Edit Service Modal */}
-      {isEditModalOpen && editingService && (
-        <div style={{
-          position: 'fixed', inset: 0, zIndex: 110,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          padding: '24px', backgroundColor: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)'
-        }}>
-          <div className="glass-card animate-fade-in-up" style={{
-            width: '100%',
-            maxWidth: '1000px',
-            padding: '40px',
-            maxHeight: '90vh',
-            overflowY: 'auto',
-            position: 'relative'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
-              <h2 style={{ fontSize: '1.75rem', fontWeight: 800 }}>Gestão do Serviço</h2>
-              <button onClick={() => setIsEditModalOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
-                <X size={24} />
-              </button>
-            </div>
-
+      <DialogShell
+        isOpen={isEditModalOpen && !!editingService}
+        onClose={() => setIsEditModalOpen(false)}
+        title="Gestão do Serviço"
+        maxWidth="1060px"
+        zIndex={110}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+            <button className="btn btn-secondary" onClick={() => setIsEditModalOpen(false)} style={{ padding: '8px 18px', fontSize: '0.875rem' }}>Cancelar</button>
+            <button className="btn btn-accent" onClick={handleSaveService} disabled={isSaving} style={{ padding: '8px 18px', fontSize: '0.875rem' }}>
+              {isSaving ? 'Salvando...' : 'Salvar Alterações'}
+            </button>
+          </div>
+        }
+      >
+        {editingService && (
             <div className="mobile-stack" style={{ display: 'flex', gap: '48px' }}>
               {/* Coluna Esquerda: Configurações */}
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '32px' }}>
@@ -462,12 +458,6 @@ export default function ServicesPage() {
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: '12px', marginTop: '32px', position: 'sticky', bottom: 0, background: 'var(--glass-bg)', padding: '16px 0', borderTop: '1px solid var(--border)' }}>
-                  <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setIsEditModalOpen(false)}>Cancelar</button>
-                  <button className="btn btn-accent" style={{ flex: 1 }} onClick={handleSaveService} disabled={isSaving}>
-                    {isSaving ? 'Salvando...' : 'Salvar Alterações'}
-                  </button>
-                </div>
               </div>
 
               {/* Coluna Direita: Visão Interna de Lançamentos */}
@@ -534,9 +524,8 @@ export default function ServicesPage() {
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+        )}
+      </DialogShell>
     </div>
   );
 }

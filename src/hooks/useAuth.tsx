@@ -46,12 +46,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq('id', user.id)
         .single();
 
-      if (error) throw error;
-
-      if (data) {
+      if (!error && data) {
         data.avatarUrl = data.avatar_url;
         data.statusMessage = data.status_message;
         setCurrentUser(data);
+        return;
+      }
+
+      // Se deu erro ou não achou em users, tenta buscar em clients
+      const { data: clientData, error: clientError } = await supabase
+        .from('clients')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (!clientError && clientData) {
+        const clientProfile = {
+          id: clientData.id,
+          name: clientData.name,
+          username: clientData.contact_name || clientData.name,
+          email: clientData.portal_email || clientData.email,
+          role: 'client',
+          avatarUrl: '',
+          statusMessage: ''
+        };
+        setCurrentUser(clientProfile as any);
+      } else {
+        console.error("Usuário não encontrado em users nem em clients.");
       }
     } catch (error) {
       console.error("Erro ao buscar perfil do usuário:", error);
