@@ -186,6 +186,24 @@ export interface ExpenseEntry {
   expenses?: Expense;
 }
 
+export interface Note {
+  id: string;
+  user_id: string;
+  title: string;
+  content: any; // TipTap JSON doc
+  date: string;
+  subjects: string[];
+  client_id?: string;
+  shared_with: string[];
+  share_all: boolean;    // visível para todo o time
+  pin_to_client: boolean; // aparece na aba Notas do cadastro do cliente
+  created_at: string;
+  updated_at: string;
+  // Joined fields
+  client?: Pick<Client, 'id' | 'name' | 'nome_fantasia'>;
+  author?: Pick<User, 'id' | 'name' | 'avatar_url'>;
+}
+
 export interface AsaasTransaction {
   id: string;
   description?: string;

@@ -370,6 +370,20 @@ select {
 @media (max-width: 768px) {
   .mobile-stack {
     flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  /* Header de detalhe do cliente: info acima, botões abaixo em linha */
+  .client-page-header {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+  }
+  .client-page-actions {
+    flex-direction: row !important;
+    justify-content: flex-end;
+    margin-left: 0 !important;
+    width: 100%;
   }
 
   .mobile-full-width {
@@ -484,6 +498,62 @@ select {
 @media (max-width: 1100px) {
   .agenda-layout {
     grid-template-columns: 1fr;
+  }
+}
+
+/* =============================================
+   WORKSPACE MOBILE
+   ============================================= */
+
+/* Header: quebra em 2 linhas no mobile */
+.workspace-header {
+  flex-wrap: nowrap;
+}
+.workspace-header-divider {
+  display: block;
+}
+
+@media (max-width: 768px) {
+  .workspace-header {
+    flex-wrap: wrap !important;
+    gap: 10px !important;
+    padding: 12px 14px !important;
+  }
+  .workspace-header-divider {
+    display: none !important;
+  }
+  /* Status bar sobe para segunda linha e ocupa largura total */
+  .workspace-status-bar {
+    order: 3;
+    width: 100%;
+    min-width: 0 !important;
+    padding: 8px 12px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 14px;
+    border: 1px solid var(--border);
+  }
+  /* Botões ficam à direita na primeira linha */
+  .workspace-actions {
+    margin-left: auto !important;
+  }
+  /* Emoji picker não extravasa a tela */
+  .workspace-emoji-picker {
+    max-width: min(320px, calc(100vw - 48px)) !important;
+  }
+
+  /* Grid de widgets: 1 coluna, altura automática */
+  .workspace-widget-grid {
+    grid-template-columns: 1fr !important;
+    grid-auto-rows: auto !important;
+    gap: 16px !important;
+  }
+  .workspace-widget-grid > * {
+    grid-column: 1 !important;
+    grid-row: auto !important;
+  }
+  /* Mínimo de altura confortável por widget */
+  .workspace-widget-grid .glass-card {
+    min-height: 160px;
   }
 }
 

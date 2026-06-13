@@ -3,6 +3,7 @@
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/hooks/useAuth";
 import {
   ArrowLeft,
   User,
@@ -59,6 +60,8 @@ import {
   GoogleIcon
 } from "@/components/SocialIcons";
 import ContractDetailsModal from "@/components/admin/contracts/ContractDetailsModal";
+import NoteCard from "@/components/notas/NoteCard";
+import InlineNoteEditor from "@/components/notas/InlineNoteEditor";
 
 
 const TABS = [
@@ -78,6 +81,7 @@ export default function ClientDetailPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { showToast } = useToast();
+  const { currentUser } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
   const [dateRange, setDateRange] = useState({
@@ -117,6 +121,8 @@ export default function ClientDetailPage() {
   const [localDemands, setLocalDemands] = useState<any[]>([]);
   const [localNotes, setLocalNotes] = useState<any[]>([]);
   const [newNote, setNewNote] = useState("");
+  const [notesView, setNotesView] = useState<'list' | 'editor'>('list');
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [clientContracts, setClientContracts] = useState<any[]>([]);
   const [clientInvoices, setClientInvoices] = useState<any[]>([]);
   const [clientEvents, setClientEvents] = useState<any[]>([]);
@@ -179,9 +185,13 @@ export default function ClientDetailPage() {
 
       setClientData(client);
 
-      // Note: We don't have a 'notes' table yet. If it was jsonb in mock, let's keep it empty for now 
-      // or fetch from somewhere else if it gets added later.
-      setLocalNotes([]);
+      const { data: notesData } = await supabase
+        .from('notes')
+        .select('id, title, content, date, subjects, user_id, created_at, updated_at')
+        .eq('client_id', id)
+        .eq('pin_to_client', true)
+        .order('updated_at', { ascending: false });
+      setLocalNotes(notesData ?? []);
 
       // Fetch related data in parallel
       const [demandsRes, contractsRes, invoicesRes, eventsRes, docsRes] = await Promise.all([
@@ -346,19 +356,34 @@ export default function ClientDetailPage() {
     }
   };
 
-  const handleAddNote = () => {
-    if (!newNote.trim()) return;
+  const handleAddNote = async () => {
+    if (!newNote.trim() || !currentUser) return;
 
-    // Lógica de menção será adaptada
-    const mentions = newNote.match(/@(\w+)/g);
-    if (mentions) {
-      // requires querying users table
+    const { data, error } = await supabase
+      .from('notes')
+      .insert({
+        user_id: currentUser.id,
+        title: `Nota — ${new Date().toLocaleDateString('pt-BR')}`,
+        content: {
+          type: 'doc',
+          content: [{ type: 'paragraph', content: [{ type: 'text', text: newNote.trim() }] }],
+        },
+        date: new Date().toISOString().split('T')[0],
+        subjects: [],
+        shared_with: [],
+        share_all: false,
+        pin_to_client: true,
+        client_id: id,
+      })
+      .select('id, title, content, date, user_id, subjects, created_at, updated_at')
+      .single();
+
+    if (!error && data) {
+      setLocalNotes([data, ...localNotes]);
+      setNewNote('');
+    } else {
+      showToast('Erro ao salvar nota', 'error');
     }
-
-    // Como a tabela notes não existe na modelagem atual, apenas adiciona em memória ou você pode querer criá-la.
-    const note = { id: Math.random().toString(), content: newNote, date: new Date().toISOString(), author: 'Current User' };
-    setLocalNotes([note, ...localNotes]);
-    setNewNote("");
   };
 
   const handleOpenEdit = () => {
@@ -694,7 +719,7 @@ export default function ClientDetailPage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* Header */}
-      <div className="mobile-stack" style={{ display: 'flex', alignItems: 'center', gap: '16px', width: '100%' }}>
+      <div className="client-page-header" style={{ display: 'flex', alignItems: 'center', gap: '16px', width: '100%' }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <motion.button
@@ -860,7 +885,7 @@ export default function ClientDetailPage() {
             </div>
           </div>
         </div>
-        <div className="mobile-stack" style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
+        <div className="client-page-actions" style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
           <button className="btn btn-secondary" onClick={() => setIsDeleteModalOpen(true)} style={{ color: '#EF4444', minHeight: '44px' }}><Trash2 size={18} /></button>
           <button className="btn btn-secondary" onClick={handleOpenEdit} style={{ minHeight: '44px' }}><Edit2 size={18} /> <span className="hide-mobile">Editar</span></button>
           <button className="btn btn-accent" onClick={() => setIsActionModalOpen(true)} style={{ minHeight: '44px' }}><Plus size={18} /> <span className="hide-mobile">Nova</span> Ação</button>
@@ -1459,50 +1484,70 @@ export default function ClientDetailPage() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '800px', margin: '0 auto', width: '100%' }}
+              style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}
             >
-              <div className="glass-card" style={{ padding: '20px', display: 'flex', gap: '16px' }}>
-                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>JN</div>
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  <textarea
-                    className="input-dark"
-                    placeholder="Adicionar uma nota interna..."
-                    style={{ minHeight: '100px', resize: 'none' }}
-                    value={newNote}
-                    onChange={(e) => setNewNote(e.target.value)}
-                  />
-                  <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              {notesView === 'editor' ? (
+                <InlineNoteEditor
+                  clientId={id as string}
+                  noteId={editingNoteId}
+                  onClose={() => { setNotesView('list'); setEditingNoteId(null); }}
+                  onSaved={(savedNote) => {
+                    setLocalNotes(prev => {
+                      const exists = prev.find((n: any) => n.id === savedNote.id);
+                      if (exists) return prev.map((n: any) => n.id === savedNote.id ? savedNote : n);
+                      return [savedNote, ...prev];
+                    });
+                    setNotesView('list');
+                    setEditingNoteId(null);
+                  }}
+                />
+              ) : (
+                <>
+                  {/* Header */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <h3 style={{ fontWeight: 600, fontSize: '1rem', margin: 0 }}>Notas do cliente</h3>
+                      <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '2px 0 0' }}>
+                        {localNotes.length} nota{localNotes.length !== 1 ? 's' : ''} vinculada{localNotes.length !== 1 ? 's' : ''}
+                      </p>
+                    </div>
                     <button
-                      className="btn btn-accent btn-sm"
-                      onClick={handleAddNote}
+                      className="btn btn-accent"
+                      onClick={() => { setEditingNoteId(null); setNotesView('editor'); }}
+                      style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
                     >
-                      <Send size={16} /> Publicar Nota
+                      <Plus size={16} /> Nova Nota
                     </button>
                   </div>
-                </div>
-              </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {localNotes.map(note => (
-                  <div key={note.id} style={{ display: 'flex', gap: '16px' }}>
-                    <div style={{ width: '40px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                      <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 600 }}>
-                        {note.author.substring(0, 2).toUpperCase()}
-                      </div>
-                      <div style={{ width: '1px', flex: 1, background: 'var(--border)', margin: '8px 0' }} />
+                  {/* Grid */}
+                  {localNotes.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '56px 20px' }}>
+                      <MessageSquare size={40} style={{ opacity: 0.12, display: 'block', margin: '0 auto 12px' }} />
+                      <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '16px' }}>
+                        Nenhuma nota para este cliente ainda.
+                      </p>
+                      <button
+                        className="btn btn-accent"
+                        onClick={() => { setEditingNoteId(null); setNotesView('editor'); }}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+                      >
+                        <Plus size={16} /> Criar primeira nota
+                      </button>
                     </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                        <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>{note.author}</span>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{new Date(note.date).toLocaleDateString('pt-BR')}</span>
-                      </div>
-                      <div className="glass-card" style={{ padding: '16px', fontSize: '0.95rem' }}>
-                        {note.content}
-                      </div>
+                  ) : (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px' }}>
+                      {localNotes.map((note: any) => (
+                        <NoteCard
+                          key={note.id}
+                          note={note}
+                          onClick={() => { setEditingNoteId(note.id); setNotesView('editor'); }}
+                        />
+                      ))}
                     </div>
-                  </div>
-                ))}
-              </div>
+                  )}
+                </>
+              )}
             </motion.div>
           )}
 

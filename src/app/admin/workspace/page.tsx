@@ -248,13 +248,12 @@ export default function WorkspacePage() {
       style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}
     >
       {/* Header Principal - Linha Única */}
-      <div style={{
+      <div className="workspace-header" style={{
         position: 'relative',
         zIndex: 999999,
         display: 'flex',
         alignItems: 'center',
         gap: '16px',
-        flexWrap: 'nowrap',
         background: 'rgba(255, 255, 255, 0.02)',
         padding: '12px 20px',
         borderRadius: '24px',
@@ -304,6 +303,7 @@ export default function WorkspacePage() {
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 10, scale: 0.9 }}
                   onClick={(e) => e.stopPropagation()}
+                  className="workspace-emoji-picker"
                   style={{
                     position: 'absolute', top: '100%', left: 0, zIndex: 99999,
                     marginTop: '12px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px',
@@ -377,10 +377,10 @@ export default function WorkspacePage() {
           </h1>
         </div>
 
-        <div style={{ width: '1px', height: '24px', background: 'var(--border)', margin: '0 8px' }} />
+        <div className="workspace-header-divider" style={{ width: '1px', height: '24px', background: 'var(--border)', margin: '0 8px' }} />
 
         {/* Status Bar Integrada */}
-        <div style={{
+        <div className="workspace-status-bar" style={{
           display: 'flex',
           alignItems: 'center',
           gap: '10px',
@@ -402,7 +402,7 @@ export default function WorkspacePage() {
           )}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto' }}>
+        <div className="workspace-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto' }}>
           {/* Timer Compacto */}
           <button
             onClick={isTracking ? clockOut : clockIn}
@@ -564,7 +564,7 @@ export default function WorkspacePage() {
               <h3 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '8px' }}>Adicionar Widget</h3>
               <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '0.9rem' }}>Escolha um bloco para adicionar ao seu workspace.</p>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div className="responsive-grid-2" style={{ gap: '16px' }}>
                 {AVAILABLE_WIDGETS.map(w => (
                   <button
                     key={w.id}
