@@ -1,9 +1,9 @@
 "use client";
 
 import { supabase } from "@/lib/supabase";
-import { ArrowLeft, FileText, Calendar, DollarSign, User, Briefcase, RefreshCw, Save, Loader2 } from "lucide-react";
+import { ArrowLeft, FileText, Calendar, DollarSign, User, Briefcase, RefreshCw, Save, Loader2, CheckCircle2 } from "lucide-react";
 import Spotlight from "@/components/Spotlight";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";

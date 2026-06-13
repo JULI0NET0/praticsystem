@@ -143,6 +143,7 @@ export default function ContractDetailsModal({ isOpen, onClose, contract, client
   };
 
   const handleSaveDocument = async () => {
+    if (!contract) return;
     setIsSaving(true);
     try {
       const newStatus = documentStatus === 'pending' ? 'generated' : documentStatus;
@@ -165,6 +166,7 @@ export default function ContractDetailsModal({ isOpen, onClose, contract, client
   };
 
   const handleUpdateStatus = async (newStatus: 'pending' | 'generated' | 'sent' | 'signed') => {
+    if (!contract) return;
     try {
       const { error } = await supabase
         .from('contracts')
@@ -182,6 +184,7 @@ export default function ContractDetailsModal({ isOpen, onClose, contract, client
   };
 
   const handleUploadSignedFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!contract) return;
     const file = e.target.files?.[0];
     if (!file) return;
 

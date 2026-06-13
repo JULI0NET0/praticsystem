@@ -2,6 +2,7 @@
 
 import { supabase } from "@/lib/supabase";
 import { useState } from "react";
+import { Download } from "lucide-react";
 import SearchInput from "@/components/ui/SearchInput";
 import SortFilterMenu, { SortOption } from "@/components/ui/SortFilterMenu";
 import { useToast } from "@/components/CustomToast";
