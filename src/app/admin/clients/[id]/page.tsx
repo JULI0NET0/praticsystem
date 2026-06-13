@@ -2869,7 +2869,7 @@ export default function ClientDetailPage() {
         onClose={() => setIsContractModalOpen(false)}
         contract={selectedContractForModal}
         client={clientData}
-        service={availableServices.find((s: Service) => s.id === selectedContractForModal?.service_id)}
+        service={availableServices.find((s: any) => s.id === selectedContractForModal?.service_id)}
         invoices={clientInvoices.filter((i: any) => i.contract_id === selectedContractForModal?.id)}
       />
     </div>
