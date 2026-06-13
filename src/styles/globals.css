@@ -289,7 +289,8 @@ select {
   top: 0;
   left: 0;
   right: 0;
-  height: var(--header-height);
+  /* height cresce para incluir safe-area-inset-top (notch/dynamic island) */
+  height: calc(var(--header-height) + env(safe-area-inset-top, 0px));
   padding: 0 16px;
   padding-top: env(safe-area-inset-top, 0px);
   align-items: center;
