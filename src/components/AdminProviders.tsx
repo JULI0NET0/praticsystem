@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { PresenceProvider } from "@/hooks/usePresence";
 import { TimeTrackerProvider } from "@/hooks/useTimeTracker";
@@ -7,14 +9,21 @@ import { Loader2 } from "lucide-react";
 
 function AdminProvidersInner({ children }: { children: React.ReactNode }) {
   const { currentUser, loading } = useAuth();
+  const router = useRouter();
 
-  if (loading) {
+  useEffect(() => {
+    if (!loading && !currentUser) {
+      router.replace("/login");
+    }
+  }, [loading, currentUser, router]);
+
+  if (loading || !currentUser) {
     return (
-      <div style={{ 
+      <div style={{
         height: '100dvh',
         width: '100%',
-        display: 'flex', 
-        alignItems: 'center', 
+        display: 'flex',
+        alignItems: 'center',
         justifyContent: 'center',
         background: 'var(--bg-primary)'
       }}>
