@@ -155,15 +155,17 @@ export default function ChatPage() {
     if (!sent) return;
 
     // Persistir no banco em background
-    supabase.from('chat_messages').insert([{
-      id: sent.id,
-      sender_id: currentUser.id,
-      receiver_id: activeChat === 'general' ? null : activeChat,
-      content,
-      channel: activeChat === 'general' ? 'general' : 'dm',
-      message_type: content.includes('@') ? 'mention' : 'text',
-      timestamp: sent.createdAt,
-    }]).then(async () => {
+    try {
+      await supabase.from('chat_messages').insert([{
+        id: sent.id,
+        sender_id: currentUser.id,
+        receiver_id: activeChat === 'general' ? null : activeChat,
+        content,
+        channel: activeChat === 'general' ? 'general' : 'dm',
+        message_type: content.includes('@') ? 'mention' : 'text',
+        timestamp: sent.createdAt,
+      }]);
+
       const mentions = content.match(/@(\S+)/g);
       if (mentions) {
         for (const mention of mentions) {
@@ -182,9 +184,9 @@ export default function ChatPage() {
           }
         }
       }
-    }).catch(() => {
+    } catch {
       setFailedIds(prev => new Set(prev).add(sent.id));
-    });
+    }
   }, [message, currentUser, activeChat, isConnected, sendMessage, users]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
