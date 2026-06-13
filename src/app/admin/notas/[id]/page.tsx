@@ -52,6 +52,7 @@ export default function NotaDetailPage() {
   const [newSubject, setNewSubject] = useState('');
   const [isOwner, setIsOwner] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -168,14 +169,91 @@ export default function NotaDetailPage() {
 
   const canEdit = isOwner || (note.share_all) || (note.shared_with ?? []).includes(currentUser?.id ?? '');
 
-  const handleExport = () => {
+  const handleExport = async () => {
     const editorEl = document.querySelector('.block-editor-content');
     const html = editorEl?.innerHTML ?? '';
-    const overlay = document.getElementById('note-print-overlay');
+    const overlay = document.getElementById('note-print-overlay') as HTMLElement | null;
     if (!overlay) return;
-    const contentEl = overlay.querySelector('#print-body');
+    const contentEl = overlay.querySelector('#print-body') as HTMLElement | null;
     if (contentEl) contentEl.innerHTML = html;
-    window.print();
+
+    setExporting(true);
+
+    // Posiciona o overlay fora da tela mas visível (necessário para html2canvas)
+    // Substituir checkboxes nativos por spans (html2canvas não renderiza input corretamente)
+    overlay.querySelectorAll<HTMLElement>('ul[data-type="taskList"] > li').forEach(li => {
+      const checked = li.dataset.checked === 'true';
+      const input = li.querySelector('input[type="checkbox"]');
+      if (!input) return;
+      const box = document.createElement('span');
+      box.style.cssText = [
+        'display:inline-block', 'width:12px', 'height:12px',
+        'border-radius:2px', 'flex-shrink:0', 'vertical-align:middle',
+        checked
+          ? 'background:#d9480f;border:1.5px solid #d9480f'
+          : 'background:#ffffff;border:1.5px solid #bbb',
+      ].join(';');
+      if (checked) {
+        box.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      }
+      input.parentNode?.replaceChild(box, input);
+    });
+
+    const prevCss = overlay.style.cssText;
+    overlay.style.cssText = [
+      'display:block',
+      'position:fixed',
+      'left:-99999px',
+      'top:0',
+      'width:794px',
+      'background:#ffffff',
+      'z-index:-1',
+    ].join(';');
+
+    try {
+      const { default: html2canvas } = await import('html2canvas');
+      const canvas = await html2canvas(overlay, {
+        scale: 3,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        width: 794,
+        windowWidth: 794,
+      });
+
+      const { default: jsPDF } = await import('jspdf');
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+      const imgData   = canvas.toDataURL('image/png');
+      const pdfWidth  = 210;
+      const pdfHeight = (canvas.height / canvas.width) * pdfWidth;
+      const pageH     = 297;
+
+      // +1mm de epsilon para evitar falso multi-página por arredondamento float
+      if (pdfHeight <= pageH + 1) {
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pageH);
+      } else {
+        let yOffset = 0;
+        while (yOffset < pdfHeight) {
+          pdf.addImage(imgData, 'PNG', 0, -yOffset, pdfWidth, pdfHeight);
+          yOffset += pageH;
+          if (yOffset < pdfHeight) pdf.addPage();
+        }
+      }
+
+      // Filename: "Título · 13.06.pdf"
+      const safeName = (note.title || 'nota').replace(/[/\\?%*:|"<>]/g, '-').trim();
+      const rawDate  = note.date ?? new Date().toISOString().split('T')[0];
+      const [, mm, dd] = rawDate.split('-');
+      const safeDate = `${dd}.${mm}`;
+      pdf.save(`${safeName} · ${safeDate}.pdf`);
+
+    } catch (err) {
+      console.error('PDF export error:', err);
+    } finally {
+      overlay.style.cssText = prevCss;
+      setExporting(false);
+    }
   };
   const linkedClient = clients.find(c => c.id === note.client_id);
   const teamMembers = users.filter(u => u.id !== currentUser?.id);
@@ -226,9 +304,13 @@ export default function NotaDetailPage() {
           )}
           <button
             onClick={handleExport}
-            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', padding: '5px 12px' }}
+            disabled={exporting}
+            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border)', borderRadius: '8px', cursor: exporting ? 'wait' : 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', padding: '5px 12px', opacity: exporting ? 0.6 : 1 }}
           >
-            <Printer size={13} /> Exportar PDF
+            {exporting
+              ? <><motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}><Loader2 size={13} /></motion.div> Gerando PDF...</>
+              : <><Printer size={13} /> Exportar PDF</>
+            }
           </button>
           {isOwner && (
             <button
@@ -462,165 +544,198 @@ function PrintOverlay({
     ? new Date(note.date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
     : new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
 
-  const exportedAt = new Date().toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  const exportedAt = new Date().toLocaleString('pt-BR', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  });
+
+  const hasClient   = !!linkedClient;
+  const hasMeta     = hasClient || (note.subjects?.length ?? 0) > 0;
 
   return (
     <>
       <style>{`
+        /* ═══════════════════════════════════════════════════════════════
+           Estilos de tela (usados pelo html2canvas) — prefixados para
+           não afetar o resto da UI enquanto o overlay está hidden.
+           ═══════════════════════════════════════════════════════════════ */
+
+        #note-print-overlay #print-body {
+          color: #1a1a1a; font-size: 14px; line-height: 1.8;
+          font-family: "Helvetica Neue", Arial, sans-serif;
+        }
+        #note-print-overlay #print-body > * + * { margin-top: 5px; }
+        #note-print-overlay #print-body h1 { font-size: 20px; font-weight: 700; color: #111; margin: 16px 0 4px; }
+        #note-print-overlay #print-body h2 { font-size: 17px; font-weight: 700; color: #111; margin: 13px 0 3px; }
+        #note-print-overlay #print-body h3 { font-size: 15px; font-weight: 700; color: #333; margin: 10px 0 2px; }
+        #note-print-overlay #print-body p { margin: 0 0 5px; }
+        #note-print-overlay #print-body ul,
+        #note-print-overlay #print-body ol { padding-left: 24px; margin: 4px 0 6px; }
+        #note-print-overlay #print-body li { margin: 3px 0; }
+        #note-print-overlay #print-body blockquote {
+          border-left: 4px solid #d9480f; padding: 6px 14px; margin: 10px 0;
+          color: #555; background: #fff8f5; border-radius: 0 4px 4px 0;
+        }
+        #note-print-overlay #print-body pre {
+          background: #f6f6f6 !important; border-radius: 4px;
+          padding: 10px 12px; font-size: 11px; margin: 8px 0;
+        }
+        #note-print-overlay #print-body pre code {
+          font-family: "Courier New", monospace; color: #222; background: none; padding: 0;
+        }
+        #note-print-overlay #print-body :not(pre) > code {
+          background: #f0f0f0; padding: 1px 4px; border-radius: 2px;
+          font-size: 11px; font-family: "Courier New", monospace; color: #c0392b;
+        }
+        #note-print-overlay #print-body strong { font-weight: 700; }
+        #note-print-overlay #print-body em { font-style: italic; }
+        #note-print-overlay #print-body s { text-decoration: line-through; }
+        #note-print-overlay #print-body hr { border: none; border-top: 1px solid #e8e8e8; margin: 14px 0; }
+        #note-print-overlay #print-body img { max-width: 100%; border-radius: 4px; margin: 8px 0; display: block; }
+        #note-print-overlay #print-body .editor-mention {
+          background: #fff0eb; color: #d9480f; border-radius: 3px; padding: 0 4px; font-weight: 600;
+        }
+
+        /* Task list — corrige checkboxes para html2canvas */
+        #note-print-overlay #print-body ul[data-type="taskList"] {
+          list-style: none !important; padding: 0 !important; margin: 4px 0;
+        }
+        #note-print-overlay #print-body ul[data-type="taskList"] > li {
+          display: flex !important; list-style: none !important;
+          align-items: flex-start; gap: 8px; margin: 5px 0;
+        }
+        #note-print-overlay #print-body ul[data-type="taskList"] > li::marker { display: none; }
+        #note-print-overlay #print-body ul[data-type="taskList"] > li > label {
+          display: flex !important; align-items: center; flex-shrink: 0; padding-top: 2px;
+        }
+        #note-print-overlay #print-body ul[data-type="taskList"] > li > label input[type="checkbox"] {
+          -webkit-appearance: none !important; appearance: none !important;
+          width: 13px !important; height: 13px !important; margin: 0 !important;
+          border: 1.5px solid #bbb !important; border-radius: 2px !important;
+          background: #fff !important; display: inline-block !important;
+          position: relative !important; flex-shrink: 0 !important;
+        }
+        #note-print-overlay #print-body ul[data-type="taskList"] > li[data-checked="true"] > label input[type="checkbox"] {
+          background: #d9480f !important; border-color: #d9480f !important;
+        }
+        #note-print-overlay #print-body ul[data-type="taskList"] > li[data-checked="true"] > label input[type="checkbox"]::after {
+          content: ''; position: absolute;
+          left: 3px; top: 1px; width: 4px; height: 6px;
+          border: 2px solid #fff; border-top: none; border-left: none;
+          transform: rotate(44deg);
+        }
+        #note-print-overlay #print-body ul[data-type="taskList"] > li > div { flex: 1; padding-top: 1px; }
+        #note-print-overlay #print-body ul[data-type="taskList"] > li[data-checked="true"] > div {
+          text-decoration: line-through; color: #aaa;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           @media print — fallback para window.print()
+           ═══════════════════════════════════════════════════════════════ */
         @media print {
           body > * { visibility: hidden !important; }
-
-          #note-print-overlay,
-          #note-print-overlay * { visibility: visible !important; }
-
+          #note-print-overlay, #note-print-overlay * { visibility: visible !important; }
           #note-print-overlay {
-            display: block !important;
-            position: fixed !important;
-            inset: 0 !important;
-            background: #ffffff !important;
-            padding: 0 !important;
-            margin: 0 !important;
-            z-index: 99999;
+            display: block !important; position: fixed !important;
+            inset: 0 !important; background: #fff !important;
+            padding: 0 !important; margin: 0 !important; z-index: 99999;
           }
-
-          @page {
-            size: A4 portrait;
-            margin: 0;
+          @page { size: A4 portrait; margin: 0; }
+          #print-body { color: #1a1a1a !important; font-size: 10.5pt; line-height: 1.8; }
+          #print-body ul[data-type="taskList"] { list-style: none !important; padding: 0 !important; }
+          #print-body ul[data-type="taskList"] > li { display: flex !important; align-items: flex-start; gap: 7pt; margin: 4pt 0; }
+          #print-body ul[data-type="taskList"] > li > label input[type="checkbox"] {
+            -webkit-appearance: none !important; appearance: none !important;
+            width: 9pt !important; height: 9pt !important; margin: 0 !important;
+            border: 1.5pt solid #bbb !important; border-radius: 2pt !important;
+            background: #fff !important; display: inline-block !important; position: relative !important;
+            -webkit-print-color-adjust: exact; print-color-adjust: exact;
           }
-
-          /* Body content */
-          #print-body { color: #1a1a1a !important; font-size: 10.5pt; line-height: 1.75; }
-          #print-body > * + * { margin-top: 5pt; }
-          #print-body h1 { font-size: 16pt; font-weight: 700; color: #111 !important; margin: 14pt 0 4pt; }
-          #print-body h2 { font-size: 13pt; font-weight: 700; color: #111 !important; margin: 12pt 0 3pt; }
-          #print-body h3 { font-size: 11pt; font-weight: 700; color: #333 !important; margin: 10pt 0 2pt; }
-          #print-body p { margin: 0 0 5pt; }
-          #print-body ul, #print-body ol { padding-left: 18pt; margin: 4pt 0 6pt; }
-          #print-body li { margin: 2pt 0; }
-          #print-body blockquote { border-left: 3pt solid #d9480f; padding: 5pt 12pt; margin: 8pt 0; color: #555; background: #fff8f5; }
-          #print-body pre { background: #f5f5f5 !important; border-radius: 4pt; padding: 10pt; font-size: 8.5pt; overflow: hidden; }
-          #print-body pre code { font-family: "Courier New", monospace; color: #222; background: none; padding: 0; }
-          #print-body :not(pre) > code { background: #f0f0f0; padding: 1pt 4pt; border-radius: 2pt; font-size: 8.5pt; font-family: "Courier New", monospace; color: #c0392b; }
-          #print-body ul[data-type="taskList"] { list-style: none; padding: 0; }
-          #print-body ul[data-type="taskList"] > li { display: flex; align-items: flex-start; gap: 6pt; }
-          #print-body ul[data-type="taskList"] > li[data-checked="true"] > div { text-decoration: line-through; color: #999; }
-          #print-body .editor-mention { background: #fff0eb; color: #d9480f; border-radius: 3pt; padding: 0 4pt; font-weight: 600; font-size: 0.95em; }
+          #print-body ul[data-type="taskList"] > li[data-checked="true"] > label input[type="checkbox"] {
+            background: #d9480f !important; border-color: #d9480f !important;
+          }
+          #print-body ul[data-type="taskList"] > li[data-checked="true"] > div { text-decoration: line-through; color: #aaa; }
+          #print-body ul[data-type="taskList"] > li > div { flex: 1; }
+          #print-body .editor-mention { background: #fff0eb; color: #d9480f; border-radius: 3pt; padding: 0 4pt; font-weight: 600; }
           #print-body strong { font-weight: 700; }
           #print-body em { font-style: italic; }
-          #print-body s { text-decoration: line-through; }
-          #print-body hr { border: none; border-top: 1pt solid #e0e0e0; margin: 12pt 0; }
-          #print-body img { max-width: 100%; border-radius: 4pt; margin: 6pt 0; }
+          #print-body hr { border: none; border-top: 1pt solid #e8e8e8; margin: 14pt 0; }
+          #print-body blockquote { border-left: 3pt solid #d9480f; padding: 6pt 14pt; margin: 10pt 0; color: #555; background: #fff8f5; }
+          #print-body img { max-width: 100%; border-radius: 4pt; margin: 8pt 0; display: block; }
         }
       `}</style>
 
       <div id="note-print-overlay" style={{ display: 'none' }}>
-        <div style={{
-          fontFamily: '"Inter", "Helvetica Neue", Arial, sans-serif',
-          color: '#1a1a1a',
-          minHeight: '100vh',
-          display: 'flex',
-          flexDirection: 'column',
-        }}>
+        <div style={{ fontFamily: '"Helvetica Neue", Arial, sans-serif', color: '#1a1a1a', display: 'flex', flexDirection: 'column', minHeight: '1123px', width: '794px', background: '#fff' }}>
 
           {/* ── Header ── */}
-          <div style={{
-            padding: '18pt 22mm 14pt',
-            display: 'flex',
-            alignItems: 'flex-start',
-            justifyContent: 'space-between',
-            gap: '16pt',
-            flexShrink: 0,
-            borderBottom: '2.5pt solid #d9480f',
-          }}>
-            {/* Symbol logo */}
+          <div style={{ padding: '16pt 22mm 14pt', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+            {/* Horizontal logo */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/SIMBOLO-PRETO.png"
-              alt="Pratic"
-              style={{ height: '28pt', width: 'auto', objectFit: 'contain', flexShrink: 0, marginTop: '2pt' }}
+              src="/logo-horizontal-preta.png"
+              alt="Pratic System"
+              style={{ height: '16pt', width: 'auto', objectFit: 'contain', flexShrink: 0 }}
             />
-
-            {/* Meta: label + date */}
-            <div style={{ textAlign: 'right', flexShrink: 0 }}>
-              <div style={{ fontSize: '7pt', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#d9480f', marginBottom: '2pt' }}>
+            {/* NOTA + date */}
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: '6.5pt', fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#d9480f' }}>
                 Nota
               </div>
-              <div style={{ fontSize: '9pt', color: '#888', fontWeight: 400 }}>
+              <div style={{ fontSize: '8.5pt', color: '#999', marginTop: '2pt' }}>
                 {formattedDate}
               </div>
             </div>
           </div>
 
-          {/* ── Title block ── */}
-          <div style={{ padding: '14pt 22mm 0', flexShrink: 0 }}>
-            <h1 style={{
-              fontSize: '22pt',
-              fontWeight: 800,
-              color: '#111',
-              margin: '0 0 10pt',
-              lineHeight: 1.2,
-              letterSpacing: '-0.02em',
-            }}>
-              {note.title || 'Sem título'}
-            </h1>
-
-            {/* Orange rule */}
-            <div style={{ height: '2.5pt', background: 'linear-gradient(90deg, #d9480f 0%, #f76b35 60%, transparent 100%)', borderRadius: '2pt' }} />
-            <div style={{ height: '0.5pt', background: '#ececec', marginTop: '3pt' }} />
+          {/* ── Orange line — dentro das margens ── */}
+          <div style={{ padding: '0 22mm', flexShrink: 0 }}>
+            <div style={{ height: '1.5px', background: 'linear-gradient(90deg, #d9480f 0%, #f76b35 60%, rgba(217,72,15,0) 100%)', borderRadius: '1px' }} />
           </div>
 
-          {/* ── Meta block (logo + cliente + assuntos + data) ── */}
-          <div style={{
-            margin: '10pt 22mm 0',
-            padding: '10pt 14pt',
-            background: '#fafafa',
-            border: '0.5pt solid #ebebeb',
-            borderRadius: '5pt',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '16pt',
-            flexShrink: 0,
-          }}>
-            {/* Left: meta info */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4pt' }}>
-              {linkedClient && (
-                <div style={{ fontSize: '8.5pt', color: '#444', display: 'flex', alignItems: 'baseline', gap: '5pt' }}>
-                  <span style={{ fontWeight: 700, color: '#d9480f', textTransform: 'uppercase', fontSize: '7pt', letterSpacing: '0.08em' }}>Cliente</span>
-                  {linkedClient.nome_fantasia || linkedClient.name}
-                </div>
-              )}
-              {(note.subjects?.length ?? 0) > 0 && (
-                <div style={{ fontSize: '8.5pt', color: '#444', display: 'flex', alignItems: 'baseline', gap: '5pt' }}>
-                  <span style={{ fontWeight: 700, color: '#d9480f', textTransform: 'uppercase', fontSize: '7pt', letterSpacing: '0.08em' }}>Assuntos</span>
-                  {note.subjects!.join(' · ')}
-                </div>
-              )}
-              <div style={{ fontSize: '7.5pt', color: '#bbb', marginTop: '1pt' }}>
-                Exportado em {exportedAt}
-              </div>
-            </div>
+          {/* ── Title ── */}
+          <div style={{ padding: '18pt 22mm 0', flexShrink: 0 }}>
+            <h1 style={{ fontSize: '26pt', fontWeight: 800, color: '#111', margin: 0, lineHeight: 1.15, letterSpacing: '-0.03em' }}>
+              {note.title || 'Sem título'}
+            </h1>
+          </div>
 
-            {/* Right: logo */}
+          {/* ── Sub-header: pills only (data já está no cabeçalho) ── */}
+          <div style={{ padding: '8pt 22mm 0', flexShrink: 0 }}>
+            {/* Pills */}
+            {hasMeta && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '5pt' }}>
+                {hasClient && (
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5pt', background: '#fff3ef', border: '0.75px solid #ffd4be', borderRadius: '4px', padding: '3px 9px' }}>
+                    <span style={{ fontSize: '6pt', fontWeight: 800, color: '#d9480f', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Cliente</span>
+                    <span style={{ fontSize: '8.5pt', color: '#333', fontWeight: 500 }}>{linkedClient!.nome_fantasia || linkedClient!.name}</span>
+                  </div>
+                )}
+                {(note.subjects ?? []).map(s => (
+                  <div key={s} style={{ display: 'inline-flex', alignItems: 'center', background: '#f4f4f4', border: '0.75px solid #e4e4e4', borderRadius: '4px', padding: '3px 9px', fontSize: '8pt', color: '#555' }}>
+                    {s}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* ── Divider before body ── */}
+          <div style={{ margin: '12pt 22mm 0', height: '0.5px', background: '#eaeaea', flexShrink: 0 }} />
+
+          {/* ── Body — populated by handleExport() ── */}
+          <div id="print-body" style={{ padding: '14pt 22mm 0', flex: 1, fontSize: '10.5pt', lineHeight: 1.8, color: '#1a1a1a' }} />
+
+          {/* ── Footer ── */}
+          <div style={{ margin: '24pt 22mm 18pt', padding: '10pt 0 0', borderTop: '0.5px solid #e8e8e8', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+            <span style={{ fontSize: '7.5pt', color: '#c0c0c0' }}>Exportado em {exportedAt}</span>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/logo-horizontal-preta.png"
               alt="Pratic System"
-              style={{ height: '16pt', width: 'auto', objectFit: 'contain', opacity: 0.45, flexShrink: 0 }}
+              style={{ height: '9pt', width: 'auto', objectFit: 'contain', opacity: 0.18 }}
             />
           </div>
-
-          {/* ── Body ── */}
-          <div
-            id="print-body"
-            style={{
-              padding: '16pt 22mm 24pt',
-              flex: 1,
-              fontSize: '10.5pt',
-              lineHeight: 1.75,
-              color: '#1a1a1a',
-            }}
-          />
         </div>
       </div>
     </>

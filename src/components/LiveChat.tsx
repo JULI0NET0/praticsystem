@@ -27,6 +27,7 @@ export default function LiveChat() {
   const [mentionFilter, setMentionFilter] = useState("");
   const [unreadCount, setUnreadCount] = useState(0);
   const [showSidebar, setShowSidebar] = useState(true);
+  const [failedIds, setFailedIds] = useState<Set<string>>(new Set());
 
   const inputRef = useRef<HTMLInputElement>(null);
   const typingChannelRef = useRef<any>(null);
@@ -159,7 +160,10 @@ export default function LiveChat() {
       if (mentions) {
         for (const mention of mentions) {
           const username = mention.replace('@', '');
-          const mentioned = users.find(u => u.name.toLowerCase().includes(username.toLowerCase()));
+          const mentioned = users.find(u =>
+            u.username?.toLowerCase() === username.toLowerCase() ||
+            u.name.toLowerCase().includes(username.toLowerCase())
+          );
           if (mentioned && mentioned.id !== currentUser.id) {
             await supabase.from('notifications').insert([{
               user_id: mentioned.id,
@@ -170,6 +174,8 @@ export default function LiveChat() {
           }
         }
       }
+    }).catch(() => {
+      setFailedIds(prev => new Set(prev).add(sent.id));
     });
   }, [message, currentUser, activeChat, isConnected, sendMessage, users]);
 
@@ -406,6 +412,7 @@ export default function LiveChat() {
                       isOwnMessage={msg.user.id === currentUser?.id}
                       showHeader={showHeader}
                       compact
+                      sendError={failedIds.has(msg.id)}
                     />
                   );
                 })}
@@ -433,7 +440,7 @@ export default function LiveChat() {
                     >
                       {filteredMentionUsers.map(u => (
                         <button
-                          key={u.id} type="button" onClick={() => insertMention(u.name)}
+                          key={u.id} type="button" onClick={() => insertMention(u.username || u.name.split(' ')[0])}
                           style={{
                             width: '100%', padding: '6px 10px', border: 'none', borderRadius: '6px',
                             background: 'transparent', color: 'var(--text-primary)', textAlign: 'left',
@@ -445,7 +452,10 @@ export default function LiveChat() {
                           <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.55rem', fontWeight: 700 }}>
                             {u.name.substring(0, 2).toUpperCase()}
                           </div>
-                          {u.name}
+                          <span style={{ flex: 1 }}>{u.name}</span>
+                          <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>
+                            @{u.username || u.name.split(' ')[0]}
+                          </span>
                         </button>
                       ))}
                     </motion.div>

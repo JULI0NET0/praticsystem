@@ -7,6 +7,7 @@ interface ChatMessageItemProps {
   isOwnMessage: boolean
   showHeader: boolean
   compact?: boolean
+  sendError?: boolean
 }
 
 const formatTime = (ts: string) =>
@@ -16,7 +17,29 @@ const formatTime = (ts: string) =>
     timeZone: 'America/Sao_Paulo',
   })
 
-export function ChatMessageItem({ message, isOwnMessage, showHeader, compact = false }: ChatMessageItemProps) {
+function renderContent(content: string, isOwnMessage: boolean) {
+  const parts = content.split(/(@\S+)/g)
+  return parts.map((part, i) =>
+    /^@\S+/.test(part) ? (
+      <span
+        key={i}
+        style={{
+          fontWeight: 700,
+          color: isOwnMessage ? 'white' : 'var(--accent)',
+          background: isOwnMessage ? 'rgba(0,0,0,0.22)' : 'rgba(217, 72, 15, 0.15)',
+          borderRadius: '4px',
+          padding: '1px 5px',
+          display: 'inline-block',
+          lineHeight: 'inherit',
+        }}
+      >
+        {part}
+      </span>
+    ) : part
+  )
+}
+
+export function ChatMessageItem({ message, isOwnMessage, showHeader, compact = false, sendError = false }: ChatMessageItemProps) {
   const avatarSize = compact ? 26 : 32
   const fontSize = compact ? '0.82rem' : '0.88rem'
   const padding = compact ? '8px 12px' : '10px 14px'
@@ -76,21 +99,25 @@ export function ChatMessageItem({ message, isOwnMessage, showHeader, compact = f
             wordBreak: 'break-word',
           }}
         >
-          {message.content}
+          {renderContent(message.content, isOwnMessage)}
         </div>
 
         {isOwnMessage && (
-          <span
-            style={{
-              fontSize: '0.55rem',
-              color: 'var(--text-secondary)',
-              display: 'block',
-              textAlign: 'right',
-              marginTop: '2px',
-            }}
-          >
-            {formatTime(message.createdAt)}
-          </span>
+          <div style={{ textAlign: 'right', marginTop: '2px' }}>
+            <span
+              style={{
+                fontSize: '0.55rem',
+                color: 'var(--text-secondary)',
+              }}
+            >
+              {formatTime(message.createdAt)}
+            </span>
+            {sendError && (
+              <span style={{ fontSize: '0.6rem', color: '#EF4444', marginLeft: '6px', fontWeight: 600 }}>
+                ⚠ Não salvo
+              </span>
+            )}
+          </div>
         )}
       </div>
     </div>

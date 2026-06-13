@@ -4,11 +4,13 @@ import ThemeLogo from "./ThemeLogo";
 import { Search, Bell } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 export default function MobileHeader() {
   const [mounted, setMounted] = useState(false);
   const { currentUser } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
     setMounted(true);
@@ -25,6 +27,7 @@ export default function MobileHeader() {
         alignItems: 'center'
       }}>
         <button
+          aria-label="Pesquisar"
           onClick={() => window.dispatchEvent(new CustomEvent('toggle-search'))}
           style={{
             color: 'var(--text-secondary)',
@@ -36,12 +39,15 @@ export default function MobileHeader() {
             justifyContent: 'center',
             backgroundColor: 'var(--card-inner-bg)',
             border: '1px solid var(--border)',
+            cursor: 'pointer',
             WebkitTapHighlightColor: 'transparent'
           }}
         >
           <Search size={18} />
         </button>
         <button
+          aria-label="Notificações"
+          onClick={() => router.push('/admin/profile')}
           style={{
             color: 'var(--text-secondary)',
             position: 'relative',
@@ -53,6 +59,7 @@ export default function MobileHeader() {
             justifyContent: 'center',
             backgroundColor: 'var(--card-inner-bg)',
             border: '1px solid var(--border)',
+            cursor: 'pointer',
             WebkitTapHighlightColor: 'transparent'
           }}
         >
@@ -70,6 +77,7 @@ export default function MobileHeader() {
         </button>
         <Link
           href="/admin/profile"
+          aria-label="Meu perfil"
           style={{
             width: '36px',
             height: '36px',

@@ -8,7 +8,6 @@ import { useState, useEffect, useRef } from "react";
 import { useTheme } from "next-themes";
 import { useAuth } from "@/hooks/useAuth";
 import { NAV_GROUPS } from "@/lib/navConfig";
-import { notifications } from "@/mocks/db";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 
@@ -119,10 +118,19 @@ export default function MobileMenuDrawer({ isOpen, onClose }: MobileMenuDrawerPr
 
           {/* Drawer */}
           <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Menu de navegação"
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', stiffness: 400, damping: 40 }}
+            drag="y"
+            dragConstraints={{ top: 0 }}
+            dragElastic={0.1}
+            onDragEnd={(_, info) => {
+              if (info.offset.y > 120) onClose();
+            }}
             style={{
               position: 'fixed',
               inset: 0,
@@ -137,13 +145,22 @@ export default function MobileMenuDrawer({ isOpen, onClose }: MobileMenuDrawerPr
               paddingBottom: 'env(safe-area-inset-bottom, 20px)'
             }}
           >
+            {/* Drag handle */}
+            <div style={{
+              width: '40px',
+              height: '4px',
+              borderRadius: '2px',
+              background: 'var(--border)',
+              margin: '12px auto 0',
+              flexShrink: 0
+            }} />
+
             {/* Header */}
             <div style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
               padding: '16px 20px',
-              paddingTop: 'calc(16px + env(safe-area-inset-top, 0px))',
               borderBottom: '1px solid var(--border)',
               flexShrink: 0
             }}>
@@ -151,6 +168,7 @@ export default function MobileMenuDrawer({ isOpen, onClose }: MobileMenuDrawerPr
               <motion.button
                 whileTap={{ scale: 0.9 }}
                 onClick={onClose}
+                aria-label="Fechar menu"
                 style={{
                   width: '36px',
                   height: '36px',
@@ -160,7 +178,8 @@ export default function MobileMenuDrawer({ isOpen, onClose }: MobileMenuDrawerPr
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  color: 'var(--text-secondary)'
+                  color: 'var(--text-secondary)',
+                  cursor: 'pointer'
                 }}
               >
                 <X size={18} />
@@ -172,6 +191,9 @@ export default function MobileMenuDrawer({ isOpen, onClose }: MobileMenuDrawerPr
               <motion.div
                 whileTap={{ scale: 0.98 }}
                 onClick={() => handleNavigate('/admin/profile')}
+                role="button"
+                tabIndex={0}
+                aria-label="Ver meu perfil"
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -241,6 +263,7 @@ export default function MobileMenuDrawer({ isOpen, onClose }: MobileMenuDrawerPr
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Buscar clientes, serviços..."
+                  aria-label="Buscar"
                   style={{
                     flex: 1,
                     background: 'transparent',

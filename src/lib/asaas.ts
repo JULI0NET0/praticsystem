@@ -69,3 +69,16 @@ export async function getAllTransactions(
 
   return all;
 }
+
+export interface AsaasBalance {
+  balance: number;
+  availableBalance: number;
+}
+
+export async function getBalance(): Promise<AsaasBalance> {
+  const data = await asaasFetch('/finance/balance');
+  return {
+    balance: Number(data.balance ?? 0),
+    availableBalance: Number(data.availableBalance ?? 0),
+  };
+}

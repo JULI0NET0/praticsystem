@@ -23,6 +23,7 @@ interface LancamentosTableProps {
   invoices: Invoice[];
   expenseEntries: ExpenseEntry[];
   asaasTransactions: AsaasTransaction[];
+  clients: { id: string; name: string; nome_fantasia?: string }[];
   syncing: boolean;
   onSync: (startDate: string, endDate: string) => Promise<void>;
   onLinkTransaction: (asaasId: string, expenseEntryId?: string, invoiceId?: string) => Promise<void>;
@@ -37,11 +38,13 @@ interface UnifiedEntry {
   id: string;
   date: string;
   description: string;
+  clientName?: string;
   category: string;
   amount: number;
   type: "receita" | "despesa";
   status: string;
   asaasLinked: boolean;
+  asaasTransactionId?: string;
   rawInvoice?: Invoice;
   rawEntry?: ExpenseEntry;
 }
@@ -50,6 +53,7 @@ export function LancamentosTable({
   invoices,
   expenseEntries,
   asaasTransactions,
+  clients,
   syncing,
   onSync,
   onLinkTransaction,
@@ -75,15 +79,19 @@ export function LancamentosTable({
       const d = inv.due_date.split("T")[0];
       if (startDate && d < startDate) continue;
       if (endDate && d > endDate) continue;
+      const client = clients.find((c) => c.id === inv.client_id);
+      const linkedTxn = asaasTransactions.find((t) => t.invoice_id === inv.id);
       result.push({
         id: `inv-${inv.id}`,
         date: d,
         description: inv.description,
+        clientName: client?.nome_fantasia || client?.name,
         category: "receita",
         amount: Number(inv.amount),
         type: "receita",
         status: inv.status,
-        asaasLinked: asaasTransactions.some((t) => t.invoice_id === inv.id),
+        asaasLinked: !!linkedTxn,
+        asaasTransactionId: linkedTxn?.id,
         rawInvoice: inv,
       });
     }
@@ -92,6 +100,7 @@ export function LancamentosTable({
       const d = entry.date.split("T")[0];
       if (startDate && d < startDate) continue;
       if (endDate && d > endDate) continue;
+      const linkedTxn = asaasTransactions.find((t) => t.expense_entry_id === entry.id);
       result.push({
         id: `exp-${entry.id}`,
         date: d,
@@ -101,12 +110,13 @@ export function LancamentosTable({
         type: "despesa",
         status: entry.status,
         asaasLinked: !!entry.asaas_transaction_id,
+        asaasTransactionId: entry.asaas_transaction_id || linkedTxn?.id,
         rawEntry: entry,
       });
     }
 
     return result.sort((a, b) => b.date.localeCompare(a.date));
-  }, [invoices, expenseEntries, asaasTransactions, startDate, endDate]);
+  }, [invoices, expenseEntries, asaasTransactions, clients, startDate, endDate]);
 
   const filtered = useMemo(() => {
     return entries.filter((e) => {
@@ -280,6 +290,11 @@ export function LancamentosTable({
                   <span style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {entry.description}
                   </span>
+                  {entry.clientName && (
+                    <span style={{ display: "block", fontSize: "0.72rem", color: "var(--text-tertiary)", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: "2px" }}>
+                      {entry.clientName}
+                    </span>
+                  )}
                 </td>
                 <td>
                   <span className="badge" style={{ fontSize: "0.75rem" }}>
@@ -302,9 +317,28 @@ export function LancamentosTable({
                 </td>
                 <td>
                   {entry.asaasLinked ? (
-                    <span style={{ color: "#22C55E", fontSize: "0.75rem", fontWeight: 700 }}>✓ Vinculado</span>
+                    <span style={{
+                      display: "inline-flex", alignItems: "center", gap: "4px",
+                      padding: "3px 8px", borderRadius: "8px", fontSize: "0.72rem", fontWeight: 700,
+                      background: "rgba(34,197,94,0.1)", color: "#22C55E", border: "1px solid rgba(34,197,94,0.25)",
+                    }}>
+                      ● Vinculado
+                    </span>
                   ) : (
-                    <span style={{ color: "var(--text-tertiary)", fontSize: "0.75rem" }}>—</span>
+                    <button
+                      onClick={() => {
+                        const txn = asaasTransactions.find((t) => !t.expense_entry_id && !t.invoice_id);
+                        if (txn) setLinkDialog(txn);
+                      }}
+                      style={{
+                        display: "inline-flex", alignItems: "center", gap: "4px",
+                        padding: "3px 8px", borderRadius: "8px", fontSize: "0.72rem", fontWeight: 700,
+                        background: "rgba(245,158,11,0.08)", color: "#F59E0B", border: "1px solid rgba(245,158,11,0.25)",
+                        cursor: "pointer", transition: "all 0.15s",
+                      }}
+                    >
+                      ⟳ Vincular
+                    </button>
                   )}
                 </td>
                 <td style={{ textAlign: "right" }}>

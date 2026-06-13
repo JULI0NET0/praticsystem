@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { MessageSquare, Send, Hash, Search } from "lucide-react";
+import { MessageSquare, Send, Hash, Search, ChevronLeft } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 import { usePresence } from "@/hooks/usePresence";
@@ -21,11 +21,26 @@ export default function ChatPage() {
   const [showMentions, setShowMentions] = useState(false);
   const [mentionFilter, setMentionFilter] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [failedIds, setFailedIds] = useState<Set<string>>(new Set());
+  const [isMobile, setIsMobile] = useState(false);
+  const [mobileChatOpen, setMobileChatOpen] = useState(false);
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const typingChannelRef = useRef<any>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { containerRef, scrollToBottom } = useChatScroll();
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+
+  const openChat = useCallback((id: string) => {
+    setActiveChat(id);
+    setMobileChatOpen(true);
+  }, []);
 
   const teamUsers = useMemo(
     () => users.filter(u => u.id !== currentUser?.id && ['admin', 'board', 'social_media', 'filmmaker'].includes(u.role)),
@@ -153,7 +168,10 @@ export default function ChatPage() {
       if (mentions) {
         for (const mention of mentions) {
           const username = mention.replace('@', '');
-          const mentioned = users.find(u => u.name.toLowerCase().includes(username.toLowerCase()));
+          const mentioned = users.find(u =>
+            u.username?.toLowerCase() === username.toLowerCase() ||
+            u.name.toLowerCase().includes(username.toLowerCase())
+          );
           if (mentioned && mentioned.id !== currentUser.id) {
             await supabase.from('notifications').insert([{
               user_id: mentioned.id,
@@ -164,6 +182,8 @@ export default function ChatPage() {
           }
         }
       }
+    }).catch(() => {
+      setFailedIds(prev => new Set(prev).add(sent.id));
     });
   }, [message, currentUser, activeChat, isConnected, sendMessage, users]);
 
@@ -205,9 +225,21 @@ export default function ChatPage() {
   }
 
   return (
-    <div style={{ display: 'flex', height: 'calc(100vh - 80px)', margin: '-20px -32px', overflow: 'hidden' }}>
-      {/* Sidebar */}
-      <div style={{ width: '280px', minWidth: '280px', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', background: 'rgba(255,255,255,0.01)' }}>
+    <div style={{
+      display: 'flex',
+      height: isMobile ? 'calc(100dvh - 56px - 70px)' : 'calc(100vh - 80px)',
+      margin: isMobile ? '-16px -16px 0' : '-20px -32px',
+      overflow: 'hidden',
+    }}>
+      {/* Sidebar — oculta no mobile quando chat está aberto */}
+      <div style={{
+        width: isMobile ? '100%' : '280px',
+        minWidth: isMobile ? '100%' : '280px',
+        borderRight: isMobile ? 'none' : '1px solid var(--border)',
+        display: isMobile && mobileChatOpen ? 'none' : 'flex',
+        flexDirection: 'column',
+        background: 'rgba(255,255,255,0.01)',
+      }}>
         <div style={{ padding: '24px 20px 16px' }}>
           <h2 style={{ fontSize: '1.3rem', fontWeight: 800, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
             <MessageSquare size={22} color="var(--accent)" /> Chat
@@ -225,7 +257,7 @@ export default function ChatPage() {
         <div style={{ flex: 1, overflowY: 'auto', padding: '0 12px 12px' }}>
           <p style={{ fontSize: '0.6rem', textTransform: 'uppercase', color: 'var(--text-secondary)', padding: '8px 8px 4px', letterSpacing: '0.05em', fontWeight: 700 }}>Canais</p>
           <button
-            onClick={() => setActiveChat('general')}
+            onClick={() => openChat('general')}
             style={{ width: '100%', padding: '12px', borderRadius: '12px', border: 'none', background: activeChat === 'general' ? 'rgba(217, 72, 15, 0.1)' : 'transparent', color: activeChat === 'general' ? 'var(--accent)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', marginBottom: '4px', fontSize: '0.9rem', fontWeight: 600 }}
           >
             <Hash size={18} /> Canal Geral
@@ -238,7 +270,7 @@ export default function ChatPage() {
             const isActive = activeChat === user.id;
             return (
               <button
-                key={user.id} onClick={() => setActiveChat(user.id)}
+                key={user.id} onClick={() => openChat(user.id)}
                 style={{ width: '100%', padding: '10px 12px', borderRadius: '12px', border: 'none', background: isActive ? 'rgba(217, 72, 15, 0.1)' : 'transparent', color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', marginBottom: '2px', transition: 'all 0.15s' }}
               >
                 <div style={{ position: 'relative', flexShrink: 0 }}>
@@ -259,11 +291,19 @@ export default function ChatPage() {
         </div>
       </div>
 
-      {/* Área Principal */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+      {/* Área Principal — oculta no mobile enquanto sidebar está visível */}
+      <div style={{ flex: 1, display: isMobile && !mobileChatOpen ? 'none' : 'flex', flexDirection: 'column', minWidth: 0 }}>
         {/* Header */}
-        <div style={{ padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', background: 'rgba(255,255,255,0.01)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+        <div style={{ padding: isMobile ? '12px 16px' : '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', background: 'rgba(255,255,255,0.01)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '10px' : '14px' }}>
+            {isMobile && (
+              <button
+                onClick={() => setMobileChatOpen(false)}
+                style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '4px', marginLeft: '-4px' }}
+              >
+                <ChevronLeft size={22} />
+              </button>
+            )}
             {activeChat === 'general' ? (
               <>
                 <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(217,72,15,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -302,7 +342,7 @@ export default function ChatPage() {
         </div>
 
         {/* Mensagens */}
-        <div ref={containerRef} style={{ flex: 1, padding: '20px 24px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <div ref={containerRef} style={{ flex: 1, padding: isMobile ? '12px 16px' : '20px 24px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px' }}>
           {allMessages.length === 0 && (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '12px', opacity: 0.4 }}>
               <MessageSquare size={40} />
@@ -325,6 +365,7 @@ export default function ChatPage() {
                     message={msg}
                     isOwnMessage={msg.user.id === currentUser?.id}
                     showHeader={showHeader}
+                    sendError={failedIds.has(msg.id)}
                   />
                 );
               })}
@@ -334,7 +375,7 @@ export default function ChatPage() {
 
         {/* Typing */}
         {isTyping && (
-          <div style={{ padding: '0 24px 8px', fontSize: '0.75rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+          <div style={{ padding: isMobile ? '0 16px 6px' : '0 24px 8px', fontSize: '0.75rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
             <span style={{ display: 'inline-flex', gap: '3px', alignItems: 'center' }}>
               {isTyping} está digitando
               <span style={{ display: 'inline-flex', gap: '2px' }}>
@@ -347,16 +388,16 @@ export default function ChatPage() {
         )}
 
         {/* Input */}
-        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', position: 'relative' }}>
+        <div style={{ padding: isMobile ? '10px 16px' : '16px 24px', borderTop: '1px solid var(--border)', position: 'relative' }}>
           <AnimatePresence>
             {showMentions && filteredMentionUsers.length > 0 && (
               <motion.div
                 initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}
-                style={{ position: 'absolute', bottom: '100%', left: '24px', right: '24px', background: 'rgba(18,18,18,0.98)', border: '1px solid var(--border)', borderRadius: '12px', padding: '8px', maxHeight: '160px', overflowY: 'auto', boxShadow: '0 -10px 30px rgba(0,0,0,0.3)' }}
+                style={{ position: 'absolute', bottom: '100%', left: isMobile ? '16px' : '24px', right: isMobile ? '16px' : '24px', background: 'rgba(18,18,18,0.98)', border: '1px solid var(--border)', borderRadius: '12px', padding: '8px', maxHeight: '160px', overflowY: 'auto', boxShadow: '0 -10px 30px rgba(0,0,0,0.3)' }}
               >
                 {filteredMentionUsers.map(u => (
                   <button
-                    key={u.id} type="button" onClick={() => insertMention(u.name)}
+                    key={u.id} type="button" onClick={() => insertMention(u.username || u.name.split(' ')[0])}
                     style={{ width: '100%', padding: '8px 12px', border: 'none', borderRadius: '8px', background: 'transparent', color: 'var(--text-primary)', textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.85rem' }}
                     onMouseEnter={e => (e.currentTarget.style.background = 'rgba(217,72,15,0.1)')}
                     onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
@@ -366,7 +407,9 @@ export default function ChatPage() {
                     </div>
                     <div>
                       <span style={{ fontWeight: 600 }}>{u.name}</span>
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginLeft: '8px' }}>{u.role}</span>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginLeft: '8px' }}>
+                        @{u.username || u.name.split(' ')[0]}
+                      </span>
                     </div>
                   </button>
                 ))}

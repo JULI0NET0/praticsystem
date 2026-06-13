@@ -2,10 +2,15 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { RefreshCw, Link2, CheckCircle2, AlertCircle, ChevronDown } from "lucide-react";
+import { RefreshCw, Link2, CheckCircle2, AlertCircle, Wallet } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import DialogShell from "@/components/DialogShell";
 import type { AsaasTransaction, ExpenseEntry, Invoice } from "@/types/database";
+
+interface AsaasBalance {
+  balance: number;
+  availableBalance: number;
+}
 
 interface AsaasSyncProps {
   asaasTransactions: AsaasTransaction[];
@@ -15,6 +20,8 @@ interface AsaasSyncProps {
   onSync: (startDate: string, endDate: string) => Promise<{ imported: number; skipped: number } | void>;
   onLink: (asaasId: string, expenseEntryId?: string, invoiceId?: string) => Promise<void>;
   selectedMonth: string;
+  balance?: AsaasBalance | null;
+  onRefreshBalance?: () => Promise<void>;
 }
 
 export function AsaasSync({
@@ -25,6 +32,8 @@ export function AsaasSync({
   onSync,
   onLink,
   selectedMonth,
+  balance,
+  onRefreshBalance,
 }: AsaasSyncProps) {
   const [lastSyncResult, setLastSyncResult] = useState<{ imported: number; skipped: number } | null>(null);
   const [linkDialog, setLinkDialog] = useState<AsaasTransaction | null>(null);
@@ -66,8 +75,70 @@ export function AsaasSync({
 
   const unlinkedCount = asaasTransactions.filter((t) => !t.expense_entry_id && !t.invoice_id).length;
 
+  const [refreshingBalance, setRefreshingBalance] = useState(false);
+
+  async function handleRefreshBalance() {
+    if (!onRefreshBalance) return;
+    setRefreshingBalance(true);
+    try { await onRefreshBalance(); } finally { setRefreshingBalance(false); }
+  }
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+      {/* Caixa Asaas */}
+      <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", alignItems: "stretch" }}>
+        {[
+          {
+            label: "Saldo Total",
+            value: balance?.balance ?? null,
+            color: "#60A5FA",
+            bg: "rgba(96,165,250,0.06)",
+            border: "rgba(96,165,250,0.15)",
+          },
+          {
+            label: "Saldo Disponível",
+            value: balance?.availableBalance ?? null,
+            color: balance?.availableBalance != null
+              ? balance.availableBalance >= 0 ? "#22C55E" : "#EF4444"
+              : "#60A5FA",
+            bg: balance?.availableBalance != null
+              ? balance.availableBalance >= 0 ? "rgba(34,197,94,0.06)" : "rgba(239,68,68,0.06)"
+              : "rgba(255,255,255,0.02)",
+            border: balance?.availableBalance != null
+              ? balance.availableBalance >= 0 ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.15)"
+              : "var(--border)",
+          },
+        ].map((card) => (
+          <div
+            key={card.label}
+            className="glass-card"
+            style={{ padding: "20px 24px", flex: "1 1 200px", background: card.bg, border: `1px solid ${card.border}` }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" }}>
+              <Wallet size={15} color={card.color} />
+              <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                {card.label}
+              </span>
+            </div>
+            <span style={{ fontSize: "1.6rem", fontWeight: 800, color: card.color, letterSpacing: "-0.02em" }}>
+              {card.value != null
+                ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(card.value)
+                : <span style={{ fontSize: "0.9rem", color: "var(--text-tertiary)", fontWeight: 600 }}>—</span>
+              }
+            </span>
+          </div>
+        ))}
+        <button
+          onClick={handleRefreshBalance}
+          disabled={refreshingBalance}
+          className="btn btn-secondary"
+          style={{ alignSelf: "center", display: "flex", alignItems: "center", gap: "7px", whiteSpace: "nowrap" }}
+        >
+          <RefreshCw size={14} className={refreshingBalance ? "animate-spin" : ""} />
+          Atualizar Saldo
+        </button>
+      </div>
+
       {/* Sync control */}
       <div className="glass-card" style={{ padding: "24px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "24px", flexWrap: "wrap" }}>
         <div>

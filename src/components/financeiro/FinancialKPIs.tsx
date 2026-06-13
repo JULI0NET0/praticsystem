@@ -1,13 +1,14 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { TrendingUp, TrendingDown, DollarSign, Users, Percent, BarChart2, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { TrendingUp, DollarSign, Users, Percent, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 
 import { Calendar } from "lucide-react";
 
 interface FinancialKPIsProps {
-  faturamento: number;
+  faturamentoPrevisto: number;
+  faturamentoRealizado: number;
   despesas: number;
   clientesAtivos: number;
   dateRange: { start: string; end: string };
@@ -17,7 +18,8 @@ interface FinancialKPIsProps {
 }
 
 export function FinancialKPIs({
-  faturamento,
+  faturamentoPrevisto,
+  faturamentoRealizado,
   despesas,
   clientesAtivos,
   dateRange,
@@ -25,14 +27,25 @@ export function FinancialKPIs({
   onPresetChange,
   onRangeChange,
 }: FinancialKPIsProps) {
-  const lucro = faturamento - despesas;
-  const margem = faturamento > 0 ? (lucro / faturamento) * 100 : 0;
-  const ticketMedio = clientesAtivos > 0 ? faturamento / clientesAtivos : 0;
+  const lucro = faturamentoRealizado - despesas;
+  const margem = faturamentoRealizado > 0 ? (lucro / faturamentoRealizado) * 100 : 0;
+  const ticketMedio = clientesAtivos > 0 ? faturamentoRealizado / clientesAtivos : 0;
+  const taxaConversao = faturamentoPrevisto > 0 ? (faturamentoRealizado / faturamentoPrevisto) * 100 : 0;
 
   const cards = [
     {
-      label: "Faturamento",
-      value: formatCurrency(faturamento),
+      label: "Faturamento Previsto",
+      value: formatCurrency(faturamentoPrevisto),
+      sub: "Total emitido no período",
+      icon: <TrendingUp size={20} />,
+      color: "#60A5FA",
+      bg: "rgba(96,165,250,0.06)",
+      border: "rgba(96,165,250,0.15)",
+    },
+    {
+      label: "Faturamento Realizado",
+      value: formatCurrency(faturamentoRealizado),
+      sub: `${taxaConversao.toFixed(0)}% do previsto recebido`,
       icon: <ArrowUpRight size={20} />,
       color: "#22C55E",
       bg: "rgba(34,197,94,0.06)",
@@ -41,22 +54,16 @@ export function FinancialKPIs({
     {
       label: "Despesas",
       value: formatCurrency(despesas),
+      sub: null,
       icon: <ArrowDownRight size={20} />,
       color: "#EF4444",
       bg: "rgba(239,68,68,0.06)",
       border: "rgba(239,68,68,0.15)",
     },
     {
-      label: "Lucro",
-      value: formatCurrency(lucro),
-      icon: lucro >= 0 ? <TrendingUp size={20} /> : <TrendingDown size={20} />,
-      color: lucro >= 0 ? "var(--accent)" : "#EF4444",
-      bg: lucro >= 0 ? "rgba(var(--accent-rgb),0.06)" : "rgba(239,68,68,0.06)",
-      border: lucro >= 0 ? "rgba(var(--accent-rgb),0.15)" : "rgba(239,68,68,0.15)",
-    },
-    {
       label: "Ticket Médio",
       value: formatCurrency(ticketMedio),
+      sub: null,
       icon: <DollarSign size={20} />,
       color: "#A78BFA",
       bg: "rgba(167,139,250,0.06)",
@@ -65,6 +72,7 @@ export function FinancialKPIs({
     {
       label: "Margem de Lucro",
       value: `${margem.toFixed(1)}%`,
+      sub: `Lucro: ${formatCurrency(lucro)}`,
       icon: <Percent size={20} />,
       color: margem >= 20 ? "#22C55E" : margem >= 0 ? "#F59E0B" : "#EF4444",
       bg: "rgba(255,255,255,0.02)",
@@ -73,6 +81,7 @@ export function FinancialKPIs({
     {
       label: "Clientes Ativos",
       value: String(clientesAtivos),
+      sub: null,
       icon: <Users size={20} />,
       color: "#60A5FA",
       bg: "rgba(96,165,250,0.06)",
@@ -180,6 +189,11 @@ export function FinancialKPIs({
             <span style={{ fontSize: "1.75rem", fontWeight: 800, color: card.color, letterSpacing: "-0.02em", lineHeight: 1 }}>
               {card.value}
             </span>
+            {card.sub && (
+              <span style={{ fontSize: "0.75rem", color: "var(--text-tertiary)", fontWeight: 600 }}>
+                {card.sub}
+              </span>
+            )}
           </motion.div>
         ))}
       </div>

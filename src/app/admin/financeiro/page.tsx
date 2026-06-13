@@ -35,6 +35,8 @@ export default function FinanceiroPage() {
   const [asaasTransactions, setAsaasTransactions] = useState<AsaasTransaction[]>([]);
   const [users, setUsers] = useState<{ id: string; name: string }[]>([]);
   const [contracts, setContracts] = useState<any[]>([]);
+  const [clients, setClients] = useState<{ id: string; name: string; nome_fantasia?: string }[]>([]);
+  const [asaasBalance, setAsaasBalance] = useState<{ balance: number; availableBalance: number } | null>(null);
 
   const handlePresetChange = (preset: 'all' | 'this_month' | 'prev_month' | 'next_month' | 'custom') => {
     setDatePreset(preset);
@@ -70,13 +72,14 @@ export default function FinanceiroPage() {
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [invRes, expRes, entRes, txnRes, usrRes, ctrRes] = await Promise.all([
+      const [invRes, expRes, entRes, txnRes, usrRes, ctrRes, cliRes] = await Promise.all([
         supabase.from("invoices").select("*"),
         supabase.from("expenses").select("*").order("created_at", { ascending: false }),
         supabase.from("expense_entries").select("*, expenses(id, description, category)").order("date", { ascending: false }),
         supabase.from("asaas_transactions").select("*").order("date", { ascending: false }),
         supabase.from("users").select("id, name"),
         supabase.from("contracts").select("id, status"),
+        supabase.from("clients").select("id, name, nome_fantasia"),
       ]);
 
       if (invRes.data) setInvoices(invRes.data);
@@ -85,12 +88,25 @@ export default function FinanceiroPage() {
       if (txnRes.data) setAsaasTransactions(txnRes.data);
       if (usrRes.data) setUsers(usrRes.data);
       if (ctrRes.data) setContracts(ctrRes.data);
+      if (cliRes.data) setClients(cliRes.data);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => { fetchAll(); }, [fetchAll]);
+  const fetchBalance = useCallback(async () => {
+    try {
+      const res = await fetch("/api/financeiro/asaas/balance");
+      if (res.ok) {
+        const data = await res.json();
+        setAsaasBalance(data);
+      }
+    } catch {
+      // saldo indisponível não bloqueia a página
+    }
+  }, []);
+
+  useEffect(() => { fetchAll(); fetchBalance(); }, [fetchAll, fetchBalance]);
 
   // Dashboard KPI calculations
   const periodInvoices = invoices.filter((i) => {
@@ -99,7 +115,8 @@ export default function FinanceiroPage() {
     const endMatch = !endDate || d <= endDate;
     return startMatch && endMatch;
   });
-  const faturamento = periodInvoices.filter((i) => i.status === "paid").reduce((s, i) => s + Number(i.amount), 0);
+  const faturamentoRealizado = periodInvoices.filter((i) => i.status === "paid").reduce((s, i) => s + Number(i.amount), 0);
+  const faturamentoPrevisto = periodInvoices.reduce((s, i) => s + Number(i.amount), 0);
 
   const periodEntries = expenseEntries.filter((e) => {
     const d = e.date.split("T")[0];
@@ -197,7 +214,8 @@ export default function FinanceiroPage() {
     <div style={{ display: "flex", flexDirection: "column", gap: "32px" }}>
       {/* KPIs + date controls (always visible) */}
       <FinancialKPIs
-        faturamento={faturamento}
+        faturamentoPrevisto={faturamentoPrevisto}
+        faturamentoRealizado={faturamentoRealizado}
         despesas={despesas}
         clientesAtivos={clientesAtivos}
         dateRange={dateRange}
@@ -244,9 +262,10 @@ export default function FinanceiroPage() {
                 Receita × Despesa — {datePreset === "all" ? "Todos os Períodos" : datePreset === "this_month" ? "Este Mês" : datePreset === "prev_month" ? "Mês Anterior" : datePreset === "next_month" ? "Próximo Mês" : `${startDate} a ${endDate}`}
               </h4>
               {[
-                { label: "Faturamento", value: faturamento, color: "#22C55E", max: Math.max(faturamento, despesas, 1) },
-                { label: "Despesas", value: despesas, color: "#EF4444", max: Math.max(faturamento, despesas, 1) },
-                { label: "Lucro", value: Math.max(faturamento - despesas, 0), color: "var(--accent)", max: Math.max(faturamento, despesas, 1) },
+                { label: "Previsto", value: faturamentoPrevisto, color: "#60A5FA", max: Math.max(faturamentoPrevisto, despesas, 1) },
+                { label: "Realizado", value: faturamentoRealizado, color: "#22C55E", max: Math.max(faturamentoPrevisto, despesas, 1) },
+                { label: "Despesas", value: despesas, color: "#EF4444", max: Math.max(faturamentoPrevisto, despesas, 1) },
+                { label: "Lucro", value: Math.max(faturamentoRealizado - despesas, 0), color: "var(--accent)", max: Math.max(faturamentoPrevisto, despesas, 1) },
               ].map((item) => (
                 <div key={item.label} style={{ marginBottom: "16px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
@@ -341,6 +360,7 @@ export default function FinanceiroPage() {
           invoices={invoices}
           expenseEntries={expenseEntries}
           asaasTransactions={asaasTransactions}
+          clients={clients}
           syncing={syncing}
           onSync={handleSync}
           onLinkTransaction={handleLinkTransaction}
@@ -370,6 +390,8 @@ export default function FinanceiroPage() {
           onSync={handleSync}
           onLink={handleLinkTransaction}
           selectedMonth={selectedMonthForComponents}
+          balance={asaasBalance}
+          onRefreshBalance={fetchBalance}
         />
       )}
     </div>

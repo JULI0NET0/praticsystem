@@ -32,6 +32,8 @@ export function useRealtimeChat({ roomName, username, userId, onMessage }: UseRe
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [isConnected, setIsConnected] = useState(false)
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
+  const onMessageRef = useRef(onMessage)
+  useEffect(() => { onMessageRef.current = onMessage })
 
   useEffect(() => {
     const channel = supabase.channel(roomName)
@@ -45,7 +47,7 @@ export function useRealtimeChat({ roomName, username, userId, onMessage }: UseRe
           if (prev.some(m => m.id === incoming.id)) return prev
           return [...prev, incoming]
         })
-        onMessage?.(incoming)
+        onMessageRef.current?.(incoming)
       })
       .subscribe(status => {
         setIsConnected(status === 'SUBSCRIBED')

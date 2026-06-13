@@ -111,7 +111,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [fetchUserProfile]);
 
   useEffect(() => {
-    if (currentUser && ['admin', 'board'].includes(currentUser.role)) {
+    if (currentUser && ['admin', 'board', 'social_media', 'filmmaker'].includes(currentUser.role)) {
       fetchAllUsers();
     }
   }, [currentUser, fetchAllUsers]);
