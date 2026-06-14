@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { CheckCircle2, AlertCircle, X, Info } from "lucide-react";
-import { useState, useEffect, createContext, useContext } from "react";
+import { useState, useCallback, createContext, useContext } from "react";
 import { playSound } from "@/utils/audio";
 
 type ToastType = 'success' | 'error' | 'info';
@@ -22,14 +22,14 @@ const ToastContext = createContext<ToastContextType | undefined>(undefined);
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
-  const showToast = (message: string, type: ToastType) => {
+  const showToast = useCallback((message: string, type: ToastType) => {
     const id = Date.now();
     playSound(type);
     setToasts((prev) => [...prev, { id, message, type }]);
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id));
     }, 4000);
-  };
+  }, []);
 
   return (
     <ToastContext.Provider value={{ showToast }}>
