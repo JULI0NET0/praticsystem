@@ -35,12 +35,9 @@ export default function ClientsPage() {
   const fetchClients = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('clients')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
+      const res = await fetch('/api/clients');
+      if (!res.ok) throw new Error(`Erro ao buscar clientes: ${res.status}`);
+      const data = await res.json();
 
       if (data) {
         setClients(data);
