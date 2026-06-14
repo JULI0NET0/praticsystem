@@ -46,7 +46,9 @@ import {
   Target,
   TrendingUp,
   Activity,
-  Loader2
+  Loader2,
+  Palette,
+  Image
 } from "lucide-react";
 import Spotlight from "@/components/Spotlight";
 import DialogShell from "@/components/DialogShell";
@@ -62,6 +64,7 @@ import {
 import ContractDetailsModal from "@/components/admin/contracts/ContractDetailsModal";
 import NoteCard from "@/components/notas/NoteCard";
 import InlineNoteEditor from "@/components/notas/InlineNoteEditor";
+import { formatPhone } from "@/utils/masks";
 
 
 const TABS = [
@@ -130,6 +133,10 @@ export default function ClientDetailPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [isGoogleDriveModalOpen, setIsGoogleDriveModalOpen] = useState(false);
   const [tempGoogleDriveUrl, setTempGoogleDriveUrl] = useState("");
+  const [isBrandModalOpen, setIsBrandModalOpen] = useState(false);
+  const [tempBrandDriveUrl, setTempBrandDriveUrl] = useState("");
+  const [tempBrandCanvaUrl, setTempBrandCanvaUrl] = useState("");
+  const [isBrandUploading, setIsBrandUploading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -591,6 +598,54 @@ export default function ClientDetailPage() {
     } catch (err) {
       console.error('Erro ao salvar Drive:', err);
       showToast('Erro ao salvar link do Drive.', 'error');
+    }
+  };
+
+  const handleSaveBrandLinks = async () => {
+    try {
+      const { error } = await supabase
+        .from('clients')
+        .update({ brand_drive_url: tempBrandDriveUrl, brand_canva_url: tempBrandCanvaUrl })
+        .eq('id', id);
+      if (error) throw error;
+      setClientData({ ...clientData, brand_drive_url: tempBrandDriveUrl, brand_canva_url: tempBrandCanvaUrl });
+      setIsBrandModalOpen(false);
+      showToast('ID Visual da Marca atualizado!', 'success');
+    } catch (err) {
+      showToast('Erro ao salvar ID Visual.', 'error');
+    }
+  };
+
+  const handleUploadBrandDocument = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !id) return;
+    setIsBrandUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random()}.${fileExt}`;
+      const filePath = `${id}/${fileName}`;
+      const { error: uploadError } = await supabase.storage
+        .from('client-documents')
+        .upload(filePath, file);
+      if (uploadError) throw uploadError;
+      const { error: dbError } = await supabase
+        .from('client_documents')
+        .insert({
+          client_id: id,
+          name: file.name,
+          file_path: filePath,
+          file_type: file.type,
+          size: file.size,
+          category: 'brand-identity'
+        });
+      if (dbError) throw dbError;
+      showToast('Arquivo de marca enviado!', 'success');
+      fetchClientDetails();
+    } catch (err) {
+      showToast('Erro ao enviar arquivo.', 'error');
+    } finally {
+      setIsBrandUploading(false);
+      e.target.value = '';
     }
   };
 
@@ -2129,6 +2184,143 @@ export default function ClientDetailPage() {
                 </div>
               </Spotlight>
 
+              {/* Brand Identity Section */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                {/* Header */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(168, 85, 247, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#A855F7' }}>
+                      <Palette size={18} />
+                    </div>
+                    <h3 style={{ fontSize: '1.25rem', fontWeight: 700 }}>ID Visual da Marca</h3>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setTempBrandDriveUrl(clientData.brand_drive_url || '');
+                      setTempBrandCanvaUrl(clientData.brand_canva_url || '');
+                      setIsBrandModalOpen(true);
+                    }}
+                    className="btn btn-secondary btn-sm"
+                    style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem' }}
+                  >
+                    <Edit2 size={14} /> Editar Links
+                  </button>
+                </div>
+
+                {/* Drive + Canva Cards */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                  {/* Google Drive Card */}
+                  <Spotlight className="glass-card" style={{ padding: '24px', display: 'flex', alignItems: 'center', gap: '16px', border: '1px solid rgba(66, 133, 244, 0.2)', background: 'rgba(66, 133, 244, 0.03)' }}>
+                    <div style={{ width: '48px', height: '48px', borderRadius: '12px', backgroundColor: 'rgba(66, 133, 244, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4285F4', flexShrink: 0 }}>
+                      <HardDrive size={24} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: '2px' }}>Google Drive</p>
+                      <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                        {clientData.brand_drive_url ? 'Pasta vinculada' : 'Nenhuma pasta vinculada'}
+                      </p>
+                    </div>
+                    {clientData.brand_drive_url ? (
+                      <button
+                        onClick={() => window.open(clientData.brand_drive_url, '_blank')}
+                        className="btn btn-secondary btn-sm"
+                        style={{ display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid rgba(66, 133, 244, 0.3)', color: '#4285F4', flexShrink: 0, fontSize: '0.8rem' }}
+                      >
+                        <ExternalLink size={14} /> Abrir
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => { setTempBrandDriveUrl(''); setTempBrandCanvaUrl(clientData.brand_canva_url || ''); setIsBrandModalOpen(true); }}
+                        className="btn btn-secondary btn-sm"
+                        style={{ display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid rgba(66, 133, 244, 0.2)', color: '#4285F4', flexShrink: 0, fontSize: '0.8rem' }}
+                      >
+                        <Plus size={14} /> Vincular
+                      </button>
+                    )}
+                  </Spotlight>
+
+                  {/* Canva Card */}
+                  <Spotlight className="glass-card" style={{ padding: '24px', display: 'flex', alignItems: 'center', gap: '16px', border: '1px solid rgba(126, 86, 222, 0.2)', background: 'rgba(126, 86, 222, 0.03)' }}>
+                    <div style={{ width: '48px', height: '48px', borderRadius: '12px', backgroundColor: 'rgba(126, 86, 222, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#7E56DE', flexShrink: 0 }}>
+                      <Sparkles size={24} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: '2px' }}>Canva</p>
+                      <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                        {clientData.brand_canva_url ? 'Kit vinculado' : 'Nenhum kit vinculado'}
+                      </p>
+                    </div>
+                    {clientData.brand_canva_url ? (
+                      <button
+                        onClick={() => window.open(clientData.brand_canva_url, '_blank')}
+                        className="btn btn-secondary btn-sm"
+                        style={{ display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid rgba(126, 86, 222, 0.3)', color: '#7E56DE', flexShrink: 0, fontSize: '0.8rem' }}
+                      >
+                        <ExternalLink size={14} /> Abrir
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => { setTempBrandDriveUrl(clientData.brand_drive_url || ''); setTempBrandCanvaUrl(''); setIsBrandModalOpen(true); }}
+                        className="btn btn-secondary btn-sm"
+                        style={{ display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid rgba(126, 86, 222, 0.2)', color: '#7E56DE', flexShrink: 0, fontSize: '0.8rem' }}
+                      >
+                        <Plus size={14} /> Vincular
+                      </button>
+                    )}
+                  </Spotlight>
+                </div>
+
+                {/* Brand Files Upload */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Arquivos de Marca ({clientDocuments.filter(d => d.category === 'brand-identity').length})
+                  </p>
+                  <div style={{ position: 'relative' }}>
+                    <input type="file" id="brand-upload" style={{ display: 'none' }} onChange={handleUploadBrandDocument} disabled={isBrandUploading} accept="image/*,application/pdf" />
+                    <label
+                      htmlFor="brand-upload"
+                      className={`btn btn-secondary btn-sm ${isBrandUploading ? '' : ''}`}
+                      style={{ cursor: isBrandUploading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', border: '1px solid rgba(168, 85, 247, 0.3)', color: '#A855F7' }}
+                    >
+                      {isBrandUploading ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Upload size={14} />}
+                      {isBrandUploading ? 'Enviando...' : 'Upload'}
+                    </label>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px' }}>
+                  {clientDocuments.filter(d => d.category === 'brand-identity').map(doc => (
+                    <Spotlight key={doc.id} className="glass-card" style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '14px', border: '1px solid rgba(168, 85, 247, 0.1)' }}>
+                      <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: 'rgba(168, 85, 247, 0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#A855F7', flexShrink: 0 }}>
+                        {doc.file_type?.includes('image') ? <Image size={20} /> : <FileText size={20} />}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontWeight: 600, fontSize: '0.875rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={doc.name}>{doc.name}</p>
+                        <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{(doc.size / 1024).toFixed(1)} KB • {new Date(doc.created_at).toLocaleDateString('pt-BR')}</p>
+                      </div>
+                      <div style={{ display: 'flex', gap: '2px' }}>
+                        <button
+                          onClick={() => { const { data } = supabase.storage.from('client-documents').getPublicUrl(doc.file_path); window.open(data.publicUrl, '_blank'); }}
+                          style={{ padding: '6px', color: 'var(--text-secondary)', background: 'none', border: 'none', cursor: 'pointer' }}
+                        ><Eye size={15} /></button>
+                        <button
+                          onClick={() => handleDeleteDocument(doc.id, doc.file_path)}
+                          style={{ padding: '6px', color: 'var(--text-secondary)', background: 'none', border: 'none', cursor: 'pointer' }}
+                          className="hover-danger"
+                        ><Trash2 size={15} /></button>
+                      </div>
+                    </Spotlight>
+                  ))}
+                  {clientDocuments.filter(d => d.category === 'brand-identity').length === 0 && (
+                    <div style={{ gridColumn: '1 / -1', padding: '32px', textAlign: 'center', background: 'rgba(168, 85, 247, 0.02)', borderRadius: '16px', border: '1px dashed rgba(168, 85, 247, 0.2)' }}>
+                      <Palette size={28} style={{ color: 'rgba(168, 85, 247, 0.3)', margin: '0 auto 8px' }} />
+                      <p style={{ color: 'var(--text-tertiary)', fontSize: '0.875rem' }}>Nenhum arquivo de marca enviado.</p>
+                      <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.2)', marginTop: '4px' }}>Suba logos, paletas, fontes ou manual da marca.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {/* Attachments Section */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -2164,7 +2356,7 @@ export default function ClientDetailPage() {
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
-                  {clientDocuments.map(doc => (
+                  {clientDocuments.filter(d => d.category !== 'brand-identity').map(doc => (
                     <Spotlight key={doc.id} className="glass-card" style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
                       <div style={{
                         width: '48px', height: '48px', borderRadius: '12px',
@@ -2205,7 +2397,7 @@ export default function ClientDetailPage() {
                     </Spotlight>
                   ))}
 
-                  {clientDocuments.length === 0 && !isUploading && (
+                  {clientDocuments.filter(d => d.category !== 'brand-identity').length === 0 && !isUploading && (
                     <div style={{
                       gridColumn: '1 / -1', padding: '48px', textAlign: 'center',
                       backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '24px',
@@ -2569,11 +2761,11 @@ export default function ClientDetailPage() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '18px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>WhatsApp / Celular</label>
-                  <input type="text" className="input-dark" value={editFormData.phone || ''} onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })} />
+                  <input type="text" className="input-dark" value={editFormData.phone || ''} onChange={(e) => setEditFormData({ ...editFormData, phone: formatPhone(e.target.value) })} />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Telefone Fixo</label>
-                  <input type="text" className="input-dark" value={editFormData.telefone_fixo || ''} onChange={(e) => setEditFormData({ ...editFormData, telefone_fixo: e.target.value })} />
+                  <input type="text" className="input-dark" value={editFormData.telefone_fixo || ''} onChange={(e) => setEditFormData({ ...editFormData, telefone_fixo: formatPhone(e.target.value) })} />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>E-mail Principal</label>
@@ -2777,6 +2969,81 @@ export default function ClientDetailPage() {
                   <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setIsGoogleDriveModalOpen(false)}>Cancelar</button>
                   <button className="btn btn-accent" style={{ flex: 1, backgroundColor: '#4285F4', borderColor: '#4285F4' }} onClick={handleSaveGoogleDrive}>
                     Salvar Vínculo
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Brand Identity Modal */}
+      <AnimatePresence>
+        {isBrandModalOpen && (
+          <div style={{
+            position: 'fixed', inset: 0, zIndex: 110,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '24px', backgroundColor: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)'
+          }}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="glass-card"
+              style={{ width: '100%', maxWidth: '520px', padding: '32px' }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '28px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ color: '#A855F7' }}><Palette size={24} /></div>
+                  <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>ID Visual da Marca</h2>
+                </div>
+                <button onClick={() => setIsBrandModalOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                  <X size={24} />
+                </button>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                {/* Drive field */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <HardDrive size={15} color="#4285F4" /> Google Drive
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <Link size={16} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
+                    <input
+                      type="url"
+                      className="input-dark"
+                      placeholder="https://drive.google.com/drive/folders/..."
+                      style={{ paddingLeft: '42px' }}
+                      value={tempBrandDriveUrl}
+                      onChange={(e) => setTempBrandDriveUrl(e.target.value)}
+                    />
+                  </div>
+                </div>
+                {/* Canva field */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Sparkles size={15} color="#7E56DE" /> Canva
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <Link size={16} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
+                    <input
+                      type="url"
+                      className="input-dark"
+                      placeholder="https://www.canva.com/design/..."
+                      style={{ paddingLeft: '42px' }}
+                      value={tempBrandCanvaUrl}
+                      onChange={(e) => setTempBrandCanvaUrl(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '12px', marginTop: '4px' }}>
+                  <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setIsBrandModalOpen(false)}>Cancelar</button>
+                  <button
+                    className="btn btn-accent"
+                    style={{ flex: 1, backgroundColor: '#A855F7', borderColor: '#A855F7' }}
+                    onClick={handleSaveBrandLinks}
+                  >
+                    Salvar
                   </button>
                 </div>
               </div>

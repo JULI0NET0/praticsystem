@@ -252,243 +252,102 @@ export default function ContractDetailsModal({ isOpen, onClose, contract, client
     }
   };
 
-  const handleDownloadPDF = () => {
+  const [exporting, setExporting] = useState(false);
+
+  const handleDownloadPDF = async () => {
     if (!contract || !client) return;
 
-    const printWindow = window.open("", "_blank");
-    if (!printWindow) {
-      showToast("Por favor, permita pop-ups para exportar o PDF.", "error");
-      return;
-    }
+    const overlay = document.getElementById('contract-print-overlay') as HTMLElement | null;
+    if (!overlay) return;
 
-    const docNum = contract.contract_number ? `Nº ${contract.contract_number}` : `#${contract.id.substring(0, 8).toUpperCase()}`;
+    setExporting(true);
 
-    // Processamento do texto simples para formatar títulos e tópicos em negrito
-    let processedBody = docContent;
+    const prevCss = overlay.style.cssText;
+    overlay.style.cssText = [
+      'display:block',
+      'position:fixed',
+      'left:-99999px',
+      'top:0',
+      'width:794px',
+      'background:#ffffff',
+      'z-index:-1',
+    ].join(';');
 
-    // Aplica formatação de cabeçalhos separadamente do negrito inline para evitar quebras estranhas
-    processedBody = processedBody
-      .replace(/(1\.\s+IDENTIFICAÇÃO\s+DAS\s+PARTES)/g, '<div class="clause-header">$1</div>')
-      .replace(/(CLÁUSULA\s+[A-ZÀ-Ú]+(?:\s+–\s+[A-ZÀ-Ú ]+)?)/g, '<div class="clause-header">$1</div>')
-      .replace(/(^[0-9]+\s+[–\-\.]\s+[A-ZÀ-Ú ]+)/gm, '<div class="clause-header">$1</div>')
-      .replace(/(DISPOSIÇÕES\s+GERAIS)/g, '<div class="clause-header">$1</div>')
-      .replace(/(DO\s+FORO)/g, '<div class="clause-header">$1</div>')
-      .replace(/(CONTRATANTE:)/g, '<strong>$1</strong>')
-      .replace(/(CONTRATADA:)/g, '<strong>$1</strong>');
+    try {
+      const { default: html2canvas } = await import('html2canvas');
+      const canvas = await html2canvas(overlay, {
+        scale: 3,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        width: 794,
+        windowWidth: 794,
+      });
 
-    // Remove as linhas de assinatura cruas do final para substituirmos pelo bloco estruturado
-    const signatureStartIndex = processedBody.indexOf("_________________________________________");
-    let mainBody = processedBody;
-    if (signatureStartIndex !== -1) {
-      mainBody = processedBody.substring(0, signatureStartIndex);
-    }
+      const { default: jsPDF } = await import('jspdf');
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      
+      const pdfWidth = 210;
+      const pdfHeight = 297;
+      const marginX = 5;  // Margem lateral menor no PDF para o texto respirar
+      const marginY = 8;  // Margem vertical menor para aproveitar melhor a página
+      
+      const contentWidth = pdfWidth - (marginX * 2);
+      const contentHeight = pdfHeight - (marginY * 2);
 
-    const headerHtml = `
-      <div class="header-container">
-        <div class="logo-box">
-          <img class="logo" src="/SIMBOLO_PRATIC.jpeg" alt="P" onerror="this.style.display='none'">
-        </div>
-        <h1 class="contract-title">Contrato de Prestação de Serviços</h1>
-      </div>
-      <div class="contract-subtitle">
-        Contrato ${docNum} &nbsp;|&nbsp; Londrina, ${new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })}
-      </div>
-    `;
+      // Proporções do Canvas correspondentes à área útil do PDF
+      const canvasPageHeight = (contentHeight / contentWidth) * canvas.width;
+      
+      let heightLeft = canvas.height;
+      let yOffset = 0;
+      let isFirstPage = true;
 
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>Contrato Agência Prátic - ${client.name} - ${docNum}</title>
-          <link rel="preconnect" href="https://fonts.googleapis.com">
-          <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-          <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
-          <style>
-            @media print {
-              body {
-                background: white;
-                color: #111;
-                padding: 10px;
-              }
-              .no-print {
-                display: none;
-              }
-              thead {
-                display: table-header-group;
-              }
-            }
-            body {
-              font-family: 'Outfit', 'Inter', sans-serif;
-              line-height: 1.25;
-              color: #222;
-              padding: 30px;
-              max-width: 800px;
-              margin: 0 auto;
-              background-color: #fff;
-            }
-            table {
-              width: 100%;
-              border-collapse: collapse;
-              border: none;
-            }
-            thead {
-              display: table-header-group;
-            }
-            .header-container {
-              position: relative;
-              border-bottom: 2px solid #D9480F;
-              padding-bottom: 12px;
-              margin-bottom: 10px;
-              text-align: center;
-              display: flex;
-              justify-content: center;
-              align-items: center;
-              min-height: 45px;
-            }
-            .logo-box {
-              position: absolute;
-              left: 0;
-              top: 50%;
-              transform: translateY(-50%);
-            }
-            .logo {
-              height: 38px;
-            }
-            .contract-title {
-              font-size: 18px;
-              font-weight: 800;
-              text-transform: uppercase;
-              color: #111;
-              margin: 0;
-              letter-spacing: 0.5px;
-              text-align: center;
-              width: 100%;
-            }
-            .contract-subtitle {
-              font-family: 'Playfair Display', 'Georgia', serif;
-              font-size: 12px;
-              color: #555;
-              font-style: italic;
-              margin-top: 6px;
-              margin-bottom: 20px;
-              text-align: center;
-            }
-            .content {
-              font-size: 12px;
-              text-align: justify;
-              white-space: pre-line;
-              color: #333;
-            }
-            .clause-header {
-              color: #111;
-              font-weight: 700;
-              font-size: 12.5px;
-              margin-top: 12px;
-              margin-bottom: 4px;
-              text-transform: uppercase;
-            }
-            .content strong {
-              color: #111;
-              font-weight: 700;
-            }
-            .signatures-container {
-              margin-top: 40px;
-              display: flex;
-              justify-content: space-between;
-              text-align: center;
-              page-break-inside: avoid;
-            }
-            .signature-box {
-              width: 45%;
-            }
-            .signature-line {
-              border-top: 1px solid #333;
-              margin-top: 30px;
-              padding-top: 6px;
-            }
-            .signature-name {
-              margin: 0;
-              font-weight: 600;
-              font-size: 12px;
-              color: #111;
-            }
-            .signature-role {
-              margin: 2px 0 0 0;
-              font-size: 10.5px;
-              color: #666;
-              text-transform: uppercase;
-              letter-spacing: 0.5px;
-            }
-            .print-btn {
-              position: fixed;
-              top: 20px;
-              right: 20px;
-              background-color: #D9480F;
-              color: white;
-              border: none;
-              padding: 12px 24px;
-              font-size: 14px;
-              font-weight: 600;
-              border-radius: 8px;
-              cursor: pointer;
-              box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-              transition: background-color 0.2s;
-              font-family: inherit;
-              z-index: 9999;
-            }
-            .print-btn:hover {
-              background-color: #BF360C;
-            }
-          </style>
-        </head>
-        <body>
-          <button class="print-btn no-print" onclick="window.print()">Imprimir / Salvar PDF</button>
-          
-          <table>
-            <thead>
-              <tr>
-                <td style="padding: 0; border: none;">
-                  ${headerHtml}
-                </td>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td style="padding: 0; border: none;">
-                  <div class="content">${mainBody}</div>
-                  
-                  <div class="signatures-container">
-                    <div class="signature-box">
-                      <div class="signature-line">
-                        <p class="signature-name">${client.name}</p>
-                        <p class="signature-role">CONTRATANTE</p>
-                      </div>
-                    </div>
-                    <div class="signature-box">
-                      <div class="signature-line">
-                        <p class="signature-name">Agência Pratic</p>
-                        <p class="signature-role">CONTRATADA</p>
-                      </div>
-                    </div>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-          
-          <script>
-            window.onload = function() {
-              setTimeout(function() {
-                window.print();
-              }, 500);
-            };
-          </script>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
+      while (heightLeft > 0) {
+        // Criar um canvas temporário para cada pedaço (página) para evitar que o jspdf faça clipping seco na borda
+        const pageCanvas = document.createElement('canvas');
+        pageCanvas.width = canvas.width;
+        pageCanvas.height = Math.min(canvasPageHeight, heightLeft);
 
-    if (documentStatus === 'generated') {
-      handleUpdateStatus('sent');
+        const ctx = pageCanvas.getContext('2d');
+        if (ctx) {
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+          ctx.drawImage(
+            canvas,
+            0, yOffset, canvas.width, pageCanvas.height, // origem
+            0, 0, pageCanvas.width, pageCanvas.height // destino
+          );
+        }
+
+        if (!isFirstPage) {
+          pdf.addPage();
+        }
+        isFirstPage = false;
+
+        const pageImgData = pageCanvas.toDataURL('image/png');
+        const renderHeight = (pageCanvas.height / pageCanvas.width) * contentWidth;
+
+        // Adiciona a imagem respeitando a margem superior (marginY) e lateral (marginX)
+        pdf.addImage(pageImgData, 'PNG', marginX, marginY, contentWidth, renderHeight);
+
+        yOffset += pageCanvas.height;
+        heightLeft -= pageCanvas.height;
+      }
+
+      const safeName = (client.name || 'contrato').replace(/[/\\?%*:|"<>]/g, '-').trim();
+      const docNum = contract.contract_number ? `Nº ${contract.contract_number}` : `#${contract.id.substring(0, 8).toUpperCase()}`;
+      pdf.save(`Contrato · ${safeName} · ${docNum}.pdf`);
+
+      if (documentStatus === 'generated') {
+        handleUpdateStatus('sent');
+      }
+
+    } catch (err) {
+      console.error('PDF export error:', err);
+      showToast('Erro ao exportar PDF.', 'error');
+    } finally {
+      overlay.style.cssText = prevCss;
+      setExporting(false);
     }
   };
 
@@ -703,81 +562,89 @@ export default function ContractDetailsModal({ isOpen, onClose, contract, client
                             </div>
 
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <div>
-                                <p style={{ fontWeight: 600, color: 'white', fontSize: '0.9rem' }}>2. Exportar</p>
-                                <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Para enviar via Autentique</p>
-                              </div>
-                              <button 
-                                className="btn btn-secondary btn-sm" 
-                                onClick={handleDownloadPDF}
-                                disabled={documentStatus === 'pending'}
-                                style={{ opacity: documentStatus === 'pending' ? 0.5 : 1 }}
-                              >
-                                <Download size={16} /> Baixar PDF
-                              </button>
-                            </div>
+                               <div>
+                                 <p style={{ fontWeight: 600, color: 'white', fontSize: '0.9rem' }}>2. Exportar</p>
+                                 <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Para enviar via Autentique</p>
+                               </div>
+                               <button 
+                                 className="btn btn-secondary btn-sm" 
+                                 onClick={handleDownloadPDF}
+                                 disabled={documentStatus === 'pending' || exporting}
+                                 style={{ opacity: (documentStatus === 'pending' || exporting) ? 0.5 : 1, display: 'flex', alignItems: 'center', gap: '6px' }}
+                               >
+                                 {exporting ? (
+                                   <>
+                                     <span style={{ display: 'inline-block', width: '12px', height: '12px', border: '2px solid rgba(255,255,255,0.2)', borderTopColor: 'white', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                                     Exportando...
+                                   </>
+                                 ) : (
+                                   <>
+                                     <Download size={16} /> Baixar PDF
+                                   </>
+                                 )}
+                               </button>
+                             </div>
 
-                            <div style={{ height: '1px', background: 'rgba(255,255,255,0.05)' }} />
+                             <div style={{ height: '1px', background: 'rgba(255,255,255,0.05)' }} />
 
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                              <div>
-                                <p style={{ fontWeight: 600, color: 'white', fontSize: '0.9rem' }}>3. Assinatura Digital</p>
-                                <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                                  {contract.signed_document_url ? 'Contrato assinado em arquivo' : 'Recebeu assinado? Marque ou anexe a cópia'}
-                                </p>
-                              </div>
-                              
-                              <div style={{ display: 'flex', gap: '8px', marginTop: '4px', flexWrap: 'wrap' }}>
-                                <label
-                                  className={`btn btn-sm ${documentStatus === 'signed' ? 'btn-secondary' : 'btn-accent'}`}
-                                  style={{ 
-                                    cursor: documentStatus === 'pending' ? 'not-allowed' : 'pointer',
-                                    opacity: documentStatus === 'pending' ? 0.5 : 1,
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '6px',
-                                    padding: '8px 14px'
-                                  }}
-                                >
-                                  <Upload size={16} /> {documentStatus === 'signed' ? 'Substituir PDF' : 'Anexar PDF Assinado'}
-                                  <input 
-                                    type="file" 
-                                    accept=".pdf" 
-                                    onChange={handleUploadSignedFile} 
-                                    disabled={documentStatus === 'pending'}
-                                    style={{ display: 'none' }} 
-                                  />
-                                </label>
+                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                               <div>
+                                 <p style={{ fontWeight: 600, color: 'white', fontSize: '0.9rem' }}>3. Assinatura Digital</p>
+                                 <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                   {contract.signed_document_url ? 'Contrato assinado em arquivo' : 'Recebeu assinado? Marque ou anexe a cópia'}
+                                 </p>
+                               </div>
+                               
+                               <div style={{ display: 'flex', gap: '8px', marginTop: '4px', flexWrap: 'wrap' }}>
+                                 <label
+                                   className={`btn btn-sm ${documentStatus === 'signed' ? 'btn-secondary' : 'btn-accent'}`}
+                                   style={{ 
+                                     cursor: documentStatus === 'pending' ? 'not-allowed' : 'pointer',
+                                     opacity: documentStatus === 'pending' ? 0.5 : 1,
+                                     display: 'inline-flex',
+                                     alignItems: 'center',
+                                     gap: '6px',
+                                     padding: '8px 14px'
+                                   }}
+                                 >
+                                   <Upload size={16} /> {documentStatus === 'signed' ? 'Substituir PDF' : 'Anexar PDF Assinado'}
+                                   <input 
+                                     type="file" 
+                                     accept=".pdf" 
+                                     onChange={handleUploadSignedFile} 
+                                     disabled={documentStatus === 'pending'}
+                                     style={{ display: 'none' }} 
+                                   />
+                                 </label>
 
-                                {documentStatus !== 'signed' && (
-                                  <button
-                                    className="btn btn-secondary btn-sm"
-                                    onClick={() => handleUpdateStatus('signed')}
-                                    disabled={documentStatus === 'pending'}
-                                    style={{ opacity: documentStatus === 'pending' ? 0.5 : 1 }}
-                                  >
-                                    Marcar como Assinado
-                                  </button>
-                                )}
-                              </div>
+                                 {documentStatus !== 'signed' && (
+                                   <button
+                                     className="btn btn-secondary btn-sm"
+                                     onClick={() => handleUpdateStatus('signed')}
+                                     disabled={documentStatus === 'pending'}
+                                     style={{ opacity: documentStatus === 'pending' ? 0.5 : 1 }}
+                                   >
+                                     Marcar como Assinado
+                                   </button>
+                                 )}
+                               </div>
 
-                              {contract.signed_document_url && (
-                                <div style={{ marginTop: '8px' }}>
-                                  <a 
-                                    href={contract.signed_document_url}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    style={{ fontSize: '0.8rem', color: '#22C55E', display: 'flex', alignItems: 'center', gap: '6px', textDecoration: 'underline' }}
-                                  >
-                                    <FileCheck size={14} /> Ver PDF Assinado Anexado
-                                  </a>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-
-                        </div>
-                      </div>
+                               {contract.signed_document_url && (
+                                 <div style={{ marginTop: '8px' }}>
+                                   <a 
+                                     href={contract.signed_document_url}
+                                     target="_blank"
+                                     rel="noreferrer"
+                                     style={{ fontSize: '0.8rem', color: '#22C55E', display: 'flex', alignItems: 'center', gap: '6px', textDecoration: 'underline' }}
+                                   >
+                                     <FileCheck size={14} /> Ver PDF Assinado Anexado
+                                   </a>
+                                 </div>
+                               )}
+                             </div>
+                           </div>
+                         </div>
+                       </div>
                     </div>
 
                     {/* Financial History */}
@@ -854,10 +721,195 @@ export default function ContractDetailsModal({ isOpen, onClose, contract, client
               </div>
             </motion.div>
           </div>
+          
+          {/* Overlay invisível para renderização do html2canvas */}
+          <PrintOverlay contract={contract} client={client} docContent={docContent} />
         </>
       )}
     </AnimatePresence>
   );
 
   return createPortal(modalContent, document.body);
+}
+
+interface PrintOverlayProps {
+  contract: Contract;
+  client: Client;
+  docContent: string;
+}
+
+function PrintOverlay({ contract, client, docContent }: PrintOverlayProps) {
+  const docNum = contract.contract_number ? `Nº ${contract.contract_number}` : `#${contract.id.substring(0, 8).toUpperCase()}`;
+  const exportedAt = new Date().toLocaleString('pt-BR', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  });
+
+  // Processamento do texto do contrato para formatação HTML básica com parágrafos estruturados
+  let processedBody = docContent;
+  
+  // Tratamento dos cabeçalhos das cláusulas
+  processedBody = processedBody
+    .replace(/(1\.\s+IDENTIFICAÇÃO\s+DAS\s+PARTES)/g, '<div class="clause-header">$1</div>')
+    .replace(/(CLÁUSULA\s+[A-ZÀ-Ú]+(?:\s+–\s+[A-ZÀ-Ú ]+)?)/g, '<div class="clause-header">$1</div>')
+    .replace(/(^[0-9]+\s+[–\-\.]\s+[A-ZÀ-Ú ]+)/gm, '<div class="clause-header">$1</div>')
+    .replace(/(DISPOSIÇÕES\s+GERAIS)/g, '<div class="clause-header">$1</div>')
+    .replace(/(DO\s+FORO)/g, '<div class="clause-header">$1</div>')
+    .replace(/(CONTRATANTE:)/g, '<strong>$1</strong>')
+    .replace(/(CONTRATADA:)/g, '<strong>$1</strong>');
+
+  // Remover linhas de assinatura manuais do texto cru
+  const signatureStartIndex = processedBody.indexOf("_________________________________________");
+  let mainBody = processedBody;
+  if (signatureStartIndex !== -1) {
+    mainBody = processedBody.substring(0, signatureStartIndex);
+  }
+
+  // Dividir o conteúdo do contrato pelas cláusulas principais para evitar que sejam cortadas no meio
+  // O divisor lógico é a quebra de linha (simples ou dupla) antes de um título de Cláusula ou numeração
+  const sections = mainBody.split(/\n+(?=(?:CLÁUSULA|\d+[\.\-\s]\s*(?:IDENTIFICAÇÃO|DO|DOS|DAS)|DISPOSIÇÕES|DO\s+FORO))/i);
+
+  mainBody = sections
+    .map(sectionStr => {
+      const trimmedSection = sectionStr.trim();
+      if (!trimmedSection) return '';
+
+      // Processa o conteúdo interno da seção
+      const paragraphs = trimmedSection
+        .split(/\n/)
+        .map(line => {
+          const trimmedLine = line.trim();
+          if (!trimmedLine) return '';
+
+          // Se for uma linha de cabeçalho
+          if (trimmedLine.includes('class="clause-header"')) {
+            return trimmedLine;
+          }
+
+          // Se a linha começar com letras de tópicos (ex: a), b), I., II.)
+          const isTopic = /^(?:[a-z]\)|[IVXLCDM]+\.)\s+/i.test(trimmedLine);
+          if (isTopic) {
+            return `<div class="topic-line">${trimmedLine}</div>`;
+          }
+
+          return `<p>${trimmedLine}</p>`;
+        })
+        .filter(Boolean)
+        .join('');
+
+      return `<section class="clause-section">${paragraphs}</section>`;
+    })
+    .filter(Boolean)
+    .join('');
+
+  return (
+    <>
+      <style>{`
+        #contract-print-overlay .clause-section {
+          page-break-inside: avoid;
+          break-inside: avoid;
+          margin-bottom: 16px;
+        }
+        #contract-print-overlay .clause-header {
+          color: #111;
+          font-weight: 800;
+          font-size: 13px;
+          margin-top: 12px;
+          margin-bottom: 6px;
+          text-transform: uppercase;
+          font-family: "Helvetica Neue", Arial, sans-serif;
+        }
+        #contract-print-overlay .content-body {
+          color: #1a1a1a;
+          font-size: 11.5px;
+          line-height: 1.45;
+          text-align: justify;
+          font-family: "Helvetica Neue", Arial, sans-serif;
+        }
+        #contract-print-overlay .content-body p {
+          margin: 0 0 4px 0;
+        }
+        #contract-print-overlay .topic-line {
+          margin: 2px 0 2px 14px;
+          text-align: justify;
+        }
+        #contract-print-overlay .content-body strong {
+          color: #000;
+          font-weight: 700;
+        }
+        #contract-print-overlay .content-body ul,
+        #contract-print-overlay .content-body ol {
+          padding-left: 20px;
+          margin: 4px 0;
+        }
+        #contract-print-overlay .content-body li {
+          margin: 2px 0;
+        }
+        #contract-print-overlay .signatures-block {
+          display: flex;
+          justify-content: space-between;
+          margin-top: 40px;
+          padding-bottom: 20px;
+          page-break-inside: avoid;
+          break-inside: avoid;
+        }
+      `}</style>
+
+      <div id="contract-print-overlay" style={{ display: 'none' }}>
+        <div style={{ fontFamily: '"Helvetica Neue", Arial, sans-serif', color: '#1a1a1a', display: 'flex', flexDirection: 'column', width: '794px', background: '#fff' }}>
+
+          {/* Cabeçalho */}
+          <div style={{ padding: '16pt 12mm 14pt', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+            <img
+              src="/logo-horizontal-preta.png"
+              alt="Pratic System"
+              style={{ height: '16pt', width: 'auto', objectFit: 'contain', flexShrink: 0 }}
+            />
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: '6.5pt', fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#d9480f' }}>
+                Contrato
+              </div>
+              <div style={{ fontSize: '8.5pt', color: '#999', marginTop: '2pt' }}>
+                {docNum}
+              </div>
+            </div>
+          </div>
+
+          {/* Linha Divisória Laranja */}
+          <div style={{ padding: '0 12mm', flexShrink: 0 }}>
+            <div style={{ height: '1.5px', background: 'linear-gradient(90deg, #d9480f 0%, #f76b35 60%, rgba(217,72,15,0) 100%)', borderRadius: '1px' }} />
+          </div>
+
+          {/* Corpo do Contrato */}
+          <div style={{ padding: '10pt 12mm 0' }}>
+            <div className="content-body" dangerouslySetInnerHTML={{ __html: mainBody }} />
+
+            {/* Bloco de Assinaturas */}
+            <div className="signatures-block">
+              <div style={{ width: '45%', textAlign: 'center' }}>
+                <div style={{ borderBottom: '1px solid #000', marginBottom: '8px' }}></div>
+                <p style={{ fontWeight: 'bold', fontSize: '11px', margin: 0 }}>{client.name.toUpperCase()}</p>
+                <p style={{ fontSize: '9.5px', color: '#555', margin: '2px 0 0' }}>CONTRATANTE</p>
+              </div>
+              <div style={{ width: '45%', textAlign: 'center' }}>
+                <div style={{ borderBottom: '1px solid #000', marginBottom: '8px' }}></div>
+                <p style={{ fontWeight: 'bold', fontSize: '11px', margin: 0 }}>AGÊNCIA PRATIC</p>
+                <p style={{ fontSize: '9.5px', color: '#555', margin: '2px 0 0' }}>CONTRATADA</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Rodapé */}
+          <div style={{ margin: '24pt 12mm 18pt', padding: '10pt 0 0', borderTop: '0.5px solid #e8e8e8', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+            <span style={{ fontSize: '7.5pt', color: '#c0c0c0' }}>Exportado em {exportedAt}</span>
+            <img
+              src="/logo-horizontal-preta.png"
+              alt="Pratic System"
+              style={{ height: '9pt', width: 'auto', objectFit: 'contain', opacity: 0.18 }}
+            />
+          </div>
+        </div>
+      </div>
+    </>
+  );
 }

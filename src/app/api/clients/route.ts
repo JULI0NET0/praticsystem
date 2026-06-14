@@ -15,10 +15,19 @@ export async function GET() {
     const { data, error } = await supabase
       .from('clients')
       .select('*')
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: true });
 
     if (error) throw error;
-    return NextResponse.json(data);
+
+    const clientsWithSeqId = data.map((client: any, index: number) => ({
+      ...client,
+      sequential_id: client.sequential_id || (index + 1)
+    }));
+
+    // Reordena decrescente pelo created_at
+    clientsWithSeqId.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+    return NextResponse.json(clientsWithSeqId);
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

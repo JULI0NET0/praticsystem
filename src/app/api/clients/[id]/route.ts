@@ -18,6 +18,7 @@ export async function GET(
 
   const [
     clientRes,
+    allClientsRes,
     notesRes,
     demandsRes,
     contractsRes,
@@ -26,6 +27,7 @@ export async function GET(
     docsRes,
   ] = await Promise.all([
     supabase.from('clients').select('*').eq('id', id).single(),
+    supabase.from('clients').select('id').order('created_at', { ascending: true }),
     supabase.from('notes').select('id,title,content,date,subjects,user_id,created_at,updated_at').eq('client_id', id).eq('pin_to_client', true).order('updated_at', { ascending: false }),
     supabase.from('demands').select('*').eq('client_id', id).order('created_at', { ascending: false }),
     supabase.from('contracts').select('*').eq('client_id', id),
@@ -38,8 +40,16 @@ export async function GET(
     return NextResponse.json({ error: clientRes.error.message }, { status: 404 });
   }
 
+  const client = clientRes.data;
+  if (allClientsRes.data) {
+    const idx = allClientsRes.data.findIndex((c: any) => c.id === id);
+    if (idx !== -1) {
+      client.sequential_id = client.sequential_id || (idx + 1);
+    }
+  }
+
   return NextResponse.json({
-    client: clientRes.data,
+    client,
     notes: notesRes.data ?? [],
     demands: demandsRes.data ?? [],
     contracts: contractsRes.data ?? [],

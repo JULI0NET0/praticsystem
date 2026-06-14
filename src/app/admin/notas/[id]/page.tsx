@@ -15,6 +15,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Note, Client } from '@/types/database';
 import { useToast } from '@/components/CustomToast';
 import TitleMention, { Mention } from '@/components/notas/TitleMention';
+import CustomModal from '@/components/CustomModal';
 
 const BlockEditor = dynamic(() => import('@/components/notas/BlockEditor'), {
   ssr: false,
@@ -53,6 +54,7 @@ export default function NotaDetailPage() {
   const [isOwner, setIsOwner] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -161,7 +163,7 @@ export default function NotaDetailPage() {
   const clearShare = () => updateNote({ share_all: false, shared_with: [] });
 
   const deleteNote = async () => {
-    if (!confirm('Excluir esta nota permanentemente?')) return;
+    setIsDeleteModalOpen(false);
     await supabase.from('notes').delete().eq('id', id);
     showToast('Nota excluída', 'success');
     router.push('/admin/notas');
@@ -314,7 +316,7 @@ export default function NotaDetailPage() {
           </button>
           {isOwner && (
             <button
-              onClick={deleteNote}
+              onClick={() => setIsDeleteModalOpen(true)}
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.8rem', padding: '4px 8px', borderRadius: '6px' }}
             >
               <Trash2 size={13} /> Excluir
@@ -516,6 +518,17 @@ export default function NotaDetailPage() {
 
       {/* ── Print overlay (hidden on screen, visible on print) ─────────── */}
       <PrintOverlay note={note} linkedClient={linkedClient} />
+
+      <CustomModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={deleteNote}
+        title="Excluir nota"
+        message="Tem certeza que deseja excluir esta nota permanentemente? Esta ação não pode ser desfeita."
+        type="confirm"
+        confirmText="Excluir"
+        cancelText="Cancelar"
+      />
     </motion.div>
   );
 }

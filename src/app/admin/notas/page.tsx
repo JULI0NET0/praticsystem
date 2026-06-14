@@ -29,7 +29,8 @@ export default function NotasPage() {
       let query = supabase
         .from('notes')
         .select('*, client:clients(id, name, nome_fantasia)')
-        .order('updated_at', { ascending: false });
+        .order('updated_at', { ascending: false })
+        .limit(50);
 
       if (tab === 'mine') {
         query = query.eq('user_id', currentUser.id);
@@ -41,7 +42,7 @@ export default function NotasPage() {
       if (error) {
         if (error.code === 'PGRST200') {
           // Fallback se a relação client não existir no schema do Supabase ainda
-          let fallbackQuery = supabase.from('notes').select('*').order('updated_at', { ascending: false });
+          let fallbackQuery = supabase.from('notes').select('*').order('updated_at', { ascending: false }).limit(50);
           if (tab === 'mine') {
             fallbackQuery = fallbackQuery.eq('user_id', currentUser.id);
           } else {
@@ -52,7 +53,7 @@ export default function NotasPage() {
           
           setNotes((fallbackData ?? []) as unknown as Note[]);
           console.warn('Fallback: relation "client:clients" not found. Missing database schema update.');
-          showToast('Relação de clientes pendente no banco', 'warning');
+          // showToast('Relação de clientes pendente no banco', 'warning'); // Removido para não incomodar
           return;
         }
         throw error;
@@ -163,7 +164,7 @@ export default function NotasPage() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{ delay: idx * 0.035 }}
+                  transition={{ delay: Math.min(idx * 0.03, 0.3) }}
                 >
                   <NoteCard note={note} />
                 </motion.div>

@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { ArrowUpRight, ArrowDownRight, RefreshCw, Search, ChevronDown, Link2, Plus } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, RefreshCw, Search, ChevronDown, Link2, Plus, Check } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import DialogShell from "@/components/DialogShell";
 import type { Invoice, ExpenseEntry, AsaasTransaction, ExpenseCategory } from "@/types/database";
@@ -270,7 +270,6 @@ export function LancamentosTable({
               <th>Data</th>
               <th>Cliente</th>
               <th>Descrição</th>
-              <th>Tipo</th>
               <th>Categoria</th>
               <th>Valor</th>
               <th>Status</th>
@@ -281,7 +280,7 @@ export function LancamentosTable({
           <tbody>
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={9} style={{ textAlign: "center", padding: "40px", color: "var(--text-tertiary)" }}>
+                <td colSpan={8} style={{ textAlign: "center", padding: "40px", color: "var(--text-tertiary)" }}>
                   Nenhum lançamento encontrado para o período.
                 </td>
               </tr>
@@ -293,39 +292,36 @@ export function LancamentosTable({
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.02 }}
               >
-                <td style={{ color: "var(--text-secondary)", fontSize: "0.875rem", whiteSpace: "nowrap" }}>
-                  {new Date(`${entry.date}T12:00:00`).toLocaleDateString("pt-BR")}
+                <td style={{ color: "var(--text-secondary)", fontSize: "0.875rem", fontWeight: 500, whiteSpace: "nowrap" }}>
+                  {(() => {
+                    const parts = entry.date.split("-");
+                    return parts.length >= 3 ? `${parts[2]}/${parts[1]}` : entry.date;
+                  })()}
                 </td>
                 <td style={{ maxWidth: "160px" }}>
                   {entry.clientName ? (
-                    <span style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: "0.875rem", fontWeight: 600 }}>
+                    <span style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: "0.875rem", fontWeight: 500 }}>
                       {entry.clientName}
                     </span>
                   ) : (
-                    <span style={{ color: "var(--text-tertiary)", fontSize: "0.8rem" }}>—</span>
+                    <span style={{ color: "var(--text-tertiary)", fontSize: "0.875rem" }}>—</span>
                   )}
                 </td>
-                <td style={{ fontWeight: 600, maxWidth: "240px" }}>
-                  <span style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                <td style={{ maxWidth: "240px" }}>
+                  <span style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: "0.875rem", fontWeight: 500, color: "var(--text-secondary)" }}>
                     {entry.description}
                   </span>
                 </td>
                 <td>
-                  <span style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "0.85rem", fontWeight: 700, color: entry.type === "receita" ? "#22C55E" : "#EF4444" }}>
-                    {entry.type === "receita" ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
-                    {entry.type === "receita" ? "Receita" : "Despesa"}
-                  </span>
-                </td>
-                <td>
-                  <span className="badge" style={{ fontSize: "0.75rem" }}>
+                  <span className="badge" style={{ fontSize: "0.75rem", fontWeight: 500 }}>
                     {entry.categoryLabel}
                   </span>
                 </td>
-                <td style={{ fontWeight: 700, color: entry.type === "receita" ? "#22C55E" : "#EF4444" }}>
+                <td style={{ fontSize: "0.875rem", fontWeight: 600, color: entry.type === "receita" ? "#22C55E" : "#EF4444" }}>
                   {entry.type === "despesa" ? "- " : "+ "}{formatCurrency(entry.amount)}
                 </td>
                 <td>
-                  <span className="badge" style={{ color: statusColor[entry.status] || "var(--text-secondary)", background: `${statusColor[entry.status] || "var(--text-secondary)"}18`, border: `1px solid ${statusColor[entry.status] || "var(--text-secondary)"}30`, fontSize: "0.75rem" }}>
+                  <span className="badge" style={{ color: statusColor[entry.status] || "var(--text-secondary)", background: `${statusColor[entry.status] || "var(--text-secondary)"}18`, border: `1px solid ${statusColor[entry.status] || "var(--text-secondary)"}30`, fontSize: "0.75rem", fontWeight: 500 }}>
                     {statusLabel[entry.status] || entry.status}
                   </span>
                 </td>
@@ -333,7 +329,7 @@ export function LancamentosTable({
                   {entry.asaasLinked ? (
                     <span style={{
                       display: "inline-flex", alignItems: "center", gap: "4px",
-                      padding: "3px 8px", borderRadius: "8px", fontSize: "0.72rem", fontWeight: 700,
+                      padding: "3px 8px", borderRadius: "8px", fontSize: "0.72rem", fontWeight: 600,
                       background: "rgba(34,197,94,0.1)", color: "#22C55E", border: "1px solid rgba(34,197,94,0.25)",
                     }}>
                       ● Vinculado
@@ -346,7 +342,7 @@ export function LancamentosTable({
                       }}
                       style={{
                         display: "inline-flex", alignItems: "center", gap: "4px",
-                        padding: "3px 8px", borderRadius: "8px", fontSize: "0.72rem", fontWeight: 700,
+                        padding: "3px 8px", borderRadius: "8px", fontSize: "0.72rem", fontWeight: 600,
                         background: "rgba(245,158,11,0.08)", color: "#F59E0B", border: "1px solid rgba(245,158,11,0.25)",
                         cursor: "pointer", transition: "all 0.15s",
                       }}
@@ -367,15 +363,17 @@ export function LancamentosTable({
                         background: "rgba(34, 197, 94, 0.1)",
                         border: "1px solid rgba(34, 197, 94, 0.2)",
                         borderRadius: "8px",
-                        padding: "4px 10px",
-                        fontSize: "0.75rem",
-                        fontWeight: 700,
+                        padding: "6px",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
                         cursor: "pointer",
                         transition: "all 0.2s"
                       }}
                       className="hover-accent"
+                      title="Dar Baixa"
                     >
-                      Dar Baixa
+                      <Check size={16} />
                     </button>
                   )}
                 </td>
@@ -393,51 +391,44 @@ export function LancamentosTable({
           </p>
         )}
         {filtered.map((entry) => (
-          <div key={entry.id} className="mobile-data-card">
-            <div className="mobile-card-header">
-              <div>
-                <span className="mobile-card-title">{entry.description}</span>
-                {entry.clientName && (
-                  <p style={{ fontSize: "0.72rem", color: "var(--text-tertiary)", fontWeight: 500, marginTop: "2px" }}>
-                    {entry.clientName}
-                  </p>
+          <div key={entry.id} className="mobile-data-card" style={{ padding: "12px", gap: "6px" }}>
+            <div className="mobile-card-header" style={{ marginBottom: "2px" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "2px", minWidth: 0, flex: 1 }}>
+                <span className="mobile-card-title" style={{ fontSize: "0.85rem", fontWeight: 600 }}>{entry.description}</span>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                  {entry.clientName && (
+                    <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)", fontWeight: 500 }}>
+                      {entry.clientName}
+                    </span>
+                  )}
+                  {entry.clientName && <span style={{ fontSize: "0.7rem", color: "var(--text-tertiary)" }}>•</span>}
+                  <span style={{ fontSize: "0.75rem", color: "var(--text-tertiary)" }}>
+                    {(() => {
+                      const parts = entry.date.split("-");
+                      return parts.length >= 3 ? `${parts[2]}/${parts[1]}` : entry.date;
+                    })()}
+                  </span>
+                </div>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
+                <span style={{ fontSize: "0.85rem", fontWeight: 700, color: entry.type === "receita" ? "#22C55E" : "#EF4444" }}>
+                  {entry.type === "despesa" ? "- " : "+ "}{formatCurrency(entry.amount)}
+                </span>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px", marginTop: "4px" }}>
+              <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                <span className="badge" style={{ fontSize: "0.7rem", padding: "2px 6px" }}>{entry.categoryLabel}</span>
+                <span className="badge" style={{ color: statusColor[entry.status] || "var(--text-secondary)", background: `${statusColor[entry.status] || "var(--text-secondary)"}18`, border: `1px solid ${statusColor[entry.status] || "var(--text-secondary)"}30`, fontSize: "0.7rem", padding: "2px 6px" }}>
+                  {statusLabel[entry.status] || entry.status}
+                </span>
+                {entry.asaasLinked && (
+                  <span style={{ fontSize: "0.7rem", color: "#22C55E", fontWeight: 600 }}>Asaas</span>
                 )}
               </div>
-              <span
-                className="badge"
-                style={{
-                  color: statusColor[entry.status] || "var(--text-secondary)",
-                  background: `${statusColor[entry.status] || "var(--text-secondary)"}18`,
-                  border: `1px solid ${statusColor[entry.status] || "var(--text-secondary)"}30`,
-                  fontSize: "0.72rem",
-                  flexShrink: 0,
-                }}
-              >
-                {statusLabel[entry.status] || entry.status}
-              </span>
-            </div>
-            <div className="mobile-card-row">
-              <span>Tipo</span>
-              <span style={{ fontWeight: 700, color: entry.type === "receita" ? "#22C55E" : "#EF4444" }}>
-                {entry.type === "receita" ? "↑ Receita" : "↓ Despesa"}
-              </span>
-            </div>
-            <div className="mobile-card-row">
-              <span>Categoria</span>
-              <span className="badge" style={{ fontSize: "0.72rem" }}>{entry.categoryLabel}</span>
-            </div>
-            <div className="mobile-card-row">
-              <span>Data</span>
-              <span>{new Date(`${entry.date}T12:00:00`).toLocaleDateString("pt-BR")}</span>
-            </div>
-            <div className="mobile-card-row">
-              <span>Valor</span>
-              <strong style={{ color: entry.type === "receita" ? "#22C55E" : "#EF4444" }}>
-                {entry.type === "despesa" ? "- " : "+ "}{formatCurrency(entry.amount)}
-              </strong>
-            </div>
-            {entry.type === "receita" && entry.status !== "paid" && (
-              <div style={{ marginTop: "12px", paddingTop: "12px", borderTop: "1px dashed var(--border)" }}>
+
+              {entry.type === "receita" && entry.status !== "paid" && (
                 <button
                   onClick={() => {
                     const invoiceId = entry.id.replace("inv-", "");
@@ -447,19 +438,20 @@ export function LancamentosTable({
                     color: "#22C55E",
                     background: "rgba(34, 197, 94, 0.1)",
                     border: "1px solid rgba(34, 197, 94, 0.2)",
-                    borderRadius: "8px",
-                    padding: "8px 12px",
-                    fontSize: "0.75rem",
+                    borderRadius: "6px",
+                    padding: "4px 8px",
+                    fontSize: "0.7rem",
                     fontWeight: 700,
                     cursor: "pointer",
-                    width: "100%",
-                    textAlign: "center"
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "4px"
                   }}
                 >
-                  Confirmar Recebimento (Dar Baixa)
+                  <Check size={12} /> Baixar
                 </button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         ))}
       </div>
