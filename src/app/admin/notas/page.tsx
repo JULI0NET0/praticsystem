@@ -34,15 +34,34 @@ export default function NotasPage() {
       if (tab === 'mine') {
         query = query.eq('user_id', currentUser.id);
       } else {
-        // shared_with individual OR share_all (todo o time)
         query = query.neq('user_id', currentUser.id).or(`shared_with.cs.{${currentUser.id}},share_all.eq.true`);
       }
 
       const { data, error } = await query;
-      if (error) throw error;
+      if (error) {
+        if (error.code === 'PGRST200') {
+          // Fallback se a relação client não existir no schema do Supabase ainda
+          let fallbackQuery = supabase.from('notes').select('*').order('updated_at', { ascending: false });
+          if (tab === 'mine') {
+            fallbackQuery = fallbackQuery.eq('user_id', currentUser.id);
+          } else {
+            fallbackQuery = fallbackQuery.neq('user_id', currentUser.id).or(`shared_with.cs.{${currentUser.id}},share_all.eq.true`);
+          }
+          const { data: fallbackData, error: fallbackError } = await fallbackQuery;
+          if (fallbackError) throw fallbackError;
+          
+          setNotes((fallbackData ?? []) as unknown as Note[]);
+          console.warn('Fallback: relation "client:clients" not found. Missing database schema update.');
+          showToast('Relação de clientes pendente no banco', 'warning');
+          return;
+        }
+        throw error;
+      }
+      
       setNotes((data ?? []) as unknown as Note[]);
-    } catch {
-      showToast('Erro ao carregar notas', 'error');
+    } catch (err: any) {
+      console.error('Erro ao carregar notas:', err);
+      showToast('Erro ao carregar notas: ' + (err.message || ''), 'error');
     } finally {
       setLoading(false);
     }
