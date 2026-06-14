@@ -23,7 +23,6 @@ import {
 import Link from "next/link";
 import { formatCPFOrCNPJ, formatCEP, formatPhone } from "@/utils/masks";
 import ThemeLogo from "@/components/ThemeLogo";
-import { supabase } from "@/lib/supabase";
 import { useToast } from "@/components/CustomToast";
 import { 
   InstagramIcon, 
@@ -240,40 +239,27 @@ export default function OnboardingPage() {
   const handleSubmit = async () => {
     setIsLoadingCnpj(true);
     try {
-      // Define a senha final (preferencialmente a do usuário)
       const finalPassword = formData.portal_password || `Pratic@${Math.floor(1000 + Math.random() * 9000)}`;
-      
-      // Remove campos que não devem ir no spread principal ou que precisam de tratamento
       const { portal_password, ...dataToInsert } = formData;
 
-      // 1. Criar usuário no Supabase Auth via API
       const authResponse = await fetch('/api/auth/create-client', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: formData.email, password: finalPassword })
+        body: JSON.stringify({
+          email: formData.email,
+          password: finalPassword,
+          clientData: {
+            ...dataToInsert,
+            portal_password: finalPassword,
+          }
+        })
       });
 
       if (!authResponse.ok) {
         const errorData = await authResponse.json();
-        throw new Error(errorData.error || 'Falha ao registrar cliente no Auth.');
+        throw new Error(errorData.error || 'Falha ao registrar cliente.');
       }
 
-      const authData = await authResponse.json();
-
-      // 2. Salvar na tabela clients com o auth_id
-      const { error } = await supabase.from('clients').insert([{
-        ...dataToInsert,
-        id: authData.user?.id, // Vincula o id do auth ao client
-        portal_email: formData.email,
-        portal_password: finalPassword,
-        status: 'prospect',
-        onboarding_date: new Date().toISOString()
-      }]);
-
-      if (error) {
-        throw new Error(`Erro ao salvar na tabela clients: ${error.message}. Verifique se as colunas website, sistema_proprio e whatsapp_financeiro foram criadas no banco de dados.`);
-      }
-      
       setGeneratedCredentials({ email: formData.email, password: finalPassword });
       return true;
     } catch (err: any) {
