@@ -285,6 +285,20 @@ export default function ClientDetailPage() {
     return date.toLocaleDateString('pt-BR');
   };
 
+  const formatBadgeDate = (dateStr: string) => {
+    if (!dateStr) return '-';
+    const formatted = formatDate(dateStr);
+    const parts = formatted.split('/');
+    if (parts.length < 3) return formatted;
+    const year = parts[2];
+    const currentYear = new Date().getFullYear().toString();
+    if (year === currentYear) {
+      return parts.slice(0, 2).join('/');
+    }
+    const shortYear = year.slice(-2);
+    return `${parts[0]}/${parts[1]}/${shortYear}`;
+  };
+
   const getFinanceMetrics = () => {
     const rangeInvoices = clientInvoices.filter(i => {
       const d = i.due_date.split('T')[0];
@@ -890,7 +904,7 @@ export default function ClientDetailPage() {
             <span style={{ color: 'rgba(255,255,255,0.1)' }}>•</span>
 
             <div
-              title={`Cadastrado em ${new Date(clientData.created_at).toLocaleDateString('pt-BR')} às ${new Date(clientData.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`}
+              title={clientData.onboarding_date ? `Onboarding em ${formatDate(clientData.onboarding_date)}` : 'Sem data de onboarding'}
               style={{
                 color: 'var(--text-secondary)',
                 fontSize: '0.75rem',
@@ -907,7 +921,7 @@ export default function ClientDetailPage() {
               }}
               className="hover-accent"
             >
-              <Calendar size={14} /> CAD {clientData.created_at ? formatDate(clientData.created_at).split('/').slice(0, 2).join('/') : '-'}
+              <Calendar size={14} /> ONB {formatBadgeDate(clientData.onboarding_date)}
             </div>
           </div>
         </div>
