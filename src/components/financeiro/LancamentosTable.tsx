@@ -13,8 +13,15 @@ const CATEGORY_LABELS: Record<string, string> = {
   sistema: "Sistema/Software",
   internet: "Internet/Infra",
   outros: "Outros",
-  receita: "Receita",
 };
+
+function parseInvoiceDescription(raw: string): { categoryLabel: string; description: string } {
+  const colonIdx = raw.indexOf(': ');
+  if (colonIdx > 0) {
+    return { categoryLabel: raw.slice(0, colonIdx), description: raw.slice(colonIdx + 2) };
+  }
+  return { categoryLabel: 'Avulso', description: raw };
+}
 
 type FilterType = "all" | "receita" | "despesa";
 type FilterStatus = "all" | "paid" | "pending" | "cancelled";
@@ -39,7 +46,7 @@ interface UnifiedEntry {
   date: string;
   description: string;
   clientName?: string;
-  category: string;
+  categoryLabel: string;
   amount: number;
   type: "receita" | "despesa";
   status: string;
@@ -81,12 +88,13 @@ export function LancamentosTable({
       if (endDate && d > endDate) continue;
       const client = clients.find((c) => c.id === inv.client_id);
       const linkedTxn = asaasTransactions.find((t) => t.invoice_id === inv.id);
+      const parsed = parseInvoiceDescription(inv.description);
       result.push({
         id: `inv-${inv.id}`,
         date: d,
-        description: inv.description,
+        description: parsed.description,
         clientName: client?.nome_fantasia || client?.name,
-        category: "receita",
+        categoryLabel: parsed.categoryLabel,
         amount: Number(inv.amount),
         type: "receita",
         status: inv.status,
@@ -101,11 +109,12 @@ export function LancamentosTable({
       if (startDate && d < startDate) continue;
       if (endDate && d > endDate) continue;
       const linkedTxn = asaasTransactions.find((t) => t.expense_entry_id === entry.id);
+      const cat = entry.category || "outros";
       result.push({
         id: `exp-${entry.id}`,
         date: d,
         description: entry.description,
-        category: entry.category || "outros",
+        categoryLabel: CATEGORY_LABELS[cat] || cat,
         amount: Number(entry.amount),
         type: "despesa",
         status: entry.status,
@@ -259,9 +268,10 @@ export function LancamentosTable({
           <thead>
             <tr>
               <th>Data</th>
+              <th>Cliente</th>
               <th>Descrição</th>
-              <th>Categoria</th>
               <th>Tipo</th>
+              <th>Categoria</th>
               <th>Valor</th>
               <th>Status</th>
               <th>Asaas</th>
@@ -271,7 +281,7 @@ export function LancamentosTable({
           <tbody>
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={8} style={{ textAlign: "center", padding: "40px", color: "var(--text-tertiary)" }}>
+                <td colSpan={9} style={{ textAlign: "center", padding: "40px", color: "var(--text-tertiary)" }}>
                   Nenhum lançamento encontrado para o período.
                 </td>
               </tr>
@@ -286,25 +296,29 @@ export function LancamentosTable({
                 <td style={{ color: "var(--text-secondary)", fontSize: "0.875rem", whiteSpace: "nowrap" }}>
                   {new Date(`${entry.date}T12:00:00`).toLocaleDateString("pt-BR")}
                 </td>
+                <td style={{ maxWidth: "160px" }}>
+                  {entry.clientName ? (
+                    <span style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: "0.875rem", fontWeight: 600 }}>
+                      {entry.clientName}
+                    </span>
+                  ) : (
+                    <span style={{ color: "var(--text-tertiary)", fontSize: "0.8rem" }}>—</span>
+                  )}
+                </td>
                 <td style={{ fontWeight: 600, maxWidth: "240px" }}>
                   <span style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {entry.description}
-                  </span>
-                  {entry.clientName && (
-                    <span style={{ display: "block", fontSize: "0.72rem", color: "var(--text-tertiary)", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: "2px" }}>
-                      {entry.clientName}
-                    </span>
-                  )}
-                </td>
-                <td>
-                  <span className="badge" style={{ fontSize: "0.75rem" }}>
-                    {CATEGORY_LABELS[entry.category] || entry.category}
                   </span>
                 </td>
                 <td>
                   <span style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "0.85rem", fontWeight: 700, color: entry.type === "receita" ? "#22C55E" : "#EF4444" }}>
                     {entry.type === "receita" ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
                     {entry.type === "receita" ? "Receita" : "Despesa"}
+                  </span>
+                </td>
+                <td>
+                  <span className="badge" style={{ fontSize: "0.75rem" }}>
+                    {entry.categoryLabel}
                   </span>
                 </td>
                 <td style={{ fontWeight: 700, color: entry.type === "receita" ? "#22C55E" : "#EF4444" }}>
@@ -381,7 +395,14 @@ export function LancamentosTable({
         {filtered.map((entry) => (
           <div key={entry.id} className="mobile-data-card">
             <div className="mobile-card-header">
-              <span className="mobile-card-title">{entry.description}</span>
+              <div>
+                <span className="mobile-card-title">{entry.description}</span>
+                {entry.clientName && (
+                  <p style={{ fontSize: "0.72rem", color: "var(--text-tertiary)", fontWeight: 500, marginTop: "2px" }}>
+                    {entry.clientName}
+                  </p>
+                )}
+              </div>
               <span
                 className="badge"
                 style={{
@@ -403,9 +424,7 @@ export function LancamentosTable({
             </div>
             <div className="mobile-card-row">
               <span>Categoria</span>
-              <span className="badge" style={{ fontSize: "0.72rem" }}>
-                {CATEGORY_LABELS[entry.category] || entry.category}
-              </span>
+              <span className="badge" style={{ fontSize: "0.72rem" }}>{entry.categoryLabel}</span>
             </div>
             <div className="mobile-card-row">
               <span>Data</span>

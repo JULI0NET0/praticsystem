@@ -59,17 +59,17 @@ export default function ClientsPage() {
           setDemandsCount(counts);
         }
       }
-    } catch (err) {
-      console.error("Erro ao buscar clientes:", err);
+    } catch (err: any) {
+      console.error("Erro ao buscar clientes:", err?.message || JSON.stringify(err, null, 2) || err);
     } finally {
       setLoading(false);
     }
   };
 
   const filteredClients = clients.filter(client => {
-    const matchesSearch = client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      client.cnpj.includes(searchTerm) ||
-      client.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = client.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (client.cnpj ?? "").includes(searchTerm) ||
+      client.email?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || client.status === statusFilter;
     return matchesSearch && matchesStatus;
   });

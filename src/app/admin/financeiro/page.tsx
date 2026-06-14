@@ -89,6 +89,7 @@ export default function FinanceiroPage() {
       if (usrRes.data) setUsers(usrRes.data);
       if (ctrRes.data) setContracts(ctrRes.data);
       if (cliRes.data) setClients(cliRes.data);
+      if (cliRes.error) console.error("[financeiro] clients fetch error:", cliRes.error);
     } finally {
       setLoading(false);
     }

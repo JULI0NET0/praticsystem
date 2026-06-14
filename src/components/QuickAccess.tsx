@@ -19,8 +19,8 @@ export default function QuickAccess() {
 
         if (error) throw error;
         if (data) setActiveClients(data);
-      } catch (err) {
-        console.error("Erro ao buscar clientes ativos:", err);
+      } catch (err: any) {
+        console.error("Erro ao buscar clientes ativos:", err?.message || JSON.stringify(err, null, 2) || err);
       } finally {
         setLoading(false);
       }
