@@ -166,70 +166,44 @@ export default function ClientDetailPage() {
   }, [id]);
 
   const fetchAvailableServices = async () => {
-    const { data } = await supabase.from('services').select('*').order('name');
-    if (data) setAvailableServices(data);
+    const res = await fetch('/api/services');
+    if (res.ok) setAvailableServices(await res.json());
   };
 
   const fetchClientDetails = async () => {
     try {
       setLoading(true);
 
-      // Fetch Client Data
-      const { data: client, error: clientError } = await supabase
-        .from('clients')
-        .select('*')
-        .eq('id', id)
-        .single();
+      const res = await fetch(`/api/clients/${id}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const payload = await res.json();
 
-      if (clientError) throw clientError;
-
+      const client = payload.client;
       setClientData(client);
+      setLocalNotes(payload.notes);
+      setLocalDemands(payload.demands);
+      setClientContracts(payload.contracts);
+      setClientInvoices(payload.invoices);
+      setClientEvents(payload.events);
+      setClientDocuments(payload.documents);
 
-      const { data: notesData } = await supabase
-        .from('notes')
-        .select('id, title, content, date, subjects, user_id, created_at, updated_at')
-        .eq('client_id', id)
-        .eq('pin_to_client', true)
-        .order('updated_at', { ascending: false });
-      setLocalNotes(notesData ?? []);
-
-      // Fetch related data in parallel
-      const [demandsRes, contractsRes, invoicesRes, eventsRes, docsRes] = await Promise.all([
-        supabase.from('demands').select('*').eq('client_id', id).order('created_at', { ascending: false }),
-        supabase.from('contracts').select('*').eq('client_id', id),
-        supabase.from('invoices').select('*').eq('client_id', id),
-        supabase.from('agenda_events').select('*').eq('client_id', id),
-        supabase.from('client_documents').select('*').eq('client_id', id).order('created_at', { ascending: false })
-      ]);
-
-      let finalClientStatus = client.status;
-      if (demandsRes.data) setLocalDemands(demandsRes.data);
-      if (contractsRes.data) {
-        setClientContracts(contractsRes.data);
-        
-        // Se o cliente for prospect e possuir um contrato ativo, altera para active
-        if (client.status === 'prospect' && contractsRes.data.some((c: any) => c.status === 'active')) {
-          await supabase
-            .from('clients')
-            .update({ status: 'active' })
-            .eq('id', id);
-          finalClientStatus = 'active';
-        }
+      // Se prospect com contrato ativo, promove para active via API
+      if (client.status === 'prospect' && payload.contracts.some((c: any) => c.status === 'active')) {
+        await fetch(`/api/clients/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'active' }),
+        });
+        setClientData({ ...client, status: 'active' });
       }
-      
-      setClientData({ ...client, status: finalClientStatus });
-      if (invoicesRes.data) setClientInvoices(invoicesRes.data);
-      if (eventsRes.data) setClientEvents(eventsRes.data);
-      if (docsRes.data) setClientDocuments(docsRes.data);
 
       const openContractId = searchParams.get('openContract');
-      if (openContractId && contractsRes.data) {
-        const cToOpen = contractsRes.data.find(c => c.id === openContractId);
+      if (openContractId && payload.contracts.length) {
+        const cToOpen = payload.contracts.find((c: any) => c.id === openContractId);
         if (cToOpen) {
           setActiveTab('contracts');
           setSelectedContractForModal(cToOpen);
           setIsContractModalOpen(true);
-          // Optional: clear the query param so it doesn't reopen on refresh
           window.history.replaceState(null, '', `/admin/clients/${id}?tab=contracts`);
         }
       } else if (searchParams.get('tab')) {
@@ -247,11 +221,12 @@ export default function ClientDetailPage() {
     if (!clientData) return;
     const newStatus = clientData.status === 'active' ? 'prospect' : 'active';
     try {
-      const { error } = await supabase
-        .from('clients')
-        .update({ status: newStatus })
-        .eq('id', id);
-      if (error) throw error;
+      const res = await fetch(`/api/clients/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (!res.ok) throw new Error('Falha ao atualizar status');
       setClientData({ ...clientData, status: newStatus });
       showToast(`Status alterado para ${newStatus === 'active' ? 'Ativo' : 'Prospect'}!`, 'success');
     } catch (err) {
@@ -396,9 +371,10 @@ export default function ClientDetailPage() {
     if (!editFormData) return;
     setIsSaving(true);
     try {
-      const { error } = await supabase
-        .from('clients')
-        .update({
+      const res = await fetch(`/api/clients/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           name: editFormData.name,
           nome_fantasia: editFormData.nome_fantasia,
           cnpj: editFormData.cnpj,
@@ -416,11 +392,10 @@ export default function ClientDetailPage() {
           social_access: editFormData.social_access,
           portal_email: editFormData.portal_email,
           portal_password: editFormData.portal_password,
-          onboarding_date: editFormData.onboarding_date
-        })
-        .eq('id', id);
-
-      if (error) throw error;
+          onboarding_date: editFormData.onboarding_date,
+        }),
+      });
+      if (!res.ok) throw new Error('Falha ao salvar');
 
       setClientData(editFormData);
       setIsEditModalOpen(false);
@@ -528,12 +503,8 @@ export default function ClientDetailPage() {
   const handleDeleteClient = async () => {
     setIsDeleting(true);
     try {
-      const { error } = await supabase
-        .from('clients')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
+      const res = await fetch(`/api/clients/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Falha ao excluir');
 
       setIsDeleteModalOpen(false);
       router.push("/admin/clients");
