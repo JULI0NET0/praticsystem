@@ -11,6 +11,7 @@
 
 CREATE TABLE IF NOT EXISTS public.clients (
     id              UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    sequential_id   SERIAL,
     name            TEXT NOT NULL,
     nome_fantasia   TEXT,
     cnpj            TEXT NOT NULL DEFAULT '',
@@ -39,6 +40,7 @@ CREATE TABLE IF NOT EXISTS public.clients (
 );
 
 -- Garante colunas em instâncias antigas
+ALTER TABLE public.clients ADD COLUMN IF NOT EXISTS sequential_id      SERIAL;
 ALTER TABLE public.clients ADD COLUMN IF NOT EXISTS nome_fantasia      TEXT;
 ALTER TABLE public.clients ADD COLUMN IF NOT EXISTS email_financeiro   TEXT;
 ALTER TABLE public.clients ADD COLUMN IF NOT EXISTS whatsapp_financeiro TEXT;

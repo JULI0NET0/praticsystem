@@ -1,6 +1,7 @@
 -- Criação da tabela clients
 CREATE TABLE IF NOT EXISTS public.clients (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    sequential_id SERIAL,
     name TEXT NOT NULL,
     nome_fantasia TEXT,
     cnpj TEXT NOT NULL,

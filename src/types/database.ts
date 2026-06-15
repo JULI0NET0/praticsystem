@@ -16,6 +16,7 @@ export interface User {
 
 export interface Client {
   id: string;
+  sequential_id?: number;
   name: string; // Razão Social
   nome_fantasia?: string;
   cnpj: string; // Ou CPF
@@ -41,7 +42,7 @@ export interface Client {
   status: 'active' | 'inactive' | 'prospect';
   created_at: string;
   social_access?: {
-    instagram?: { usuario: string; senha?: string; email?: string; link?: string };
+    instagram?: { usuario: string; senha?: string; email?: string; link?: string; reserva_image_url?: string };
     facebook?: { usuario: string; senha?: string; email?: string; link?: string };
     google?: { usuario: string; senha?: string; email?: string; link?: string };
     linkedin?: { usuario: string; senha?: string; email?: string; link?: string };
@@ -156,7 +157,9 @@ export interface PortfolioCase {
   results: string[];
 }
 
-export type ExpenseCategory = 'pro_labore' | 'funcionario_pj' | 'sistema' | 'internet' | 'outros';
+export type ExpenseCategory =
+  | 'pro_labore' | 'funcionario_pj' | 'sistema' | 'internet'
+  | 'taxa_asaas' | 'taxa_boleto' | 'taxa_mensageria' | 'outros';
 export type ExpenseRecurrence = 'monthly' | 'quarterly' | 'yearly' | 'one_time';
 
 export interface Expense {

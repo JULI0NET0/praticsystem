@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight, ChevronDown } from "lucide-react";
+import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight, ChevronDown, CalendarPlus } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import DialogShell from "@/components/DialogShell";
 import type { Expense, ExpenseCategory, ExpenseRecurrence } from "@/types/database";
@@ -12,6 +12,9 @@ const CATEGORIES: Record<ExpenseCategory, string> = {
   funcionario_pj: "Funcionário PJ",
   sistema: "Sistema/Software",
   internet: "Internet/Infra",
+  taxa_asaas: "Taxas Asaas",
+  taxa_boleto: "Taxa de Boleto",
+  taxa_mensageria: "Taxa de Mensageria",
   outros: "Outros",
 };
 
@@ -27,6 +30,9 @@ const CATEGORY_COLORS: Record<ExpenseCategory, string> = {
   funcionario_pj: "#60A5FA",
   sistema: "#34D399",
   internet: "#F59E0B",
+  taxa_asaas: "#FB923C",
+  taxa_boleto: "#F472B6",
+  taxa_mensageria: "#38BDF8",
   outros: "var(--text-secondary)",
 };
 
@@ -36,6 +42,7 @@ interface DespesasListProps {
   onSave: (data: Partial<Expense>) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onToggle: (id: string, status: 'active' | 'inactive') => Promise<void>;
+  onGenerateEntries: (expenseId: string, startMonth: string, months: number) => Promise<void>;
 }
 
 const EMPTY_FORM: Partial<Expense> = {
@@ -49,12 +56,34 @@ const EMPTY_FORM: Partial<Expense> = {
   notes: "",
 };
 
-export function DespesasList({ expenses, users, onSave, onDelete, onToggle }: DespesasListProps) {
+function getMonthLabel(yyyymm: string) {
+  if (!yyyymm) return "";
+  const [y, m] = yyyymm.split("-").map(Number);
+  return new Date(y, m - 1, 1).toLocaleDateString("pt-BR", { month: "short", year: "2-digit" });
+}
+
+function generatePreviewDates(startMonth: string, months: number, dueDay: number): string[] {
+  if (!startMonth || months < 1) return [];
+  const [y, m] = startMonth.split("-").map(Number);
+  return Array.from({ length: months }, (_, i) => {
+    const d = new Date(y, m - 1 + i, dueDay || 1);
+    return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "2-digit" });
+  });
+}
+
+export function DespesasList({ expenses, users, onSave, onDelete, onToggle, onGenerateEntries }: DespesasListProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Expense | null>(null);
   const [form, setForm] = useState<Partial<Expense>>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [filterCat, setFilterCat] = useState<string>("all");
+
+  const [genDialog, setGenDialog] = useState<Expense | null>(null);
+  const now = new Date();
+  const defaultMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const [genStartMonth, setGenStartMonth] = useState(defaultMonth);
+  const [genMonths, setGenMonths] = useState(1);
+  const [genSaving, setGenSaving] = useState(false);
 
   const totalMensal = expenses
     .filter((e) => e.status === "active" && e.recurrence === "monthly")
@@ -72,6 +101,12 @@ export function DespesasList({ expenses, users, onSave, onDelete, onToggle }: De
     setDialogOpen(true);
   }
 
+  function openGen(expense: Expense) {
+    setGenDialog(expense);
+    setGenStartMonth(defaultMonth);
+    setGenMonths(1);
+  }
+
   async function handleSave() {
     setSaving(true);
     try {
@@ -82,7 +117,22 @@ export function DespesasList({ expenses, users, onSave, onDelete, onToggle }: De
     }
   }
 
+  async function handleGenerate() {
+    if (!genDialog) return;
+    setGenSaving(true);
+    try {
+      await onGenerateEntries(genDialog.id, genStartMonth, genMonths);
+      setGenDialog(null);
+    } finally {
+      setGenSaving(false);
+    }
+  }
+
   const filtered = filterCat === "all" ? expenses : expenses.filter((e) => e.category === filterCat);
+
+  const previewDates = genDialog
+    ? generatePreviewDates(genStartMonth, genMonths, genDialog.due_day || 1)
+    : [];
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
@@ -183,6 +233,15 @@ export function DespesasList({ expenses, users, onSave, onDelete, onToggle }: De
                 </td>
                 <td>
                   <div style={{ display: "flex", gap: "6px" }}>
+                    {expense.status === "active" && (
+                      <button
+                        onClick={() => openGen(expense)}
+                        style={{ background: "none", border: "none", cursor: "pointer", color: "var(--accent)", padding: "4px", display: "flex" }}
+                        title="Gerar Lançamentos por Meses"
+                      >
+                        <CalendarPlus size={15} />
+                      </button>
+                    )}
                     <button
                       onClick={() => onToggle(expense.id, expense.status === "active" ? "inactive" : "active")}
                       style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-secondary)", padding: "4px", display: "flex" }}
@@ -254,6 +313,15 @@ export function DespesasList({ expenses, users, onSave, onDelete, onToggle }: De
               </span>
             </div>
             <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", marginTop: "4px" }}>
+              {expense.status === "active" && (
+                <button
+                  onClick={() => openGen(expense)}
+                  style={{ background: "none", border: "none", cursor: "pointer", color: "var(--accent)", padding: "4px", display: "flex" }}
+                  title="Gerar Lançamentos"
+                >
+                  <CalendarPlus size={16} />
+                </button>
+              )}
               <button
                 onClick={() => onToggle(expense.id, expense.status === "active" ? "inactive" : "active")}
                 style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-secondary)", padding: "4px", display: "flex" }}
@@ -278,7 +346,7 @@ export function DespesasList({ expenses, users, onSave, onDelete, onToggle }: De
         ))}
       </div>
 
-      {/* Dialog */}
+      {/* Dialog criar/editar despesa */}
       <DialogShell
         isOpen={dialogOpen}
         onClose={() => setDialogOpen(false)}
@@ -400,6 +468,97 @@ export function DespesasList({ expenses, users, onSave, onDelete, onToggle }: De
             />
           </div>
         </div>
+      </DialogShell>
+
+      {/* Dialog gerar lançamentos por meses */}
+      <DialogShell
+        isOpen={!!genDialog}
+        onClose={() => setGenDialog(null)}
+        title="Gerar Lançamentos por Meses"
+        maxWidth="460px"
+        footer={
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px" }}>
+            <button className="btn btn-secondary" onClick={() => setGenDialog(null)}>Cancelar</button>
+            <button
+              className="btn btn-accent"
+              onClick={handleGenerate}
+              disabled={genSaving || !genStartMonth || genMonths < 1}
+            >
+              {genSaving ? "Gerando..." : `Gerar ${genMonths} lançamento${genMonths !== 1 ? "s" : ""}`}
+            </button>
+          </div>
+        }
+      >
+        {genDialog && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            <div className="glass-card" style={{ padding: "14px 16px", background: "rgba(239,68,68,0.05)", border: "1px solid rgba(239,68,68,0.12)" }}>
+              <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginBottom: "2px" }}>{CATEGORIES[genDialog.category]}</p>
+              <p style={{ fontWeight: 700, fontSize: "1rem" }}>{genDialog.description}</p>
+              <p style={{ fontWeight: 800, color: "#EF4444", fontSize: "1.15rem", marginTop: "2px" }}>
+                {formatCurrency(Number(genDialog.amount))}
+                {genDialog.due_day && (
+                  <span style={{ fontSize: "0.8rem", fontWeight: 500, color: "var(--text-secondary)", marginLeft: "8px" }}>
+                    vencto dia {String(genDialog.due_day).padStart(2, "0")}
+                  </span>
+                )}
+              </p>
+            </div>
+
+            <div className="responsive-grid-2" style={{ gap: "12px" }}>
+              <div>
+                <label style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--text-secondary)", display: "block", marginBottom: "6px" }}>Mês inicial *</label>
+                <input
+                  className="input-dark"
+                  style={{ width: "100%" }}
+                  type="month"
+                  value={genStartMonth}
+                  onChange={(e) => setGenStartMonth(e.target.value)}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--text-secondary)", display: "block", marginBottom: "6px" }}>Quantidade de meses *</label>
+                <input
+                  className="input-dark"
+                  style={{ width: "100%" }}
+                  type="number"
+                  min="1"
+                  max="24"
+                  value={genMonths}
+                  onChange={(e) => setGenMonths(Math.max(1, Math.min(24, Number(e.target.value))))}
+                />
+              </div>
+            </div>
+
+            {previewDates.length > 0 && (
+              <div>
+                <p style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--text-secondary)", marginBottom: "8px" }}>
+                  Lançamentos que serão criados ({previewDates.length}):
+                </p>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                  {previewDates.map((date, i) => (
+                    <span
+                      key={i}
+                      style={{
+                        padding: "4px 10px",
+                        borderRadius: "8px",
+                        fontSize: "0.78rem",
+                        fontWeight: 600,
+                        background: "rgba(239,68,68,0.08)",
+                        color: "#EF4444",
+                        border: "1px solid rgba(239,68,68,0.2)",
+                      }}
+                    >
+                      {date}
+                    </span>
+                  ))}
+                </div>
+                <p style={{ fontSize: "0.75rem", color: "var(--text-tertiary)", marginTop: "8px" }}>
+                  Total: {formatCurrency(Number(genDialog.amount) * genMonths)}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
       </DialogShell>
     </div>
   );

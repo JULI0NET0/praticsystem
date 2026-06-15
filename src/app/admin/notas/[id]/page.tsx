@@ -97,7 +97,7 @@ export default function NotaDetailPage() {
   const fetchClients = async () => {
     const { data } = await supabase
       .from('clients')
-      .select('id, name, nome_fantasia')
+      .select('id, name, nome_fantasia, sequential_id')
       .eq('status', 'active')
       .order('name');
     if (data) setClients(data as any);
@@ -475,9 +475,14 @@ export default function NotaDetailPage() {
                 style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: '8px', padding: '7px 10px', color: note.client_id ? 'white' : 'var(--text-secondary)', fontSize: '0.85rem', outline: 'none', cursor: 'pointer' }}
               >
                 <option value="">Nenhum cliente</option>
-                {clients.map(c => (
-                  <option key={c.id} value={c.id}>{c.nome_fantasia || c.name}</option>
-                ))}
+                {clients.map((c, idx) => {
+                  const seq = (c as any).sequential_id || idx + 1;
+                  return (
+                    <option key={c.id} value={c.id}>
+                      {seq} - {c.nome_fantasia || c.name}
+                    </option>
+                  );
+                })}
               </select>
             ) : (
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: 0 }}>

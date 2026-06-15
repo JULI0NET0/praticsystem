@@ -2,7 +2,7 @@
 
 import { supabase } from "@/lib/supabase";
 import { Plus, Search, FileText, Calendar, MoreVertical, DollarSign, TrendingUp, AlertCircle, CheckCircle2, Loader2, Trash2, X } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import KPICard from "@/components/KPICard";
 import { motion, AnimatePresence } from "framer-motion";
 import ContractDetailsModal from "@/components/admin/contracts/ContractDetailsModal";
@@ -57,29 +57,28 @@ export default function ContractsPage() {
     }
   };
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        setLoading(true);
-        const [contractsRes, clientsRes, servicesRes, invoicesRes] = await Promise.all([
-          supabase.from('contracts').select('*'),
-          supabase.from('clients').select('*'),
-          supabase.from('services').select('*'),
-          supabase.from('invoices').select('*')
-        ]);
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const [contractsRes, clientsRes, servicesRes, invoicesRes] = await Promise.all([
+        supabase.from('contracts').select('*').order('start_date', { ascending: false }),
+        supabase.from('clients').select('*'),
+        supabase.from('services').select('*'),
+        supabase.from('invoices').select('*')
+      ]);
 
-        if (contractsRes.data) setContracts(contractsRes.data);
-        if (clientsRes.data) setClients(clientsRes.data);
-        if (servicesRes.data) setServices(servicesRes.data);
-        if (invoicesRes.data) setInvoices(invoicesRes.data);
-      } catch (err) {
-        console.error("Erro ao buscar dados de contratos:", err);
-      } finally {
-        setLoading(false);
-      }
+      if (contractsRes.data) setContracts(contractsRes.data);
+      if (clientsRes.data) setClients(clientsRes.data);
+      if (servicesRes.data) setServices(servicesRes.data);
+      if (invoicesRes.data) setInvoices(invoicesRes.data);
+    } catch (err) {
+      console.error("Erro ao buscar dados de contratos:", err);
+    } finally {
+      setLoading(false);
     }
-    fetchData();
   }, []);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   const handleOpenDetails = (contract: any) => {
     setSelectedContract(contract);
@@ -157,6 +156,7 @@ export default function ContractsPage() {
       <ContractDetailsModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
+        onRenew={() => { setIsModalOpen(false); fetchData(); }}
         contract={selectedContract}
         client={clients.find(c => c.id === selectedContract?.client_id)}
         service={services.find(s => s.id === selectedContract?.service_id)}

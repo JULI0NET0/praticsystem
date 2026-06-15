@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { RefreshCw, Link2, CheckCircle2, AlertCircle, Wallet } from "lucide-react";
+import { RefreshCw, Link2, CheckCircle2, AlertCircle, Wallet, Sparkles } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import DialogShell from "@/components/DialogShell";
 import type { AsaasTransaction, ExpenseEntry, Invoice } from "@/types/database";
@@ -19,10 +19,13 @@ interface AsaasSyncProps {
   syncing: boolean;
   onSync: (startDate: string, endDate: string) => Promise<{ imported: number; skipped: number } | void>;
   onLink: (asaasId: string, expenseEntryId?: string, invoiceId?: string) => Promise<void>;
+  onUpdateInvoiceStatus?: (id: string, status: string) => Promise<void>;
   selectedMonth: string;
   balance?: AsaasBalance | null;
   onRefreshBalance?: () => Promise<void>;
 }
+
+type AutoLinkMatch = { txn: AsaasTransaction; invoice: Invoice };
 
 export function AsaasSync({
   asaasTransactions,
@@ -31,6 +34,7 @@ export function AsaasSync({
   syncing,
   onSync,
   onLink,
+  onUpdateInvoiceStatus,
   selectedMonth,
   balance,
   onRefreshBalance,
@@ -40,6 +44,10 @@ export function AsaasSync({
   const [linkTarget, setLinkTarget] = useState<{ type: "expense" | "invoice"; id: string } | null>(null);
   const [saving, setSaving] = useState(false);
   const [filterStatus, setFilterStatus] = useState<"all" | "linked" | "unlinked">("all");
+  const [autoLinkMatches, setAutoLinkMatches] = useState<AutoLinkMatch[]>([]);
+  const [selectedMatchIds, setSelectedMatchIds] = useState<Set<string>>(new Set());
+  const [showAutoLinkPanel, setShowAutoLinkPanel] = useState(false);
+  const [autoLinking, setAutoLinking] = useState(false);
 
   const [year, month] = selectedMonth.split("-");
   const startDate = `${year}-${month}-01`;
@@ -49,6 +57,52 @@ export function AsaasSync({
   async function handleSync() {
     const result = await onSync(startDate, endDate);
     if (result) setLastSyncResult(result as { imported: number; skipped: number });
+  }
+
+  async function handleSync2025() {
+    const result = await onSync("2025-01-01", "2025-12-31");
+    if (result) setLastSyncResult(result as { imported: number; skipped: number });
+  }
+
+  function openAutoLink() {
+    const unlinkedCredits = asaasTransactions.filter(
+      (t) => t.type === "CREDIT" && !t.invoice_id && !t.expense_entry_id
+    );
+    const pendingInvoices = invoices.filter((i) => i.status !== "paid");
+    const usedInvoiceIds = new Set<string>();
+    const matches: AutoLinkMatch[] = [];
+
+    for (const txn of unlinkedCredits) {
+      const txnMonth = txn.date.substring(0, 7);
+      const match = pendingInvoices.find(
+        (inv) =>
+          !usedInvoiceIds.has(inv.id) &&
+          Math.abs(Number(inv.amount) - Number(txn.value)) < 0.02 &&
+          inv.due_date.substring(0, 7) === txnMonth
+      );
+      if (match) {
+        usedInvoiceIds.add(match.id);
+        matches.push({ txn, invoice: match });
+      }
+    }
+
+    setAutoLinkMatches(matches);
+    setSelectedMatchIds(new Set(matches.map((m) => m.txn.id)));
+    setShowAutoLinkPanel(true);
+  }
+
+  async function handleConfirmAutoLink() {
+    setAutoLinking(true);
+    try {
+      const selected = autoLinkMatches.filter((m) => selectedMatchIds.has(m.txn.id));
+      for (const { txn, invoice } of selected) {
+        await onLink(txn.id, undefined, invoice.id);
+        await onUpdateInvoiceStatus?.(invoice.id, "paid");
+      }
+      setShowAutoLinkPanel(false);
+    } finally {
+      setAutoLinking(false);
+    }
   }
 
   async function handleLink() {
@@ -153,15 +207,33 @@ export function AsaasSync({
             </div>
           )}
         </div>
-        <button
-          className="btn btn-accent"
-          onClick={handleSync}
-          disabled={syncing}
-          style={{ display: "flex", alignItems: "center", gap: "8px", whiteSpace: "nowrap" }}
-        >
-          <RefreshCw size={16} className={syncing ? "animate-spin" : ""} />
-          {syncing ? "Sincronizando..." : `Sincronizar ${month}/${year}`}
-        </button>
+        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+          <button
+            className="btn btn-accent"
+            onClick={handleSync}
+            disabled={syncing}
+            style={{ display: "flex", alignItems: "center", gap: "8px", whiteSpace: "nowrap" }}
+          >
+            <RefreshCw size={16} className={syncing ? "animate-spin" : ""} />
+            {syncing ? "Sincronizando..." : `Sincronizar ${month}/${year}`}
+          </button>
+          <button
+            className="btn btn-secondary"
+            onClick={handleSync2025}
+            disabled={syncing}
+            style={{ display: "flex", alignItems: "center", gap: "8px", whiteSpace: "nowrap" }}
+          >
+            <RefreshCw size={16} className={syncing ? "animate-spin" : ""} />
+            Sincronizar 2025 completo
+          </button>
+          <button
+            className="btn btn-secondary"
+            onClick={openAutoLink}
+            style={{ display: "flex", alignItems: "center", gap: "8px", whiteSpace: "nowrap" }}
+          >
+            <Sparkles size={16} /> Auto-vincular
+          </button>
+        </div>
       </div>
 
       {/* Alert for unlinked */}
@@ -364,6 +436,100 @@ export function AsaasSync({
             )}
           </div>
         )}
+      </DialogShell>
+
+      {/* Auto-link review dialog */}
+      <DialogShell
+        isOpen={showAutoLinkPanel}
+        onClose={() => setShowAutoLinkPanel(false)}
+        title="Auto-vincular Transações"
+        maxWidth="600px"
+        footer={
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" }}>
+            <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
+              {selectedMatchIds.size} de {autoLinkMatches.length} selecionados
+            </span>
+            <div style={{ display: "flex", gap: "10px" }}>
+              <button className="btn btn-secondary" onClick={() => setShowAutoLinkPanel(false)} disabled={autoLinking}>Cancelar</button>
+              <button
+                className="btn btn-accent"
+                onClick={handleConfirmAutoLink}
+                disabled={autoLinking || selectedMatchIds.size === 0}
+                style={{ display: "flex", alignItems: "center", gap: "6px" }}
+              >
+                <Sparkles size={14} />
+                {autoLinking ? "Vinculando..." : "Confirmar Vínculos"}
+              </button>
+            </div>
+          </div>
+        }
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          {autoLinkMatches.length === 0 ? (
+            <div style={{ padding: "32px", textAlign: "center" }}>
+              <Sparkles size={32} style={{ opacity: 0.2, display: "block", margin: "0 auto 12px" }} />
+              <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem" }}>
+                Nenhuma correspondência encontrada. Certifique-se de que as transações foram sincronizadas e que existem faturas pendentes com o mesmo valor e mês.
+              </p>
+            </div>
+          ) : (
+            <>
+              <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginBottom: "4px" }}>
+                Correspondências encontradas por valor + mês de vencimento. Desmarque os pares que não deseja vincular.
+              </p>
+              {autoLinkMatches.map(({ txn, invoice }) => {
+                const selected = selectedMatchIds.has(txn.id);
+                return (
+                  <button
+                    key={txn.id}
+                    onClick={() => {
+                      setSelectedMatchIds((prev) => {
+                        const next = new Set(prev);
+                        if (next.has(txn.id)) next.delete(txn.id); else next.add(txn.id);
+                        return next;
+                      });
+                    }}
+                    style={{
+                      display: "flex", alignItems: "center", gap: "12px", padding: "12px 14px",
+                      background: selected ? "rgba(34,197,94,0.08)" : "rgba(255,255,255,0.02)",
+                      border: `1px solid ${selected ? "rgba(34,197,94,0.3)" : "var(--border)"}`,
+                      borderRadius: "12px", cursor: "pointer", textAlign: "left",
+                      transition: "all 0.15s",
+                    }}
+                  >
+                    <div style={{
+                      width: "20px", height: "20px", borderRadius: "6px", flexShrink: 0,
+                      background: selected ? "#22C55E" : "rgba(255,255,255,0.08)",
+                      border: `2px solid ${selected ? "#22C55E" : "var(--border)"}`,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                    }}>
+                      {selected && <CheckCircle2 size={12} color="white" />}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--text-secondary)", marginBottom: "2px" }}>Transação Asaas</p>
+                      <p style={{ fontSize: "0.875rem", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {txn.description || txn.id.slice(0, 20) + "…"}
+                      </p>
+                      <p style={{ fontSize: "0.75rem", color: "var(--text-tertiary)" }}>
+                        {new Date(`${txn.date}T12:00:00`).toLocaleDateString("pt-BR")} · {formatCurrency(Number(txn.value))}
+                      </p>
+                    </div>
+                    <div style={{ fontSize: "1.1rem", color: "var(--text-secondary)" }}>→</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--text-secondary)", marginBottom: "2px" }}>Fatura</p>
+                      <p style={{ fontSize: "0.875rem", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {invoice.description}
+                      </p>
+                      <p style={{ fontSize: "0.75rem", color: "var(--text-tertiary)" }}>
+                        Venc. {new Date(`${invoice.due_date}T12:00:00`).toLocaleDateString("pt-BR")} · {formatCurrency(Number(invoice.amount))}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })}
+            </>
+          )}
+        </div>
       </DialogShell>
     </div>
   );

@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { ArrowUpRight, ArrowDownRight, RefreshCw, Search, ChevronDown, Link2, Plus, Check } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, RefreshCw, Search, ChevronDown, Link2, Plus, Check, ExternalLink } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import DialogShell from "@/components/DialogShell";
 import type { Invoice, ExpenseEntry, AsaasTransaction, ExpenseCategory } from "@/types/database";
@@ -12,6 +12,9 @@ const CATEGORY_LABELS: Record<string, string> = {
   funcionario_pj: "Funcionário PJ",
   sistema: "Sistema/Software",
   internet: "Internet/Infra",
+  taxa_asaas: "Taxas Asaas",
+  taxa_boleto: "Taxa de Boleto",
+  taxa_mensageria: "Taxa de Mensageria",
   outros: "Outros",
 };
 
@@ -75,9 +78,27 @@ export function LancamentosTable({
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
   const [linkDialog, setLinkDialog] = useState<AsaasTransaction | null>(null);
   const [linkTarget, setLinkTarget] = useState<{ type: "expense" | "invoice"; id: string } | null>(null);
+  const [expenseLinkDialog, setExpenseLinkDialog] = useState<UnifiedEntry | null>(null);
+  const [selectedTxnIds, setSelectedTxnIds] = useState<Set<string>>(new Set());
+  const [linkingExpense, setLinkingExpense] = useState(false);
   const [newEntryDialog, setNewEntryDialog] = useState(false);
   const [newEntryForm, setNewEntryForm] = useState<Partial<ExpenseEntry>>({ description: "", amount: 0, date: "", status: "paid", category: "outros" });
   const [saving, setSaving] = useState(false);
+  const [openingAsaas, setOpeningAsaas] = useState<string | null>(null);
+
+  const openAsaasLink = async (asaasId: string) => {
+    setOpeningAsaas(asaasId);
+    try {
+      const res = await fetch(`/api/financeiro/asaas/payment/${asaasId}`);
+      const payment = await res.json();
+      const url = payment.invoiceUrl || payment.bankSlipUrl;
+      if (url) window.open(url, '_blank', 'noopener');
+    } catch {
+      // silently fail — URL not available
+    } finally {
+      setOpeningAsaas(null);
+    }
+  };
 
   const entries = useMemo<UnifiedEntry[]>(() => {
     const result: UnifiedEntry[] = [];
@@ -108,7 +129,7 @@ export function LancamentosTable({
       const d = entry.date.split("T")[0];
       if (startDate && d < startDate) continue;
       if (endDate && d > endDate) continue;
-      const linkedTxn = asaasTransactions.find((t) => t.expense_entry_id === entry.id);
+      const linkedTxns = asaasTransactions.filter((t) => t.expense_entry_id === entry.id);
       const cat = entry.category || "outros";
       result.push({
         id: `exp-${entry.id}`,
@@ -118,8 +139,8 @@ export function LancamentosTable({
         amount: Number(entry.amount),
         type: "despesa",
         status: entry.status,
-        asaasLinked: !!entry.asaas_transaction_id,
-        asaasTransactionId: entry.asaas_transaction_id || linkedTxn?.id,
+        asaasLinked: linkedTxns.length > 0 || !!entry.asaas_transaction_id,
+        asaasTransactionId: entry.asaas_transaction_id || linkedTxns[0]?.id,
         rawEntry: entry,
       });
     }
@@ -140,6 +161,49 @@ export function LancamentosTable({
   const totalDespesa = entries.filter((e) => e.type === "despesa" && e.status === "paid").reduce((s, e) => s + e.amount, 0);
 
   const unlinkdAsaas = asaasTransactions.filter((t) => !t.expense_entry_id && !t.invoice_id);
+  const unlinkedDebits = asaasTransactions.filter((t) => t.type === "DEBIT" && !t.expense_entry_id && !t.invoice_id);
+
+  const selectedTxnsTotal = useMemo(
+    () => unlinkedDebits.filter((t) => selectedTxnIds.has(t.id)).reduce((s, t) => s + Number(t.value), 0),
+    [unlinkedDebits, selectedTxnIds]
+  );
+
+  function openExpenseLink(entry: UnifiedEntry) {
+    setExpenseLinkDialog(entry);
+    setSelectedTxnIds(new Set());
+  }
+
+  function toggleTxnSelection(id: string) {
+    setSelectedTxnIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  async function handleExpenseLink() {
+    if (!expenseLinkDialog || selectedTxnIds.size === 0) return;
+    const entryId = expenseLinkDialog.id.replace("exp-", "");
+    setLinkingExpense(true);
+    try {
+      for (const txnId of selectedTxnIds) {
+        await onLinkTransaction(txnId, entryId, undefined);
+      }
+      if (selectedTxnsTotal >= expenseLinkDialog.amount && expenseLinkDialog.status !== "paid") {
+        await onUpdateEntry(entryId, { status: "paid" });
+      }
+      setExpenseLinkDialog(null);
+      setSelectedTxnIds(new Set());
+    } finally {
+      setLinkingExpense(false);
+    }
+  }
+
+  async function handleMarkExpensePaid(entry: UnifiedEntry) {
+    const entryId = entry.id.replace("exp-", "");
+    await onUpdateEntry(entryId, { status: "paid" });
+  }
 
   async function handleLink() {
     if (!linkDialog || !linkTarget) return;
@@ -267,20 +331,17 @@ export function LancamentosTable({
         <table className="table">
           <thead>
             <tr>
-              <th>Data</th>
-              <th>Cliente</th>
+              <th style={{ width: "72px" }}>Data</th>
               <th>Descrição</th>
               <th>Categoria</th>
-              <th>Valor</th>
-              <th>Status</th>
-              <th>Asaas</th>
-              <th style={{ textAlign: "right" }}>Ações</th>
+              <th style={{ textAlign: "right" }}>Valor</th>
+              <th style={{ width: "80px" }}></th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={8} style={{ textAlign: "center", padding: "40px", color: "var(--text-tertiary)" }}>
+                <td colSpan={5} style={{ textAlign: "center", padding: "40px", color: "var(--text-tertiary)" }}>
                   Nenhum lançamento encontrado para o período.
                 </td>
               </tr>
@@ -292,90 +353,102 @@ export function LancamentosTable({
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.02 }}
               >
+                {/* Data */}
                 <td style={{ color: "var(--text-secondary)", fontSize: "0.875rem", fontWeight: 500, whiteSpace: "nowrap" }}>
                   {(() => {
                     const parts = entry.date.split("-");
                     return parts.length >= 3 ? `${parts[2]}/${parts[1]}` : entry.date;
                   })()}
                 </td>
-                <td style={{ maxWidth: "160px" }}>
-                  {entry.clientName ? (
-                    <span style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: "0.875rem", fontWeight: 500 }}>
-                      {entry.clientName}
+
+                {/* Descrição + cliente + status */}
+                <td style={{ maxWidth: "280px" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+                    <span style={{ fontWeight: 600, fontSize: "0.875rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {entry.description}
                     </span>
-                  ) : (
-                    <span style={{ color: "var(--text-tertiary)", fontSize: "0.875rem" }}>—</span>
-                  )}
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      {entry.clientName && (
+                        <span style={{ fontSize: "0.75rem", color: "var(--text-tertiary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {entry.clientName}
+                        </span>
+                      )}
+                      <span
+                        className="badge"
+                        style={{
+                          fontSize: "0.68rem",
+                          padding: "1px 6px",
+                          color: statusColor[entry.status] || "var(--text-secondary)",
+                          background: `${statusColor[entry.status] || "var(--text-secondary)"}18`,
+                          border: `1px solid ${statusColor[entry.status] || "var(--text-secondary)"}30`,
+                          flexShrink: 0,
+                        }}
+                      >
+                        {statusLabel[entry.status] || entry.status}
+                      </span>
+                    </div>
+                  </div>
                 </td>
-                <td style={{ maxWidth: "240px" }}>
-                  <span style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: "0.875rem", fontWeight: 500, color: "var(--text-secondary)" }}>
-                    {entry.description}
-                  </span>
-                </td>
+
+                {/* Categoria */}
                 <td>
                   <span className="badge" style={{ fontSize: "0.75rem", fontWeight: 500 }}>
                     {entry.categoryLabel}
                   </span>
                 </td>
-                <td style={{ fontSize: "0.875rem", fontWeight: 600, color: entry.type === "receita" ? "#22C55E" : "#EF4444" }}>
-                  {entry.type === "despesa" ? "- " : "+ "}{formatCurrency(entry.amount)}
+
+                {/* Valor alinhado à direita */}
+                <td style={{ textAlign: "right", fontWeight: 700, fontSize: "0.9rem", color: entry.type === "receita" ? "#22C55E" : "#EF4444", whiteSpace: "nowrap" }}>
+                  {entry.type === "despesa" ? "−" : "+"} {formatCurrency(entry.amount)}
                 </td>
-                <td>
-                  <span className="badge" style={{ color: statusColor[entry.status] || "var(--text-secondary)", background: `${statusColor[entry.status] || "var(--text-secondary)"}18`, border: `1px solid ${statusColor[entry.status] || "var(--text-secondary)"}30`, fontSize: "0.75rem", fontWeight: 500 }}>
-                    {statusLabel[entry.status] || entry.status}
-                  </span>
-                </td>
-                <td>
-                  {entry.asaasLinked ? (
-                    <span style={{
-                      display: "inline-flex", alignItems: "center", gap: "4px",
-                      padding: "3px 8px", borderRadius: "8px", fontSize: "0.72rem", fontWeight: 600,
-                      background: "rgba(34,197,94,0.1)", color: "#22C55E", border: "1px solid rgba(34,197,94,0.25)",
-                    }}>
-                      ● Vinculado
-                    </span>
-                  ) : (
-                    <button
-                      onClick={() => {
-                        const txn = asaasTransactions.find((t) => !t.expense_entry_id && !t.invoice_id);
-                        if (txn) setLinkDialog(txn);
-                      }}
-                      style={{
-                        display: "inline-flex", alignItems: "center", gap: "4px",
-                        padding: "3px 8px", borderRadius: "8px", fontSize: "0.72rem", fontWeight: 600,
-                        background: "rgba(245,158,11,0.08)", color: "#F59E0B", border: "1px solid rgba(245,158,11,0.25)",
-                        cursor: "pointer", transition: "all 0.15s",
-                      }}
-                    >
-                      ⟳ Vincular
-                    </button>
-                  )}
-                </td>
+
+                {/* Ações compactas: Asaas + Baixar */}
                 <td style={{ textAlign: "right" }}>
-                  {entry.type === "receita" && entry.status !== "paid" && (
-                    <button
-                      onClick={() => {
-                        const invoiceId = entry.id.replace("inv-", "");
-                        onUpdateInvoiceStatus?.(invoiceId, "paid");
-                      }}
-                      style={{
-                        color: "#22C55E",
-                        background: "rgba(34, 197, 94, 0.1)",
-                        border: "1px solid rgba(34, 197, 94, 0.2)",
-                        borderRadius: "8px",
-                        padding: "6px",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        cursor: "pointer",
-                        transition: "all 0.2s"
-                      }}
-                      className="hover-accent"
-                      title="Dar Baixa"
-                    >
-                      <Check size={16} />
-                    </button>
-                  )}
+                  <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "4px" }}>
+                    {/* Asaas */}
+                    {entry.asaasLinked ? (
+                      <button
+                        onClick={() => entry.asaasTransactionId && openAsaasLink(entry.asaasTransactionId)}
+                        disabled={openingAsaas === entry.asaasTransactionId}
+                        title="Abrir no Asaas"
+                        style={{ background: "none", border: "none", cursor: "pointer", color: "#22C55E", padding: "4px", display: "flex" }}
+                      >
+                        {openingAsaas === entry.asaasTransactionId
+                          ? <RefreshCw size={14} style={{ animation: "spin 1s linear infinite" }} />
+                          : <ExternalLink size={14} />
+                        }
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          if (entry.type === "despesa") openExpenseLink(entry);
+                          else {
+                            const txn = asaasTransactions.find((t) => !t.expense_entry_id && !t.invoice_id);
+                            if (txn) setLinkDialog(txn);
+                          }
+                        }}
+                        title="Vincular Asaas"
+                        style={{ background: "none", border: "none", cursor: "pointer", color: "#F59E0B", padding: "4px", display: "flex" }}
+                      >
+                        <Link2 size={14} />
+                      </button>
+                    )}
+
+                    {/* Dar Baixa */}
+                    {((entry.type === "receita" && entry.status !== "paid") ||
+                      (entry.type === "despesa" && entry.status === "pending")) && (
+                      <button
+                        onClick={() => {
+                          if (entry.type === "receita") onUpdateInvoiceStatus?.(entry.id.replace("inv-", ""), "paid");
+                          else handleMarkExpensePaid(entry);
+                        }}
+                        title="Dar Baixa"
+                        style={{ background: "none", border: "none", cursor: "pointer", color: "#22C55E", padding: "4px", display: "flex" }}
+                      >
+                        <Check size={14} />
+                      </button>
+                    )}
+                  </div>
                 </td>
               </motion.tr>
             ))}
@@ -391,66 +464,61 @@ export function LancamentosTable({
           </p>
         )}
         {filtered.map((entry) => (
-          <div key={entry.id} className="mobile-data-card" style={{ padding: "12px", gap: "6px" }}>
-            <div className="mobile-card-header" style={{ marginBottom: "2px" }}>
-              <div style={{ display: "flex", flexDirection: "column", gap: "2px", minWidth: 0, flex: 1 }}>
-                <span className="mobile-card-title" style={{ fontSize: "0.85rem", fontWeight: 600 }}>{entry.description}</span>
-                <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
-                  {entry.clientName && (
-                    <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)", fontWeight: 500 }}>
-                      {entry.clientName}
-                    </span>
-                  )}
-                  {entry.clientName && <span style={{ fontSize: "0.7rem", color: "var(--text-tertiary)" }}>•</span>}
-                  <span style={{ fontSize: "0.75rem", color: "var(--text-tertiary)" }}>
+          <div key={entry.id} className="mobile-data-card" style={{ padding: "12px 14px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px" }}>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <span style={{ display: "block", fontWeight: 600, fontSize: "0.875rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {entry.description}
+                </span>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "3px", flexWrap: "wrap" }}>
+                  <span style={{ fontSize: "0.72rem", color: "var(--text-tertiary)" }}>
                     {(() => {
                       const parts = entry.date.split("-");
                       return parts.length >= 3 ? `${parts[2]}/${parts[1]}` : entry.date;
                     })()}
                   </span>
+                  {entry.clientName && (
+                    <>
+                      <span style={{ fontSize: "0.65rem", color: "var(--text-tertiary)" }}>·</span>
+                      <span style={{ fontSize: "0.72rem", color: "var(--text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{entry.clientName}</span>
+                    </>
+                  )}
                 </div>
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
-                <span style={{ fontSize: "0.85rem", fontWeight: 700, color: entry.type === "receita" ? "#22C55E" : "#EF4444" }}>
-                  {entry.type === "despesa" ? "- " : "+ "}{formatCurrency(entry.amount)}
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "4px", flexShrink: 0 }}>
+                <span style={{ fontWeight: 700, fontSize: "0.9rem", color: entry.type === "receita" ? "#22C55E" : "#EF4444" }}>
+                  {entry.type === "despesa" ? "−" : "+"} {formatCurrency(entry.amount)}
+                </span>
+                <span className="badge" style={{ fontSize: "0.65rem", padding: "1px 6px", color: statusColor[entry.status] || "var(--text-secondary)", background: `${statusColor[entry.status] || "var(--text-secondary)"}18`, border: `1px solid ${statusColor[entry.status] || "var(--text-secondary)"}30` }}>
+                  {statusLabel[entry.status] || entry.status}
                 </span>
               </div>
             </div>
 
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px", marginTop: "4px" }}>
-              <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                <span className="badge" style={{ fontSize: "0.7rem", padding: "2px 6px" }}>{entry.categoryLabel}</span>
-                <span className="badge" style={{ color: statusColor[entry.status] || "var(--text-secondary)", background: `${statusColor[entry.status] || "var(--text-secondary)"}18`, border: `1px solid ${statusColor[entry.status] || "var(--text-secondary)"}30`, fontSize: "0.7rem", padding: "2px 6px" }}>
-                  {statusLabel[entry.status] || entry.status}
-                </span>
-                {entry.asaasLinked && (
-                  <span style={{ fontSize: "0.7rem", color: "#22C55E", fontWeight: 600 }}>Asaas</span>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "8px" }}>
+              <span className="badge" style={{ fontSize: "0.7rem", padding: "2px 8px" }}>{entry.categoryLabel}</span>
+              <div style={{ display: "flex", gap: "4px" }}>
+                {entry.asaasLinked ? (
+                  <button onClick={() => entry.asaasTransactionId && openAsaasLink(entry.asaasTransactionId)} style={{ background: "none", border: "none", cursor: "pointer", color: "#22C55E", padding: "4px", display: "flex" }} title="Asaas">
+                    <ExternalLink size={13} />
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => { if (entry.type === "despesa") openExpenseLink(entry); else { const txn = asaasTransactions.find((t) => !t.expense_entry_id && !t.invoice_id); if (txn) setLinkDialog(txn); } }}
+                    style={{ background: "none", border: "none", cursor: "pointer", color: "#F59E0B", padding: "4px", display: "flex" }} title="Vincular Asaas"
+                  >
+                    <Link2 size={13} />
+                  </button>
+                )}
+                {((entry.type === "receita" && entry.status !== "paid") || (entry.type === "despesa" && entry.status === "pending")) && (
+                  <button
+                    onClick={() => { if (entry.type === "receita") onUpdateInvoiceStatus?.(entry.id.replace("inv-", ""), "paid"); else handleMarkExpensePaid(entry); }}
+                    style={{ background: "none", border: "none", cursor: "pointer", color: "#22C55E", padding: "4px", display: "flex" }} title="Dar Baixa"
+                  >
+                    <Check size={13} />
+                  </button>
                 )}
               </div>
-
-              {entry.type === "receita" && entry.status !== "paid" && (
-                <button
-                  onClick={() => {
-                    const invoiceId = entry.id.replace("inv-", "");
-                    onUpdateInvoiceStatus?.(invoiceId, "paid");
-                  }}
-                  style={{
-                    color: "#22C55E",
-                    background: "rgba(34, 197, 94, 0.1)",
-                    border: "1px solid rgba(34, 197, 94, 0.2)",
-                    borderRadius: "6px",
-                    padding: "4px 8px",
-                    fontSize: "0.7rem",
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "4px"
-                  }}
-                >
-                  <Check size={12} /> Baixar
-                </button>
-              )}
             </div>
           </div>
         ))}
@@ -502,7 +570,105 @@ export function LancamentosTable({
         </div>
       </DialogShell>
 
-      {/* Link dialog */}
+      {/* Dialog vincular múltiplos débitos Asaas a uma despesa */}
+      <DialogShell
+        isOpen={!!expenseLinkDialog}
+        onClose={() => { setExpenseLinkDialog(null); setSelectedTxnIds(new Set()); }}
+        title="Vincular Pagamentos Asaas à Despesa"
+        maxWidth="500px"
+        footer={
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px" }}>
+            <button className="btn btn-secondary" onClick={() => { setExpenseLinkDialog(null); setSelectedTxnIds(new Set()); }}>Cancelar</button>
+            <button
+              className="btn btn-accent"
+              onClick={handleExpenseLink}
+              disabled={linkingExpense || selectedTxnIds.size === 0}
+            >
+              {linkingExpense ? "Vinculando..." : `Vincular${selectedTxnIds.size > 0 ? ` ${selectedTxnIds.size} transação(ões)` : ""}`}
+            </button>
+          </div>
+        }
+      >
+        {expenseLinkDialog && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            <div className="glass-card" style={{ padding: "14px", background: "rgba(239,68,68,0.05)", border: "1px solid rgba(239,68,68,0.15)" }}>
+              <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginBottom: "2px" }}>Despesa</p>
+              <p style={{ fontWeight: 700 }}>{expenseLinkDialog.description}</p>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "4px" }}>
+                <p style={{ fontWeight: 800, color: "#EF4444", fontSize: "1.1rem" }}>
+                  {formatCurrency(expenseLinkDialog.amount)}
+                </p>
+                {selectedTxnIds.size > 0 && (
+                  <p style={{ fontSize: "0.82rem", fontWeight: 600, color: selectedTxnsTotal >= expenseLinkDialog.amount ? "#22C55E" : "#F59E0B" }}>
+                    Selecionado: {formatCurrency(selectedTxnsTotal)}
+                    {selectedTxnsTotal >= expenseLinkDialog.amount && " ✓"}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <p style={{ fontSize: "0.875rem", color: "var(--text-secondary)" }}>
+              Selecione os pagamentos PIX/débitos do Asaas que correspondem a esta despesa:
+            </p>
+
+            {unlinkedDebits.length === 0 ? (
+              <p style={{ fontSize: "0.875rem", color: "var(--text-tertiary)", textAlign: "center", padding: "20px" }}>
+                Nenhuma transação de débito sem vínculo. Sincronize o Asaas primeiro.
+              </p>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px", maxHeight: "280px", overflowY: "auto" }}>
+                {unlinkedDebits.map((txn) => {
+                  const selected = selectedTxnIds.has(txn.id);
+                  return (
+                    <button
+                      key={txn.id}
+                      onClick={() => toggleTxnSelection(txn.id)}
+                      style={{
+                        padding: "10px 14px",
+                        background: selected ? "rgba(239,68,68,0.08)" : "rgba(255,255,255,0.02)",
+                        border: `1px solid ${selected ? "rgba(239,68,68,0.4)" : "var(--border)"}`,
+                        borderRadius: "12px",
+                        cursor: "pointer",
+                        textAlign: "left",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        color: "var(--text-primary)",
+                        transition: "all 0.15s",
+                      }}
+                    >
+                      <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                        <span style={{ fontSize: "0.875rem", fontWeight: 600 }}>{txn.description || "Transferência"}</span>
+                        <span style={{ fontSize: "0.75rem", color: "var(--text-tertiary)" }}>
+                          {new Date(`${txn.date}T12:00:00`).toLocaleDateString("pt-BR")}
+                        </span>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <span style={{ fontWeight: 700, color: "#EF4444" }}>- {formatCurrency(Number(txn.value))}</span>
+                        {selected && (
+                          <span style={{ width: "18px", height: "18px", borderRadius: "50%", background: "#EF4444", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            <Check size={11} color="#fff" />
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {selectedTxnsTotal >= expenseLinkDialog.amount && expenseLinkDialog.status !== "paid" && (
+              <div style={{ padding: "10px 14px", background: "rgba(34,197,94,0.06)", border: "1px solid rgba(34,197,94,0.2)", borderRadius: "10px" }}>
+                <p style={{ fontSize: "0.82rem", color: "#22C55E", fontWeight: 600 }}>
+                  A soma cobre o valor da despesa — a fatura será baixada automaticamente ao vincular.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+      </DialogShell>
+
+      {/* Link dialog (receita) */}
       <DialogShell
         isOpen={!!linkDialog}
         onClose={() => { setLinkDialog(null); setLinkTarget(null); }}

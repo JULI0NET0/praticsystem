@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Search, Plus, MoreHorizontal, User, X, Building2, Mail, Phone, Shield, Loader2, Briefcase, Copy } from "lucide-react";
+import { Search, Plus, MoreHorizontal, User, X, Building2, Mail, Phone, Shield, Loader2, Briefcase, Copy, Download, CheckCircle, AlertCircle } from "lucide-react";
 import Spotlight from "@/components/Spotlight";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
@@ -13,7 +13,7 @@ import { useToast } from "@/components/CustomToast";
 
 export default function ClientsPage() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("active");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newClient, setNewClient] = useState({
     name: "",
@@ -25,8 +25,17 @@ export default function ClientsPage() {
   });
   const [clients, setClients] = useState<any[]>([]);
   const [demandsCount, setDemandsCount] = useState<Record<string, number>>({});
+  const [activeServices, setActiveServices] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const { showToast } = useToast();
+
+  // Modal: Importar cliente via Asaas
+  const [asaasModalOpen, setAsaasModalOpen] = useState(false);
+  const [asaasCpfCnpj, setAsaasCpfCnpj] = useState("");
+  const [asaasLookupLoading, setAsaasLookupLoading] = useState(false);
+  const [asaasResult, setAsaasResult] = useState<{ customer: any; payments: any[] } | null>(null);
+  const [asaasImportLoading, setAsaasImportLoading] = useState(false);
+  const [asaasImported, setAsaasImported] = useState(false);
 
   useEffect(() => {
     fetchClients();
@@ -55,6 +64,22 @@ export default function ClientsPage() {
           });
           setDemandsCount(counts);
         }
+
+        // Buscar contratos ativos com nome do serviço
+        const { data: contractsData } = await supabase
+          .from('contracts')
+          .select('client_id, services(name)')
+          .eq('status', 'active');
+
+        if (contractsData) {
+          const svcMap: Record<string, string> = {};
+          contractsData.forEach((c: any) => {
+            if (c.client_id && c.services?.name) {
+              svcMap[c.client_id] = c.services.name;
+            }
+          });
+          setActiveServices(svcMap);
+        }
       }
     } catch (err: any) {
       console.error("Erro ao buscar clientes:", err?.message || JSON.stringify(err, null, 2) || err);
@@ -76,6 +101,48 @@ export default function ClientsPage() {
     console.log("Novo cliente:", newClient);
     setIsModalOpen(false);
     setNewClient({ name: "", cnpj: "", contact_name: "", email: "", phone: "", status: "prospect" });
+  };
+
+  const handleAsaasLookup = async () => {
+    if (!asaasCpfCnpj.trim()) return;
+    setAsaasLookupLoading(true);
+    setAsaasResult(null);
+    setAsaasImported(false);
+    try {
+      const res = await fetch('/api/financeiro/asaas/customer-lookup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cpfCnpj: asaasCpfCnpj }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro ao buscar no Asaas');
+      setAsaasResult(data);
+    } catch (err: any) {
+      showToast(err.message, 'error');
+    } finally {
+      setAsaasLookupLoading(false);
+    }
+  };
+
+  const handleAsaasImport = async () => {
+    if (!asaasResult?.customer) return;
+    setAsaasImportLoading(true);
+    try {
+      const res = await fetch('/api/clients/import-from-asaas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cpfCnpj: asaasCpfCnpj }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro ao importar');
+      setAsaasImported(true);
+      showToast(`${asaasResult.customer.name} importado com ${data.paymentsSynced} pagamento(s) vinculado(s)!`, 'success');
+      fetchClients();
+    } catch (err: any) {
+      showToast(err.message, 'error');
+    } finally {
+      setAsaasImportLoading(false);
+    }
   };
 
   const statusOptions: SortOption[] = [
@@ -108,6 +175,13 @@ export default function ClientsPage() {
             style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
           >
             <Copy size={18} /> Onboarding
+          </button>
+          <button
+            onClick={() => { setAsaasModalOpen(true); setAsaasResult(null); setAsaasCpfCnpj(""); setAsaasImported(false); }}
+            className="btn btn-secondary"
+            style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+          >
+            <Download size={18} /> <span className="hide-mobile">Importar via</span> Asaas
           </button>
           <Link href="/admin/clients/create">
             <Spotlight
@@ -200,9 +274,20 @@ export default function ClientsPage() {
                           <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>{client.phone}</p>
                         </td>
                         <td>
-                          <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-                            {client.servico_interesse || '-'}
-                          </p>
+                          {activeServices[client.id] ? (
+                            <span style={{
+                              display: 'inline-block',
+                              padding: '3px 8px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 600,
+                              background: 'rgba(59, 130, 246, 0.12)', color: '#60A5FA',
+                              border: '1px solid rgba(59, 130, 246, 0.2)', whiteSpace: 'nowrap'
+                            }}>
+                              {activeServices[client.id].replace('Gestão de Redes Sociais', 'G. Redes')}
+                            </span>
+                          ) : (
+                            <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+                              {client.servico_interesse || '-'}
+                            </p>
+                          )}
                         </td>
                         <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -278,11 +363,22 @@ export default function ClientsPage() {
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                       <span>{client.contact_name}</span>
-                      {(demandsCount[client.id] || 0) > 0 && (
-                        <span style={{ color: 'var(--accent)', fontWeight: 600 }}>
-                          {demandsCount[client.id]} demandas
-                        </span>
-                      )}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        {activeServices[client.id] && (
+                          <span style={{
+                            padding: '2px 7px', borderRadius: '5px', fontSize: '0.68rem', fontWeight: 600,
+                            background: 'rgba(59, 130, 246, 0.12)', color: '#60A5FA',
+                            border: '1px solid rgba(59, 130, 246, 0.2)'
+                          }}>
+                            {activeServices[client.id].replace('Gestão de Redes Sociais', 'G. Redes')}
+                          </span>
+                        )}
+                        {(demandsCount[client.id] || 0) > 0 && (
+                          <span style={{ color: 'var(--accent)', fontWeight: 600 }}>
+                            {demandsCount[client.id]} demandas
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </motion.div>
                 ))}
@@ -292,7 +388,136 @@ export default function ClientsPage() {
         )}
       </div>
 
-      {/* O modal de criação foi substituído pela página /admin/clients/create */}
+      {/* Modal: Importar cliente inativo via Asaas */}
+      <AnimatePresence>
+        {asaasModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 1000,
+              background: 'rgba(0,0,0,0.7)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              padding: '16px',
+            }}
+            onClick={() => setAsaasModalOpen(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="glass-card"
+              style={{ width: '100%', maxWidth: '520px', padding: '28px', display: 'flex', flexDirection: 'column', gap: '20px' }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <h2 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>Importar cliente via Asaas</h2>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                    Busca o cliente pelo CPF ou CNPJ e importa o histórico de cobranças.
+                  </p>
+                </div>
+                <button onClick={() => setAsaasModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input
+                  type="text"
+                  className="input"
+                  placeholder="CPF ou CNPJ (somente números)"
+                  value={asaasCpfCnpj}
+                  onChange={(e) => setAsaasCpfCnpj(e.target.value.replace(/\D/g, ''))}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAsaasLookup()}
+                  style={{ flex: 1 }}
+                  maxLength={14}
+                />
+                <button
+                  className="btn btn-secondary"
+                  onClick={handleAsaasLookup}
+                  disabled={asaasLookupLoading || asaasCpfCnpj.length < 11}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
+                >
+                  {asaasLookupLoading ? <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <Search size={16} />}
+                  Buscar
+                </button>
+              </div>
+
+              {asaasResult && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {asaasResult.customer ? (
+                    <>
+                      <div style={{ padding: '14px', borderRadius: '10px', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)' }}>
+                        <p style={{ fontWeight: 600, marginBottom: '4px' }}>{asaasResult.customer.name}</p>
+                        <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                          {asaasResult.customer.email} · {asaasResult.customer.mobilePhone || asaasResult.customer.phone || '—'}
+                        </p>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                          ID Asaas: {asaasResult.customer.id}
+                        </p>
+                      </div>
+
+                      <div>
+                        <p style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: '8px' }}>
+                          {asaasResult.payments.length} cobrança(s) encontrada(s)
+                        </p>
+                        <div style={{ maxHeight: '200px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          {asaasResult.payments.map((p: any) => {
+                            const isPaid = ['RECEIVED', 'CONFIRMED', 'RECEIVED_IN_CASH'].includes(p.status);
+                            const isOverdue = p.status === 'OVERDUE';
+                            return (
+                              <div key={p.id} style={{
+                                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                padding: '8px 12px', borderRadius: '8px',
+                                background: 'rgba(255,255,255,0.03)',
+                                fontSize: '0.8rem',
+                              }}>
+                                <span style={{ color: 'var(--text-secondary)' }}>{p.dueDate}</span>
+                                <span style={{ fontWeight: 500 }}>R$ {p.value?.toFixed(2)}</span>
+                                <span style={{
+                                  padding: '2px 8px', borderRadius: '999px', fontSize: '0.7rem', fontWeight: 600,
+                                  background: isPaid ? 'rgba(34,197,94,0.15)' : isOverdue ? 'rgba(239,68,68,0.15)' : 'rgba(234,179,8,0.15)',
+                                  color: isPaid ? '#4ade80' : isOverdue ? '#f87171' : '#facc15',
+                                }}>
+                                  {isPaid ? 'Pago' : isOverdue ? 'Vencido' : 'Pendente'}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {asaasImported ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#4ade80', fontSize: '0.9rem', fontWeight: 600 }}>
+                          <CheckCircle size={18} /> Importado com sucesso!
+                        </div>
+                      ) : (
+                        <button
+                          className="btn btn-accent"
+                          onClick={handleAsaasImport}
+                          disabled={asaasImportLoading}
+                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                        >
+                          {asaasImportLoading
+                            ? <><Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> Importando...</>
+                            : <><Download size={16} /> Importar como cliente inativo</>
+                          }
+                        </button>
+                      )}
+                    </>
+                  ) : (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                      <AlertCircle size={18} /> Nenhum cliente encontrado no Asaas com este CPF/CNPJ.
+                    </div>
+                  )}
+                </div>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

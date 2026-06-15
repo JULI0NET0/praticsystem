@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Calendar, DollarSign, FileText, CheckCircle2, AlertCircle, Clock, ArrowRight, Copy, Hash, Edit3, Save, Download, Upload, FileCheck } from "lucide-react";
+import { X, Calendar, DollarSign, FileText, CheckCircle2, AlertCircle, Clock, ArrowRight, Copy, Hash, Edit3, Save, Download, Upload, FileCheck, RefreshCw } from "lucide-react";
 import { Contract, Client, Service, Invoice } from "@/types/database";
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
@@ -12,6 +12,7 @@ import { CONTRACT_TEMPLATE, CONTRACT_TEMPLATE_DEVELOPMENT, CONTRACT_TEMPLATE_IA 
 interface ContractDetailsModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onRenew?: () => void;
   contract: Contract | null;
   client: Client | undefined;
   service: Service | undefined;
@@ -64,7 +65,7 @@ function escreverValorPorExtenso(valor: number): string {
   return resultado;
 }
 
-export default function ContractDetailsModal({ isOpen, onClose, contract, client, service, invoices }: ContractDetailsModalProps) {
+export default function ContractDetailsModal({ isOpen, onClose, onRenew, contract, client, service, invoices }: ContractDetailsModalProps) {
   const { showToast } = useToast();
   const [isEditingDoc, setIsEditingDoc] = useState(false);
   const [docContent, setDocContent] = useState("");
@@ -72,6 +73,9 @@ export default function ContractDetailsModal({ isOpen, onClose, contract, client
   const [mounted, setMounted] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [documentStatus, setDocumentStatus] = useState<'pending' | 'generated' | 'sent' | 'signed'>('pending');
+  const [showRenewPanel, setShowRenewPanel] = useState(false);
+  const [renewMonths, setRenewMonths] = useState(2);
+  const [isRenewing, setIsRenewing] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -348,6 +352,45 @@ export default function ContractDetailsModal({ isOpen, onClose, contract, client
     } finally {
       overlay.style.cssText = prevCss;
       setExporting(false);
+    }
+  };
+
+  const handleRenew = async () => {
+    if (!contract || !client || !service) return;
+    setIsRenewing(true);
+    try {
+      const oldEnd = new Date(contract.end_date + 'T12:00:00');
+      const newEnd = new Date(oldEnd);
+      newEnd.setMonth(newEnd.getMonth() + renewMonths);
+
+      await supabase
+        .from('contracts')
+        .update({ end_date: newEnd.toISOString().split('T')[0], status: 'active' })
+        .eq('id', contract.id);
+
+      const newInvoices = Array.from({ length: renewMonths }, (_, i) => {
+        const due = new Date(oldEnd);
+        due.setMonth(due.getMonth() + i + 1);
+        return {
+          client_id: contract.client_id,
+          contract_id: contract.id,
+          amount: contract.value,
+          due_date: due.toISOString().split('T')[0],
+          status: 'pending',
+          description: `${client.name} - ${service.name} - Renovação - Parcela ${i + 1}/${renewMonths}`,
+        };
+      });
+
+      await supabase.from('invoices').insert(newInvoices);
+
+      showToast(`Contrato prorrogado por ${renewMonths} ${renewMonths === 1 ? 'mês' : 'meses'}!`, 'success');
+      setShowRenewPanel(false);
+      onRenew?.();
+    } catch (err) {
+      console.error('Erro ao prorrogar contrato:', err);
+      showToast('Erro ao prorrogar contrato', 'error');
+    } finally {
+      setIsRenewing(false);
     }
   };
 
@@ -647,6 +690,41 @@ export default function ContractDetailsModal({ isOpen, onClose, contract, client
                        </div>
                     </div>
 
+                    {/* Renewal Panel — sempre visível */}
+                    <div style={{ padding: '16px 20px', borderRadius: '16px', border: '1px solid rgba(217,72,15,0.3)', background: 'rgba(217,72,15,0.06)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <p style={{ fontWeight: 600, color: 'white', fontSize: '0.9rem', marginBottom: '2px' }}>Prorrogar Contrato</p>
+                          <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Adiciona meses e gera novas faturas automaticamente</p>
+                        </div>
+                        {!showRenewPanel && (
+                          <button className="btn btn-accent btn-sm" onClick={() => setShowRenewPanel(true)} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <RefreshCw size={14} /> Prorrogar
+                          </button>
+                        )}
+                      </div>
+                      {showRenewPanel && (
+                        <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                          <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>Quantos meses?</label>
+                          <input
+                            type="number"
+                            min={1}
+                            max={24}
+                            value={renewMonths}
+                            onChange={(e) => setRenewMonths(Math.max(1, parseInt(e.target.value) || 1))}
+                            className="input-dark"
+                            style={{ width: '80px', padding: '6px 12px', fontSize: '0.9rem' }}
+                          />
+                          <button className="btn btn-accent btn-sm" onClick={handleRenew} disabled={isRenewing}>
+                            {isRenewing ? 'Salvando...' : 'Confirmar'}
+                          </button>
+                          <button className="btn btn-secondary btn-sm" onClick={() => setShowRenewPanel(false)} disabled={isRenewing}>
+                            Cancelar
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
                     {/* Financial History */}
                     <div>
                       <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'white', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -734,7 +812,7 @@ export default function ContractDetailsModal({ isOpen, onClose, contract, client
 
 interface PrintOverlayProps {
   contract: Contract;
-  client: Client;
+  client?: Client;
   docContent: string;
 }
 
@@ -888,7 +966,7 @@ function PrintOverlay({ contract, client, docContent }: PrintOverlayProps) {
             <div className="signatures-block">
               <div style={{ width: '45%', textAlign: 'center' }}>
                 <div style={{ borderBottom: '1px solid #000', marginBottom: '8px' }}></div>
-                <p style={{ fontWeight: 'bold', fontSize: '11px', margin: 0 }}>{client.name.toUpperCase()}</p>
+                <p style={{ fontWeight: 'bold', fontSize: '11px', margin: 0 }}>{(client?.name || '').toUpperCase()}</p>
                 <p style={{ fontSize: '9.5px', color: '#555', margin: '2px 0 0' }}>CONTRATANTE</p>
               </div>
               <div style={{ width: '45%', textAlign: 'center' }}>

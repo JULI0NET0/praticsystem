@@ -48,7 +48,8 @@ import {
   Activity,
   Loader2,
   Palette,
-  Image
+  Image,
+  RefreshCw
 } from "lucide-react";
 import Spotlight from "@/components/Spotlight";
 import DialogShell from "@/components/DialogShell";
@@ -129,6 +130,8 @@ export default function ClientDetailPage() {
   const [clientContracts, setClientContracts] = useState<any[]>([]);
   const [clientInvoices, setClientInvoices] = useState<any[]>([]);
   const [clientEvents, setClientEvents] = useState<any[]>([]);
+  const [syncingAsaas, setSyncingAsaas] = useState(false);
+  const [generatingBoleto, setGeneratingBoleto] = useState<string | null>(null);
   const [clientDocuments, setClientDocuments] = useState<any[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isGoogleDriveModalOpen, setIsGoogleDriveModalOpen] = useState(false);
@@ -146,7 +149,8 @@ export default function ClientDetailPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [editFormData, setEditFormData] = useState<any>(null);
-  const [editTab, setEditTab] = useState<'geral' | 'contato' | 'acesso' | 'redes'>('geral');
+  const [editTab, setEditTab] = useState<'geral' | 'contato' | 'acesso' | 'redes' | 'endereco'>('geral');
+  const [cepLoading, setCepLoading] = useState(false);
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
   const [linkFormData, setLinkFormData] = useState({ title: '', url: '' });
   const [isSavingLink, setIsSavingLink] = useState(false);
@@ -171,6 +175,13 @@ export default function ClientDetailPage() {
       fetchAvailableServices();
     }
   }, [id]);
+
+  // Auto-sync Asaas silencioso ao entrar na aba financeiro
+  useEffect(() => {
+    if (activeTab === 'finance' && clientData?.id) {
+      syncAsaasStatus(true);
+    }
+  }, [activeTab, clientData?.id]);
 
   const fetchAvailableServices = async () => {
     const res = await fetch('/api/services');
@@ -334,6 +345,69 @@ export default function ClientDetailPage() {
       .reduce((acc, curr) => acc + Number(curr.amount || 0), 0);
 
     return { mrr, avulsos, totalReceived, overdue, upcoming, count: rangeInvoices.length, rangeInvoices };
+  };
+
+  const syncAsaasStatus = async (silent = false) => {
+    if (!clientData?.id) return;
+    if (!silent) setSyncingAsaas(true);
+    try {
+      const res = await fetch('/api/financeiro/asaas/sync-client-invoices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientId: clientData.id }),
+      });
+      const data = await res.json();
+      if (data.updated > 0) {
+        // Recarrega invoices após atualização de status
+        const { data: fresh } = await supabase.from('invoices').select('*').eq('client_id', clientData.id);
+        if (fresh) setClientInvoices(fresh);
+        if (!silent) showToast(`${data.updated} fatura(s) atualizada(s) pelo Asaas`, 'success');
+      } else {
+        if (!silent) showToast('Status já atualizado — nenhuma alteração', 'info');
+      }
+    } catch {
+      if (!silent) showToast('Erro ao sincronizar com Asaas', 'error');
+    } finally {
+      if (!silent) setSyncingAsaas(false);
+    }
+  };
+
+  const handleOpenAsaasLink = async (asaasPaymentId: string) => {
+    try {
+      const res = await fetch(`/api/financeiro/asaas/payment/${asaasPaymentId}`);
+      const payment = await res.json();
+      const url = payment.invoiceUrl || payment.bankSlipUrl;
+      if (url) {
+        window.open(url, '_blank', 'noopener');
+      } else {
+        showToast('Link da fatura não disponível no Asaas', 'info');
+      }
+    } catch {
+      showToast('Erro ao buscar link do Asaas', 'error');
+    }
+  };
+
+  const handleGerarBoleto = async (invoiceId: string) => {
+    setGeneratingBoleto(invoiceId);
+    try {
+      const res = await fetch('/api/financeiro/asaas/create-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ invoiceId, billingType: 'UNDEFINED' }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro ao gerar cobrança');
+      // Atualiza asaas_payment_id localmente
+      setClientInvoices(prev => prev.map(inv =>
+        inv.id === invoiceId ? { ...inv, asaas_payment_id: data.asaasPaymentId } : inv
+      ));
+      showToast('Cobrança gerada no Asaas!', 'success');
+      if (data.invoiceUrl) window.open(data.invoiceUrl, '_blank', 'noopener');
+    } catch (err: any) {
+      showToast(err.message, 'error');
+    } finally {
+      setGeneratingBoleto(null);
+    }
   };
 
   const handleMarkAsPaid = async (invoiceId: string) => {
@@ -1742,6 +1816,34 @@ export default function ClientDetailPage() {
                           </button>
                         </div>
                       </div>
+
+                      {key === 'instagram' && data.reserva_image_url && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px' }}>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Código de Reserva</span>
+                          <div style={{
+                            padding: '12px', background: 'rgba(0,0,0,0.2)', borderRadius: '10px',
+                            display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.9rem'
+                          }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                              <span style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
+                                <Image size={14} /> Imagem do código salva
+                              </span>
+                              <a 
+                                href={data.reserva_image_url} 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="btn btn-secondary btn-sm"
+                                style={{ padding: '4px 8px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                              >
+                                <Eye size={12} /> Visualizar
+                              </a>
+                            </div>
+                            <div style={{ position: 'relative', width: '100%', maxHeight: '180px', overflow: 'hidden', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,0,0,0.3)', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                              <img src={data.reserva_image_url} alt="Código de Reserva" style={{ maxWidth: '100%', maxHeight: '180px', width: 'auto', height: 'auto', display: 'block', objectFit: 'contain' }} />
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </Spotlight>
                 );
@@ -1944,9 +2046,27 @@ export default function ClientDetailPage() {
                     </div>
                   )}
                 </div>
-                <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-                  Exibindo {getFinanceMetrics().count} faturas encontradas
-                </p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+                    Exibindo {getFinanceMetrics().count} faturas encontradas
+                  </p>
+                  <button
+                    onClick={() => syncAsaasStatus(false)}
+                    disabled={syncingAsaas}
+                    title="Sincronizar status das faturas com Asaas"
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '6px',
+                      padding: '6px 12px', borderRadius: '10px', fontSize: '0.75rem',
+                      fontWeight: 600, cursor: syncingAsaas ? 'not-allowed' : 'pointer',
+                      border: '1px solid rgba(217, 72, 15, 0.3)',
+                      background: 'rgba(217, 72, 15, 0.08)',
+                      color: 'var(--accent)', opacity: syncingAsaas ? 0.6 : 1
+                    }}
+                  >
+                    <RefreshCw size={13} style={{ animation: syncingAsaas ? 'spin 1s linear infinite' : 'none' }} />
+                    {syncingAsaas ? 'Sincronizando...' : 'Sincronizar Asaas'}
+                  </button>
+                </div>
               </div>
 
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
@@ -2042,29 +2162,62 @@ export default function ClientDetailPage() {
                             </span>
                           </td>
                           <td style={{ paddingRight: '24px', textAlign: 'right' }}>
-                            {invoice.status !== 'paid' && (
-                              <button
-                                onClick={() => handleMarkAsPaid(invoice.id)}
-                                title="Marcar como Pago"
-                                style={{
-                                  color: 'var(--accent)',
-                                  padding: '8px',
-                                  borderRadius: '8px',
-                                  background: 'rgba(217, 72, 15, 0.1)',
-                                  border: 'none',
-                                  cursor: 'pointer',
-                                  marginRight: '8px'
-                                }}
-                              >
-                                <CheckCircle2 size={16} />
-                              </button>
-                            )}
-                            <button
-                              style={{ color: 'var(--text-secondary)', padding: '8px', background: 'none', border: 'none', cursor: 'pointer' }}
-                              onClick={() => showToast('Recibo indisponível no momento.', 'info')}
-                            >
-                              <FileText size={16} />
-                            </button>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px' }}>
+                              {invoice.status !== 'paid' && (
+                                <button
+                                  onClick={() => handleMarkAsPaid(invoice.id)}
+                                  title="Marcar como Pago"
+                                  style={{
+                                    color: 'var(--accent)',
+                                    padding: '8px',
+                                    borderRadius: '8px',
+                                    background: 'rgba(217, 72, 15, 0.1)',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                  }}
+                                >
+                                  <CheckCircle2 size={16} />
+                                </button>
+                              )}
+                              {invoice.asaas_payment_id ? (
+                                <button
+                                  onClick={() => handleOpenAsaasLink(invoice.asaas_payment_id)}
+                                  title="Abrir fatura no Asaas"
+                                  style={{
+                                    display: 'flex', alignItems: 'center', gap: '5px',
+                                    padding: '6px 10px', borderRadius: '8px', fontSize: '0.72rem',
+                                    fontWeight: 600, cursor: 'pointer',
+                                    border: '1px solid rgba(59, 130, 246, 0.35)',
+                                    background: 'rgba(59, 130, 246, 0.1)',
+                                    color: '#3B82F6',
+                                  }}
+                                >
+                                  <ExternalLink size={13} />
+                                  Asaas
+                                </button>
+                              ) : invoice.status !== 'paid' ? (
+                                <button
+                                  onClick={() => handleGerarBoleto(invoice.id)}
+                                  disabled={generatingBoleto === invoice.id}
+                                  title="Gerar cobrança no Asaas"
+                                  style={{
+                                    display: 'flex', alignItems: 'center', gap: '5px',
+                                    padding: '6px 10px', borderRadius: '8px', fontSize: '0.72rem',
+                                    fontWeight: 600, cursor: generatingBoleto === invoice.id ? 'not-allowed' : 'pointer',
+                                    border: '1px solid rgba(249, 115, 22, 0.35)',
+                                    background: 'rgba(249, 115, 22, 0.1)',
+                                    color: '#F97316',
+                                    opacity: generatingBoleto === invoice.id ? 0.6 : 1,
+                                  }}
+                                >
+                                  {generatingBoleto === invoice.id
+                                    ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} />
+                                    : <Plus size={13} />
+                                  }
+                                  {generatingBoleto === invoice.id ? 'Gerando...' : 'Gerar boleto'}
+                                </button>
+                              ) : null}
+                            </div>
                           </td>
                         </tr>
                       );
@@ -2695,6 +2848,7 @@ export default function ClientDetailPage() {
                 { id: 'contato', label: 'Contato' },
                 { id: 'acesso', label: 'Portal' },
                 { id: 'redes', label: 'Redes Sociais' },
+                { id: 'endereco', label: 'Endereço' },
               ] as const).map(tab => (
                 <button
                   key={tab.id}
@@ -2806,6 +2960,90 @@ export default function ClientDetailPage() {
               </div>
             )}
 
+            {/* Aba: Endereço */}
+            {editTab === 'endereco' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+                {/* CEP com busca automática */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '10px', alignItems: 'flex-end' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>CEP</label>
+                    <input
+                      type="text"
+                      className="input-dark"
+                      placeholder="00000-000"
+                      value={editFormData.address?.cep || ''}
+                      maxLength={9}
+                      onChange={(e) => {
+                        const v = e.target.value.replace(/\D/g, '').slice(0, 8);
+                        const masked = v.length > 5 ? `${v.slice(0,5)}-${v.slice(5)}` : v;
+                        setEditFormData({ ...editFormData, address: { ...editFormData.address, cep: masked } });
+                      }}
+                    />
+                  </div>
+                  <button
+                    className="btn btn-secondary"
+                    style={{ padding: '10px 16px', fontSize: '0.8rem' }}
+                    disabled={cepLoading}
+                    onClick={async () => {
+                      const digits = (editFormData.address?.cep || '').replace(/\D/g, '');
+                      if (digits.length !== 8) return;
+                      setCepLoading(true);
+                      try {
+                        const res = await fetch(`https://viacep.com.br/ws/${digits}/json/`);
+                        const data = await res.json();
+                        if (!data.erro) {
+                          setEditFormData({
+                            ...editFormData,
+                            address: {
+                              ...editFormData.address,
+                              logradouro: data.logradouro,
+                              bairro: data.bairro,
+                              cidade: data.localidade,
+                              uf: data.uf,
+                            }
+                          });
+                        }
+                      } finally {
+                        setCepLoading(false);
+                      }
+                    }}
+                  >
+                    {cepLoading ? 'Buscando...' : 'Buscar'}
+                  </button>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '10px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Logradouro</label>
+                    <input type="text" className="input-dark" value={editFormData.address?.logradouro || ''} onChange={(e) => setEditFormData({ ...editFormData, address: { ...editFormData.address, logradouro: e.target.value } })} />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100px' }}>
+                    <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Número</label>
+                    <input type="text" className="input-dark" value={editFormData.address?.numero || ''} onChange={(e) => setEditFormData({ ...editFormData, address: { ...editFormData.address, numero: e.target.value } })} />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '18px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Complemento</label>
+                    <input type="text" className="input-dark" placeholder="Apto, sala, bloco..." value={editFormData.address?.complemento || ''} onChange={(e) => setEditFormData({ ...editFormData, address: { ...editFormData.address, complemento: e.target.value } })} />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Bairro</label>
+                    <input type="text" className="input-dark" value={editFormData.address?.bairro || ''} onChange={(e) => setEditFormData({ ...editFormData, address: { ...editFormData.address, bairro: e.target.value } })} />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Cidade</label>
+                    <input type="text" className="input-dark" value={editFormData.address?.cidade || ''} onChange={(e) => setEditFormData({ ...editFormData, address: { ...editFormData.address, cidade: e.target.value } })} />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>UF</label>
+                    <input type="text" className="input-dark" maxLength={2} placeholder="SP" value={editFormData.address?.uf || ''} onChange={(e) => setEditFormData({ ...editFormData, address: { ...editFormData.address, uf: e.target.value.toUpperCase() } })} />
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Aba: Redes Sociais */}
             {editTab === 'redes' && (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '14px' }}>
@@ -2827,6 +3065,77 @@ export default function ClientDetailPage() {
                       </div>
                       <input placeholder="Usuário" type="text" className="input-dark" value={editFormData.social_access?.[social]?.usuario || ''} onChange={(e) => setEditFormData({ ...editFormData, social_access: { ...editFormData.social_access, [social]: { ...editFormData.social_access?.[social], usuario: e.target.value, ativo: !!e.target.value } } })} />
                       <input placeholder="Senha" type="text" className="input-dark" value={editFormData.social_access?.[social]?.senha || ''} onChange={(e) => setEditFormData({ ...editFormData, social_access: { ...editFormData.social_access, [social]: { ...editFormData.social_access?.[social], senha: e.target.value } } })} />
+                      
+                      {social === 'instagram' && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px' }}>
+                          <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Imagem Código de Reserva</span>
+                          {editFormData.social_access?.[social]?.reserva_image_url ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(0,0,0,0.2)', padding: '6px 10px', borderRadius: '8px' }}>
+                              <span style={{ fontSize: '0.75rem', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', flex: 1 }}>Código de Reserva Ativo</span>
+                              <button 
+                                type="button" 
+                                className="btn btn-secondary btn-sm" 
+                                style={{ padding: '2px 6px', fontSize: '0.7rem' }}
+                                onClick={() => window.open(editFormData.social_access[social].reserva_image_url, '_blank')}
+                              >
+                                Ver
+                              </button>
+                              <button 
+                                type="button" 
+                                style={{ color: '#EF4444', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.7rem' }}
+                                onClick={() => setEditFormData({
+                                  ...editFormData,
+                                  social_access: {
+                                    ...editFormData.social_access,
+                                    instagram: {
+                                      ...editFormData.social_access?.instagram,
+                                      reserva_image_url: undefined
+                                    }
+                                  }
+                                })}
+                              >
+                                Remover
+                              </button>
+                            </div>
+                          ) : (
+                            <label className="btn btn-secondary btn-sm" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.75rem', padding: '8px' }}>
+                              <Upload size={12} />
+                              {isUploading ? 'Enviando...' : 'Enviar Imagem'}
+                              <input 
+                                type="file" 
+                                accept="image/*" 
+                                style={{ display: 'none' }} 
+                                onChange={async (e) => {
+                                  const file = e.target.files?.[0];
+                                  if (!file) return;
+                                  setIsUploading(true);
+                                  try {
+                                    const fileExt = file.name.split('.').pop();
+                                    const filePath = `${editFormData.id}/reserva_codigo.${fileExt}`;
+                                    await supabase.storage.from('client-documents').upload(filePath, file, { upsert: true });
+                                    const { data: pubData } = supabase.storage.from('client-documents').getPublicUrl(filePath);
+                                    setEditFormData({
+                                      ...editFormData,
+                                      social_access: {
+                                        ...editFormData.social_access,
+                                        instagram: {
+                                          ...editFormData.social_access?.instagram,
+                                          reserva_image_url: pubData.publicUrl
+                                        }
+                                      }
+                                    });
+                                    showToast('Imagem de reserva enviada!', 'success');
+                                  } catch (err) {
+                                    showToast('Erro ao enviar imagem', 'error');
+                                  } finally {
+                                    setIsUploading(false);
+                                  }
+                                }}
+                              />
+                            </label>
+                          )}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -3119,6 +3428,7 @@ export default function ClientDetailPage() {
       <ContractDetailsModal
         isOpen={isContractModalOpen}
         onClose={() => setIsContractModalOpen(false)}
+        onRenew={() => { setIsContractModalOpen(false); fetchClientDetails(); }}
         contract={selectedContractForModal}
         client={clientData}
         service={availableServices.find((s: any) => s.id === selectedContractForModal?.service_id)}

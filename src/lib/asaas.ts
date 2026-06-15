@@ -82,3 +82,94 @@ export async function getBalance(): Promise<AsaasBalance> {
     availableBalance: Number(data.availableBalance ?? 0),
   };
 }
+
+export interface AsaasCustomer {
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  mobilePhone?: string;
+  cpfCnpj: string;
+  personType: 'FISICA' | 'JURIDICA';
+  address?: string;
+  addressNumber?: string;
+  cityName?: string;
+  state?: string;
+}
+
+export interface AsaasPayment {
+  id: string;
+  customer: string;
+  value: number;
+  netValue: number;
+  description?: string;
+  billingType: string;
+  status: string;
+  dueDate: string;
+  paymentDate?: string;
+  dateCreated: string;
+  invoiceUrl?: string;
+  bankSlipUrl?: string;
+  pixQrCode?: string;
+  pixQrCodeUrl?: string;
+}
+
+export async function getAsaasPaymentById(id: string): Promise<AsaasPayment> {
+  return asaasFetch(`/payments/${id}`);
+}
+
+export async function createAsaasPayment(data: {
+  customer: string;
+  billingType: string;
+  value: number;
+  dueDate: string;
+  description?: string;
+}): Promise<AsaasPayment> {
+  return asaasFetch('/payments', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getAsaasCustomerByCpfCnpj(cpfCnpj: string): Promise<AsaasCustomer | null> {
+  const clean = cpfCnpj.replace(/\D/g, '');
+  const params = new URLSearchParams({ cpfCnpj: clean });
+  const res = await asaasFetch(`/customers?${params}`);
+  return res.data?.[0] ?? null;
+}
+
+export async function getAsaasPaymentsByCustomer(
+  customerId: string,
+  offset = 0,
+  limit = 100,
+  dueDateStart?: string,
+  dueDateEnd?: string,
+): Promise<{ data: AsaasPayment[]; hasMore: boolean; totalCount: number }> {
+  const params = new URLSearchParams({
+    customer: customerId,
+    offset: String(offset),
+    limit: String(limit),
+  });
+  if (dueDateStart) params.set('dueDate[ge]', dueDateStart);
+  if (dueDateEnd) params.set('dueDate[le]', dueDateEnd);
+  return asaasFetch(`/payments?${params}`);
+}
+
+export async function getAllAsaasPaymentsByCustomer(
+  customerId: string,
+  dueDateStart?: string,
+  dueDateEnd?: string,
+): Promise<AsaasPayment[]> {
+  const all: AsaasPayment[] = [];
+  let offset = 0;
+  const limit = 100;
+
+  while (true) {
+    const page = await getAsaasPaymentsByCustomer(customerId, offset, limit, dueDateStart, dueDateEnd);
+    all.push(...page.data);
+    if (!page.hasMore) break;
+    offset += limit;
+  }
+
+  return all;
+}
