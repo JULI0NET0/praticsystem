@@ -9,6 +9,7 @@ import {
   NodeViewWrapper,
   ReactNodeViewRenderer,
 } from '@tiptap/react';
+import { DOMParser } from '@tiptap/pm/model';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import { TaskList } from '@tiptap/extension-task-list';
@@ -435,7 +436,40 @@ export default function BlockEditor({
     content: content || '',
     editable,
     onUpdate: ({ editor }) => onChange?.(editor.getJSON()),
-    editorProps: { attributes: { class: 'block-editor-content' } },
+    editorProps: {
+      attributes: { class: 'block-editor-content' },
+      handlePaste(view, event) {
+        const text = event.clipboardData?.getData('text/plain');
+        if (!text) return false;
+
+        // Detect dynamic markdown formatting markers
+        const hasMarkdown =
+          /^#+\s/m.test(text) ||
+          /^[-*]\s/m.test(text) ||
+          /^\d+\.\s/m.test(text) ||
+          /^>\s/m.test(text) ||
+          /^```/m.test(text) ||
+          /\*\*([^*]+)\*\*/.test(text) ||
+          /~~([^~]+)~~/.test(text) ||
+          /`([^`]+)`/.test(text) ||
+          /\[([^\]]+)\]\(([^)]+)\)/.test(text);
+
+        if (hasMarkdown) {
+          const html = parseMarkdownToHTML(text);
+          if (html) {
+            const { schema } = view.state;
+            const parser = DOMParser.fromSchema(schema);
+            const dom = document.createElement('div');
+            dom.innerHTML = html;
+            const slice = parser.parseSlice(dom);
+            const transaction = view.state.tr.replaceSelection(slice);
+            view.dispatch(transaction);
+            return true;
+          }
+        }
+        return false;
+      }
+    },
   });
 
   useEffect(() => { if (editor) editor.setEditable(editable); }, [editor, editable]);
@@ -506,4 +540,156 @@ export default function BlockEditor({
       <EditorContent editor={editor} />
     </div>
   );
+}
+
+function parseMarkdownToHTML(markdown: string): string {
+  const lines = markdown.split(/\r?\n/);
+  const htmlLines: string[] = [];
+  
+  let inCodeBlock = false;
+  let codeBlockLang = "";
+  let codeLines: string[] = [];
+  
+  let inBlockquote = false;
+  let blockquoteLines: string[] = [];
+  
+  let listType: 'ul' | 'ol' | 'taskList' | null = null;
+  
+  const closeList = () => {
+    if (listType === 'ul') {
+      htmlLines.push('</ul>');
+    } else if (listType === 'ol') {
+      htmlLines.push('</ol>');
+    } else if (listType === 'taskList') {
+      htmlLines.push('</ul>');
+    }
+    listType = null;
+  };
+  
+  const closeBlockquote = () => {
+    if (inBlockquote) {
+      htmlLines.push(`<blockquote>${blockquoteLines.map(line => parseInline(line)).join('<br />')}</blockquote>`);
+      inBlockquote = false;
+      blockquoteLines = [];
+    }
+  };
+  
+  const parseInline = (text: string): string => {
+    let escaped = text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+      
+    escaped = escaped.replace(/`([^`]+)`/g, '<code>$1</code>');
+    escaped = escaped.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    escaped = escaped.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+    escaped = escaped.replace(/_([^_]+)_/g, '<em>$1</em>');
+    escaped = escaped.replace(/~~([^~]+)~~/g, '<s>$1</s>');
+    escaped = escaped.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+    
+    return escaped;
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    
+    if (inCodeBlock) {
+      if (line.trim().startsWith('```')) {
+        const escapedCode = codeLines.join('\n')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;');
+        const langClass = codeBlockLang ? ` class="language-${codeBlockLang}"` : '';
+        htmlLines.push(`<pre><code${langClass}>${escapedCode}</code></pre>`);
+        inCodeBlock = false;
+        codeLines = [];
+      } else {
+        codeLines.push(line);
+      }
+      continue;
+    }
+    
+    if (line.trim().startsWith('```')) {
+      closeList();
+      closeBlockquote();
+      inCodeBlock = true;
+      codeBlockLang = line.trim().slice(3).trim();
+      continue;
+    }
+    
+    if (line.startsWith('>')) {
+      closeList();
+      inBlockquote = true;
+      const content = line.slice(1).trim();
+      blockquoteLines.push(content);
+      continue;
+    } else {
+      closeBlockquote();
+    }
+    
+    if (/^(?:---|===|\*\*\*|___)$/.test(line.trim())) {
+      closeList();
+      htmlLines.push('<hr />');
+      continue;
+    }
+    
+    const headingMatch = line.match(/^(#{1,3})\s+(.*)$/);
+    if (headingMatch) {
+      closeList();
+      const level = headingMatch[1].length;
+      const content = headingMatch[2];
+      htmlLines.push(`<h${level}>${parseInline(content)}</h${level}>`);
+      continue;
+    }
+    
+    const taskMatch = line.match(/^[-*]\s+\[([ xX])\]\s+(.*)$/);
+    if (taskMatch) {
+      if (listType !== 'taskList') {
+        closeList();
+        listType = 'taskList';
+        htmlLines.push('<ul data-type="taskList">');
+      }
+      const checked = taskMatch[1].toLowerCase() === 'x';
+      const content = taskMatch[2];
+      htmlLines.push(`<li data-checked="${checked}"><label><input type="checkbox" ${checked ? 'checked' : ''} /></label><div>${parseInline(content)}</div></li>`);
+      continue;
+    }
+    
+    const ulMatch = line.match(/^[-*]\s+(.*)$/);
+    if (ulMatch) {
+      if (listType !== 'ul') {
+        closeList();
+        listType = 'ul';
+        htmlLines.push('<ul>');
+      }
+      const content = ulMatch[1];
+      htmlLines.push(`<li>${parseInline(content)}</li>`);
+      continue;
+    }
+    
+    const olMatch = line.match(/^(\d+)\.\s+(.*)$/);
+    if (olMatch) {
+      if (listType !== 'ol') {
+        closeList();
+        listType = 'ol';
+        htmlLines.push('<ol>');
+      }
+      const content = olMatch[2];
+      htmlLines.push(`<li>${parseInline(content)}</li>`);
+      continue;
+    }
+    
+    if (line.trim() === '') {
+      closeList();
+      continue;
+    }
+    
+    closeList();
+    htmlLines.push(`<p>${parseInline(line)}</p>`);
+  }
+  
+  closeList();
+  closeBlockquote();
+  
+  return htmlLines.join('\n');
 }
