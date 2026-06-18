@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Calendar, BookmarkCheck } from 'lucide-react';
+import { Calendar, BookmarkCheck, Trash2 } from 'lucide-react';
 
 export interface NoteCardData {
   id: string;
@@ -17,12 +17,20 @@ export interface NoteCardData {
 
 function getPreviewText(content: any): string {
   if (!content) return '';
+  
+  const extractText = (node: any): string => {
+    if (!node) return '';
+    if (node.text) return node.text;
+    if (Array.isArray(node.content)) {
+      return node.content.map(extractText).join('');
+    }
+    return '';
+  };
+
   const blocks: any[] = Array.isArray(content) ? content : content.content ?? [];
   for (const block of blocks) {
-    if (block.type === 'paragraph' && block.content?.length) {
-      const text = block.content.map((c: any) => c.text ?? '').join('').trim();
-      if (text) return text.slice(0, 140);
-    }
+    const text = extractText(block).trim();
+    if (text) return text.slice(0, 140);
   }
   return '';
 }
@@ -34,7 +42,7 @@ function formatDate(str?: string): string {
   });
 }
 
-export default function NoteCard({ note, onClick }: { note: NoteCardData; onClick?: () => void }) {
+export default function NoteCard({ note, onClick, onDelete }: { note: NoteCardData; onClick?: () => void; onDelete?: (note: NoteCardData) => void }) {
   const preview = getPreviewText(note.content);
   const clientName = note.client
     ? note.client.nome_fantasia || note.client.name
@@ -124,11 +132,45 @@ export default function NoteCard({ note, onClick }: { note: NoteCardData; onClic
             <Calendar size={11} />
             {formatDate(dateStr)}
           </div>
-          {clientName && (
-            <span style={{ fontSize: '0.72rem', color: 'var(--accent)', fontWeight: 600 }}>
-              {clientName}
-            </span>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {clientName && (
+              <span style={{ fontSize: '0.72rem', color: 'var(--accent)', fontWeight: 600 }}>
+                {clientName}
+              </span>
+            )}
+            {onDelete && (
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onDelete(note);
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '4px',
+                  borderRadius: '4px',
+                  color: 'var(--text-secondary)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'color 0.15s, background 0.15s',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = '#ef4444';
+                  e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = 'var(--text-secondary)';
+                  e.currentTarget.style.background = 'none';
+                }}
+                title="Excluir nota"
+              >
+                <Trash2 size={13} />
+              </button>
+            )}
+          </div>
         </div>
       </div>
   );

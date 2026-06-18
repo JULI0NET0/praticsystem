@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { ArrowUpRight, ArrowDownRight, RefreshCw, Search, ChevronDown, Link2, Plus, Check, ExternalLink } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, RefreshCw, Search, ChevronDown, Link2, Plus, Check, ExternalLink, Pencil } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import DialogShell from "@/components/DialogShell";
 import type { Invoice, ExpenseEntry, AsaasTransaction, ExpenseCategory } from "@/types/database";
@@ -85,6 +85,9 @@ export function LancamentosTable({
   const [newEntryForm, setNewEntryForm] = useState<Partial<ExpenseEntry>>({ description: "", amount: 0, date: "", status: "paid", category: "outros" });
   const [saving, setSaving] = useState(false);
   const [openingAsaas, setOpeningAsaas] = useState<string | null>(null);
+  const [editDialog, setEditDialog] = useState<UnifiedEntry | null>(null);
+  const [editForm, setEditForm] = useState<Partial<ExpenseEntry>>({});
+  const [editSaving, setEditSaving] = useState(false);
 
   const openAsaasLink = async (asaasId: string) => {
     setOpeningAsaas(asaasId);
@@ -167,6 +170,31 @@ export function LancamentosTable({
     () => unlinkedDebits.filter((t) => selectedTxnIds.has(t.id)).reduce((s, t) => s + Number(t.value), 0),
     [unlinkedDebits, selectedTxnIds]
   );
+
+  function openEdit(entry: UnifiedEntry) {
+    setEditDialog(entry);
+    const raw = entry.rawEntry;
+    setEditForm({
+      description: raw?.description ?? entry.description,
+      amount: raw?.amount ?? entry.amount,
+      date: raw?.date ?? entry.date,
+      status: (raw?.status ?? entry.status) as ExpenseEntry["status"],
+      category: (raw?.category ?? "outros") as ExpenseCategory,
+      notes: raw?.notes ?? "",
+    });
+  }
+
+  async function handleEditSave() {
+    if (!editDialog || editDialog.type !== "despesa") return;
+    const id = editDialog.id.replace("exp-", "");
+    setEditSaving(true);
+    try {
+      await onUpdateEntry(id, editForm);
+      setEditDialog(null);
+    } finally {
+      setEditSaving(false);
+    }
+  }
 
   function openExpenseLink(entry: UnifiedEntry) {
     setExpenseLinkDialog(entry);
@@ -434,6 +462,17 @@ export function LancamentosTable({
                       </button>
                     )}
 
+                    {/* Editar (apenas despesas) */}
+                    {entry.type === "despesa" && (
+                      <button
+                        onClick={() => openEdit(entry)}
+                        title="Editar lançamento"
+                        style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-secondary)", padding: "4px", display: "flex" }}
+                      >
+                        <Pencil size={14} />
+                      </button>
+                    )}
+
                     {/* Dar Baixa */}
                     {((entry.type === "receita" && entry.status !== "paid") ||
                       (entry.type === "despesa" && entry.status === "pending")) && (
@@ -552,15 +591,28 @@ export function LancamentosTable({
               <input className="input-dark" style={{ width: "100%" }} type="date" value={newEntryForm.date || ""} onChange={(e) => setNewEntryForm({ ...newEntryForm, date: e.target.value })} />
             </div>
           </div>
-          <div>
-            <label style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--text-secondary)", display: "block", marginBottom: "6px" }}>Categoria</label>
-            <div style={{ position: "relative" }}>
-              <select className="input-dark" style={{ width: "100%", appearance: "none" }} value={newEntryForm.category || "outros"} onChange={(e) => setNewEntryForm({ ...newEntryForm, category: e.target.value as ExpenseCategory })}>
-                {Object.entries(CATEGORY_LABELS).filter(([k]) => k !== "receita").map(([k, v]) => (
-                  <option key={k} value={k}>{v}</option>
-                ))}
-              </select>
-              <ChevronDown size={13} style={{ position: "absolute", right: "10px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "var(--text-secondary)" }} />
+          <div className="responsive-grid-2" style={{ gap: "12px" }}>
+            <div>
+              <label style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--text-secondary)", display: "block", marginBottom: "6px" }}>Categoria</label>
+              <div style={{ position: "relative" }}>
+                <select className="input-dark" style={{ width: "100%", appearance: "none" }} value={newEntryForm.category || "outros"} onChange={(e) => setNewEntryForm({ ...newEntryForm, category: e.target.value as ExpenseCategory })}>
+                  {Object.entries(CATEGORY_LABELS).map(([k, v]) => (
+                    <option key={k} value={k}>{v}</option>
+                  ))}
+                </select>
+                <ChevronDown size={13} style={{ position: "absolute", right: "10px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "var(--text-secondary)" }} />
+              </div>
+            </div>
+            <div>
+              <label style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--text-secondary)", display: "block", marginBottom: "6px" }}>Status</label>
+              <div style={{ position: "relative" }}>
+                <select className="input-dark" style={{ width: "100%", appearance: "none" }} value={newEntryForm.status || "paid"} onChange={(e) => setNewEntryForm({ ...newEntryForm, status: e.target.value as ExpenseEntry["status"] })}>
+                  <option value="paid">Pago</option>
+                  <option value="pending">Pendente</option>
+                  <option value="cancelled">Cancelado</option>
+                </select>
+                <ChevronDown size={13} style={{ position: "absolute", right: "10px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "var(--text-secondary)" }} />
+              </div>
             </div>
           </div>
           <div>
@@ -666,6 +718,108 @@ export function LancamentosTable({
             )}
           </div>
         )}
+      </DialogShell>
+
+      {/* Edit dialog (despesa) */}
+      <DialogShell
+        isOpen={!!editDialog}
+        onClose={() => setEditDialog(null)}
+        title="Editar Lançamento"
+        maxWidth="480px"
+        footer={
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px" }}>
+            <button className="btn btn-secondary" onClick={() => setEditDialog(null)}>Cancelar</button>
+            <button className="btn btn-accent" onClick={handleEditSave} disabled={editSaving}>
+              {editSaving ? "Salvando..." : "Salvar"}
+            </button>
+          </div>
+        }
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+          <div>
+            <label style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--text-secondary)", display: "block", marginBottom: "6px" }}>Descrição *</label>
+            <input
+              className="input-dark"
+              style={{ width: "100%" }}
+              value={editForm.description ?? ""}
+              onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+            />
+          </div>
+          <div className="responsive-grid-2" style={{ gap: "12px" }}>
+            <div>
+              <label style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--text-secondary)", display: "block", marginBottom: "6px" }}>Valor (R$) *</label>
+              <input
+                className="input-dark"
+                style={{ width: "100%" }}
+                type="number"
+                min="0"
+                step="0.01"
+                value={editForm.amount ?? ""}
+                onChange={(e) => setEditForm({ ...editForm, amount: Number(e.target.value) })}
+              />
+            </div>
+            <div>
+              <label style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--text-secondary)", display: "block", marginBottom: "6px" }}>Data *</label>
+              <input
+                className="input-dark"
+                style={{ width: "100%" }}
+                type="date"
+                value={editForm.date ?? ""}
+                onChange={(e) => setEditForm({ ...editForm, date: e.target.value })}
+              />
+            </div>
+          </div>
+          <div className="responsive-grid-2" style={{ gap: "12px" }}>
+            <div>
+              <label style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--text-secondary)", display: "block", marginBottom: "6px" }}>Categoria</label>
+              <div style={{ position: "relative" }}>
+                <select
+                  className="input-dark"
+                  style={{ width: "100%", appearance: "none" }}
+                  value={editForm.category ?? "outros"}
+                  onChange={(e) => setEditForm({ ...editForm, category: e.target.value as ExpenseCategory })}
+                >
+                  {Object.entries(CATEGORY_LABELS).map(([k, v]) => (
+                    <option key={k} value={k}>{v}</option>
+                  ))}
+                </select>
+                <ChevronDown size={13} style={{ position: "absolute", right: "10px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "var(--text-secondary)" }} />
+              </div>
+            </div>
+            <div>
+              <label style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--text-secondary)", display: "block", marginBottom: "6px" }}>Status</label>
+              <div style={{ position: "relative" }}>
+                <select
+                  className="input-dark"
+                  style={{ width: "100%", appearance: "none" }}
+                  value={editForm.status ?? "pending"}
+                  onChange={(e) => setEditForm({ ...editForm, status: e.target.value as ExpenseEntry["status"] })}
+                >
+                  <option value="pending">Pendente</option>
+                  <option value="paid">Pago</option>
+                  <option value="cancelled">Cancelado</option>
+                </select>
+                <ChevronDown size={13} style={{ position: "absolute", right: "10px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "var(--text-secondary)" }} />
+              </div>
+            </div>
+          </div>
+          <div>
+            <label style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--text-secondary)", display: "block", marginBottom: "6px" }}>Observações</label>
+            <textarea
+              className="input-dark"
+              style={{ width: "100%", minHeight: "60px", resize: "vertical" }}
+              value={editForm.notes ?? ""}
+              onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+            />
+          </div>
+          {editDialog?.asaasLinked && (
+            <div style={{ padding: "10px 14px", background: "rgba(34,197,94,0.05)", border: "1px solid rgba(34,197,94,0.2)", borderRadius: "10px" }}>
+              <p style={{ fontSize: "0.8rem", color: "#22C55E", fontWeight: 600 }}>
+                Vinculado ao Asaas — clique no ícone <ExternalLink size={12} style={{ display: "inline", verticalAlign: "middle" }} /> para abrir.
+              </p>
+            </div>
+          )}
+        </div>
       </DialogShell>
 
       {/* Link dialog (receita) */}

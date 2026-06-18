@@ -61,6 +61,20 @@ export default function NotasPage() {
 
   useEffect(() => { fetchNotes(); }, [fetchNotes]);
 
+  const handleDeleteNote = async (noteToDelete: any) => {
+    const confirm = window.confirm(`Tem certeza que deseja excluir a nota "${noteToDelete.title || 'Sem título'}"?`);
+    if (!confirm) return;
+    try {
+      const { error } = await supabase.from('notes').delete().eq('id', noteToDelete.id);
+      if (error) throw error;
+      setNotes(prev => prev.filter(n => n.id !== noteToDelete.id));
+      showToast('Nota excluída com sucesso', 'success');
+    } catch (err: any) {
+      console.error(err);
+      showToast('Erro ao excluir nota: ' + (err.message || ''), 'error');
+    }
+  };
+
   const filteredNotes = notes.filter(n =>
     n.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     n.subjects?.some(s => s.toLowerCase().includes(searchTerm.toLowerCase())),
@@ -157,7 +171,10 @@ export default function NotasPage() {
                   exit={{ opacity: 0, scale: 0.95 }}
                   transition={{ delay: Math.min(idx * 0.03, 0.3) }}
                 >
-                  <NoteCard note={note} />
+                  <NoteCard 
+                    note={note} 
+                    onDelete={note.user_id === currentUser?.id ? handleDeleteNote : undefined} 
+                  />
                 </motion.div>
               ))}
             </AnimatePresence>

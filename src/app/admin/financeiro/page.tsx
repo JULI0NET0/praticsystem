@@ -145,9 +145,15 @@ export default function FinanceiroPage() {
   }
 
   async function handleDeleteExpense(id: string) {
-    if (!confirm("Remover esta despesa? Lançamentos vinculados não serão excluídos.")) return;
+    const entries = expenseEntries.filter((e) => e.expense_id === id);
+    const msg = entries.length > 0
+      ? `Remover esta despesa e as ${entries.length} fatura(s) gerada(s)? Esta ação não pode ser desfeita.`
+      : "Remover esta despesa? Esta ação não pode ser desfeita.";
+    if (!confirm(msg)) return;
+    await supabase.from("expense_entries").delete().eq("expense_id", id);
     await supabase.from("expenses").delete().eq("id", id);
     setExpenses((prev) => prev.filter((e) => e.id !== id));
+    setExpenseEntries((prev) => prev.filter((e) => e.expense_id !== id));
   }
 
   async function handleToggleExpense(id: string, status: "active" | "inactive") {
@@ -399,11 +405,13 @@ export default function FinanceiroPage() {
       {tab === "despesas" && (
         <DespesasList
           expenses={expenses}
+          expenseEntries={expenseEntries}
           users={users}
           onSave={handleSaveExpense}
           onDelete={handleDeleteExpense}
           onToggle={handleToggleExpense}
           onGenerateEntries={handleGenerateEntries}
+          onUpdateEntry={handleUpdateEntry}
         />
       )}
 

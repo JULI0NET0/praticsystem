@@ -8,7 +8,7 @@ import { motion } from 'framer-motion';
 import {
   ArrowLeft, Calendar, Tag, Users, Building2,
   X, Plus, Loader2, Check, Share2, Trash2, UserCircle,
-  BookmarkCheck, User, Printer,
+  BookmarkCheck, User, Printer, FileDown,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
@@ -243,6 +243,32 @@ export default function NotaDetailPage() {
         }
       }
 
+      // Add clickable links on top of the image in the PDF
+      const linkElements = overlay.querySelectorAll('a');
+      const scaleFactor = 210 / 794;
+      const overlayRect = overlay.getBoundingClientRect();
+
+      linkElements.forEach(aEl => {
+        const href = aEl.getAttribute('href');
+        if (!href) return;
+        
+        const aRect = aEl.getBoundingClientRect();
+        
+        const x = (aRect.left - overlayRect.left) * scaleFactor;
+        const y = (aRect.top - overlayRect.top) * scaleFactor;
+        const w = aRect.width * scaleFactor;
+        const h = aRect.height * scaleFactor;
+        
+        const pageIndex = Math.floor(y / pageH);
+        const localY = y - (pageIndex * pageH);
+        
+        const totalPages = pdf.getNumberOfPages();
+        if (pageIndex < totalPages) {
+          pdf.setPage(pageIndex + 1);
+          pdf.link(x, localY, w, h, { url: href });
+        }
+      });
+
       // Filename: "Título · 13.06.pdf"
       const safeName = (note.title || 'nota').replace(/[/\\?%*:|"<>]/g, '-').trim();
       const rawDate  = note.date ?? new Date().toISOString().split('T')[0];
@@ -257,6 +283,115 @@ export default function NotaDetailPage() {
       setExporting(false);
     }
   };
+
+  const handleExportMarkdown = () => {
+    if (!note.content) return;
+    try {
+      const markdownText = convertJSONToMarkdown(note.content);
+      const fullMd = `# ${note.title || 'Sem título'}\n\n${markdownText}`;
+      const blob = new Blob([fullMd], { type: 'text/markdown;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+
+      const safeName = (note.title || 'nota').replace(/[/\\?%*:|"<>]/g, '-').trim();
+      const rawDate  = note.date ?? new Date().toISOString().split('T')[0];
+      const [, mm, dd] = rawDate.split('-');
+      const safeDate = `${dd}.${mm}`;
+
+      link.href = url;
+      link.setAttribute('download', `${safeName} · ${safeDate}.md`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      showToast('Markdown exportado!', 'success');
+    } catch (err) {
+      console.error('Error exporting MD:', err);
+      showToast('Erro ao exportar Markdown', 'error');
+    }
+  };
+
+  function convertJSONToMarkdown(node: any): string {
+    if (!node) return '';
+    if (node.type === 'text') {
+      let text = node.text || '';
+      if (node.marks) {
+        node.marks.forEach((mark: any) => {
+          if (mark.type === 'bold') text = `**${text}**`;
+          if (mark.type === 'italic') text = `*${text}*`;
+          if (mark.type === 'strike') text = `~~${text}~~`;
+          if (mark.type === 'code') text = `\`${text}\``;
+          if (mark.type === 'link') text = `[${text}](${mark.attrs?.href})`;
+        });
+      }
+      return text;
+    }
+
+    const childrenText = Array.isArray(node.content)
+      ? node.content.map((child: any) => convertJSONToMarkdown(child)).join('')
+      : '';
+
+    switch (node.type) {
+      case 'doc':
+        return Array.isArray(node.content)
+          ? node.content.map((child: any) => convertJSONToMarkdown(child)).join('\n\n')
+          : '';
+      case 'paragraph':
+        return childrenText;
+      case 'heading': {
+        const level = node.attrs?.level || 1;
+        return `${'#'.repeat(level)} ${childrenText}`;
+      }
+      case 'blockquote':
+        return childrenText
+          .split('\n')
+          .map((line: string) => `> ${line}`)
+          .join('\n');
+      case 'codeBlock': {
+        const lang = node.attrs?.language || '';
+        return `\`\`\`${lang}\n${childrenText}\n\`\`\``;
+      }
+      case 'horizontalRule':
+        return '---';
+      case 'bulletList':
+        return Array.isArray(node.content)
+          ? node.content.map((li: any) => `* ${convertJSONToMarkdown(li).trim()}`).join('\n')
+          : '';
+      case 'orderedList':
+        return Array.isArray(node.content)
+          ? node.content.map((li: any, idx: number) => `${idx + 1}. ${convertJSONToMarkdown(li).trim()}`).join('\n')
+          : '';
+      case 'listItem':
+        return Array.isArray(node.content)
+          ? node.content.map((child: any) => convertJSONToMarkdown(child)).join('\n')
+          : '';
+      case 'taskList':
+        return Array.isArray(node.content)
+          ? node.content.map((li: any) => convertJSONToMarkdown(li)).join('\n')
+          : '';
+      case 'taskItem': {
+        const checked = node.attrs?.checked || false;
+        return `- [${checked ? 'x' : ' '}] ${childrenText.trim()}`;
+      }
+      case 'callout': {
+        const emoji = node.attrs?.icon || '💡';
+        return `> ${emoji} ${childrenText.trim()}`;
+      }
+      case 'fileBlock': {
+        const name = node.attrs?.name || 'arquivo';
+        const url = node.attrs?.url || '';
+        return `[Arquivo: ${name}](${url})`;
+      }
+      case 'image': {
+        const src = node.attrs?.src || '';
+        const alt = node.attrs?.alt || '';
+        return `![${alt}](${src})`;
+      }
+      default:
+        return childrenText;
+    }
+  }
   const linkedClient = clients.find(c => c.id === note.client_id);
   const teamMembers = users.filter(u => u.id !== currentUser?.id);
 
@@ -313,6 +448,13 @@ export default function NotaDetailPage() {
               ? <><motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}><Loader2 size={13} /></motion.div> Gerando PDF...</>
               : <><Printer size={13} /> Exportar PDF</>
             }
+          </button>
+          <button
+            onClick={handleExportMarkdown}
+            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', padding: '5px 12px' }}
+            title="Exportar como Markdown (.md)"
+          >
+            <FileDown size={13} /> Exportar MD
           </button>
           {isOwner && (
             <button
@@ -612,6 +754,37 @@ function PrintOverlay({
         #note-print-overlay #print-body img { max-width: 100%; border-radius: 4px; margin: 8px 0; display: block; }
         #note-print-overlay #print-body .editor-mention {
           background: #fff0eb; color: #d9480f; border-radius: 3px; padding: 0 4px; font-weight: 600;
+        }
+
+        /* Callout Styles in PDF */
+        #note-print-overlay #print-body .editor-callout {
+          display: flex; gap: 12px; padding: 12px 14px; border-radius: 6px; margin: 10px 0; align-items: flex-start;
+        }
+        #note-print-overlay #print-body .callout-orange { background: rgba(217, 72, 15, 0.06); border-left: 4px solid #d9480f; }
+        #note-print-overlay #print-body .callout-blue { background: rgba(30, 144, 255, 0.06); border-left: 4px solid #1e90ff; }
+        #note-print-overlay #print-body .callout-green { background: rgba(34, 197, 94, 0.06); border-left: 4px solid #22c55e; }
+        #note-print-overlay #print-body .callout-red { background: rgba(239, 68, 68, 0.06); border-left: 4px solid #ef4444; }
+        #note-print-overlay #print-body .callout-icon { font-size: 14px; user-select: none; line-height: 1.4; }
+        #note-print-overlay #print-body .callout-content { flex: 1; min-width: 0; color: #1a1a1a !important; }
+        #note-print-overlay #print-body .callout-content p { margin: 0; color: #1a1a1a !important; }
+
+        /* LinkCard Styles in PDF */
+        #note-print-overlay #print-body .editor-link-card {
+          display: flex; background: #fafafa; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; text-decoration: none; color: #1a1a1a !important; margin: 10px 0;
+        }
+        #note-print-overlay #print-body .link-card-info { flex: 1; padding: 10px 14px; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
+        #note-print-overlay #print-body .link-card-title { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px; color: #111 !important; }
+        #note-print-overlay #print-body .link-card-desc { font-size: 11px; color: #666 !important; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.4; margin-bottom: 4px; }
+        #note-print-overlay #print-body .link-card-meta { display: flex; align-items: center; gap: 4px; }
+        #note-print-overlay #print-body .link-card-favicon { width: 12px; height: 12px; border-radius: 2px; }
+        #note-print-overlay #print-body .link-card-domain { font-size: 10px; color: #888 !important; }
+        #note-print-overlay #print-body .link-card-image-wrap { width: 100px; min-height: 100%; position: relative; flex-shrink: 0; background: #f0f0f0; border-left: 1px solid #e0e0e0; }
+        #note-print-overlay #print-body .link-card-image { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; }
+
+        /* Anchor/Link styling in PDF */
+        #note-print-overlay #print-body .editor-link, 
+        #note-print-overlay #print-body a {
+          color: #d9480f !important; text-decoration: underline !important;
         }
 
         /* Task list — corrige checkboxes para html2canvas */

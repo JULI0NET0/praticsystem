@@ -456,6 +456,20 @@ export default function ClientDetailPage() {
     }
   };
 
+  const handleDeleteNote = async (noteToDelete: any) => {
+    const confirm = window.confirm(`Tem certeza que deseja excluir a nota "${noteToDelete.title || 'Sem título'}"?`);
+    if (!confirm) return;
+    try {
+      const { error } = await supabase.from('notes').delete().eq('id', noteToDelete.id);
+      if (error) throw error;
+      setLocalNotes(prev => prev.filter(n => n.id !== noteToDelete.id));
+      showToast('Nota excluída com sucesso', 'success');
+    } catch (err: any) {
+      console.error(err);
+      showToast('Erro ao excluir nota: ' + (err.message || ''), 'error');
+    }
+  };
+
   const handleOpenEdit = () => {
     setEditFormData({ ...clientData });
     setEditTab('geral');
@@ -1656,6 +1670,7 @@ export default function ClientDetailPage() {
                           key={note.id}
                           note={note}
                           onClick={() => { setEditingNoteId(note.id); setNotesView('editor'); }}
+                          onDelete={note.user_id === currentUser?.id ? handleDeleteNote : undefined}
                         />
                       ))}
                     </div>

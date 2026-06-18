@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight, ChevronDown, CalendarPlus } from "lucide-react";
+import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight, ChevronDown, CalendarPlus, FileText, Check } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import DialogShell from "@/components/DialogShell";
-import type { Expense, ExpenseCategory, ExpenseRecurrence } from "@/types/database";
+import type { Expense, ExpenseCategory, ExpenseRecurrence, ExpenseEntry } from "@/types/database";
 
 const CATEGORIES: Record<ExpenseCategory, string> = {
   pro_labore: "Pro-labore",
@@ -38,11 +38,13 @@ const CATEGORY_COLORS: Record<ExpenseCategory, string> = {
 
 interface DespesasListProps {
   expenses: Expense[];
+  expenseEntries: ExpenseEntry[];
   users: { id: string; name: string }[];
   onSave: (data: Partial<Expense>) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onToggle: (id: string, status: 'active' | 'inactive') => Promise<void>;
   onGenerateEntries: (expenseId: string, startMonth: string, months: number) => Promise<void>;
+  onUpdateEntry: (id: string, data: Partial<ExpenseEntry>) => Promise<void>;
 }
 
 const EMPTY_FORM: Partial<Expense> = {
@@ -71,12 +73,13 @@ function generatePreviewDates(startMonth: string, months: number, dueDay: number
   });
 }
 
-export function DespesasList({ expenses, users, onSave, onDelete, onToggle, onGenerateEntries }: DespesasListProps) {
+export function DespesasList({ expenses, expenseEntries, users, onSave, onDelete, onToggle, onGenerateEntries, onUpdateEntry }: DespesasListProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Expense | null>(null);
   const [form, setForm] = useState<Partial<Expense>>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [filterCat, setFilterCat] = useState<string>("all");
+  const [viewEntriesDialog, setViewEntriesDialog] = useState<Expense | null>(null);
 
   const [genDialog, setGenDialog] = useState<Expense | null>(null);
   const now = new Date();
@@ -197,74 +200,95 @@ export function DespesasList({ expenses, users, onSave, onDelete, onToggle, onGe
                 </td>
               </tr>
             )}
-            {filtered.map((expense, i) => (
-              <motion.tr
-                key={expense.id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.03 }}
-              >
-                <td style={{ fontWeight: 600 }}>
-                  {expense.description}
-                  {expense.notes && (
-                    <p style={{ fontSize: "0.75rem", color: "var(--text-tertiary)", marginTop: "2px" }}>{expense.notes}</p>
-                  )}
-                </td>
-                <td>
-                  <span
-                    className="badge"
-                    style={{ color: CATEGORY_COLORS[expense.category], background: `${CATEGORY_COLORS[expense.category]}18`, border: `1px solid ${CATEGORY_COLORS[expense.category]}30` }}
-                  >
-                    {CATEGORIES[expense.category]}
-                  </span>
-                </td>
-                <td style={{ color: "var(--text-secondary)" }}>
-                  {expense.due_day ? `Dia ${String(expense.due_day).padStart(2, "0")}` : "—"}
-                </td>
-                <td style={{ color: "var(--text-secondary)", fontSize: "0.875rem" }}>
-                  {RECURRENCES[expense.recurrence]}
-                </td>
-                <td style={{ fontWeight: 700, color: "#EF4444" }}>{formatCurrency(Number(expense.amount))}</td>
-                <td>
-                  <span className={`badge ${expense.status === "active" ? "badge-success" : ""}`}
-                    style={expense.status !== "active" ? { color: "var(--text-tertiary)", background: "rgba(255,255,255,0.04)" } : {}}>
-                    {expense.status === "active" ? "Ativa" : "Inativa"}
-                  </span>
-                </td>
-                <td>
-                  <div style={{ display: "flex", gap: "6px" }}>
-                    {expense.status === "active" && (
-                      <button
-                        onClick={() => openGen(expense)}
-                        style={{ background: "none", border: "none", cursor: "pointer", color: "var(--accent)", padding: "4px", display: "flex" }}
-                        title="Gerar Lançamentos por Meses"
-                      >
-                        <CalendarPlus size={15} />
-                      </button>
+            {filtered.map((expense, i) => {
+              const entries = expenseEntries.filter((e) => e.expense_id === expense.id);
+              const paidCount = entries.filter((e) => e.status === "paid").length;
+              const pendingCount = entries.filter((e) => e.status === "pending").length;
+              return (
+                <motion.tr
+                  key={expense.id}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.03 }}
+                >
+                  <td style={{ fontWeight: 600 }}>
+                    {expense.description}
+                    {expense.notes && (
+                      <p style={{ fontSize: "0.75rem", color: "var(--text-tertiary)", marginTop: "2px" }}>{expense.notes}</p>
                     )}
-                    <button
-                      onClick={() => onToggle(expense.id, expense.status === "active" ? "inactive" : "active")}
-                      style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-secondary)", padding: "4px", display: "flex" }}
-                      title={expense.status === "active" ? "Desativar" : "Ativar"}
+                  </td>
+                  <td>
+                    <span
+                      className="badge"
+                      style={{ color: CATEGORY_COLORS[expense.category], background: `${CATEGORY_COLORS[expense.category]}18`, border: `1px solid ${CATEGORY_COLORS[expense.category]}30` }}
                     >
-                      {expense.status === "active" ? <ToggleRight size={18} color="#22C55E" /> : <ToggleLeft size={18} />}
-                    </button>
-                    <button
-                      onClick={() => openEdit(expense)}
-                      style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-secondary)", padding: "4px", display: "flex" }}
-                    >
-                      <Pencil size={15} />
-                    </button>
-                    <button
-                      onClick={() => onDelete(expense.id)}
-                      style={{ background: "none", border: "none", cursor: "pointer", color: "#EF4444", padding: "4px", display: "flex" }}
-                    >
-                      <Trash2 size={15} />
-                    </button>
-                  </div>
-                </td>
-              </motion.tr>
-            ))}
+                      {CATEGORIES[expense.category]}
+                    </span>
+                  </td>
+                  <td style={{ color: "var(--text-secondary)" }}>
+                    {expense.due_day ? `Dia ${String(expense.due_day).padStart(2, "0")}` : "—"}
+                  </td>
+                  <td style={{ color: "var(--text-secondary)", fontSize: "0.875rem" }}>
+                    {RECURRENCES[expense.recurrence]}
+                  </td>
+                  <td style={{ fontWeight: 700, color: "#EF4444" }}>{formatCurrency(Number(expense.amount))}</td>
+                  <td>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                      <span className={`badge ${expense.status === "active" ? "badge-success" : ""}`}
+                        style={expense.status !== "active" ? { color: "var(--text-tertiary)", background: "rgba(255,255,255,0.04)" } : {}}>
+                        {expense.status === "active" ? "Ativa" : "Inativa"}
+                      </span>
+                      {entries.length > 0 && (
+                        <span style={{ fontSize: "0.7rem", color: "var(--text-tertiary)" }}>
+                          {entries.length} fatura{entries.length !== 1 ? "s" : ""}
+                          {paidCount > 0 && <span style={{ color: "#22C55E" }}> · {paidCount}✓</span>}
+                          {pendingCount > 0 && <span style={{ color: "#F59E0B" }}> · {pendingCount}⏳</span>}
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td>
+                    <div style={{ display: "flex", gap: "6px" }}>
+                      <button
+                        onClick={() => setViewEntriesDialog(expense)}
+                        style={{ background: "none", border: "none", cursor: "pointer", color: entries.length > 0 ? "var(--accent)" : "var(--text-tertiary)", padding: "4px", display: "flex" }}
+                        title="Ver faturas geradas"
+                      >
+                        <FileText size={15} />
+                      </button>
+                      {expense.status === "active" && (
+                        <button
+                          onClick={() => openGen(expense)}
+                          style={{ background: "none", border: "none", cursor: "pointer", color: "var(--accent)", padding: "4px", display: "flex" }}
+                          title="Gerar Lançamentos por Meses"
+                        >
+                          <CalendarPlus size={15} />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => onToggle(expense.id, expense.status === "active" ? "inactive" : "active")}
+                        style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-secondary)", padding: "4px", display: "flex" }}
+                        title={expense.status === "active" ? "Desativar" : "Ativar"}
+                      >
+                        {expense.status === "active" ? <ToggleRight size={18} color="#22C55E" /> : <ToggleLeft size={18} />}
+                      </button>
+                      <button
+                        onClick={() => openEdit(expense)}
+                        style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-secondary)", padding: "4px", display: "flex" }}
+                      >
+                        <Pencil size={15} />
+                      </button>
+                      <button
+                        onClick={() => onDelete(expense.id)}
+                        style={{ background: "none", border: "none", cursor: "pointer", color: "#EF4444", padding: "4px", display: "flex" }}
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  </td>
+                </motion.tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -313,6 +337,13 @@ export function DespesasList({ expenses, users, onSave, onDelete, onToggle, onGe
               </span>
             </div>
             <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", marginTop: "4px" }}>
+              <button
+                onClick={() => setViewEntriesDialog(expense)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--accent)", padding: "4px", display: "flex" }}
+                title="Ver faturas"
+              >
+                <FileText size={16} />
+              </button>
               {expense.status === "active" && (
                 <button
                   onClick={() => openGen(expense)}
@@ -345,6 +376,113 @@ export function DespesasList({ expenses, users, onSave, onDelete, onToggle, onGe
           </div>
         ))}
       </div>
+
+      {/* Dialog faturas da despesa */}
+      {(() => {
+        if (!viewEntriesDialog) return null;
+        const entries = expenseEntries.filter((e) => e.expense_id === viewEntriesDialog.id);
+        const paidCount = entries.filter((e) => e.status === "paid").length;
+        const pendingCount = entries.filter((e) => e.status === "pending").length;
+        const totalPago = entries.filter((e) => e.status === "paid").reduce((s, e) => s + Number(e.amount), 0);
+        const totalPendente = entries.filter((e) => e.status === "pending").reduce((s, e) => s + Number(e.amount), 0);
+        return (
+          <DialogShell
+            isOpen
+            onClose={() => setViewEntriesDialog(null)}
+            title="Faturas Geradas"
+            maxWidth="560px"
+            footer={
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" }}>
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => { setViewEntriesDialog(null); openGen(viewEntriesDialog); }}
+                  style={{ display: "flex", alignItems: "center", gap: "6px" }}
+                >
+                  <CalendarPlus size={15} /> Gerar mais meses
+                </button>
+                <button className="btn btn-accent" onClick={() => setViewEntriesDialog(null)}>Fechar</button>
+              </div>
+            }
+          >
+            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              {/* Cabeçalho da despesa */}
+              <div style={{ padding: "14px 16px", background: "rgba(239,68,68,0.05)", border: "1px solid rgba(239,68,68,0.12)", borderRadius: "12px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px" }}>
+                  <div>
+                    <p style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginBottom: "2px" }}>
+                      {CATEGORIES[viewEntriesDialog.category]} · {RECURRENCES[viewEntriesDialog.recurrence]}
+                      {viewEntriesDialog.due_day && ` · vcto dia ${String(viewEntriesDialog.due_day).padStart(2, "0")}`}
+                    </p>
+                    <p style={{ fontWeight: 700, fontSize: "1rem" }}>{viewEntriesDialog.description}</p>
+                  </div>
+                  <p style={{ fontWeight: 800, color: "#EF4444", fontSize: "1.15rem", flexShrink: 0 }}>
+                    {formatCurrency(Number(viewEntriesDialog.amount))}
+                  </p>
+                </div>
+              </div>
+
+              {/* Resumo */}
+              {entries.length > 0 && (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px" }}>
+                  {[
+                    { label: "Total gerado", value: entries.length, suffix: ` fatura${entries.length !== 1 ? "s" : ""}`, color: "var(--text-primary)" },
+                    { label: "Pago", value: formatCurrency(totalPago), suffix: ` (${paidCount})`, color: "#22C55E" },
+                    { label: "Pendente", value: formatCurrency(totalPendente), suffix: ` (${pendingCount})`, color: "#F59E0B" },
+                  ].map((item) => (
+                    <div key={item.label} style={{ padding: "10px 12px", background: "rgba(255,255,255,0.02)", border: "1px solid var(--border)", borderRadius: "10px", textAlign: "center" }}>
+                      <p style={{ fontSize: "0.7rem", color: "var(--text-secondary)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "4px" }}>{item.label}</p>
+                      <p style={{ fontWeight: 800, color: item.color, fontSize: "0.9rem" }}>{item.value}<span style={{ fontWeight: 500, fontSize: "0.72rem", color: "var(--text-tertiary)" }}>{item.suffix}</span></p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Lista de faturas */}
+              {entries.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "32px", color: "var(--text-tertiary)", fontSize: "0.875rem" }}>
+                  Nenhuma fatura gerada ainda.<br />
+                  <span style={{ fontSize: "0.8rem" }}>Use o botão abaixo para gerar os meses.</span>
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px", maxHeight: "320px", overflowY: "auto" }}>
+                  {entries
+                    .slice()
+                    .sort((a, b) => a.date.localeCompare(b.date))
+                    .map((entry) => {
+                      const dateObj = new Date(`${entry.date}T12:00:00`);
+                      const mesLabel = dateObj.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+                      const diaLabel = dateObj.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit" });
+                      const sc = entry.status === "paid" ? "#22C55E" : entry.status === "cancelled" ? "var(--text-tertiary)" : "#F59E0B";
+                      const sl = entry.status === "paid" ? "Pago" : entry.status === "cancelled" ? "Cancelado" : "Pendente";
+                      return (
+                        <div
+                          key={entry.id}
+                          style={{ display: "flex", alignItems: "center", gap: "12px", padding: "10px 14px", borderRadius: "10px", background: "rgba(255,255,255,0.02)", border: "1px solid var(--border)" }}
+                        >
+                          <div style={{ flex: 1 }}>
+                            <p style={{ fontSize: "0.875rem", fontWeight: 600, textTransform: "capitalize" }}>{mesLabel}</p>
+                            <p style={{ fontSize: "0.72rem", color: "var(--text-tertiary)", marginTop: "1px" }}>vcto {diaLabel}</p>
+                          </div>
+                          <span style={{ fontWeight: 700, color: "#EF4444", fontSize: "0.9rem" }}>{formatCurrency(Number(entry.amount))}</span>
+                          <span style={{ fontSize: "0.72rem", fontWeight: 700, padding: "3px 8px", borderRadius: "6px", color: sc, background: `${sc}18`, border: `1px solid ${sc}30`, flexShrink: 0 }}>{sl}</span>
+                          {entry.status === "pending" && (
+                            <button
+                              onClick={() => onUpdateEntry(entry.id, { status: "paid" })}
+                              style={{ background: "none", border: "none", cursor: "pointer", color: "#22C55E", padding: "2px", display: "flex", flexShrink: 0 }}
+                              title="Dar baixa"
+                            >
+                              <Check size={15} />
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                </div>
+              )}
+            </div>
+          </DialogShell>
+        );
+      })()}
 
       {/* Dialog criar/editar despesa */}
       <DialogShell

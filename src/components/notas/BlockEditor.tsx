@@ -9,6 +9,7 @@ import {
   NodeViewWrapper,
   ReactNodeViewRenderer,
 } from '@tiptap/react';
+import { BubbleMenu } from '@tiptap/react/menus';
 import { DOMParser } from '@tiptap/pm/model';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
@@ -16,12 +17,16 @@ import { TaskList } from '@tiptap/extension-task-list';
 import { TaskItem } from '@tiptap/extension-task-item';
 import ImageExtension from '@tiptap/extension-image';
 import MentionExtension from '@tiptap/extension-mention';
+import LinkExtension from '@tiptap/extension-link';
+import Highlight from '@tiptap/extension-highlight';
+import { Color } from '@tiptap/extension-color';
+import { TextStyle } from '@tiptap/extension-text-style';
 import Suggestion from '@tiptap/suggestion';
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import {
   Type, Heading1, Heading2, Heading3, List, ListOrdered,
   CheckSquare, Quote, Code, Minus, User, Building2,
-  ImageIcon, Paperclip, FileDown, Loader2,
+  ImageIcon, Paperclip, FileDown, Loader2, AlertTriangle, Link2,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
@@ -53,14 +58,48 @@ const SLASH_ITEMS = [
   { title: 'Citação',          description: 'Bloco de citação',     icon: Quote,        command: ({ editor, range }: any) => editor.chain().focus().deleteRange(range).toggleBlockquote().run() },
   { title: 'Código',           description: 'Bloco de código',      icon: Code,         command: ({ editor, range }: any) => editor.chain().focus().deleteRange(range).toggleCodeBlock().run() },
   { title: 'Divisor',          description: 'Linha horizontal',     icon: Minus,        command: ({ editor, range }: any) => editor.chain().focus().deleteRange(range).setHorizontalRule().run() },
-  { title: 'Imagem',           description: 'Inserir imagem',       icon: ImageIcon,    command: ({ editor, range }: any) => _uploadTrigger.image?.(editor, range) },
-  { title: 'Arquivo',          description: 'Anexar arquivo',       icon: Paperclip,    command: ({ editor, range }: any) => _uploadTrigger.file?.(editor, range) },
+  { title: 'Aviso (Callout)',  description: 'Caixa de destaque com ícone', icon: AlertTriangle,  command: ({ editor, range }: any) => {
+      editor.chain().focus().deleteRange(range).insertContent([
+        {
+          type: 'callout',
+          attrs: { color: 'orange', icon: '💡' },
+          content: [{ type: 'paragraph', text: 'Escreva um aviso importante aqui...' }]
+        }
+      ]).run();
+  } },
+  { title: 'Card de Link',     description: 'Card de preview de link', icon: Link2,          command: ({ editor, range }: any) => {
+      const url = window.prompt('Digite a URL para o card:');
+      if (!url) return;
+      editor.chain().focus().deleteRange(range).run();
+      fetch(`/api/link-preview?url=${encodeURIComponent(url)}`)
+        .then(res => res.json())
+        .then(data => {
+          editor.chain().focus().insertContent({
+            type: 'linkCard',
+            attrs: {
+              url: data.url || url,
+              title: data.title || '',
+              description: data.description || '',
+              image: data.image || '',
+              domain: data.domain || '',
+              favicon: data.favicon || '',
+            }
+          }).run();
+        })
+        .catch(() => {
+          editor.chain().focus().insertContent({
+            type: 'linkCard',
+            attrs: { url }
+          }).run();
+        });
+  } },
 ];
 
 // ─── Slash menu component ──────────────────────────────────────────────────
 
 const SlashMenuList = forwardRef<any, any>((props, ref) => {
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useImperativeHandle(ref, () => ({
     onKeyDown: ({ event }: { event: KeyboardEvent }) => {
@@ -72,10 +111,21 @@ const SlashMenuList = forwardRef<any, any>((props, ref) => {
   }));
 
   useEffect(() => setSelectedIndex(0), [props.items]);
+
+  useEffect(() => {
+    if (containerRef.current) {
+      // Find the active button. The first child is the "Blocos" <p> label.
+      const activeBtn = containerRef.current.children[1 + selectedIndex] as HTMLElement;
+      if (activeBtn) {
+        activeBtn.scrollIntoView({ block: 'nearest' });
+      }
+    }
+  }, [selectedIndex]);
+
   if (!props.items.length) return null;
 
   return (
-    <div style={{ background: '#16162a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '8px', boxShadow: '0 8px 32px rgba(0,0,0,0.5)', minWidth: '220px', maxHeight: '360px', overflowY: 'auto' }}>
+    <div ref={containerRef} style={{ background: '#16162a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '8px', boxShadow: '0 8px 32px rgba(0,0,0,0.5)', minWidth: '220px', maxHeight: '360px', overflowY: 'auto' }}>
       <p style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.4)', padding: '2px 8px 6px', margin: 0, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Blocos</p>
       {props.items.map((item: any, index: number) => {
         const Icon = item.icon;
@@ -204,6 +254,106 @@ const FileBlock = Node.create({
   parseHTML()  { return [{ tag: 'div[data-type="file-block"]' }]; },
   renderHTML({ HTMLAttributes }) { return ['div', { ...HTMLAttributes, 'data-type': 'file-block' }]; },
   addNodeView() { return ReactNodeViewRenderer(FileNodeView); },
+});
+
+// ─── Callout custom node ───────────────────────────────────────────────────
+
+const Callout = Node.create({
+  name: 'callout',
+  group: 'block',
+  content: 'block+',
+  defining: true,
+  addAttributes() {
+    return {
+      color: { default: 'orange' },
+      icon: { default: '💡' },
+    };
+  },
+  parseHTML() {
+    return [
+      {
+        tag: 'div[data-type="callout"]',
+        getAttrs: (dom) => {
+          const element = dom as HTMLElement;
+          return {
+            color: element.getAttribute('data-color') || 'orange',
+            icon: element.getAttribute('data-icon') || '💡',
+          };
+        },
+      },
+    ];
+  },
+  renderHTML({ HTMLAttributes }) {
+    return [
+      'div',
+      {
+        'data-type': 'callout',
+        'data-color': HTMLAttributes.color,
+        'data-icon': HTMLAttributes.icon,
+        class: `editor-callout callout-${HTMLAttributes.color}`,
+      },
+      ['span', { class: 'callout-icon', contentEditable: 'false' }, HTMLAttributes.icon],
+      ['div', { class: 'callout-content' }, 0],
+    ];
+  },
+});
+
+// ─── LinkCard custom node ──────────────────────────────────────────────────
+
+const LinkCardNodeView = ({ node }: { node: any }) => {
+  const { url, title, description, image, domain, favicon } = node.attrs as {
+    url: string;
+    title: string;
+    description: string;
+    image: string;
+    domain: string;
+    favicon: string;
+  };
+
+  return (
+    <NodeViewWrapper>
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        contentEditable={false}
+        className="editor-link-card"
+      >
+        <div className="link-card-info">
+          <div className="link-card-title">{title || domain || url}</div>
+          <div className="link-card-desc">{description}</div>
+          <div className="link-card-meta">
+            {favicon && <img src={favicon} alt="" className="link-card-favicon" />}
+            <span className="link-card-domain">{domain || 'Link'}</span>
+          </div>
+        </div>
+        {image && (
+          <div className="link-card-image-wrap">
+            <img src={image} alt="" className="link-card-image" />
+          </div>
+        )}
+      </a>
+    </NodeViewWrapper>
+  );
+};
+
+const LinkCard = Node.create({
+  name: 'linkCard',
+  group: 'block',
+  atom: true,
+  addAttributes() {
+    return {
+      url: { default: '' },
+      title: { default: '' },
+      description: { default: '' },
+      image: { default: '' },
+      domain: { default: '' },
+      favicon: { default: '' },
+    };
+  },
+  parseHTML() { return [{ tag: 'div[data-type="link-card"]' }]; },
+  renderHTML({ HTMLAttributes }) { return ['div', { ...HTMLAttributes, 'data-type': 'link-card' }]; },
+  addNodeView() { return ReactNodeViewRenderer(LinkCardNodeView); },
 });
 
 // ─── Utility: mount a ReactRenderer into a floating div ───────────────────
@@ -430,8 +580,23 @@ export default function BlockEditor({
         },
       }),
       FileBlock,
+      Callout,
+      LinkCard,
       SlashExtension,
       MentionConfig,
+      Highlight.configure({ multicolor: true }),
+      TextStyle,
+      Color,
+      LinkExtension.configure({
+        openOnClick: false,
+        autolink: true,
+        defaultProtocol: 'https',
+        HTMLAttributes: {
+          class: 'editor-link',
+          rel: 'noopener noreferrer',
+          target: '_blank',
+        },
+      }),
     ],
     content: content || '',
     editable,
@@ -441,6 +606,42 @@ export default function BlockEditor({
       handlePaste(view, event) {
         const text = event.clipboardData?.getData('text/plain');
         if (!text) return false;
+
+        // Auto Link Card detection when pasting URL on empty paragraph
+        const isSingleUrl = /^(https?:\/\/[^\s<>]+)$/i.test(text.trim());
+        if (isSingleUrl) {
+          const { selection } = view.state;
+          const isEmptyParagraph = selection.$from.parent.type.name === 'paragraph' && selection.$from.parent.content.size === 0;
+          if (isEmptyParagraph) {
+            const url = text.trim();
+            fetch(`/api/link-preview?url=${encodeURIComponent(url)}`)
+              .then(res => res.json())
+              .then(data => {
+                if (view.isDestroyed) return;
+                view.dispatch(
+                  view.state.tr.replaceSelectionWith(
+                    view.state.schema.nodes.linkCard.create({
+                      url: data.url || url,
+                      title: data.title || '',
+                      description: data.description || '',
+                      image: data.image || '',
+                      domain: data.domain || '',
+                      favicon: data.favicon || '',
+                    })
+                  )
+                );
+              })
+              .catch(() => {
+                if (view.isDestroyed) return;
+                view.dispatch(
+                  view.state.tr.replaceSelectionWith(
+                    view.state.schema.nodes.linkCard.create({ url })
+                  )
+                );
+              });
+            return true;
+          }
+        }
 
         // Detect dynamic markdown formatting markers
         const hasMarkdown =
@@ -487,6 +688,107 @@ export default function BlockEditor({
       <input ref={imageInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImageSelected} />
       <input ref={fileInputRef}  type="file" accept="*/*"     style={{ display: 'none' }} onChange={handleFileSelected} />
 
+      {/* Bubble Menu for formatting */}
+      {editor && (
+        <BubbleMenu editor={editor}>
+          <div className="editor-bubble-menu">
+            <button
+              onClick={() => editor.chain().focus().toggleBold().run()}
+              className={editor.isActive('bold') ? 'is-active' : ''}
+              title="Negrito"
+            >
+              <b>B</b>
+            </button>
+            <button
+              onClick={() => editor.chain().focus().toggleItalic().run()}
+              className={editor.isActive('italic') ? 'is-active' : ''}
+              title="Itálico"
+            >
+              <i>I</i>
+            </button>
+            <button
+              onClick={() => editor.chain().focus().toggleStrike().run()}
+              className={editor.isActive('strike') ? 'is-active' : ''}
+              title="Tachado"
+            >
+              <s>S</s>
+            </button>
+            
+            <div className="bubble-divider" />
+            
+            {/* Highlight toggles */}
+            <button
+              onClick={() => editor.chain().focus().toggleHighlight({ color: '#ffe066' }).run()}
+              className={editor.isActive('highlight', { color: '#ffe066' }) ? 'is-active' : ''}
+              style={{ color: '#ffe066' }}
+              title="Realce Amarelo"
+            >
+              🖍️
+            </button>
+            
+            <button
+              onClick={() => editor.chain().focus().toggleHighlight({ color: '#8ce99a' }).run()}
+              className={editor.isActive('highlight', { color: '#8ce99a' }) ? 'is-active' : ''}
+              style={{ color: '#8ce99a' }}
+              title="Realce Verde"
+            >
+              🖍️
+            </button>
+            
+            <div className="bubble-divider" />
+
+            {/* Orange text color */}
+            <button
+              onClick={() => editor.chain().focus().setColor('#d9480f').run()}
+              className={editor.isActive('textStyle', { color: '#d9480f' }) ? 'is-active' : ''}
+              style={{ color: '#d9480f' }}
+              title="Texto Laranja"
+            >
+              A
+            </button>
+
+            <div className="bubble-divider" />
+
+            {/* Block Conversions */}
+            <button
+              onClick={() => editor.chain().focus().setParagraph().run()}
+              className={editor.isActive('paragraph') && !editor.isActive('taskList') && !editor.isActive('bulletList') && !editor.isActive('orderedList') ? 'is-active' : ''}
+              title="Texto normal"
+            >
+              <Type size={14} />
+            </button>
+
+            <button
+              onClick={() => editor.chain().focus().toggleBulletList().run()}
+              className={editor.isActive('bulletList') ? 'is-active' : ''}
+              title="Lista de marcadores"
+            >
+              <List size={14} />
+            </button>
+
+            <button
+              onClick={() => editor.chain().focus().toggleTaskList().run()}
+              className={editor.isActive('taskList') ? 'is-active' : ''}
+              title="Lista de tarefas (Checklist)"
+            >
+              <CheckSquare size={14} />
+            </button>
+
+            <div className="bubble-divider" />
+
+            {/* Clear Formatting */}
+            <button
+              onClick={() => {
+                editor.chain().focus().unsetColor().unsetHighlight().run();
+              }}
+              title="Limpar Estilos"
+            >
+              Limpar
+            </button>
+          </div>
+        </BubbleMenu>
+      )}
+
       <style>{`
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
@@ -507,6 +809,151 @@ export default function BlockEditor({
         .block-editor-content ul[data-type="taskList"] > li { display: flex; align-items: flex-start; gap: 8px; margin: 4px 0; }
         .block-editor-content ul[data-type="taskList"] > li > label { margin-top: 3px; }
         .block-editor-content ul[data-type="taskList"] > li > label input[type="checkbox"] { accent-color: #d9480f; width: 15px; height: 15px; cursor: pointer; }
+        
+        /* Bubble Menu Styles */
+        .editor-bubble-menu {
+          display: flex;
+          background: #16162a;
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          border-radius: 8px;
+          padding: 4px;
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+          gap: 3px;
+          align-items: center;
+          user-select: none;
+        }
+        .editor-bubble-menu button {
+          background: transparent;
+          border: none;
+          color: rgba(255, 255, 255, 0.8);
+          padding: 6px 9px;
+          font-size: 0.82rem;
+          border-radius: 6px;
+          cursor: pointer;
+          font-weight: 600;
+          transition: background 0.12s, color 0.12s;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .editor-bubble-menu button:hover {
+          background: rgba(255, 255, 255, 0.08);
+          color: white;
+        }
+        .editor-bubble-menu button.is-active {
+          background: rgba(217, 72, 15, 0.18);
+          color: #d9480f;
+        }
+        .bubble-divider {
+          width: 1px;
+          height: 16px;
+          background: rgba(255, 255, 255, 0.15);
+          margin: 0 3px;
+        }
+
+        /* Highlight Styles (fix text readability contrast) */
+        .block-editor-content mark {
+          color: #111111 !important;
+          padding: 2px 5px;
+          border-radius: 4px;
+          font-weight: 500;
+        }
+        .block-editor-content mark strong {
+          color: #111111 !important;
+        }
+
+        /* Callout Styles */
+        .editor-callout {
+          display: flex;
+          gap: 12px;
+          padding: 14px 16px;
+          border-radius: 8px;
+          margin: 12px 0;
+          align-items: flex-start;
+        }
+        .callout-orange { background: rgba(217, 72, 15, 0.08); border-left: 4px solid #d9480f; }
+        .callout-blue { background: rgba(30, 144, 255, 0.08); border-left: 4px solid #1e90ff; }
+        .callout-green { background: rgba(34, 197, 94, 0.08); border-left: 4px solid #22c55e; }
+        .callout-red { background: rgba(239, 68, 68, 0.08); border-left: 4px solid #ef4444; }
+        .callout-icon { font-size: 1.15rem; user-select: none; line-height: 1.4; }
+        .callout-content { flex: 1; min-width: 0; color: rgba(255, 255, 255, 0.88); }
+        .callout-content p { margin: 0; }
+
+        /* LinkCard Styles */
+        .editor-link-card {
+          display: flex;
+          background: rgba(255, 255, 255, 0.03);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 10px;
+          overflow: hidden;
+          text-decoration: none;
+          color: white !important;
+          margin: 14px 0;
+          transition: border-color 0.15s, background 0.15s;
+          user-select: none;
+          max-width: 100%;
+        }
+        .editor-link-card:hover {
+          border-color: rgba(217, 72, 15, 0.4);
+          background: rgba(217, 72, 15, 0.04);
+        }
+        .link-card-info {
+          flex: 1;
+          padding: 14px 16px;
+          min-width: 0;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+        }
+        .link-card-title {
+          font-size: 0.88rem;
+          font-weight: 600;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          margin-bottom: 4px;
+          color: rgba(255, 255, 255, 0.95);
+        }
+        .link-card-desc {
+          font-size: 0.76rem;
+          color: rgba(255, 255, 255, 0.45);
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+          line-height: 1.4;
+          margin-bottom: 6px;
+        }
+        .link-card-meta {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+        .link-card-favicon {
+          width: 14px;
+          height: 14px;
+          border-radius: 2px;
+        }
+        .link-card-domain {
+          font-size: 0.72rem;
+          color: rgba(255, 255, 255, 0.35);
+        }
+        .link-card-image-wrap {
+          width: 130px;
+          min-height: 100%;
+          position: relative;
+          flex-shrink: 0;
+          background: rgba(255, 255, 255, 0.02);
+          border-left: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .link-card-image {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          position: absolute;
+          top: 0;
+          left: 0;
+        }
         .block-editor-content ul[data-type="taskList"] > li > div { flex: 1; }
         .block-editor-content ul[data-type="taskList"] > li[data-checked="true"] > div { opacity: 0.5; text-decoration: line-through; }
         .block-editor-content p.is-editor-empty:first-child::before { content: attr(data-placeholder); float: left; color: rgba(255,255,255,0.28); pointer-events: none; height: 0; }
@@ -514,6 +961,8 @@ export default function BlockEditor({
         .block-editor-content em { font-style: italic; }
         .block-editor-content s { text-decoration: line-through; opacity: 0.6; }
         .editor-mention { background: rgba(217,72,15,0.18); color: #d9480f; border-radius: 5px; padding: 1px 6px; font-weight: 600; cursor: default; display: inline-block; }
+        .editor-link { color: #d9480f; text-decoration: underline; cursor: pointer; }
+        .editor-link:hover { color: #f76b35; }
         .editor-image { max-width: 100%; border-radius: 10px; display: block; cursor: default; }
 
         /* Resize container */
@@ -585,7 +1034,24 @@ function parseMarkdownToHTML(markdown: string): string {
     escaped = escaped.replace(/\*([^*]+)\*/g, '<em>$1</em>');
     escaped = escaped.replace(/_([^_]+)_/g, '<em>$1</em>');
     escaped = escaped.replace(/~~([^~]+)~~/g, '<s>$1</s>');
-    escaped = escaped.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+
+    // 1. Temporarily placeholder markdown links to prevent double parsing of their URLs
+    const markdownLinks: string[] = [];
+    escaped = escaped.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, linkText, url) => {
+      const placeholder = `___MDLINK_${markdownLinks.length}___`;
+      markdownLinks.push(`<a href="${url}" target="_blank" rel="noopener noreferrer" class="editor-link">${linkText}</a>`);
+      return placeholder;
+    });
+
+    // 2. Identify raw http/https links and wrap them in <a> tags
+    escaped = escaped.replace(/\b(https?:\/\/[^\s<>]+)/g, (url) => {
+      return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="editor-link">${url}</a>`;
+    });
+
+    // 3. Restore the placeholder markdown links
+    markdownLinks.forEach((html, index) => {
+      escaped = escaped.replace(`___MDLINK_${index}___`, html);
+    });
     
     return escaped;
   };

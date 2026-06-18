@@ -264,79 +264,116 @@ export function AsaasSync({
         ))}
       </div>
 
-      {/* Transactions list */}
-      {filtered.length === 0 ? (
-        <div className="glass-card" style={{ padding: "48px", textAlign: "center" }}>
-          <p style={{ color: "var(--text-tertiary)", fontSize: "0.9rem" }}>
-            {asaasTransactions.length === 0
-              ? "Nenhuma transação importada. Clique em Sincronizar para importar."
-              : "Nenhuma transação neste filtro."}
-          </p>
-        </div>
-      ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-          {filtered.map((txn, i) => {
-            const isLinked = !!(txn.expense_entry_id || txn.invoice_id);
-            const linkedEntry = txn.expense_entry_id ? expenseEntries.find((e) => e.id === txn.expense_entry_id) : null;
-            const linkedInvoice = txn.invoice_id ? invoices.find((inv) => inv.id === txn.invoice_id) : null;
+      {/* Transactions table */}
+      <div className="table-container">
+        <table className="table">
+          <thead>
+            <tr>
+              <th style={{ width: "90px" }}>Data</th>
+              <th>Descrição</th>
+              <th style={{ width: "110px" }}>Categoria</th>
+              <th style={{ textAlign: "right", width: "130px" }}>Valor</th>
+              <th style={{ width: "110px" }}>Status</th>
+              <th style={{ width: "90px" }}></th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.length === 0 && (
+              <tr>
+                <td colSpan={6} style={{ textAlign: "center", padding: "48px", color: "var(--text-tertiary)" }}>
+                  {asaasTransactions.length === 0
+                    ? "Nenhuma transação importada. Clique em Sincronizar para importar."
+                    : "Nenhuma transação neste filtro."}
+                </td>
+              </tr>
+            )}
+            {filtered.map((txn, i) => {
+              const isLinked = !!(txn.expense_entry_id || txn.invoice_id);
+              const linkedEntry = txn.expense_entry_id ? expenseEntries.find((e) => e.id === txn.expense_entry_id) : null;
+              const linkedInvoice = txn.invoice_id ? invoices.find((inv) => inv.id === txn.invoice_id) : null;
+              const categoria = txn.type === "CREDIT" ? "Receita" : "Despesa";
 
-            return (
-              <motion.div
-                key={txn.id}
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.02 }}
-                className="glass-card"
-                style={{
-                  padding: "16px 20px",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  gap: "16px",
-                  border: isLinked ? "1px solid rgba(34,197,94,0.15)" : "1px solid var(--border)",
-                  flexWrap: "wrap",
-                }}
-              >
-                <div style={{ flex: 1, minWidth: "200px" }}>
-                  <p style={{ fontWeight: 700, fontSize: "0.925rem", marginBottom: "3px" }}>
-                    {txn.description || txn.id}
-                  </p>
-                  <p style={{ fontSize: "0.75rem", color: "var(--text-tertiary)" }}>
-                    {new Date(`${txn.date}T12:00:00`).toLocaleDateString("pt-BR")} · ID: {txn.id.slice(0, 16)}…
-                  </p>
-                  {isLinked && (
-                    <p style={{ fontSize: "0.75rem", color: "#22C55E", marginTop: "4px", display: "flex", alignItems: "center", gap: "4px" }}>
-                      <CheckCircle2 size={12} />
-                      {linkedEntry ? `Vinculado a: ${linkedEntry.description}` : linkedInvoice ? `Vinculado a: ${linkedInvoice.description}` : "Vinculado"}
-                    </p>
-                  )}
-                </div>
+              return (
+                <motion.tr
+                  key={txn.id}
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.015 }}
+                >
+                  {/* Data */}
+                  <td style={{ color: "var(--text-secondary)", fontSize: "0.875rem", whiteSpace: "nowrap" }}>
+                    {new Date(`${txn.date}T12:00:00`).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit" })}
+                  </td>
 
-                <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-                  <div style={{ textAlign: "right" }}>
-                    <p style={{ fontWeight: 800, fontSize: "1.05rem", color: txn.type === "CREDIT" ? "#22C55E" : "#EF4444" }}>
-                      {txn.type === "DEBIT" ? "- " : "+ "}{formatCurrency(Number(txn.value))}
+                  {/* Descrição + vínculo */}
+                  <td style={{ maxWidth: "280px" }}>
+                    <p style={{ fontWeight: 600, fontSize: "0.875rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {txn.description || "—"}
                     </p>
-                    <p style={{ fontSize: "0.75rem", color: "var(--text-tertiary)" }}>
-                      {txn.type === "CREDIT" ? "Entrada" : "Saída"}
-                    </p>
-                  </div>
+                    {isLinked && (
+                      <p style={{ fontSize: "0.72rem", color: "#22C55E", marginTop: "2px", display: "flex", alignItems: "center", gap: "3px" }}>
+                        <CheckCircle2 size={11} />
+                        {linkedEntry ? linkedEntry.description : linkedInvoice ? linkedInvoice.description : "Vinculado"}
+                      </p>
+                    )}
+                  </td>
 
-                  {!isLinked && (
-                    <button
-                      className="btn btn-secondary"
-                      onClick={() => { setLinkDialog(txn); setLinkTarget(null); }}
-                      style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.8rem", whiteSpace: "nowrap" }}
+                  {/* Categoria */}
+                  <td>
+                    <span
+                      className="badge"
+                      style={{
+                        color: txn.type === "CREDIT" ? "#22C55E" : "#EF4444",
+                        background: txn.type === "CREDIT" ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)",
+                        border: `1px solid ${txn.type === "CREDIT" ? "rgba(34,197,94,0.25)" : "rgba(239,68,68,0.25)"}`,
+                        fontSize: "0.72rem",
+                      }}
                     >
-                      <Link2 size={13} /> Vincular
-                    </button>
-                  )}
-                </div>
-              </motion.div>
-            );
-          })}
-        </div>
-      )}
+                      {categoria}
+                    </span>
+                  </td>
+
+                  {/* Valor */}
+                  <td style={{ textAlign: "right", fontWeight: 700, fontSize: "0.9rem", color: txn.type === "CREDIT" ? "#22C55E" : "#EF4444", whiteSpace: "nowrap" }}>
+                    {txn.type === "DEBIT" ? "−" : "+"} {formatCurrency(Number(txn.value))}
+                  </td>
+
+                  {/* Status vínculo */}
+                  <td>
+                    <span
+                      className="badge"
+                      style={{
+                        fontSize: "0.7rem",
+                        color: isLinked ? "#22C55E" : "#F59E0B",
+                        background: isLinked ? "rgba(34,197,94,0.08)" : "rgba(245,158,11,0.08)",
+                        border: `1px solid ${isLinked ? "rgba(34,197,94,0.2)" : "rgba(245,158,11,0.2)"}`,
+                      }}
+                    >
+                      {isLinked ? "Vinculado" : "Sem vínculo"}
+                    </span>
+                  </td>
+
+                  {/* Ação */}
+                  <td style={{ textAlign: "right" }}>
+                    {!isLinked && (
+                      <button
+                        onClick={() => { setLinkDialog(txn); setLinkTarget(null); }}
+                        style={{ background: "none", border: "none", cursor: "pointer", color: "#F59E0B", padding: "4px", display: "inline-flex" }}
+                        title="Vincular"
+                      >
+                        <Link2 size={15} />
+                      </button>
+                    )}
+                    {isLinked && (
+                      <CheckCircle2 size={15} color="#22C55E" style={{ display: "inline-block", verticalAlign: "middle", opacity: 0.6 }} />
+                    )}
+                  </td>
+                </motion.tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
 
       {/* Link dialog */}
       <DialogShell
