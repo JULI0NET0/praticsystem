@@ -409,10 +409,10 @@ export default function SchedulePage() {
             onChange={setSearchQuery}
             placeholder="Pesquisar..."
           />
-          <Spotlight as="button" className="btn btn-accent" onClick={(e: any) => {
+          <Spotlight as="button" className="btn btn-accent" onClick={(e?: any) => {
             let x = window.innerWidth / 2;
             let y = window.innerHeight / 2;
-            if (pageRef.current) {
+            if (e && e.clientX && pageRef.current) {
               const rect = pageRef.current.getBoundingClientRect();
               x = e.clientX - rect.left;
               y = e.clientY - rect.top;
