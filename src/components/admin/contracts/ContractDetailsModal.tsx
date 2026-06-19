@@ -328,11 +328,11 @@ export default function ContractDetailsModal({ isOpen, onClose, onRenew, contrac
         }
         isFirstPage = false;
 
-        const pageImgData = pageCanvas.toDataURL('image/png');
+        const pageImgData = pageCanvas.toDataURL('image/jpeg', 0.85);
         const renderHeight = (pageCanvas.height / pageCanvas.width) * contentWidth;
 
         // Adiciona a imagem respeitando a margem superior (marginY) e lateral (marginX)
-        pdf.addImage(pageImgData, 'PNG', marginX, marginY, contentWidth, renderHeight);
+        pdf.addImage(pageImgData, 'JPEG', marginX, marginY, contentWidth, renderHeight);
 
         yOffset += pageCanvas.height;
         heightLeft -= pageCanvas.height;

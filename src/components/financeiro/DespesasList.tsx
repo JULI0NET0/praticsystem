@@ -87,6 +87,8 @@ export function DespesasList({ expenses, expenseEntries, users, onSave, onDelete
   const [genStartMonth, setGenStartMonth] = useState(defaultMonth);
   const [genMonths, setGenMonths] = useState(1);
   const [genSaving, setGenSaving] = useState(false);
+  const [baixaEntry, setBaixaEntry] = useState<ExpenseEntry | null>(null);
+  const [baixaDate, setBaixaDate] = useState("");
 
   const totalMensal = expenses
     .filter((e) => e.status === "active" && e.recurrence === "monthly")
@@ -467,7 +469,10 @@ export function DespesasList({ expenses, expenseEntries, users, onSave, onDelete
                           <span style={{ fontSize: "0.72rem", fontWeight: 700, padding: "3px 8px", borderRadius: "6px", color: sc, background: `${sc}18`, border: `1px solid ${sc}30`, flexShrink: 0 }}>{sl}</span>
                           {entry.status === "pending" && (
                             <button
-                              onClick={() => onUpdateEntry(entry.id, { status: "paid" })}
+                              onClick={() => {
+                                setBaixaDate(new Date().toISOString().split("T")[0]);
+                                setBaixaEntry(entry);
+                              }}
                               style={{ background: "none", border: "none", cursor: "pointer", color: "#22C55E", padding: "2px", display: "flex", flexShrink: 0 }}
                               title="Dar baixa"
                             >
@@ -483,6 +488,56 @@ export function DespesasList({ expenses, expenseEntries, users, onSave, onDelete
           </DialogShell>
         );
       })()}
+
+      {/* Baixa dialog */}
+      <DialogShell
+        isOpen={!!baixaEntry}
+        onClose={() => setBaixaEntry(null)}
+        title="Confirmar Pagamento"
+        maxWidth="360px"
+        footer={
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px" }}>
+            <button className="btn btn-secondary" onClick={() => setBaixaEntry(null)}>Cancelar</button>
+            <button
+              className="btn btn-accent"
+              disabled={!baixaDate}
+              onClick={async () => {
+                if (!baixaEntry) return;
+                await onUpdateEntry(baixaEntry.id, { status: "paid", date: baixaDate });
+                setBaixaEntry(null);
+              }}
+            >
+              Confirmar Baixa
+            </button>
+          </div>
+        }
+      >
+        {baixaEntry && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            <div style={{ padding: "14px 16px", background: "rgba(34,197,94,0.05)", border: "1px solid rgba(34,197,94,0.15)", borderRadius: "12px" }}>
+              <p style={{ fontWeight: 700 }}>{baixaEntry.description}</p>
+              <p style={{ fontWeight: 800, color: "#EF4444", fontSize: "1.1rem", marginTop: "4px" }}>
+                {formatCurrency(Number(baixaEntry.amount))}
+              </p>
+            </div>
+            <div>
+              <label style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--text-secondary)", display: "block", marginBottom: "6px" }}>
+                Data do Pagamento
+              </label>
+              <input
+                className="input-dark"
+                style={{ width: "100%" }}
+                type="date"
+                value={baixaDate}
+                onChange={(e) => setBaixaDate(e.target.value)}
+              />
+              <p style={{ fontSize: "0.72rem", color: "var(--text-tertiary)", marginTop: "4px" }}>
+                Padrão: hoje. Altere se o pagamento ocorreu em outra data.
+              </p>
+            </div>
+          </div>
+        )}
+      </DialogShell>
 
       {/* Dialog criar/editar despesa */}
       <DialogShell

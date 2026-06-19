@@ -4,11 +4,11 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, Calendar, Tag, Users, Building2,
   X, Plus, Loader2, Check, Share2, Trash2, UserCircle,
-  BookmarkCheck, User, Printer, FileDown,
+  BookmarkCheck, User, Printer, FileDown, ChevronDown, ChevronUp,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
@@ -34,6 +34,7 @@ export default function NotaDetailPage() {
   const { currentUser, users } = useAuth();
   const { showToast } = useToast();
 
+  const [showMetadata, setShowMetadata] = useState(true);
   const [note, setNote] = useState<NoteState>({
     user_id: '',
     title: '',
@@ -106,13 +107,18 @@ export default function NotaDetailPage() {
   const persist = useCallback(
     async (updated: NoteState) => {
       setSaving(true);
+      let finalSubjects = updated.subjects ? [...updated.subjects] : [];
+      if (currentUser) {
+        finalSubjects = finalSubjects.filter(s => !s.startsWith('_last_edited_by:'));
+        finalSubjects.push(`_last_edited_by:${currentUser.name || 'Usuário'}`);
+      }
       const { error } = await supabase
         .from('notes')
         .update({
           title: updated.title,
           content: updated.content,
           date: updated.date,
-          subjects: updated.subjects,
+          subjects: finalSubjects,
           shared_with: updated.shared_with,
           share_all: updated.share_all,
           pin_to_client: updated.pin_to_client,
@@ -122,10 +128,11 @@ export default function NotaDetailPage() {
       setSaving(false);
       if (!error) {
         setSaved(true);
+        setNote(prev => ({ ...prev, subjects: finalSubjects }));
         setTimeout(() => setSaved(false), 2000);
       }
     },
-    [id],
+    [id, currentUser],
   );
 
   const updateNote = useCallback(
@@ -226,18 +233,18 @@ export default function NotaDetailPage() {
       const { default: jsPDF } = await import('jspdf');
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
-      const imgData   = canvas.toDataURL('image/png');
+      const imgData   = canvas.toDataURL('image/jpeg', 0.85);
       const pdfWidth  = 210;
       const pdfHeight = (canvas.height / canvas.width) * pdfWidth;
       const pageH     = 297;
 
       // +1mm de epsilon para evitar falso multi-página por arredondamento float
       if (pdfHeight <= pageH + 1) {
-        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pageH);
+        pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pageH);
       } else {
         let yOffset = 0;
         while (yOffset < pdfHeight) {
-          pdf.addImage(imgData, 'PNG', 0, -yOffset, pdfWidth, pdfHeight);
+          pdf.addImage(imgData, 'JPEG', 0, -yOffset, pdfWidth, pdfHeight);
           yOffset += pageH;
           if (yOffset < pdfHeight) pdf.addPage();
         }
@@ -412,254 +419,288 @@ export default function NotaDetailPage() {
       transition={{ duration: 0.35 }}
       style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}
     >
-      {/* Top bar */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
-        <Link
-          href="/admin/notas"
-          style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)', textDecoration: 'none', fontSize: '0.875rem' }}
-        >
-          <ArrowLeft size={15} /> Notas
-        </Link>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          {saving && (
-            <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '5px' }}>
-              <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}>
-                <Loader2 size={13} />
-              </motion.div>
-              Salvando
-            </span>
-          )}
-          {saved && (
-            <motion.span
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              style={{ fontSize: '0.78rem', color: '#22c55e', display: 'flex', alignItems: 'center', gap: '5px' }}
-            >
-              <Check size={13} /> Salvo
-            </motion.span>
-          )}
-          <button
-            onClick={handleExport}
-            disabled={exporting}
-            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border)', borderRadius: '8px', cursor: exporting ? 'wait' : 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', padding: '5px 12px', opacity: exporting ? 0.6 : 1 }}
-          >
-            {exporting
-              ? <><motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}><Loader2 size={13} /></motion.div> Gerando PDF...</>
-              : <><Printer size={13} /> Exportar PDF</>
-            }
-          </button>
-          <button
-            onClick={handleExportMarkdown}
-            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', padding: '5px 12px' }}
-            title="Exportar como Markdown (.md)"
-          >
-            <FileDown size={13} /> Exportar MD
-          </button>
-          {isOwner && (
-            <button
-              onClick={() => setIsDeleteModalOpen(true)}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.8rem', padding: '4px 8px', borderRadius: '6px' }}
-            >
-              <Trash2 size={13} /> Excluir
-            </button>
-          )}
-        </div>
-      </div>
-
       {/* Layout */}
-      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 272px', gap: '20px', alignItems: 'start' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%' }}>
 
-        {/* Editor */}
-        <div className="glass-card" style={{ padding: 'clamp(20px, 4vw, 36px)', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          <TitleMention
-            value={note.title}
-            mentions={mentions}
-            onChange={(title, newMentions) => { setMentions(newMentions); updateNote({ title }); }}
-            placeholder="Título da nota..."
-          />
-          <div style={{ height: '1px', background: 'rgba(255,255,255,0.07)' }} />
+        {/* Editor Wrapper */}
+        <div className="glass-card" style={{ padding: isMobile ? '0px 20px 20px 20px' : '0px 36px 36px 36px', display: 'flex', flexDirection: 'column', gap: '20px', position: 'relative' }}>
+          
+          {/* Top bar */}
+          <div style={{
+            position: 'sticky',
+            top: isMobile ? '56px' : '0px',
+            zIndex: 50,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: '12px',
+            background: 'var(--glass-bg)',
+            backdropFilter: 'blur(24px)',
+            WebkitBackdropFilter: 'blur(24px)',
+            padding: isMobile ? '12px 20px' : '16px 36px',
+            margin: isMobile ? '0 -20px 10px -20px' : '0 -36px 10px -36px',
+            borderBottom: '1px solid var(--border)',
+            borderRadius: isMobile ? '12px 12px 0 0' : '16px 16px 0 0',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
+              <Link
+                href="/admin/notas"
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)', textDecoration: 'none', fontSize: '0.875rem', flexShrink: 0 }}
+              >
+                <ArrowLeft size={15} /> Notas
+              </Link>
+              <div style={{ height: '14px', width: '1px', background: 'var(--border)', flexShrink: 0 }} />
+              <span style={{
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                color: 'white',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                opacity: 0.9
+              }}>
+                {note.title || 'Sem título'}
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              {saving && (
+                <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}>
+                    <Loader2 size={13} />
+                  </motion.div>
+                  Salvando
+                </span>
+              )}
+              {saved && (
+                <motion.span
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  style={{ fontSize: '0.78rem', color: '#22c55e', display: 'flex', alignItems: 'center', gap: '5px' }}
+                >
+                  <Check size={13} /> Salvo
+                </motion.span>
+              )}
+              <button
+                onClick={() => setShowMetadata(prev => !prev)}
+                style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', padding: '5px 12px' }}
+                title={showMetadata ? "Ocultar informações da nota" : "Mostrar informações da nota"}
+              >
+                {showMetadata ? <><ChevronUp size={13} /> Ocultar Info</> : <><ChevronDown size={13} /> Mostrar Info</>}
+              </button>
+              <button
+                onClick={handleExport}
+                disabled={exporting}
+                style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border)', borderRadius: '8px', cursor: exporting ? 'wait' : 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', padding: '5px 12px', opacity: exporting ? 0.6 : 1 }}
+              >
+                {exporting
+                  ? <><motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}><Loader2 size={13} /></motion.div> Gerando PDF...</>
+                  : <><Printer size={13} /> Exportar PDF</>
+                }
+              </button>
+              <button
+                onClick={handleExportMarkdown}
+                style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', padding: '5px 12px' }}
+                title="Exportar como Markdown (.md)"
+              >
+                <FileDown size={13} /> Exportar MD
+              </button>
+              {isOwner && (
+                <button
+                  onClick={() => setIsDeleteModalOpen(true)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.8rem', padding: '4px 8px', borderRadius: '6px' }}
+                >
+                  <Trash2 size={13} /> Excluir
+                </button>
+              )}
+            </div>
+          </div>
+
+          <style>{`
+            .sticky-title-container {
+              background: var(--glass-bg) !important;
+              backdrop-filter: blur(24px) !important;
+              -webkit-backdrop-filter: blur(24px) !important;
+              border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            }
+          `}</style>
+
+          {/* Collapsible Metadata Section */}
+          <AnimatePresence initial={false}>
+            {showMetadata && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.25, ease: 'easeInOut' }}
+                style={{ overflow: 'hidden' }}
+              >
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: isMobile ? '1fr' : isOwner ? 'repeat(4, 1fr)' : 'repeat(3, 1fr)',
+                  gap: '16px',
+                  paddingBottom: '20px',
+                  borderBottom: '1px solid rgba(255,255,255,0.07)',
+                  marginBottom: '8px'
+                }}>
+                  {/* Date */}
+                  <SideSection icon={<Calendar size={13} />} label="Data">
+                    <input
+                      type="date"
+                      value={note.date ?? new Date().toISOString().split('T')[0]}
+                      onChange={e => updateNote({ date: e.target.value })}
+                      disabled={!canEdit}
+                      style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: '8px', padding: '7px 10px', color: 'white', fontSize: '0.85rem', outline: 'none' }}
+                    />
+                  </SideSection>
+
+                   {/* Subjects */}
+                  <SideSection icon={<Tag size={13} />} label="Assuntos">
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: (note.subjects ?? []).filter(s => !s.startsWith('_')).length ? '6px' : 0 }}>
+                      {(note.subjects ?? []).filter(s => !s.startsWith('_')).map(s => (
+                        <span key={s} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(217, 72, 15, 0.1)', color: 'var(--accent)', padding: '2px 8px', borderRadius: '20px', fontSize: '0.72rem', fontWeight: 600, border: '1px solid rgba(217, 72, 15, 0.2)' }}>
+                          {s}
+                          {canEdit && (
+                            <button onClick={() => removeSubject(s)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: 0, display: 'flex', lineHeight: 1 }}>
+                              <X size={10} />
+                            </button>
+                          )}
+                        </span>
+                      ))}
+                    </div>
+                    {canEdit && (
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <input
+                          value={newSubject}
+                          onChange={e => setNewSubject(e.target.value)}
+                          onKeyDown={e => e.key === 'Enter' && addSubject()}
+                          placeholder="Novo assunto..."
+                          style={{ flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: '8px', padding: '6px 10px', color: 'white', fontSize: '0.8rem', outline: 'none' }}
+                        />
+                        <button onClick={addSubject} style={{ background: 'var(--accent)', border: 'none', borderRadius: '8px', padding: '6px 10px', color: 'white', cursor: 'pointer' }}>
+                          <Plus size={14} />
+                        </button>
+                      </div>
+                    )}
+                  </SideSection>
+
+                  {/* Share — only owner can change */}
+                  {isOwner ? (
+                    <SideSection icon={<Share2 size={13} />} label="Compartilhar">
+                      <div style={{ display: 'flex', gap: '6px', marginBottom: '8px' }}>
+                        <button
+                          onClick={shareWithAll}
+                          style={{
+                            flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
+                            padding: '6px 8px', borderRadius: '8px', border: '1px solid',
+                            fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
+                            borderColor: note.share_all ? 'var(--accent)' : 'var(--border)',
+                            background: note.share_all ? 'rgba(217, 72, 15, 0.15)' : 'rgba(255,255,255,0.04)',
+                            color: note.share_all ? 'var(--accent)' : 'var(--text-secondary)',
+                          }}
+                        >
+                          <Users size={12} /> Time
+                        </button>
+                        <button
+                          onClick={clearShare}
+                          style={{
+                            flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
+                            padding: '6px 8px', borderRadius: '8px', border: '1px solid',
+                            fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
+                            borderColor: !note.share_all && (note.shared_with ?? []).length === 0 ? 'rgba(255,255,255,0.15)' : 'var(--border)',
+                            background: !note.share_all && (note.shared_with ?? []).length === 0 ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.04)',
+                            color: !note.share_all && (note.shared_with ?? []).length === 0 ? 'white' : 'var(--text-secondary)',
+                          }}
+                        >
+                          <User size={12} /> Só eu
+                        </button>
+                      </div>
+
+                      {!note.share_all && teamMembers.length > 0 && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '80px', overflowY: 'auto', paddingRight: '4px' }}>
+                          {teamMembers.map(user => {
+                            const checked = (note.shared_with ?? []).includes(user.id);
+                            return (
+                              <label key={user.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', padding: '3px 0' }}>
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  onChange={() => toggleUser(user.id)}
+                                  style={{ accentColor: 'var(--accent)', width: '13px', height: '13px', flexShrink: 0 }}
+                                />
+                                <span style={{ fontSize: '0.75rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={user.name}>
+                                  {user.name}
+                                </span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </SideSection>
+                  ) : null}
+
+                  {/* Client */}
+                  <SideSection icon={<Building2 size={13} />} label="Cliente vinculado">
+                    {canEdit ? (
+                      <select
+                        value={note.client_id ?? ''}
+                        onChange={e => updateNote({ client_id: e.target.value || undefined, pin_to_client: false })}
+                        style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: '8px', padding: '7px 10px', color: note.client_id ? 'white' : 'var(--text-secondary)', fontSize: '0.85rem', outline: 'none', cursor: 'pointer' }}
+                      >
+                        <option value="">Nenhum cliente</option>
+                        {clients.map((c, idx) => {
+                          const seq = (c as any).sequential_id || idx + 1;
+                          return (
+                            <option key={c.id} value={c.id}>
+                              {seq} - {c.nome_fantasia || c.name}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    ) : (
+                      <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: 0 }}>
+                        {linkedClient ? (linkedClient.nome_fantasia || linkedClient.name) : '—'}
+                      </p>
+                    )}
+
+                    {note.client_id && canEdit && (
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px', cursor: 'pointer', padding: '6px 8px', borderRadius: '8px', border: '1px solid', transition: 'all 0.15s', borderColor: note.pin_to_client ? 'rgba(217,72,15,0.35)' : 'var(--border)', background: note.pin_to_client ? 'rgba(217,72,15,0.08)' : 'rgba(255,255,255,0.02)' }}>
+                        <BookmarkCheck size={14} color={note.pin_to_client ? 'var(--accent)' : 'var(--text-secondary)'} style={{ flexShrink: 0 }} />
+                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: note.pin_to_client ? 'var(--accent)' : 'white' }}>
+                          Incluir no cadastro
+                        </span>
+                        <input
+                          type="checkbox"
+                          checked={note.pin_to_client}
+                          onChange={e => updateNote({ pin_to_client: e.target.checked })}
+                          style={{ accentColor: 'var(--accent)', width: '13px', height: '13px', marginLeft: 'auto', flexShrink: 0 }}
+                        />
+                      </label>
+                    )}
+                  </SideSection>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Title Area (Static) */}
+          <div style={{
+            margin: '10px 0 5px 0',
+            padding: '0',
+          }}>
+            <TitleMention
+              value={note.title}
+              mentions={mentions}
+              onChange={(title, newMentions) => { setMentions(newMentions); updateNote({ title }); }}
+              placeholder="Título da nota..."
+            />
+          </div>
+
           <BlockEditor
             content={note.content}
             onChange={content => updateNote({ content })}
             editable={canEdit}
           />
-        </div>
-
-        {/* Sidebar */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', position: isMobile ? 'static' : 'sticky', top: '24px' }}>
-
-          {/* Date */}
-          <SideSection icon={<Calendar size={13} />} label="Data">
-            <input
-              type="date"
-              value={note.date ?? new Date().toISOString().split('T')[0]}
-              onChange={e => updateNote({ date: e.target.value })}
-              disabled={!canEdit}
-              style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: '8px', padding: '7px 10px', color: 'white', fontSize: '0.85rem', outline: 'none' }}
-            />
-          </SideSection>
-
-          {/* Subjects */}
-          <SideSection icon={<Tag size={13} />} label="Assuntos">
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: note.subjects?.length ? '10px' : 0 }}>
-              {(note.subjects ?? []).map(s => (
-                <span key={s} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(217, 72, 15, 0.1)', color: 'var(--accent)', padding: '3px 10px', borderRadius: '20px', fontSize: '0.72rem', fontWeight: 600, border: '1px solid rgba(217, 72, 15, 0.2)' }}>
-                  {s}
-                  {canEdit && (
-                    <button onClick={() => removeSubject(s)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: 0, display: 'flex', lineHeight: 1 }}>
-                      <X size={10} />
-                    </button>
-                  )}
-                </span>
-              ))}
-            </div>
-            {canEdit && (
-              <div style={{ display: 'flex', gap: '6px' }}>
-                <input
-                  value={newSubject}
-                  onChange={e => setNewSubject(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && addSubject()}
-                  placeholder="Novo assunto..."
-                  style={{ flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: '8px', padding: '6px 10px', color: 'white', fontSize: '0.8rem', outline: 'none' }}
-                />
-                <button onClick={addSubject} style={{ background: 'var(--accent)', border: 'none', borderRadius: '8px', padding: '6px 10px', color: 'white', cursor: 'pointer' }}>
-                  <Plus size={14} />
-                </button>
-              </div>
-            )}
-          </SideSection>
-
-          {/* Share — only owner can change */}
-          {isOwner && (
-            <SideSection icon={<Share2 size={13} />} label="Compartilhar">
-              {/* Quick buttons */}
-              <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-                <button
-                  onClick={shareWithAll}
-                  style={{
-                    flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-                    padding: '7px 10px', borderRadius: '8px', border: '1px solid',
-                    fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
-                    borderColor: note.share_all ? 'var(--accent)' : 'var(--border)',
-                    background: note.share_all ? 'rgba(217, 72, 15, 0.15)' : 'rgba(255,255,255,0.04)',
-                    color: note.share_all ? 'var(--accent)' : 'var(--text-secondary)',
-                  }}
-                >
-                  <Users size={13} /> Todo o time
-                </button>
-                <button
-                  onClick={clearShare}
-                  style={{
-                    flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-                    padding: '7px 10px', borderRadius: '8px', border: '1px solid',
-                    fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
-                    borderColor: !note.share_all && (note.shared_with ?? []).length === 0 ? 'rgba(255,255,255,0.15)' : 'var(--border)',
-                    background: !note.share_all && (note.shared_with ?? []).length === 0 ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.04)',
-                    color: !note.share_all && (note.shared_with ?? []).length === 0 ? 'white' : 'var(--text-secondary)',
-                  }}
-                >
-                  <User size={13} /> Só eu
-                </button>
-              </div>
-
-              {/* Individual members */}
-              {!note.share_all && teamMembers.length > 0 && (
-                <>
-                  <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    Ou escolha membros
-                  </p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    {teamMembers.map(user => {
-                      const checked = (note.shared_with ?? []).includes(user.id);
-                      return (
-                        <label key={user.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', padding: '5px 0' }}>
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={() => toggleUser(user.id)}
-                            style={{ accentColor: 'var(--accent)', width: '15px', height: '15px', flexShrink: 0 }}
-                          />
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            {user.avatar_url ? (
-                              <img src={user.avatar_url} alt={user.name} style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover' }} />
-                            ) : (
-                              <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'rgba(217,72,15,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                <UserCircle size={14} color="var(--accent)" />
-                              </div>
-                            )}
-                            <div>
-                              <div style={{ fontSize: '0.8rem', fontWeight: 500 }}>{user.name}</div>
-                              <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>@{user.username}</div>
-                            </div>
-                          </div>
-                        </label>
-                      );
-                    })}
-                  </div>
-                </>
-              )}
-
-              {note.share_all && (
-                <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: 0 }}>
-                  Todos os membros do time podem ver e editar esta nota.
-                </p>
-              )}
-            </SideSection>
-          )}
-
-          {/* Client */}
-          <SideSection icon={<Building2 size={13} />} label="Cliente vinculado">
-            {canEdit ? (
-              <select
-                value={note.client_id ?? ''}
-                onChange={e => updateNote({ client_id: e.target.value || undefined, pin_to_client: false })}
-                style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: '8px', padding: '7px 10px', color: note.client_id ? 'white' : 'var(--text-secondary)', fontSize: '0.85rem', outline: 'none', cursor: 'pointer' }}
-              >
-                <option value="">Nenhum cliente</option>
-                {clients.map((c, idx) => {
-                  const seq = (c as any).sequential_id || idx + 1;
-                  return (
-                    <option key={c.id} value={c.id}>
-                      {seq} - {c.nome_fantasia || c.name}
-                    </option>
-                  );
-                })}
-              </select>
-            ) : (
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: 0 }}>
-                {linkedClient ? (linkedClient.nome_fantasia || linkedClient.name) : '—'}
-              </p>
-            )}
-
-            {/* Pin to client record */}
-            {note.client_id && canEdit && (
-              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '12px', cursor: 'pointer', padding: '10px 12px', borderRadius: '10px', border: '1px solid', transition: 'all 0.15s', borderColor: note.pin_to_client ? 'rgba(217,72,15,0.35)' : 'var(--border)', background: note.pin_to_client ? 'rgba(217,72,15,0.08)' : 'rgba(255,255,255,0.02)' }}>
-                <BookmarkCheck size={16} color={note.pin_to_client ? 'var(--accent)' : 'var(--text-secondary)'} style={{ flexShrink: 0 }} />
-                <div>
-                  <div style={{ fontSize: '0.8rem', fontWeight: 600, color: note.pin_to_client ? 'var(--accent)' : 'white' }}>
-                    Incluir no cadastro
-                  </div>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
-                    Aparece na aba Notas do cliente
-                  </div>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={note.pin_to_client}
-                  onChange={e => updateNote({ pin_to_client: e.target.checked })}
-                  style={{ accentColor: 'var(--accent)', width: '15px', height: '15px', marginLeft: 'auto', flexShrink: 0 }}
-                />
-              </label>
-            )}
-
-            {note.client_id && (
-              <Link href={`/admin/clients/${note.client_id}?tab=notas`} style={{ display: 'block', marginTop: '10px', fontSize: '0.75rem', color: 'var(--accent)', textDecoration: 'none' }}>
-                Ver cadastro do cliente →
-              </Link>
-            )}
-          </SideSection>
-
         </div>
       </div>
 
@@ -710,7 +751,8 @@ function PrintOverlay({
   });
 
   const hasClient   = !!linkedClient;
-  const hasMeta     = hasClient || (note.subjects?.length ?? 0) > 0;
+  const visibleSubjects = (note.subjects ?? []).filter(s => !s.startsWith('_'));
+  const hasMeta     = hasClient || visibleSubjects.length > 0;
 
   return (
     <>
@@ -902,7 +944,7 @@ function PrintOverlay({
                     <span style={{ fontSize: '8.5pt', color: '#333', fontWeight: 500 }}>{linkedClient!.nome_fantasia || linkedClient!.name}</span>
                   </div>
                 )}
-                {(note.subjects ?? []).map(s => (
+                {visibleSubjects.map(s => (
                   <div key={s} style={{ display: 'inline-flex', alignItems: 'center', background: '#f4f4f4', border: '0.75px solid #e4e4e4', borderRadius: '4px', padding: '3px 9px', fontSize: '8pt', color: '#555' }}>
                     {s}
                   </div>

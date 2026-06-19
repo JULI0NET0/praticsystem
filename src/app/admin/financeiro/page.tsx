@@ -1,16 +1,17 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Loader2, LayoutDashboard, AlertTriangle, ListOrdered, Wallet, RefreshCw, Users } from "lucide-react";
+import { Loader2, LayoutDashboard, AlertTriangle, ListOrdered, Wallet, RefreshCw, Users, Layers } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { FinancialKPIs } from "@/components/financeiro/FinancialKPIs";
 import { DespesasList } from "@/components/financeiro/DespesasList";
 import { LancamentosTable } from "@/components/financeiro/LancamentosTable";
 import { FluxoCaixa } from "@/components/financeiro/FluxoCaixa";
 import { AsaasSync } from "@/components/financeiro/AsaasSync";
+import { DespesasVariaveis } from "@/components/financeiro/DespesasVariaveis";
 import type { Expense, ExpenseEntry, AsaasTransaction, Invoice } from "@/types/database";
 
-type Tab = "dashboard" | "despesas" | "lancamentos" | "fluxo" | "asaas";
+type Tab = "dashboard" | "despesas" | "lancamentos" | "fluxo" | "asaas" | "variaveis";
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "dashboard", label: "Dashboard", icon: <LayoutDashboard size={16} /> },
@@ -18,6 +19,7 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "lancamentos", label: "Lançamentos", icon: <ListOrdered size={16} /> },
   { id: "fluxo", label: "Fluxo de Caixa", icon: <Wallet size={16} /> },
   { id: "asaas", label: "Asaas", icon: <RefreshCw size={16} /> },
+  { id: "variaveis", label: "Variáveis", icon: <Layers size={16} /> },
 ];
 
 export default function FinanceiroPage() {
@@ -128,6 +130,7 @@ export default function FinanceiroPage() {
     return startMatch && endMatch;
   });
   const despesas = periodEntries.filter((e) => e.status === "paid").reduce((s, e) => s + Number(e.amount), 0);
+  const despesasPrevistas = periodEntries.filter((e) => e.status === "pending").reduce((s, e) => s + Number(e.amount), 0);
 
   const clientesAtivos = contracts.filter((c) => c.status === "active").length;
 
@@ -161,9 +164,15 @@ export default function FinanceiroPage() {
     setExpenses((prev) => prev.map((e) => (e.id === id ? { ...e, status } : e)));
   }
 
-  async function handleCreateEntry(data: Partial<ExpenseEntry>) {
+  async function handleCreateEntry(data: Partial<ExpenseEntry>): Promise<ExpenseEntry | null> {
     const { data: created } = await supabase.from("expense_entries").insert([data]).select("*, expenses(id,description,category)").single();
     if (created) setExpenseEntries((prev) => [created, ...prev]);
+    return created ?? null;
+  }
+
+  async function handleDeleteEntry(id: string) {
+    await supabase.from("expense_entries").delete().eq("id", id);
+    setExpenseEntries((prev) => prev.filter((e) => e.id !== id));
   }
 
   async function handleUpdateEntry(id: string, data: Partial<ExpenseEntry>) {
@@ -274,6 +283,7 @@ export default function FinanceiroPage() {
         faturamentoPrevisto={faturamentoPrevisto}
         faturamentoRealizado={faturamentoRealizado}
         despesas={despesas}
+        despesasPrevistas={despesasPrevistas}
         clientesAtivos={clientesAtivos}
         dateRange={dateRange}
         datePreset={datePreset}
@@ -421,6 +431,8 @@ export default function FinanceiroPage() {
           expenseEntries={expenseEntries}
           asaasTransactions={asaasTransactions}
           clients={clients}
+          users={users}
+          expenses={expenses}
           syncing={syncing}
           onSync={handleSync}
           onLinkTransaction={handleLinkTransaction}
@@ -514,15 +526,35 @@ export default function FinanceiroPage() {
             asaasTransactions={asaasTransactions}
             expenseEntries={expenseEntries}
             invoices={invoices}
+            expenses={expenses}
+            clients={clients}
+            users={users}
             syncing={syncing}
             onSync={handleSync}
             onLink={handleLinkTransaction}
             onUpdateInvoiceStatus={handleUpdateInvoiceStatus}
+            onCreateEntry={handleCreateEntry}
             selectedMonth={selectedMonthForComponents}
             balance={asaasBalance}
             onRefreshBalance={fetchBalance}
           />
         </>
+      )}
+
+      {tab === "variaveis" && (
+        <DespesasVariaveis
+          expenses={expenses}
+          expenseEntries={expenseEntries}
+          clients={clients}
+          users={users}
+          startDate={startDate}
+          endDate={endDate}
+          onSaveGroup={handleSaveExpense}
+          onDeleteGroup={handleDeleteExpense}
+          onCreateEntry={handleCreateEntry}
+          onUpdateEntry={handleUpdateEntry}
+          onDeleteEntry={handleDeleteEntry}
+        />
       )}
     </div>
   );

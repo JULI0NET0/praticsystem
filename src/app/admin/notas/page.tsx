@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, FileText, Loader2, User, Users } from 'lucide-react';
+import { Plus, FileText, Loader2, User, Users, Share2, Globe } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { Note } from '@/types/database';
@@ -12,7 +12,7 @@ import Spotlight from '@/components/Spotlight';
 import { useToast } from '@/components/CustomToast';
 import NoteCard from '@/components/notas/NoteCard';
 
-type Tab = 'mine' | 'shared';
+type Tab = 'mine' | 'shared' | 'team' | 'all';
 
 export default function NotasPage() {
   const { currentUser } = useAuth();
@@ -26,17 +26,10 @@ export default function NotasPage() {
     if (!currentUser) return;
     setLoading(true);
     try {
-      let notesQuery = supabase
+      const notesQuery = supabase
         .from('notes')
         .select('*')
-        .order('updated_at', { ascending: false })
-        .limit(50);
-
-      if (tab === 'mine') {
-        notesQuery = notesQuery.eq('user_id', currentUser.id);
-      } else {
-        notesQuery = notesQuery.neq('user_id', currentUser.id).or(`shared_with.cs.{${currentUser.id}},share_all.eq.true`);
-      }
+        .or(`user_id.eq.${currentUser.id},shared_with.cs.{${currentUser.id}},share_all.eq.true`);
 
       const [notesRes, clientsRes] = await Promise.all([
         notesQuery,
@@ -57,7 +50,7 @@ export default function NotasPage() {
     } finally {
       setLoading(false);
     }
-  }, [currentUser, tab, showToast]);
+  }, [currentUser, showToast]);
 
   useEffect(() => { fetchNotes(); }, [fetchNotes]);
 
@@ -75,10 +68,77 @@ export default function NotasPage() {
     }
   };
 
-  const filteredNotes = notes.filter(n =>
-    n.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    n.subjects?.some(s => s.toLowerCase().includes(searchTerm.toLowerCase())),
-  );
+  const handleTogglePin = async (noteToToggle: any) => {
+    if (!currentUser) return;
+    const isPinned = (noteToToggle.subjects ?? []).includes('_pinned:true');
+    let newSubjects = [...(noteToToggle.subjects ?? [])];
+    if (isPinned) {
+      newSubjects = newSubjects.filter(s => s !== '_pinned:true');
+    } else {
+      newSubjects.push('_pinned:true');
+    }
+    
+    // Atualizar quem alterou
+    newSubjects = newSubjects.filter(s => !s.startsWith('_last_edited_by:'));
+    newSubjects.push(`_last_edited_by:${currentUser.name || 'Usuário'}`);
+
+    try {
+      const { error } = await supabase
+        .from('notes')
+        .update({ subjects: newSubjects })
+        .eq('id', noteToToggle.id);
+
+      if (error) throw error;
+      
+      setNotes(prev =>
+        prev.map(n =>
+          n.id === noteToToggle.id
+            ? { ...n, subjects: newSubjects, updated_at: new Date().toISOString() }
+            : n
+        )
+      );
+      showToast(isPinned ? 'Nota desafixada' : 'Nota fixada no topo', 'success');
+    } catch (err: any) {
+      console.error(err);
+      showToast('Erro ao atualizar fixação: ' + (err.message || ''), 'error');
+    }
+  };
+
+  const tabFiltered = notes.filter(n => {
+    if (tab === 'mine') return n.user_id === currentUser?.id;
+    if (tab === 'shared') return n.user_id !== currentUser?.id && n.shared_with?.includes(currentUser?.id || '');
+    if (tab === 'team') return n.share_all === true;
+    return true; // 'all'
+  });
+
+  const filteredNotes = tabFiltered
+    .filter(n =>
+      n.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      n.subjects?.some(s => !s.startsWith('_') && s.toLowerCase().includes(searchTerm.toLowerCase())),
+    )
+    .sort((a, b) => {
+      const aPinned = (a.subjects ?? []).includes('_pinned:true');
+      const bPinned = (b.subjects ?? []).includes('_pinned:true');
+      if (aPinned && !bPinned) return -1;
+      if (!aPinned && bPinned) return 1;
+      
+      const aTime = new Date(a.updated_at || 0).getTime();
+      const bTime = new Date(b.updated_at || 0).getTime();
+      return bTime - aTime;
+    });
+
+  const getEmptyMessage = () => {
+    switch (tab) {
+      case 'mine':
+        return 'Nenhuma nota criada por você ainda.';
+      case 'shared':
+        return 'Nenhuma nota compartilhada diretamente com você.';
+      case 'team':
+        return 'Nenhuma nota compartilhada com o time.';
+      default:
+        return 'Nenhuma nota disponível.';
+    }
+  };
 
   return (
     <motion.div
@@ -112,7 +172,9 @@ export default function NotasPage() {
           }}>
             {([
               { key: 'mine', label: 'Minhas', icon: User },
-              { key: 'shared', label: 'Compartilhadas', icon: Users },
+              { key: 'shared', label: 'Compartilhadas', icon: Share2 },
+              { key: 'team', label: 'Time', icon: Globe },
+              { key: 'all', label: 'Todas', icon: FileText },
             ] as const).map(t => (
               <button
                 key={t.key}
@@ -145,9 +207,7 @@ export default function NotasPage() {
           <div style={{ textAlign: 'center', padding: '60px 20px' }}>
             <FileText size={48} style={{ opacity: 0.15, marginBottom: '16px', display: 'block', margin: '0 auto 16px' }} />
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
-              {tab === 'mine'
-                ? 'Nenhuma nota ainda. Crie a sua primeira!'
-                : 'Nenhuma nota foi compartilhada com você.'}
+              {getEmptyMessage()}
             </p>
             {tab === 'mine' && (
               <Link href="/admin/notas/create" className="btn btn-accent" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', marginTop: '16px' }}>
@@ -174,6 +234,7 @@ export default function NotasPage() {
                   <NoteCard 
                     note={note} 
                     onDelete={note.user_id === currentUser?.id ? handleDeleteNote : undefined} 
+                    onTogglePin={handleTogglePin}
                   />
                 </motion.div>
               ))}

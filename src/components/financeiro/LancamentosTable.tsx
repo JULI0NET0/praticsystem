@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { ArrowUpRight, ArrowDownRight, RefreshCw, Search, ChevronDown, Link2, Plus, Check, ExternalLink, Pencil } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, RefreshCw, Search, ChevronDown, Link2, Plus, Check, ExternalLink, Pencil, User, Building2 } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import DialogShell from "@/components/DialogShell";
 import type { Invoice, ExpenseEntry, AsaasTransaction, ExpenseCategory } from "@/types/database";
@@ -34,10 +34,12 @@ interface LancamentosTableProps {
   expenseEntries: ExpenseEntry[];
   asaasTransactions: AsaasTransaction[];
   clients: { id: string; name: string; nome_fantasia?: string }[];
+  users: { id: string; name: string }[];
+  expenses: import("@/types/database").Expense[];
   syncing: boolean;
   onSync: (startDate: string, endDate: string) => Promise<void>;
   onLinkTransaction: (asaasId: string, expenseEntryId?: string, invoiceId?: string) => Promise<void>;
-  onCreateEntry: (data: Partial<ExpenseEntry>) => Promise<void>;
+  onCreateEntry: (data: Partial<ExpenseEntry>) => Promise<ExpenseEntry | null>;
   onUpdateEntry: (id: string, data: Partial<ExpenseEntry>) => Promise<void>;
   onUpdateInvoiceStatus?: (id: string, status: string) => Promise<void>;
   startDate: string;
@@ -57,6 +59,7 @@ interface UnifiedEntry {
   asaasTransactionId?: string;
   rawInvoice?: Invoice;
   rawEntry?: ExpenseEntry;
+  responsible: { kind: "cliente" | "funcionario" | "empresa"; label: string };
 }
 
 export function LancamentosTable({
@@ -64,6 +67,8 @@ export function LancamentosTable({
   expenseEntries,
   asaasTransactions,
   clients,
+  users,
+  expenses,
   syncing,
   onSync,
   onLinkTransaction,
@@ -88,6 +93,8 @@ export function LancamentosTable({
   const [editDialog, setEditDialog] = useState<UnifiedEntry | null>(null);
   const [editForm, setEditForm] = useState<Partial<ExpenseEntry>>({});
   const [editSaving, setEditSaving] = useState(false);
+  const [baixaDialog, setBaixaDialog] = useState<UnifiedEntry | null>(null);
+  const [baixaDate, setBaixaDate] = useState("");
 
   const openAsaasLink = async (asaasId: string) => {
     setOpeningAsaas(asaasId);
@@ -111,13 +118,14 @@ export function LancamentosTable({
       if (startDate && d < startDate) continue;
       if (endDate && d > endDate) continue;
       const client = clients.find((c) => c.id === inv.client_id);
+      const clientLabel = client?.nome_fantasia || client?.name || "Cliente";
       const linkedTxn = asaasTransactions.find((t) => t.invoice_id === inv.id);
       const parsed = parseInvoiceDescription(inv.description);
       result.push({
         id: `inv-${inv.id}`,
         date: d,
         description: parsed.description,
-        clientName: client?.nome_fantasia || client?.name,
+        clientName: clientLabel,
         categoryLabel: parsed.categoryLabel,
         amount: Number(inv.amount),
         type: "receita",
@@ -125,6 +133,7 @@ export function LancamentosTable({
         asaasLinked: !!linkedTxn,
         asaasTransactionId: linkedTxn?.id,
         rawInvoice: inv,
+        responsible: { kind: "cliente", label: clientLabel },
       });
     }
 
@@ -134,6 +143,12 @@ export function LancamentosTable({
       if (endDate && d > endDate) continue;
       const linkedTxns = asaasTransactions.filter((t) => t.expense_entry_id === entry.id);
       const cat = entry.category || "outros";
+      const parentExpense = expenses.find((e) => e.id === entry.expense_id);
+      let responsible: UnifiedEntry["responsible"] = { kind: "empresa", label: "Empresa" };
+      if (parentExpense?.related_user_id) {
+        const user = users.find((u) => u.id === parentExpense.related_user_id);
+        if (user) responsible = { kind: "funcionario", label: user.name.split(" ").slice(0, 2).join(" ") };
+      }
       result.push({
         id: `exp-${entry.id}`,
         date: d,
@@ -145,11 +160,12 @@ export function LancamentosTable({
         asaasLinked: linkedTxns.length > 0 || !!entry.asaas_transaction_id,
         asaasTransactionId: entry.asaas_transaction_id || linkedTxns[0]?.id,
         rawEntry: entry,
+        responsible,
       });
     }
 
     return result.sort((a, b) => b.date.localeCompare(a.date));
-  }, [invoices, expenseEntries, asaasTransactions, clients, startDate, endDate]);
+  }, [invoices, expenseEntries, asaasTransactions, clients, users, expenses, startDate, endDate]);
 
   const filtered = useMemo(() => {
     return entries.filter((e) => {
@@ -228,9 +244,21 @@ export function LancamentosTable({
     }
   }
 
-  async function handleMarkExpensePaid(entry: UnifiedEntry) {
-    const entryId = entry.id.replace("exp-", "");
-    await onUpdateEntry(entryId, { status: "paid" });
+  function openBaixaDialog(entry: UnifiedEntry) {
+    const today = new Date().toISOString().split("T")[0];
+    setBaixaDate(today);
+    setBaixaDialog(entry);
+  }
+
+  async function handleBaixaConfirm() {
+    if (!baixaDialog) return;
+    if (baixaDialog.type === "despesa") {
+      const entryId = baixaDialog.id.replace("exp-", "");
+      await onUpdateEntry(entryId, { status: "paid", date: baixaDate });
+    } else {
+      await onUpdateInvoiceStatus?.(baixaDialog.id.replace("inv-", ""), "paid");
+    }
+    setBaixaDialog(null);
   }
 
   async function handleLink() {
@@ -361,6 +389,7 @@ export function LancamentosTable({
             <tr>
               <th style={{ width: "72px" }}>Data</th>
               <th>Descrição</th>
+              <th style={{ width: "130px" }}>Responsável</th>
               <th>Categoria</th>
               <th style={{ textAlign: "right" }}>Valor</th>
               <th style={{ width: "80px" }}></th>
@@ -369,7 +398,7 @@ export function LancamentosTable({
           <tbody>
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={5} style={{ textAlign: "center", padding: "40px", color: "var(--text-tertiary)" }}>
+                <td colSpan={6} style={{ textAlign: "center", padding: "40px", color: "var(--text-tertiary)" }}>
                   Nenhum lançamento encontrado para o período.
                 </td>
               </tr>
@@ -416,6 +445,15 @@ export function LancamentosTable({
                       </span>
                     </div>
                   </div>
+                </td>
+
+                {/* Responsável */}
+                <td>
+                  <span style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "0.75rem", color: entry.responsible.kind === "empresa" ? "var(--text-tertiary)" : "var(--text-secondary)", fontWeight: 600 }}>
+                    {entry.responsible.kind === "funcionario" && <User size={11} />}
+                    {entry.responsible.kind === "cliente" && <Building2 size={11} />}
+                    {entry.responsible.label}
+                  </span>
                 </td>
 
                 {/* Categoria */}
@@ -477,10 +515,7 @@ export function LancamentosTable({
                     {((entry.type === "receita" && entry.status !== "paid") ||
                       (entry.type === "despesa" && entry.status === "pending")) && (
                       <button
-                        onClick={() => {
-                          if (entry.type === "receita") onUpdateInvoiceStatus?.(entry.id.replace("inv-", ""), "paid");
-                          else handleMarkExpensePaid(entry);
-                        }}
+                        onClick={() => openBaixaDialog(entry)}
                         title="Dar Baixa"
                         style={{ background: "none", border: "none", cursor: "pointer", color: "#22C55E", padding: "4px", display: "flex" }}
                       >
@@ -551,7 +586,7 @@ export function LancamentosTable({
                 )}
                 {((entry.type === "receita" && entry.status !== "paid") || (entry.type === "despesa" && entry.status === "pending")) && (
                   <button
-                    onClick={() => { if (entry.type === "receita") onUpdateInvoiceStatus?.(entry.id.replace("inv-", ""), "paid"); else handleMarkExpensePaid(entry); }}
+                    onClick={() => openBaixaDialog(entry)}
                     style={{ background: "none", border: "none", cursor: "pointer", color: "#22C55E", padding: "4px", display: "flex" }} title="Dar Baixa"
                   >
                     <Check size={13} />
@@ -820,6 +855,51 @@ export function LancamentosTable({
             </div>
           )}
         </div>
+      </DialogShell>
+
+      {/* Baixa dialog */}
+      <DialogShell
+        isOpen={!!baixaDialog}
+        onClose={() => setBaixaDialog(null)}
+        title="Confirmar Pagamento"
+        maxWidth="380px"
+        footer={
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px" }}>
+            <button className="btn btn-secondary" onClick={() => setBaixaDialog(null)}>Cancelar</button>
+            <button className="btn btn-accent" onClick={handleBaixaConfirm} disabled={!baixaDate}>
+              Confirmar Baixa
+            </button>
+          </div>
+        }
+      >
+        {baixaDialog && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            <div style={{ padding: "14px 16px", background: "rgba(34,197,94,0.05)", border: "1px solid rgba(34,197,94,0.15)", borderRadius: "12px" }}>
+              <p style={{ fontSize: "0.78rem", color: "var(--text-secondary)", marginBottom: "2px" }}>
+                {baixaDialog.type === "receita" ? "Receita" : "Despesa"}
+              </p>
+              <p style={{ fontWeight: 700, fontSize: "0.95rem" }}>{baixaDialog.description}</p>
+              <p style={{ fontWeight: 800, color: baixaDialog.type === "receita" ? "#22C55E" : "#EF4444", fontSize: "1.1rem", marginTop: "4px" }}>
+                {baixaDialog.type === "despesa" ? "−" : "+"} {formatCurrency(baixaDialog.amount)}
+              </p>
+            </div>
+            <div>
+              <label style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--text-secondary)", display: "block", marginBottom: "6px" }}>
+                Data do Pagamento
+              </label>
+              <input
+                className="input-dark"
+                style={{ width: "100%" }}
+                type="date"
+                value={baixaDate}
+                onChange={(e) => setBaixaDate(e.target.value)}
+              />
+              <p style={{ fontSize: "0.72rem", color: "var(--text-tertiary)", marginTop: "4px" }}>
+                Padrão: hoje. Altere se o pagamento ocorreu em outra data.
+              </p>
+            </div>
+          </div>
+        )}
       </DialogShell>
 
       {/* Link dialog (receita) */}

@@ -29,20 +29,40 @@ const CATEGORIES = [
   { id: 'payment', label: 'Pagamento', color: '#22C55E', icon: Clock },
 ];
 
+const toLocalISOString = (dateInput: any) => {
+  if (!dateInput) return '';
+  const date = new Date(dateInput);
+  if (isNaN(date.getTime())) return '';
+  const offset = date.getTimezoneOffset();
+  const localDate = new Date(date.getTime() - (offset * 60 * 1000));
+  return localDate.toISOString().slice(0, 16);
+};
+
 export default function SchedulePage() {
   const { currentUser } = useAuth();
   const { showToast } = useToast();
   const calendarRef = useRef<any>(null);
+  const pageRef = useRef<HTMLDivElement>(null);
 
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [clients, setClients] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilters, setActiveFilters] = useState<string[]>(CATEGORIES.map(c => c.id));
   const [isMobile, setIsMobile] = useState(false);
+  const [popover, setPopover] = useState<{
+    isOpen: boolean;
+    type: 'details' | 'form';
+    x: number;
+    y: number;
+  }>({
+    isOpen: false,
+    type: 'details',
+    x: 0,
+    y: 0,
+  });
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -54,7 +74,7 @@ export default function SchedulePage() {
   const [formData, setFormData] = useState({
     title: '',
     type: 'meeting',
-    date: new Date().toISOString().slice(0, 16),
+    date: toLocalISOString(new Date()),
     client_id: '',
     visibility: 'public',
     status: 'scheduled',
@@ -67,6 +87,7 @@ export default function SchedulePage() {
   }, []);
 
   const fetchEvents = useCallback(async () => {
+    if (!currentUser) return;
     try {
       setLoading(true);
 
@@ -81,28 +102,33 @@ export default function SchedulePage() {
 
       let invoiceEvents: any[] = [];
       if (currentUser?.role === 'admin' || currentUser?.role === 'board') {
-        const { data: invoices, error: invoiceError } = await supabase
-          .from('invoices')
-          .select('*, clients(name, nome_fantasia)')
-          .order('due_date');
+        const [invoicesRes, clientsRes] = await Promise.all([
+          supabase.from('invoices').select('*').order('due_date'),
+          supabase.from('clients').select('id, name, nome_fantasia')
+        ]);
 
-        if (invoiceError) throw invoiceError;
+        if (invoicesRes.error) throw invoicesRes.error;
 
-        if (invoices) {
-          invoiceEvents = invoices.map(inv => ({
-            id: `inv-${inv.id}`,
-            title: `Pagamento: ${inv.clients?.nome_fantasia || inv.clients?.name || 'Cliente'}`,
-            start: inv.due_date,
-            allDay: true,
-            type: 'payment',
-            color: '#22C55E',
-            extendedProps: {
-              amount: inv.amount,
-              status: inv.status,
-              invoice_id: inv.id,
-              type: 'payment'
-            }
-          }));
+        const localClients = clientsRes.data || [];
+
+        if (invoicesRes.data) {
+          invoiceEvents = invoicesRes.data.map(inv => {
+            const client = localClients.find(c => c.id === inv.client_id);
+            return {
+              id: `inv-${inv.id}`,
+              title: `Pagamento: ${client?.nome_fantasia || client?.name || 'Cliente'}`,
+              start: inv.due_date,
+              allDay: true,
+              type: 'payment',
+              color: '#22C55E',
+              extendedProps: {
+                amount: inv.amount,
+                status: inv.status,
+                invoice_id: inv.id,
+                type: 'payment'
+              }
+            };
+          });
         }
       }
 
@@ -118,8 +144,13 @@ export default function SchedulePage() {
 
       const allEvents = [...formattedAgendaEvents, ...invoiceEvents];
       setEvents(allEvents);
-    } catch (err) {
-      console.error("Erro ao buscar agenda:", err);
+    } catch (err: any) {
+      console.error("Erro ao buscar agenda:", {
+        message: err.message,
+        details: err.details,
+        hint: err.hint,
+        error: err
+      });
       showToast("Erro ao carregar agenda", "error");
     } finally {
       setLoading(false);
@@ -132,31 +163,62 @@ export default function SchedulePage() {
   }, [fetchEvents, fetchClients]);
 
   const handleDateClick = (arg: any) => {
+    let x = window.innerWidth / 2;
+    let y = window.innerHeight / 2;
+    if (arg.jsEvent && pageRef.current) {
+      const rect = pageRef.current.getBoundingClientRect();
+      x = arg.jsEvent.clientX - rect.left;
+      y = arg.jsEvent.clientY - rect.top;
+    }
+
+    const localString = toLocalISOString(arg.date);
+    const dateVal = localString.endsWith('T00:00') ? localString.replace('T00:00', 'T10:00') : localString;
+
     setFormData({
       title: '',
       type: 'meeting',
-      date: arg.dateStr.includes('T') ? arg.dateStr : `${arg.dateStr}T10:00`,
+      date: dateVal,
       client_id: '',
       visibility: 'public',
       status: 'scheduled',
       description: ''
     });
     setSelectedEvent(null);
-    setIsModalOpen(true);
+    setPopover({
+      isOpen: true,
+      type: 'form',
+      x,
+      y
+    });
   };
 
   const handleEventClick = (arg: any) => {
     const event = arg.event;
     setSelectedEvent(event);
 
+    let x = window.innerWidth / 2;
+    let y = window.innerHeight / 2;
+    if (arg.jsEvent && pageRef.current) {
+      const rect = pageRef.current.getBoundingClientRect();
+      x = arg.jsEvent.clientX - rect.left;
+      y = arg.jsEvent.clientY - rect.top;
+    }
+
     setFormData({
       title: event.extendedProps.title || event.title,
       type: event.extendedProps.type,
-      date: new Date(event.start).toISOString().slice(0, 16),
+      date: toLocalISOString(event.start),
       client_id: event.extendedProps.client_id || '',
       visibility: event.extendedProps.visibility || 'public',
       status: event.extendedProps.status || 'scheduled',
       description: event.extendedProps.description || ''
+    });
+
+    setPopover({
+      isOpen: true,
+      type: 'details',
+      x,
+      y
     });
   };
 
@@ -200,7 +262,7 @@ export default function SchedulePage() {
       const eventData = {
         title: formData.title,
         type: formData.type,
-        date: formData.date,
+        date: new Date(formData.date).toISOString(),
         client_id: formData.client_id || null,
         visibility: formData.visibility,
         status: formData.status,
@@ -230,7 +292,7 @@ export default function SchedulePage() {
         await syncToGoogleCalendar(eventData, selectedEvent ? 'update' : 'insert');
       }
 
-      setIsModalOpen(false);
+      setPopover(prev => ({ ...prev, isOpen: false }));
       fetchEvents();
       setSelectedEvent(null);
     } catch (err: any) {
@@ -251,7 +313,7 @@ export default function SchedulePage() {
         .eq('id', selectedEvent.id);
       if (error) throw error;
       showToast("Compromisso excluído", "success");
-      setIsModalOpen(false);
+      setPopover(prev => ({ ...prev, isOpen: false }));
       setSelectedEvent(null);
       fetchEvents();
     } catch (err) {
@@ -313,7 +375,7 @@ export default function SchedulePage() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+    <div id="agenda-page-container" ref={pageRef} style={{ display: 'flex', flexDirection: 'column', gap: '32px', position: 'relative' }}>
       <div className="mobile-stack" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '20px' }}>
         <div>
           <h1 style={{ fontSize: '2rem', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>Agenda</h1>
@@ -347,14 +409,38 @@ export default function SchedulePage() {
             onChange={setSearchQuery}
             placeholder="Pesquisar..."
           />
-          <Spotlight as="button" className="btn btn-accent" onClick={() => { setSelectedEvent(null); setIsModalOpen(true); }} style={{ height: '40px' }}>
+          <Spotlight as="button" className="btn btn-accent" onClick={(e: any) => {
+            let x = window.innerWidth / 2;
+            let y = window.innerHeight / 2;
+            if (pageRef.current) {
+              const rect = pageRef.current.getBoundingClientRect();
+              x = e.clientX - rect.left;
+              y = e.clientY - rect.top;
+            }
+            setSelectedEvent(null);
+            setFormData({
+              title: '',
+              type: 'meeting',
+              date: toLocalISOString(new Date()),
+              client_id: '',
+              visibility: 'public',
+              status: 'scheduled',
+              description: ''
+            });
+            setPopover({
+              isOpen: true,
+              type: 'form',
+              x,
+              y
+            });
+          }} style={{ height: '40px' }}>
             <Plus size={18} /> Novo
           </Spotlight>
         </div>
       </div>
 
-      <div className="agenda-layout">
-        <div className="glass-card" style={{ padding: '24px', backgroundColor: 'var(--bg-secondary)' }}>
+      <div style={{ width: '100%', flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        <div className="glass-card" style={{ padding: isMobile ? '8px 0' : '16px 0', backgroundColor: 'var(--bg-secondary)', flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           <FullCalendar
             ref={calendarRef}
             plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin]}
@@ -362,10 +448,10 @@ export default function SchedulePage() {
             headerToolbar={{
               left: 'prev,today,next',
               center: 'title',
-              right: isMobile ? 'dayGridMonth,dayGridWeek,listWeek' : 'dayGridMonth,dayGridWeek,listWeek'
+              right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
             }}
             views={{
-              dayGridWeek: {
+              timeGridWeek: {
                 dayHeaderFormat: { weekday: 'short', day: 'numeric', omitCommas: true }
               },
               dayGridMonth: {
@@ -387,218 +473,274 @@ export default function SchedulePage() {
             selectMirror={true}
             dayMaxEvents={3}
             weekends={true}
-            height="auto"
+            height="100%"
+            expandRows={true}
             dateClick={handleDateClick}
             eventClick={handleEventClick}
             eventDrop={handleEventDrop}
             eventContent={renderEventContent}
             nowIndicator={true}
-            allDaySlot={false}
+            allDaySlot={true}
+            slotMinTime="07:00"
+            slotMaxTime="22:00"
           />
-        </div>
-
-        <div className="agenda-sidebar">
-          <AnimatePresence mode="wait">
-            {selectedEvent ? (
-              <motion.div
-                key="details"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                className="glass-card"
-                style={{ padding: '24px', position: 'sticky', top: '24px' }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
-                  <div style={{
-                    padding: '12px',
-                    borderRadius: '16px',
-                    backgroundColor: `${CATEGORIES.find(c => c.id === selectedEvent.extendedProps.type)?.color}15`,
-                    color: CATEGORIES.find(c => c.id === selectedEvent.extendedProps.type)?.color,
-                    boxShadow: `0 8px 16px ${CATEGORIES.find(c => c.id === selectedEvent.extendedProps.type)?.color}10`
-                  }}>
-                    {(() => {
-                      const Icon = CATEGORIES.find(c => c.id === selectedEvent.extendedProps.type)?.icon || Info;
-                      return <Icon size={28} />;
-                    })()}
-                  </div>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    {selectedEvent.id.startsWith('inv-') && (
-                      <span style={{
-                        padding: '4px 10px',
-                        borderRadius: '20px',
-                        fontSize: '0.7rem',
-                        fontWeight: 700,
-                        backgroundColor: selectedEvent.extendedProps.status === 'paid' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                        color: selectedEvent.extendedProps.status === 'paid' ? '#22C55E' : '#EF4444',
-                        border: `1px solid ${selectedEvent.extendedProps.status === 'paid' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`
-                      }}>
-                        {selectedEvent.extendedProps.status === 'paid' ? 'PAGO' : 'PENDENTE'}
-                      </span>
-                    )}
-                    <button onClick={() => setSelectedEvent(null)} style={{ color: 'var(--text-tertiary)', padding: '4px' }}><X size={20} /></button>
-                  </div>
-                </div>
-
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '8px' }}>{selectedEvent.title}</h3>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '24px' }}>
-                  {CATEGORIES.find(c => c.id === selectedEvent.extendedProps.type)?.label}
-                </p>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--text-secondary)' }}>
-                    <CalendarIcon size={18} />
-                    <span style={{ fontSize: '0.9rem' }}>{selectedEvent.start.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
-                  </div>
-                  {!selectedEvent.allDay && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--text-secondary)' }}>
-                      <Clock size={18} />
-                      <span style={{ fontSize: '0.9rem' }}>
-                        {selectedEvent.start.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                        {selectedEvent.end && ` - ${selectedEvent.end.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`}
-                      </span>
-                    </div>
-                  )}
-                  {selectedEvent.extendedProps.client_id && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--text-secondary)' }}>
-                      <Users size={18} />
-                      <span style={{ fontSize: '0.9rem' }}>{clients.find(c => c.id === selectedEvent.extendedProps.client_id)?.nome_fantasia || 'Cliente Vinculado'}</span>
-                    </div>
-                  )}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--text-secondary)' }}>
-                    {selectedEvent.extendedProps.visibility === 'public' ? <Shield size={18} color="#22C55E" /> : <ShieldOff size={18} color="#EF4444" />}
-                    <span style={{ fontSize: '0.9rem' }}>{selectedEvent.extendedProps.visibility === 'public' ? 'Visível para todos' : 'Apenas para mim'}</span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--text-secondary)' }}>
-                    {selectedEvent.extendedProps.status === 'completed' ? <CheckCircle2 size={18} color="#22C55E" /> : <Clock size={18} color="#EAB308" />}
-                    <span style={{ fontSize: '0.9rem' }}>{selectedEvent.extendedProps.status === 'completed' ? 'Concluído' : 'Agendado'}</span>
-                  </div>
-                </div>
-
-                {selectedEvent.extendedProps.description && (
-                  <div style={{ marginTop: '24px', padding: '16px', background: 'var(--card-inner-bg)', borderRadius: '12px' }}>
-                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>{selectedEvent.extendedProps.description}</p>
-                  </div>
-                )}
-
-                {!selectedEvent.id.startsWith('inv-') && (
-                  <div style={{ display: 'flex', gap: '12px', marginTop: '32px' }}>
-                    <button
-                      onClick={handleToggleComplete}
-                      className="btn btn-secondary"
-                      style={{ flex: 1, height: '40px', fontSize: '0.85rem' }}
-                    >
-                      {formData.status === 'completed' ? 'Pendente' : 'Concluir'}
-                    </button>
-                    <button
-                      onClick={() => setIsModalOpen(true)}
-                      className="btn btn-secondary"
-                      style={{ padding: '8px' }}
-                    >
-                      <Edit2 size={18} />
-                    </button>
-                    <button
-                      onClick={handleDeleteEvent}
-                      className="btn btn-secondary"
-                      style={{ padding: '8px', color: '#EF4444' }}
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                  </div>
-                )}
-              </motion.div>
-            ) : (
-              <motion.div
-                key="placeholder"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="glass-card"
-                style={{ padding: '32px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px', minHeight: '300px' }}
-              >
-                <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: 'var(--card-inner-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-tertiary)' }}>
-                  <CalendarIcon size={32} />
-                </div>
-                <div>
-                  <h4 style={{ fontWeight: 700, marginBottom: '4px' }}>Nenhum selecionado</h4>
-                  <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Selecione um compromisso para ver os detalhes completos.</p>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </div>
       </div>
 
       <AnimatePresence>
-        {isModalOpen && (
-          <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', backgroundColor: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)' }}>
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="glass-card" style={{ width: '100%', maxWidth: '500px', padding: '32px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: 700 }}>{selectedEvent ? 'Editar' : 'Novo'} Compromisso</h2>
-                <button onClick={() => setIsModalOpen(false)} style={{ color: 'var(--text-secondary)' }}><X size={24} /></button>
-              </div>
+        {popover.isOpen && (() => {
+          const popoverWidth = 380;
+          const isMobilePopover = isMobile;
+          
+          let popStyle: React.CSSProperties = isMobilePopover ? {
+            position: 'fixed',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: '90%',
+            maxWidth: '400px',
+            zIndex: 1000,
+          } : (() => {
+            const containerWidth = pageRef.current ? pageRef.current.clientWidth : window.innerWidth;
+            const containerHeight = pageRef.current ? pageRef.current.clientHeight : window.innerHeight;
+            
+            const popoverHeight = popover.type === 'form' ? 480 : 380; 
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Título</label>
-                  <input type="text" className="input-dark" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} placeholder="Ex: Reunião de Alinhamento..." />
-                </div>
+            let left = popover.x + 15;
+            let top = popover.y + 15;
+            
+            // Se o popover for cortar na direita, abre para a esquerda do clique
+            if (left + popoverWidth > containerWidth) {
+              left = popover.x - popoverWidth - 15;
+            }
+            
+            // Se o popover for cortar embaixo, abre para cima do clique
+            if (top + popoverHeight > containerHeight) {
+              top = popover.y - popoverHeight - 15;
+            }
+            
+            if (left < 12) left = 12;
+            if (top < 12) top = 12;
+            
+            return {
+              position: 'absolute',
+              left: `${left}px`,
+              top: `${top}px`,
+              width: `${popoverWidth}px`,
+              zIndex: 1000,
+            };
+          })();
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Tipo</label>
-                    <select className="input-dark" value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value })}>
-                      {CATEGORIES.filter(c => c.id !== 'payment').map(cat => (
-                        <option key={cat.id} value={cat.id}>{cat.label}</option>
-                      ))}
-                    </select>
+          return (
+            <>
+              <div 
+                onClick={() => { setPopover(prev => ({ ...prev, isOpen: false })); setSelectedEvent(null); }} 
+                style={{
+                  position: 'fixed',
+                  inset: 0,
+                  zIndex: 999,
+                  backgroundColor: isMobilePopover ? 'rgba(0,0,0,0.6)' : 'transparent',
+                  backdropFilter: isMobilePopover ? 'blur(4px)' : 'none',
+                }} 
+              />
+              
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.15 }}
+                className="glass-card agenda-popover"
+                style={{ 
+                  padding: '24px', 
+                  boxShadow: '0 20px 50px rgba(0,0,0,0.45), 0 0 1px rgba(255,255,255,0.15)',
+                  ...popStyle 
+                }}
+              >
+                {popover.type === 'details' && selectedEvent ? (
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+                      <div style={{
+                        padding: '10px',
+                        borderRadius: '12px',
+                        backgroundColor: `${CATEGORIES.find(c => c.id === selectedEvent.extendedProps.type)?.color}15`,
+                        color: CATEGORIES.find(c => c.id === selectedEvent.extendedProps.type)?.color,
+                      }}>
+                        {(() => {
+                          const Icon = CATEGORIES.find(c => c.id === selectedEvent.extendedProps.type)?.icon || Info;
+                          return <Icon size={20} />;
+                        })()}
+                      </div>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        {selectedEvent.id.startsWith('inv-') && (
+                          <span style={{
+                            padding: '2px 8px',
+                            borderRadius: '20px',
+                            fontSize: '0.65rem',
+                            fontWeight: 700,
+                            backgroundColor: selectedEvent.extendedProps.status === 'paid' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                            color: selectedEvent.extendedProps.status === 'paid' ? '#22C55E' : '#EF4444',
+                            border: `1px solid ${selectedEvent.extendedProps.status === 'paid' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`
+                          }}>
+                            {selectedEvent.extendedProps.status === 'paid' ? 'PAGO' : 'PENDENTE'}
+                          </span>
+                        )}
+                        <button onClick={() => { setPopover(prev => ({ ...prev, isOpen: false })); setSelectedEvent(null); }} style={{ color: 'var(--text-tertiary)', padding: '2px' }}><X size={18} /></button>
+                      </div>
+                    </div>
+
+                    <h3 style={{ fontSize: '1.15rem', fontWeight: 700, marginBottom: '4px' }}>{selectedEvent.title}</h3>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginBottom: '16px' }}>
+                      {CATEGORIES.find(c => c.id === selectedEvent.extendedProps.type)?.label}
+                    </p>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-secondary)' }}>
+                        <CalendarIcon size={16} />
+                        <span style={{ fontSize: '0.85rem' }}>{selectedEvent.start.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
+                      </div>
+                      {!selectedEvent.allDay && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-secondary)' }}>
+                          <Clock size={16} />
+                          <span style={{ fontSize: '0.85rem' }}>
+                            {selectedEvent.start.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                            {selectedEvent.end && ` - ${selectedEvent.end.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`}
+                          </span>
+                        </div>
+                      )}
+                      {selectedEvent.extendedProps.client_id && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-secondary)' }}>
+                          <Users size={16} />
+                          <span style={{ fontSize: '0.85rem' }}>{clients.find(c => c.id === selectedEvent.extendedProps.client_id)?.nome_fantasia || 'Cliente Vinculado'}</span>
+                        </div>
+                      )}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-secondary)' }}>
+                        {selectedEvent.extendedProps.visibility === 'public' ? <Shield size={16} color="#22C55E" /> : <ShieldOff size={16} color="#EF4444" />}
+                        <span style={{ fontSize: '0.85rem' }}>{selectedEvent.extendedProps.visibility === 'public' ? 'Visível para todos' : 'Apenas para mim'}</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-secondary)' }}>
+                        {selectedEvent.extendedProps.status === 'completed' ? <CheckCircle2 size={16} color="#22C55E" /> : <Clock size={16} color="#EAB308" />}
+                        <span style={{ fontSize: '0.85rem' }}>{selectedEvent.extendedProps.status === 'completed' ? 'Concluído' : 'Agendado'}</span>
+                      </div>
+                    </div>
+
+                    {selectedEvent.extendedProps.description && (
+                      <div style={{ marginBottom: '20px', padding: '12px', background: 'var(--card-inner-bg)', borderRadius: '8px' }}>
+                        <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{selectedEvent.extendedProps.description}</p>
+                      </div>
+                    )}
+
+                    {!selectedEvent.id.startsWith('inv-') && (
+                      <div style={{ display: 'flex', gap: '10px', borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
+                        <button
+                          onClick={handleToggleComplete}
+                          className="btn btn-secondary"
+                          style={{ flex: 1, height: '36px', fontSize: '0.8rem' }}
+                        >
+                          {formData.status === 'completed' ? 'Pendente' : 'Concluir'}
+                        </button>
+                        <button
+                          onClick={() => setPopover(prev => ({ ...prev, type: 'form' }))}
+                          className="btn btn-secondary"
+                          style={{ padding: '8px', height: '36px' }}
+                        >
+                          <Edit2 size={16} />
+                        </button>
+                        <button
+                          onClick={handleDeleteEvent}
+                          className="btn btn-secondary"
+                          style={{ padding: '8px', color: '#EF4444', height: '36px' }}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    )}
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Data e Hora</label>
-                    <input type="datetime-local" className="input-dark" value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} />
-                  </div>
-                </div>
+                ) : (
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                      <h2 style={{ fontSize: '1.2rem', fontWeight: 700 }}>{selectedEvent ? 'Editar' : 'Novo'} Compromisso</h2>
+                      <button onClick={() => { setPopover(prev => ({ ...prev, isOpen: false })); setSelectedEvent(null); }} style={{ color: 'var(--text-secondary)' }}><X size={20} /></button>
+                    </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Cliente (Opcional)</label>
-                  <select className="input-dark" value={formData.client_id} onChange={e => setFormData({ ...formData, client_id: e.target.value })}>
-                    <option value="">Nenhum</option>
-                    {clients.map(c => <option key={c.id} value={c.id}>{c.nome_fantasia || c.name}</option>)}
-                  </select>
-                </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Título</label>
+                        <input type="text" className="input-dark" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} placeholder="Ex: Reunião de Alinhamento..." style={{ fontSize: '0.85rem', padding: '10px' }} />
+                      </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Observações</label>
-                  <textarea
-                    className="input-dark"
-                    rows={3}
-                    value={formData.description}
-                    onChange={e => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="Adicione detalhes extras..."
-                  />
-                </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Tipo</label>
+                          <select className="input-dark" value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value })} style={{ fontSize: '0.85rem', padding: '10px' }}>
+                            {CATEGORIES.filter(c => c.id !== 'payment').map(cat => (
+                              <option key={cat.id} value={cat.id}>{cat.label}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Data e Hora</label>
+                          <input type="datetime-local" className="input-dark" value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} style={{ fontSize: '0.85rem', padding: '10px' }} />
+                        </div>
+                      </div>
 
-                <div style={{ display: 'flex', gap: '12px', alignItems: 'center', padding: '12px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', flex: 1 }} onClick={() => setFormData({ ...formData, visibility: formData.visibility === 'public' ? 'private' : 'public' })}>
-                    {formData.visibility === 'public' ? <Shield size={20} color="#22C55E" /> : <ShieldOff size={20} color="#EF4444" />}
-                    <div>
-                      <p style={{ fontSize: '0.875rem', fontWeight: 600 }}>{formData.visibility === 'public' ? 'Público' : 'Privado'}</p>
-                      <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{formData.visibility === 'public' ? 'Visível para todos' : 'Apenas para mim'}</p>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Cliente (Opcional)</label>
+                        <select className="input-dark" value={formData.client_id} onChange={e => setFormData({ ...formData, client_id: e.target.value })} style={{ fontSize: '0.85rem', padding: '10px' }}>
+                          <option value="">Nenhum</option>
+                          {clients.map(c => <option key={c.id} value={c.id}>{c.nome_fantasia || c.name}</option>)}
+                        </select>
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Observações</label>
+                        <textarea
+                          className="input-dark"
+                          rows={3}
+                          value={formData.description}
+                          onChange={e => setFormData({ ...formData, description: e.target.value })}
+                          placeholder="Adicione detalhes extras..."
+                          style={{ fontSize: '0.85rem', padding: '10px' }}
+                        />
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '10px', alignItems: 'center', padding: '10px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', flex: 1 }} onClick={() => setFormData({ ...formData, visibility: formData.visibility === 'public' ? 'private' : 'public' })}>
+                          {formData.visibility === 'public' ? <Shield size={18} color="#22C55E" /> : <ShieldOff size={18} color="#EF4444" />}
+                          <div>
+                            <p style={{ fontSize: '0.8rem', fontWeight: 600 }}>{formData.visibility === 'public' ? 'Público' : 'Privado'}</p>
+                            <p style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>{formData.visibility === 'public' ? 'Visível para todos' : 'Apenas para mim'}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
+                        <button className="btn btn-secondary" style={{ flex: 1, height: '36px', fontSize: '0.8rem' }} onClick={() => { setPopover(prev => ({ ...prev, isOpen: false })); setSelectedEvent(null); }}>Cancelar</button>
+                        <button className="btn btn-accent" style={{ flex: 1, height: '36px', fontSize: '0.8rem' }} onClick={handleSaveEvent} disabled={loading}>
+                          {loading ? 'Salvando...' : selectedEvent ? 'Atualizar' : 'Criar'}
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-
-                <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
-                  <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setIsModalOpen(false)}>Cancelar</button>
-                  <button className="btn btn-accent" style={{ flex: 1 }} onClick={handleSaveEvent} disabled={loading}>
-                    {loading ? 'Salvando...' : selectedEvent ? 'Atualizar' : 'Criar'}
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
+                )}
+              </motion.div>
+            </>
+          );
+        })()}
       </AnimatePresence>
 
       <style jsx global>{`
+        @media (min-width: 769px) {
+          #agenda-page-container {
+            height: calc(100vh - 160px) !important;
+          }
+          .fc {
+            height: 100% !important;
+          }
+          .fc-view-harness {
+            flex: 1 !important;
+            height: 100% !important;
+          }
+        }
         .fc {
           --fc-border-color: rgba(255, 255, 255, 0.05);
           --fc-daygrid-event-dot-width: 8px;
@@ -707,6 +849,34 @@ export default function SchedulePage() {
             justify-content: center;
             width: 100%;
           }
+        }
+        .fc-header-toolbar {
+          padding: 0 16px !important;
+        }
+        @media (max-width: 768px) {
+          .fc-header-toolbar {
+            padding: 0 8px !important;
+          }
+        }
+        .admin-content-area {
+          padding: 24px 12px calc(12px + 60px) !important;
+        }
+        .admin-content-area > div {
+          max-width: 100% !important;
+        }
+        @media (max-width: 768px) {
+          .admin-content-area {
+            padding: 12px 6px calc(var(--mobile-nav-height) + 20px) !important;
+          }
+        }
+        .agenda-popover {
+          background: rgba(20, 20, 20, 0.97) !important;
+          backdrop-filter: blur(20px);
+          border: 1px solid rgba(255, 255, 255, 0.15) !important;
+        }
+        [data-theme='light'] .agenda-popover {
+          background: rgba(255, 255, 255, 0.98) !important;
+          border: 1px solid rgba(0, 0, 0, 0.12) !important;
         }
       `}</style>
     </div>

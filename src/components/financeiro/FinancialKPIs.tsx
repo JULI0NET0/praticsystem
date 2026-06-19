@@ -10,6 +10,7 @@ interface FinancialKPIsProps {
   faturamentoPrevisto: number;
   faturamentoRealizado: number;
   despesas: number;
+  despesasPrevistas: number;
   clientesAtivos: number;
   dateRange: { start: string; end: string };
   datePreset: 'all' | 'this_month' | 'prev_month' | 'next_month' | 'custom';
@@ -21,6 +22,7 @@ export function FinancialKPIs({
   faturamentoPrevisto,
   faturamentoRealizado,
   despesas,
+  despesasPrevistas,
   clientesAtivos,
   dateRange,
   datePreset,
@@ -32,7 +34,18 @@ export function FinancialKPIs({
   const ticketMedio = clientesAtivos > 0 ? faturamentoRealizado / clientesAtivos : 0;
   const taxaConversao = faturamentoPrevisto > 0 ? (faturamentoRealizado / faturamentoPrevisto) * 100 : 0;
 
-  const cards = [
+  type KpiCard = {
+    label: string;
+    value: string | null;
+    sub: string | null;
+    icon: React.ReactNode;
+    color: string;
+    bg: string;
+    border: string;
+    splitValues?: { label: string; value: string; color: string }[];
+  };
+
+  const cards: KpiCard[] = [
     {
       label: "Faturamento Previsto",
       value: formatCurrency(faturamentoPrevisto),
@@ -53,12 +66,16 @@ export function FinancialKPIs({
     },
     {
       label: "Despesas",
-      value: formatCurrency(despesas),
+      value: null,
       sub: null,
       icon: <ArrowDownRight size={20} />,
       color: "#EF4444",
       bg: "rgba(239,68,68,0.06)",
       border: "rgba(239,68,68,0.15)",
+      splitValues: [
+        { label: "Pagas", value: formatCurrency(despesas), color: "#EF4444" },
+        { label: "Previstas", value: formatCurrency(despesasPrevistas), color: "#F59E0B" },
+      ],
     },
     {
       label: "Ticket Médio",
@@ -186,9 +203,24 @@ export function FinancialKPIs({
               </span>
               <span style={{ color: card.color, opacity: 0.8 }}>{card.icon}</span>
             </div>
-            <span style={{ fontSize: "1.75rem", fontWeight: 800, color: card.color, letterSpacing: "-0.02em", lineHeight: 1 }}>
-              {card.value}
-            </span>
+            {card.splitValues ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                {card.splitValues.map((sv) => (
+                  <div key={sv.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "8px" }}>
+                    <span style={{ fontSize: "0.7rem", fontWeight: 700, color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                      {sv.label}
+                    </span>
+                    <span style={{ fontSize: "1.15rem", fontWeight: 800, color: sv.color, letterSpacing: "-0.01em" }}>
+                      {sv.value}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <span style={{ fontSize: "1.75rem", fontWeight: 800, color: card.color, letterSpacing: "-0.02em", lineHeight: 1 }}>
+                {card.value}
+              </span>
+            )}
             {card.sub && (
               <span style={{ fontSize: "0.75rem", color: "var(--text-tertiary)", fontWeight: 600 }}>
                 {card.sub}

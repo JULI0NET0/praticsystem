@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import {
   User,
@@ -24,7 +24,12 @@ import {
   Play,
   Square,
   MoreHorizontal,
-  Activity
+  Activity,
+  RotateCcw,
+  SkipForward,
+  Trophy,
+  Pin,
+  FileText
 } from "lucide-react";
 import Spotlight from "@/components/Spotlight";
 import { motion, AnimatePresence } from "framer-motion";
@@ -39,6 +44,7 @@ import { useTimeTracker } from "@/hooks/useTimeTracker";
 const AVAILABLE_WIDGETS = [
   { id: 'stats', title: 'Métricas Rápidas', icon: Zap },
   { id: 'timetracker', title: 'Meu Registro', icon: Timer },
+  { id: 'pomodoro', title: 'Pomodoro', icon: Trophy },
   { id: 'demands', title: 'Minhas Demandas', icon: CheckCircle2 },
   { id: 'notes', title: 'Notas Rápidas', icon: MessageSquare },
   { id: 'links', title: 'Links Úteis', icon: Star },
@@ -60,6 +66,8 @@ export default function WorkspacePage() {
   const EMOJIS = ["☀️", "🌙", "🚀", "🔥", "☕", "💻", "🎨", "📈", "🎯", "✨", "✅", "⚡", "🌟", "🛠️", "📅", "💡", "🧠", "💼", "🤝", "🌈", "🍀", "💎", "🏆", "📣", "📝", "🌍", "🍕", "🦾", "💪", "🏄", "🧘", "🚲"];
   const [demands, setDemands] = useState<any[]>([]);
   const [loadingDemands, setLoadingDemands] = useState(true);
+  const [pomodoroPoints, setPomodoroPoints] = useState(0);
+  const [pomodoroSessionsToday, setPomodoroSessionsToday] = useState(0);
 
   useEffect(() => {
     if (currentUser) {
@@ -81,6 +89,13 @@ export default function WorkspacePage() {
       if (currentUser.workspace_settings?.layout) {
         setWidgets(currentUser.workspace_settings.layout);
       }
+
+      // Pomodoro: reset sessions diariamente
+      const today = new Date().toISOString().split('T')[0];
+      const lastDate = currentUser.workspace_settings?.pomodoro_last_date;
+      const savedSessions = lastDate === today ? (currentUser.workspace_settings?.pomodoro_sessions_today ?? 0) : 0;
+      setPomodoroPoints(currentUser.workspace_settings?.pomodoro_points ?? 0);
+      setPomodoroSessionsToday(savedSessions);
 
       fetchWorkspaceData();
     }
@@ -204,6 +219,26 @@ export default function WorkspacePage() {
     }
   };
 
+  const handlePomodoroComplete = async (newPoints: number, newSessions: number) => {
+    setPomodoroPoints(newPoints);
+    setPomodoroSessionsToday(newSessions);
+    if (!currentUser) return;
+    const today = new Date().toISOString().split('T')[0];
+    try {
+      await supabase.from('users').update({
+        workspace_settings: {
+          ...currentUser.workspace_settings,
+          pomodoro_points: newPoints,
+          pomodoro_sessions_today: newSessions,
+          pomodoro_last_date: today,
+        }
+      }).eq('id', currentUser.id);
+      showToast(`+10 pts! 🍅 Pomodoro ${newSessions} concluído!`, "success");
+    } catch (err) {
+      console.error('Erro ao salvar pomodoro:', err);
+    }
+  };
+
   const applyPreset = (presetKey: keyof typeof PRESETS) => {
     setWidgets(PRESETS[presetKey]);
   };
@@ -212,9 +247,16 @@ export default function WorkspacePage() {
     setWidgets(widgets.filter(w => w.id !== id));
   };
 
+  const WIDGET_DEFAULTS: Record<string, { colSpan: number; rowSpan: number }> = {
+    pomodoro: { colSpan: 4, rowSpan: 3 },
+    timetracker: { colSpan: 4, rowSpan: 2 },
+    team: { colSpan: 3, rowSpan: 2 },
+  };
+
   const addWidget = (id: string) => {
     if (!widgets.find(w => w.id === id)) {
-      setWidgets([...widgets, { id, colSpan: 6, rowSpan: 1 }]);
+      const defaults = WIDGET_DEFAULTS[id] ?? { colSpan: 6, rowSpan: 1 };
+      setWidgets([...widgets, { id, ...defaults }]);
     }
     setIsAddModalOpen(false);
   };
@@ -467,6 +509,7 @@ export default function WorkspacePage() {
             <motion.div
               layout
               key={w.id}
+              data-widget={w.id}
               drag={isEditing}
               dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
               dragElastic={0.1}
@@ -522,8 +565,9 @@ export default function WorkspacePage() {
                 <div style={{ opacity: isEditing ? 0.3 : 1, transition: 'opacity 0.3s', flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                   {w.id === 'stats' && <StatsWidget colSpan={w.colSpan} demandsCount={demands.length} todayHours={todayHours} isTracking={isTracking} onTimerToggle={isTracking ? clockOut : clockIn} />}
                   {w.id === 'timetracker' && <TimeTrackerWidget isTracking={isTracking} todayHours={todayHours} todayMinutes={todayMinutes} currentSession={currentSession} clockIn={clockIn} clockOut={clockOut} />}
+                  {w.id === 'pomodoro' && <PomodoroWidget totalPoints={pomodoroPoints} sessionsToday={pomodoroSessionsToday} onSessionComplete={handlePomodoroComplete} />}
                   {w.id === 'demands' && <DemandsWidget demands={demands} loading={loadingDemands} />}
-                  {w.id === 'notes' && <NotesWidget myNote={myNote} setMyNote={setMyNote} />}
+                  {w.id === 'notes' && <NotesWidget />}
                   {w.id === 'links' && <LinksWidget />}
                   {w.id === 'team' && <TeamWidget isUserOnline={isUserOnline} onlineUsers={onlineUsers} />}
                 </div>
@@ -773,6 +817,307 @@ function TimeTrackerWidget({ isTracking, todayHours, todayMinutes, currentSessio
   );
 }
 
+const POMODORO_LEVELS = [
+  { min: 0,    max: 99,   label: 'Iniciante', emoji: '🌱' },
+  { min: 100,  max: 299,  label: 'Focado',    emoji: '🔥' },
+  { min: 300,  max: 599,  label: 'Produtivo', emoji: '⚡' },
+  { min: 600,  max: 999,  label: 'Expert',    emoji: '🏆' },
+  { min: 1000, max: Infinity, label: 'Mestre', emoji: '💎' },
+];
+
+function getPomodoroLevel(points: number) {
+  return POMODORO_LEVELS.find(l => points >= l.min && points <= l.max) ?? POMODORO_LEVELS[0];
+}
+
+function PomodoroWidget({ totalPoints, sessionsToday, onSessionComplete }: {
+  totalPoints: number;
+  sessionsToday: number;
+  onSessionComplete: (newPoints: number, newSessions: number) => void;
+}) {
+  const WORK_TIME = 25 * 60;
+  const BREAK_TIME = 5 * 60;
+
+  const [mode, setMode] = useState<'work' | 'break'>('work');
+  const [timeLeft, setTimeLeft] = useState(WORK_TIME);
+  const [isRunning, setIsRunning] = useState(false);
+  const [localPoints, setLocalPoints] = useState(totalPoints);
+  const [localSessions, setLocalSessions] = useState(sessionsToday);
+  const [justCompleted, setJustCompleted] = useState(false);
+
+  const pointsRef = useRef(totalPoints);
+  const sessionsRef = useRef(sessionsToday);
+  const modeRef = useRef<'work' | 'break'>('work');
+  const onCompleteRef = useRef(onSessionComplete);
+
+  useEffect(() => { pointsRef.current = localPoints; }, [localPoints]);
+  useEffect(() => { sessionsRef.current = localSessions; }, [localSessions]);
+  useEffect(() => { modeRef.current = mode; }, [mode]);
+  useEffect(() => { onCompleteRef.current = onSessionComplete; }, [onSessionComplete]);
+
+  useEffect(() => { setLocalPoints(totalPoints); pointsRef.current = totalPoints; }, [totalPoints]);
+  useEffect(() => { setLocalSessions(sessionsToday); sessionsRef.current = sessionsToday; }, [sessionsToday]);
+
+  useEffect(() => {
+    if (!isRunning) return;
+    const interval = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          setIsRunning(false);
+          setJustCompleted(true);
+          if (modeRef.current === 'work') {
+            const newPoints = pointsRef.current + 10;
+            const newSessions = sessionsRef.current + 1;
+            setLocalPoints(newPoints);
+            setLocalSessions(newSessions);
+            onCompleteRef.current(newPoints, newSessions);
+          }
+          setTimeout(() => {
+            setJustCompleted(false);
+            if (modeRef.current === 'work') {
+              setMode('break');
+              setTimeLeft(BREAK_TIME);
+              modeRef.current = 'break';
+            } else {
+              setMode('work');
+              setTimeLeft(WORK_TIME);
+              modeRef.current = 'work';
+            }
+          }, 2500);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [isRunning]);
+
+  const switchMode = (newMode: 'work' | 'break') => {
+    if (isRunning) return;
+    setMode(newMode);
+    setTimeLeft(newMode === 'work' ? WORK_TIME : BREAK_TIME);
+  };
+
+  const reset = () => {
+    setIsRunning(false);
+    setTimeLeft(mode === 'work' ? WORK_TIME : BREAK_TIME);
+  };
+
+  const skip = () => {
+    if (isRunning) return;
+    const next = mode === 'work' ? 'break' : 'work';
+    setMode(next);
+    setTimeLeft(next === 'work' ? WORK_TIME : BREAK_TIME);
+  };
+
+  const total = mode === 'work' ? WORK_TIME : BREAK_TIME;
+  const progress = (total - timeLeft) / total;
+  const radius = 54;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference * (1 - progress);
+
+  const minutes = Math.floor(timeLeft / 60);
+  const seconds = timeLeft % 60;
+  const modeColor = mode === 'work' ? '#EF4444' : '#22C55E';
+  const level = getPomodoroLevel(localPoints);
+  const nextLevel = POMODORO_LEVELS.find(l => l.min > localPoints);
+  const progressToNext = nextLevel ? ((localPoints - level.min) / (nextLevel.min - level.min)) * 100 : 100;
+
+  return (
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+        <h3 style={{ fontSize: '1.1rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+          🍅 Pomodoro
+        </h3>
+        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '4px',
+            background: 'rgba(234,179,8,0.1)', border: '1px solid rgba(234,179,8,0.2)',
+            padding: '3px 9px', borderRadius: '10px'
+          }}>
+            <span style={{ fontSize: '0.8rem' }}>⭐</span>
+            <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#EAB308' }}>{localPoints} pts</span>
+          </div>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '4px',
+            background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)',
+            padding: '3px 9px', borderRadius: '10px'
+          }}>
+            <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
+              {localSessions} hoje
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Level bar */}
+      <div style={{ marginBottom: '14px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
+          <span style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            {level.emoji} {level.label}
+          </span>
+          {nextLevel && (
+            <span style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)' }}>
+              {nextLevel.min - localPoints} pts para {nextLevel.emoji}
+            </span>
+          )}
+        </div>
+        <div style={{ height: '4px', background: 'rgba(255,255,255,0.06)', borderRadius: '4px', overflow: 'hidden' }}>
+          <motion.div
+            animate={{ width: `${progressToNext}%` }}
+            transition={{ duration: 0.6, ease: 'easeOut' }}
+            style={{ height: '100%', background: '#EAB308', borderRadius: '4px' }}
+          />
+        </div>
+      </div>
+
+      {/* Mode toggle */}
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+        {(['work', 'break'] as const).map(m => (
+          <button
+            key={m}
+            onClick={() => switchMode(m)}
+            style={{
+              flex: 1, padding: '7px', borderRadius: '10px', fontSize: '0.72rem', fontWeight: 700,
+              background: mode === m ? (m === 'work' ? 'rgba(239,68,68,0.15)' : 'rgba(34,197,94,0.15)') : 'rgba(255,255,255,0.03)',
+              color: mode === m ? (m === 'work' ? '#EF4444' : '#22C55E') : 'var(--text-secondary)',
+              border: `1px solid ${mode === m ? (m === 'work' ? 'rgba(239,68,68,0.3)' : 'rgba(34,197,94,0.3)') : 'var(--border)'}`,
+              cursor: isRunning ? 'not-allowed' : 'pointer',
+              transition: 'all 0.2s', opacity: isRunning && mode !== m ? 0.5 : 1
+            }}
+          >
+            {m === 'work' ? '🎯 Foco 25min' : '☕ Pausa 5min'}
+          </button>
+        ))}
+      </div>
+
+      {/* Circular timer */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '20px' }}>
+        <div style={{ position: 'relative' }}>
+          <svg width="148" height="148" viewBox="0 0 148 148">
+            <circle cx="74" cy="74" r={radius} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="8" />
+            <circle
+              cx="74" cy="74" r={radius}
+              fill="none"
+              stroke={justCompleted ? '#EAB308' : modeColor}
+              strokeWidth="8"
+              strokeLinecap="round"
+              strokeDasharray={circumference}
+              strokeDashoffset={strokeDashoffset}
+              style={{ transform: 'rotate(-90deg)', transformOrigin: '74px 74px', transition: 'stroke-dashoffset 1s linear, stroke 0.3s ease' }}
+            />
+          </svg>
+
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            <AnimatePresence mode="wait">
+              {justCompleted ? (
+                <motion.div
+                  key="done"
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0, opacity: 0 }}
+                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}
+                >
+                  <span style={{ fontSize: '2.2rem' }}>{mode === 'work' ? '🎉' : '💪'}</span>
+                  <span style={{ fontSize: '0.6rem', fontWeight: 800, color: '#EAB308', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    {mode === 'work' ? '+10 pts!' : 'Boa!'}
+                  </span>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="timer"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  style={{ textAlign: 'center' }}
+                >
+                  <div style={{
+                    fontFamily: 'monospace', fontSize: '2rem', fontWeight: 900,
+                    color: 'var(--text-primary)', lineHeight: 1
+                  }}>
+                    {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
+                  </div>
+                  <div style={{ fontSize: '0.58rem', color: modeColor, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: '4px' }}>
+                    {mode === 'work' ? 'Foco' : 'Pausa'}
+                    {isRunning && <span style={{ marginLeft: '4px', opacity: 0.7 }}>• ao vivo</span>}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+
+        {/* Controls */}
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <button
+            onClick={reset}
+            title="Reiniciar"
+            style={{
+              width: '40px', height: '40px', borderRadius: '12px',
+              background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)',
+              color: 'var(--text-secondary)', display: 'flex', alignItems: 'center',
+              justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s'
+            }}
+          >
+            <RotateCcw size={16} />
+          </button>
+
+          <button
+            onClick={() => setIsRunning(r => !r)}
+            title={isRunning ? 'Pausar' : 'Iniciar'}
+            style={{
+              width: '58px', height: '58px', borderRadius: '18px',
+              background: modeColor, border: 'none',
+              color: 'white', display: 'flex', alignItems: 'center',
+              justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s',
+              boxShadow: `0 0 24px ${modeColor}50`
+            }}
+          >
+            {isRunning ? <Square size={22} fill="currentColor" /> : <Play size={22} fill="currentColor" />}
+          </button>
+
+          <button
+            onClick={skip}
+            disabled={isRunning}
+            title="Pular fase"
+            style={{
+              width: '40px', height: '40px', borderRadius: '12px',
+              background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)',
+              color: 'var(--text-secondary)', display: 'flex', alignItems: 'center',
+              justifyContent: 'center', cursor: isRunning ? 'not-allowed' : 'pointer',
+              transition: 'all 0.2s', opacity: isRunning ? 0.4 : 1
+            }}
+          >
+            <SkipForward size={16} />
+          </button>
+        </div>
+
+        {/* Sessions row */}
+        <div style={{ display: 'flex', gap: '6px' }}>
+          {Array.from({ length: Math.min(localSessions, 8) }).map((_, i) => (
+            <div
+              key={i}
+              style={{
+                width: '10px', height: '10px', borderRadius: '50%',
+                background: '#EF4444', boxShadow: '0 0 6px rgba(239,68,68,0.5)'
+              }}
+            />
+          ))}
+          {localSessions > 8 && (
+            <span style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)', fontWeight: 700, alignSelf: 'center' }}>
+              +{localSessions - 8}
+            </span>
+          )}
+          {localSessions === 0 && (
+            <span style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)' }}>Complete sessões para ganhar pontos</span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function DemandsWidget({ demands, loading }: { demands: any[], loading: boolean }) {
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -850,43 +1195,143 @@ function DemandsWidget({ demands, loading }: { demands: any[], loading: boolean 
   );
 }
 
-function NotesWidget({ myNote, setMyNote }: any) {
-  const [isSaving, setIsSaving] = useState(false);
+function NotesWidget() {
+  const { currentUser } = useAuth();
+  const [notes, setNotes] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      // Aqui simularia o salvamento automático
-      setIsSaving(false);
-    }, 1000);
-    return () => clearTimeout(timer);
-  }, [myNote]);
+    if (!currentUser) return;
+    const fetchNotes = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('notes')
+          .select('id, title, content, subjects, updated_at')
+          .or(`user_id.eq.${currentUser.id},shared_with.cs.{${currentUser.id}},share_all.eq.true`)
+          .order('updated_at', { ascending: false })
+          .limit(5);
+
+        if (!error && data) {
+          const sorted = data.sort((a, b) => {
+            const aPinned = (a.subjects ?? []).includes('_pinned:true');
+            const bPinned = (b.subjects ?? []).includes('_pinned:true');
+            if (aPinned && !bPinned) return -1;
+            if (!aPinned && bPinned) return 1;
+            return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+          });
+          setNotes(sorted);
+        }
+      } catch (err) {
+        console.error('Erro no widget de notas:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchNotes();
+  }, [currentUser]);
+
+  const getPreviewText = (content: any): string => {
+    if (!content) return '';
+    const extractText = (node: any): string => {
+      if (!node) return '';
+      if (node.text) return node.text;
+      if (Array.isArray(node.content)) return node.content.map(extractText).join('');
+      return '';
+    };
+    const blocks: any[] = Array.isArray(content) ? content : content.content ?? [];
+    for (const block of blocks) {
+      const text = extractText(block).trim();
+      if (text) return text.slice(0, 80);
+    }
+    return '';
+  };
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-        <h3 style={{ fontSize: '1.1rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <MessageSquare size={18} color="var(--accent)" /> Notas Rápidas
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '14px', overflow: 'hidden' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h3 style={{ fontSize: '1.05rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+          <MessageSquare size={16} color="var(--accent)" /> Notas do Workspace
         </h3>
-        {isSaving && <span style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)' }}>Salvando...</span>}
+        <Link href="/admin/notas/create">
+          <button style={{
+            display: 'flex', alignItems: 'center', gap: '4px',
+            background: 'rgba(217, 72, 15, 0.1)', color: 'var(--accent)',
+            border: '1px solid rgba(217, 72, 15, 0.2)', borderRadius: '8px',
+            padding: '4px 10px', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer',
+            transition: 'all 0.2s'
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.background = 'var(--accent)';
+            e.currentTarget.style.color = 'white';
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.background = 'rgba(217, 72, 15, 0.1)';
+            e.currentTarget.style.color = 'var(--accent)';
+          }}
+          >
+            <Plus size={12} /> Nova Nota
+          </button>
+        </Link>
       </div>
-      <textarea
-        value={myNote}
-        onChange={(e) => { setMyNote(e.target.value); setIsSaving(true); }}
-        className="input-dark"
-        style={{
-          flex: 1,
-          fontSize: '0.9rem',
-          resize: 'none',
-          minHeight: '100px',
-          background: 'rgba(255,255,255,0.02)',
-          border: '1px solid var(--border)',
-          borderRadius: '16px',
-          padding: '16px',
-          color: 'var(--text-primary)',
-          lineHeight: '1.6'
-        }}
-        placeholder="Escreva algo aqui..."
-      />
+
+      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', paddingRight: '4px' }}>
+        {loading ? (
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', padding: '20px' }}>
+            <Loader2 size={20} className="animate-spin" color="var(--accent)" />
+          </div>
+        ) : notes.length === 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%', gap: '8px', opacity: 0.5, textAlign: 'center', padding: '20px' }}>
+            <FileText size={24} />
+            <span style={{ fontSize: '0.8rem' }}>Nenhuma nota encontrada</span>
+          </div>
+        ) : (
+          notes.map(note => {
+            const isPinned = (note.subjects ?? []).includes('_pinned:true');
+            const previewText = getPreviewText(note.content);
+            return (
+              <div
+                key={note.id}
+                onClick={() => router.push(`/admin/notas/${note.id}`)}
+                style={{
+                  padding: '12px 14px',
+                  borderRadius: '12px',
+                  background: 'rgba(255,255,255,0.02)',
+                  border: '1px solid var(--border)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '4px',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.borderColor = 'rgba(217, 72, 15, 0.25)';
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.borderColor = 'var(--border)';
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.02)';
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                  <span style={{ fontWeight: 600, fontSize: '0.85rem', color: 'white', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {note.title || 'Sem título'}
+                  </span>
+                  {isPinned && <Pin size={11} color="var(--accent)" style={{ flexShrink: 0 }} />}
+                </div>
+                {previewText && (
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', lineHeight: 1.4 }}>
+                    {previewText}
+                  </span>
+                )}
+                <span style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)', marginTop: '2px' }}>
+                  Atualizado em {new Date(note.updated_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                </span>
+              </div>
+            );
+          })
+        )}
+      </div>
     </div>
   );
 }

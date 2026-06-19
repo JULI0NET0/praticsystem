@@ -20,6 +20,9 @@ export interface UserProfile {
     layout?: any[];
     greeting?: string;
     status?: string;
+    pomodoro_points?: number;
+    pomodoro_sessions_today?: number;
+    pomodoro_last_date?: string;
   };
 }
 

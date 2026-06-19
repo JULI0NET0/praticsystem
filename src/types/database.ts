@@ -170,6 +170,7 @@ export interface Expense {
   due_day?: number;
   recurrence: ExpenseRecurrence;
   status: 'active' | 'inactive';
+  type: 'fixed' | 'variable';
   related_user_id?: string;
   notes?: string;
   created_at: string;

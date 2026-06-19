@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Calendar, BookmarkCheck, Trash2 } from 'lucide-react';
+import { Calendar, BookmarkCheck, Trash2, Pin } from 'lucide-react';
 
 export interface NoteCardData {
   id: string;
@@ -38,16 +38,33 @@ function getPreviewText(content: any): string {
 function formatDate(str?: string): string {
   if (!str) return '';
   return new Date(str).toLocaleDateString('pt-BR', {
-    day: '2-digit', month: 'short', year: 'numeric',
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit'
   });
 }
 
-export default function NoteCard({ note, onClick, onDelete }: { note: NoteCardData; onClick?: () => void; onDelete?: (note: NoteCardData) => void }) {
+export default function NoteCard({
+  note,
+  onClick,
+  onDelete,
+  onTogglePin
+}: {
+  note: NoteCardData;
+  onClick?: () => void;
+  onDelete?: (note: NoteCardData) => void;
+  onTogglePin?: (note: NoteCardData) => void;
+}) {
   const preview = getPreviewText(note.content);
   const clientName = note.client
     ? note.client.nome_fantasia || note.client.name
     : null;
   const dateStr = note.updated_at || note.created_at || note.date;
+
+  const subjects = (note.subjects ?? []).filter(s => !s.startsWith('_'));
+  const isPinned = (note.subjects ?? []).some(s => s === '_pinned:true');
+  const lastEditedBy = (note.subjects ?? [])
+    .find(s => s.startsWith('_last_edited_by:'))
+    ?.replace('_last_edited_by:', '');
 
   const inner = (
       <div
@@ -64,6 +81,7 @@ export default function NoteCard({ note, onClick, onDelete }: { note: NoteCardDa
           flexDirection: 'column',
           gap: '10px',
           transition: 'border-color 0.2s, transform 0.2s',
+          position: 'relative',
         }}
         onMouseEnter={e => {
           (e.currentTarget as HTMLElement).style.borderColor = 'rgba(217, 72, 15, 0.35)';
@@ -83,6 +101,9 @@ export default function NoteCard({ note, onClick, onDelete }: { note: NoteCardDa
           }}>
             {note.title || 'Sem título'}
           </h3>
+          {isPinned && !onTogglePin && (
+            <Pin size={13} color="var(--accent)" style={{ flexShrink: 0, marginTop: '2px', opacity: 0.8 }} />
+          )}
           {note.pin_to_client && (
             <BookmarkCheck size={14} color="var(--accent)" style={{ flexShrink: 0, marginTop: '2px', opacity: 0.8 }} />
           )}
@@ -107,9 +128,9 @@ export default function NoteCard({ note, onClick, onDelete }: { note: NoteCardDa
         )}
 
         {/* Subjects */}
-        {(note.subjects ?? []).length > 0 && (
+        {subjects.length > 0 && (
           <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
-            {(note.subjects ?? []).slice(0, 3).map(s => (
+            {subjects.slice(0, 3).map(s => (
               <span key={s} style={{
                 fontSize: '0.68rem', fontWeight: 600,
                 background: 'rgba(217, 72, 15, 0.1)', color: 'var(--accent)',
@@ -128,15 +149,54 @@ export default function NoteCard({ note, onClick, onDelete }: { note: NoteCardDa
           marginTop: 'auto', paddingTop: '8px',
           borderTop: '1px solid rgba(255,255,255,0.05)',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
-            <Calendar size={11} />
-            {formatDate(dateStr)}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <Calendar size={11} />
+              {formatDate(dateStr)}
+            </div>
+            {lastEditedBy && (
+              <div style={{ fontSize: '0.68rem', opacity: 0.8, color: 'var(--text-tertiary)' }}>
+                Por: {lastEditedBy}
+              </div>
+            )}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             {clientName && (
               <span style={{ fontSize: '0.72rem', color: 'var(--accent)', fontWeight: 600 }}>
                 {clientName}
               </span>
+            )}
+            {onTogglePin && (
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onTogglePin(note);
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '4px',
+                  borderRadius: '4px',
+                  color: isPinned ? 'var(--accent)' : 'var(--text-secondary)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'color 0.15s, background 0.15s',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = 'var(--accent)';
+                  e.currentTarget.style.background = 'rgba(217, 72, 15, 0.1)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = isPinned ? 'var(--accent)' : 'var(--text-secondary)';
+                  e.currentTarget.style.background = 'none';
+                }}
+                title={isPinned ? 'Desafixar nota' : 'Fixar nota no topo'}
+              >
+                <Pin size={13} style={{ transform: isPinned ? 'none' : 'rotate(-45deg)' }} />
+              </button>
             )}
             {onDelete && (
               <button

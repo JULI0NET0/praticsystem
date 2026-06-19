@@ -562,6 +562,10 @@ select {
   .workspace-widget-grid .glass-card {
     min-height: 160px;
   }
+  /* Pomodoro precisa de mais espaço vertical no mobile */
+  .workspace-widget-grid [data-widget="pomodoro"] .glass-card {
+    min-height: 420px;
+  }
 }
 
 /* =============================================
