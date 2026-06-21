@@ -68,6 +68,7 @@ export function AsaasSync({
   const [autoLinking, setAutoLinking] = useState(false);
 
   const [refreshingBalance, setRefreshingBalance] = useState(false);
+  const [hoveredVinculo, setHoveredVinculo] = useState<string | null>(null);
 
   const [year, month] = selectedMonth.split("-");
   const startDate = `${year}-${month}-01`;
@@ -415,7 +416,7 @@ export function AsaasSync({
 
                   {/* Responsável */}
                   <td>
-                    <span style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "0.75rem", color: responsible.kind === "empresa" ? "var(--text-tertiary)" : "var(--text-secondary)", fontWeight: 600 }}>
+                    <span style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "0.82rem", color: responsible.kind === "empresa" ? "var(--text-tertiary)" : "var(--text-secondary)", fontWeight: 600 }}>
                       {responsible.kind === "funcionario" && <User size={11} />}
                       {responsible.kind === "cliente" && <Building2 size={11} />}
                       {responsible.label}
@@ -428,7 +429,7 @@ export function AsaasSync({
                       color: txn.type === "CREDIT" ? "#22C55E" : "#EF4444",
                       background: txn.type === "CREDIT" ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)",
                       border: `1px solid ${txn.type === "CREDIT" ? "rgba(34,197,94,0.25)" : "rgba(239,68,68,0.25)"}`,
-                      fontSize: "0.7rem",
+                      fontSize: "0.75rem",
                     }}>
                       {txn.type === "CREDIT" ? "Receita" : "Despesa"}
                     </span>
@@ -439,17 +440,69 @@ export function AsaasSync({
                     {txn.type === "DEBIT" ? "−" : "+"} {formatCurrency(Number(txn.value))}
                   </td>
 
-                  {/* Vínculo */}
-                  <td>
-                    {isLinked ? (
-                      <span style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "0.72rem", color: "#22C55E", fontWeight: 600 }}>
-                        <CheckCircle2 size={11} />
-                        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100px" }}>
-                          {linkedLabel || "Vinculado"}
+                  {/* Vínculo com hover */}
+                  <td style={{ position: "relative" }}>
+                    <div
+                      onMouseEnter={() => setHoveredVinculo(txn.id)}
+                      onMouseLeave={() => setHoveredVinculo(null)}
+                      style={{ display: "inline-flex", cursor: isLinked ? "default" : "pointer" }}
+                    >
+                      {isLinked ? (
+                        <span style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "0.82rem", color: "#22C55E", fontWeight: 600 }}>
+                          <CheckCircle2 size={11} />
+                          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100px" }}>
+                            {linkedLabel || "Vinculado"}
+                          </span>
                         </span>
-                      </span>
-                    ) : (
-                      <span style={{ fontSize: "0.7rem", color: "#F59E0B", fontWeight: 600 }}>Sem vínculo</span>
+                      ) : (
+                        <span style={{ fontSize: "0.82rem", color: "#F59E0B", fontWeight: 600 }}>Sem vínculo</span>
+                      )}
+                    </div>
+                    {hoveredVinculo === txn.id && (
+                      <div
+                        style={{
+                          position: "absolute",
+                          bottom: "calc(100% + 4px)",
+                          left: 0,
+                          zIndex: 50,
+                          width: "240px",
+                          background: "rgba(18,18,18,0.98)",
+                          border: "1px solid var(--border)",
+                          borderRadius: "12px",
+                          padding: "12px",
+                          boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+                          pointerEvents: "none",
+                        }}
+                      >
+                        {isLinked ? (
+                          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                            {linkedInvoice && (() => {
+                              const client = clients.find((c) => c.id === linkedInvoice.client_id);
+                              return client ? (
+                                <p style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--text-primary)", margin: 0 }}>
+                                  {client.nome_fantasia || client.name}
+                                </p>
+                              ) : null;
+                            })()}
+                            {linkedEntry && (() => {
+                              const group = expenses.find((e) => e.id === linkedEntry.expense_id);
+                              return group ? (
+                                <p style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--text-primary)", margin: 0 }}>
+                                  {group.description}
+                                </p>
+                              ) : null;
+                            })()}
+                            <p style={{ fontSize: "0.82rem", color: "var(--text-secondary)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {linkedLabel || "Vinculado"}
+                            </p>
+                            <span style={{ fontSize: "0.72rem", color: "#22C55E", fontWeight: 600 }}>Asaas ✓</span>
+                          </div>
+                        ) : (
+                          <p style={{ fontSize: "0.82rem", color: "#F59E0B", fontWeight: 600, margin: 0 }}>
+                            Sem vínculo — clique em <Link2 size={11} style={{ display: "inline", verticalAlign: "middle" }} /> para vincular.
+                          </p>
+                        )}
+                      </div>
                     )}
                   </td>
 

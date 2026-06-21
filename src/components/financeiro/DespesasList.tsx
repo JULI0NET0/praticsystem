@@ -54,6 +54,7 @@ const EMPTY_FORM: Partial<Expense> = {
   due_day: 5,
   recurrence: "monthly",
   status: "active",
+  type: "fixed",
   related_user_id: undefined,
   notes: "",
 };
@@ -91,7 +92,7 @@ export function DespesasList({ expenses, expenseEntries, users, onSave, onDelete
   const [baixaDate, setBaixaDate] = useState("");
 
   const totalMensal = expenses
-    .filter((e) => e.status === "active" && e.recurrence === "monthly")
+    .filter((e) => e.type !== "variable" && e.status === "active" && e.recurrence === "monthly")
     .reduce((acc, e) => acc + Number(e.amount), 0);
 
   function openCreate() {
@@ -133,7 +134,8 @@ export function DespesasList({ expenses, expenseEntries, users, onSave, onDelete
     }
   }
 
-  const filtered = filterCat === "all" ? expenses : expenses.filter((e) => e.category === filterCat);
+  const fixedExpenses = expenses.filter((e) => e.type !== "variable");
+  const filtered = filterCat === "all" ? fixedExpenses : fixedExpenses.filter((e) => e.category === filterCat);
 
   const previewDates = genDialog
     ? generatePreviewDates(genStartMonth, genMonths, genDialog.due_day || 1)

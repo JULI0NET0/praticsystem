@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useToast } from "@/components/CustomToast";
 import { Loader2, LayoutDashboard, AlertTriangle, ListOrdered, Wallet, RefreshCw, Users, Layers } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { FinancialKPIs } from "@/components/financeiro/FinancialKPIs";
@@ -24,6 +25,7 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
 
 export default function FinanceiroPage() {
   const now = new Date();
+  const { showToast } = useToast();
 
   const [tab, setTab] = useState<Tab>("dashboard");
   const [dateRange, setDateRange] = useState({ start: "", end: "" });
@@ -137,11 +139,16 @@ export default function FinanceiroPage() {
   // --- Handlers ---
 
   async function handleSaveExpense(data: Partial<Expense>) {
+    let error: any;
     if (data.id) {
       const { id, ...rest } = data;
-      await supabase.from("expenses").update(rest).eq("id", id);
+      ({ error } = await supabase.from("expenses").update(rest).eq("id", id));
     } else {
-      await supabase.from("expenses").insert([data]);
+      ({ error } = await supabase.from("expenses").insert([data]));
+    }
+    if (error) {
+      showToast(`Erro ao salvar despesa: ${error.message}`, "error");
+      throw error;
     }
     const { data: updated } = await supabase.from("expenses").select("*").order("created_at", { ascending: false });
     if (updated) setExpenses(updated);
@@ -165,7 +172,11 @@ export default function FinanceiroPage() {
   }
 
   async function handleCreateEntry(data: Partial<ExpenseEntry>): Promise<ExpenseEntry | null> {
-    const { data: created } = await supabase.from("expense_entries").insert([data]).select("*, expenses(id,description,category)").single();
+    const { data: created, error } = await supabase.from("expense_entries").insert([data]).select("*, expenses(id,description,category)").single();
+    if (error) {
+      showToast(`Erro ao registrar lançamento: ${error.message}`, "error");
+      return null;
+    }
     if (created) setExpenseEntries((prev) => [created, ...prev]);
     return created ?? null;
   }

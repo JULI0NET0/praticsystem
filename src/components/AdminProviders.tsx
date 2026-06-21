@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { PresenceProvider } from "@/hooks/usePresence";
 import { TimeTrackerProvider } from "@/hooks/useTimeTracker";
+import { PomodoroProvider } from "@/hooks/usePomodoro";
 import { Loader2 } from "lucide-react";
 
 function AdminProvidersInner({ children }: { children: React.ReactNode }) {
@@ -35,7 +36,9 @@ function AdminProvidersInner({ children }: { children: React.ReactNode }) {
   return (
     <PresenceProvider currentUser={currentUser}>
       <TimeTrackerProvider>
-        {children}
+        <PomodoroProvider>
+          {children}
+        </PomodoroProvider>
       </TimeTrackerProvider>
     </PresenceProvider>
   );

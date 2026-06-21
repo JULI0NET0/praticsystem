@@ -95,6 +95,7 @@ export function LancamentosTable({
   const [editSaving, setEditSaving] = useState(false);
   const [baixaDialog, setBaixaDialog] = useState<UnifiedEntry | null>(null);
   const [baixaDate, setBaixaDate] = useState("");
+  const [hoveredVinculo, setHoveredVinculo] = useState<string | null>(null);
 
   const openAsaasLink = async (asaasId: string) => {
     setOpeningAsaas(asaasId);
@@ -388,17 +389,19 @@ export function LancamentosTable({
           <thead>
             <tr>
               <th style={{ width: "72px" }}>Data</th>
-              <th>Descrição</th>
               <th style={{ width: "130px" }}>Responsável</th>
+              <th>Descrição</th>
               <th>Categoria</th>
-              <th style={{ textAlign: "right" }}>Valor</th>
-              <th style={{ width: "80px" }}></th>
+              <th style={{ width: "100px" }}>Status</th>
+              <th style={{ textAlign: "right", width: "110px" }}>Valor</th>
+              <th style={{ width: "64px", textAlign: "center" }}>Vínculo</th>
+              <th style={{ width: "64px" }}></th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={6} style={{ textAlign: "center", padding: "40px", color: "var(--text-tertiary)" }}>
+                <td colSpan={8} style={{ textAlign: "center", padding: "40px", color: "var(--text-tertiary)" }}>
                   Nenhum lançamento encontrado para o período.
                 </td>
               </tr>
@@ -411,49 +414,34 @@ export function LancamentosTable({
                 transition={{ delay: i * 0.02 }}
               >
                 {/* Data */}
-                <td style={{ color: "var(--text-secondary)", fontSize: "0.875rem", fontWeight: 500, whiteSpace: "nowrap" }}>
+                <td style={{ color: "var(--text-secondary)", fontWeight: 500, whiteSpace: "nowrap" }}>
                   {(() => {
                     const parts = entry.date.split("-");
                     return parts.length >= 3 ? `${parts[2]}/${parts[1]}` : entry.date;
                   })()}
                 </td>
 
-                {/* Descrição + cliente + status */}
-                <td style={{ maxWidth: "280px" }}>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-                    <span style={{ fontWeight: 600, fontSize: "0.875rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {entry.description}
-                    </span>
-                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                      {entry.clientName && (
-                        <span style={{ fontSize: "0.75rem", color: "var(--text-tertiary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {entry.clientName}
-                        </span>
-                      )}
-                      <span
-                        className="badge"
-                        style={{
-                          fontSize: "0.68rem",
-                          padding: "1px 6px",
-                          color: statusColor[entry.status] || "var(--text-secondary)",
-                          background: `${statusColor[entry.status] || "var(--text-secondary)"}18`,
-                          border: `1px solid ${statusColor[entry.status] || "var(--text-secondary)"}30`,
-                          flexShrink: 0,
-                        }}
-                      >
-                        {statusLabel[entry.status] || entry.status}
-                      </span>
-                    </div>
-                  </div>
-                </td>
-
                 {/* Responsável */}
                 <td>
-                  <span style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "0.75rem", color: entry.responsible.kind === "empresa" ? "var(--text-tertiary)" : "var(--text-secondary)", fontWeight: 600 }}>
+                  <span style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "0.82rem", color: entry.responsible.kind === "empresa" ? "var(--text-tertiary)" : "var(--text-secondary)", fontWeight: 600 }}>
                     {entry.responsible.kind === "funcionario" && <User size={11} />}
                     {entry.responsible.kind === "cliente" && <Building2 size={11} />}
                     {entry.responsible.label}
                   </span>
+                </td>
+
+                {/* Descrição */}
+                <td style={{ maxWidth: "220px" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                    <span style={{ fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {entry.description}
+                    </span>
+                    {entry.clientName && (
+                      <span style={{ fontSize: "0.82rem", color: "var(--text-tertiary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {entry.clientName}
+                      </span>
+                    )}
+                  </div>
                 </td>
 
                 {/* Categoria */}
@@ -463,44 +451,98 @@ export function LancamentosTable({
                   </span>
                 </td>
 
-                {/* Valor alinhado à direita */}
+                {/* Status */}
+                <td>
+                  <span
+                    className="badge"
+                    style={{
+                      fontSize: "0.75rem",
+                      padding: "2px 8px",
+                      color: statusColor[entry.status] || "var(--text-secondary)",
+                      background: `${statusColor[entry.status] || "var(--text-secondary)"}18`,
+                      border: `1px solid ${statusColor[entry.status] || "var(--text-secondary)"}30`,
+                    }}
+                  >
+                    {statusLabel[entry.status] || entry.status}
+                  </span>
+                </td>
+
+                {/* Valor */}
                 <td style={{ textAlign: "right", fontWeight: 700, fontSize: "0.9rem", color: entry.type === "receita" ? "#22C55E" : "#EF4444", whiteSpace: "nowrap" }}>
                   {entry.type === "despesa" ? "−" : "+"} {formatCurrency(entry.amount)}
                 </td>
 
-                {/* Ações compactas: Asaas + Baixar */}
+                {/* Vínculo com hover */}
+                <td style={{ textAlign: "center", position: "relative" }}>
+                  <button
+                    onMouseEnter={() => setHoveredVinculo(entry.id)}
+                    onMouseLeave={() => setHoveredVinculo(null)}
+                    onClick={() => {
+                      if (entry.asaasLinked && entry.asaasTransactionId) openAsaasLink(entry.asaasTransactionId);
+                      else if (entry.type === "despesa") openExpenseLink(entry);
+                      else {
+                        const txn = asaasTransactions.find((t) => !t.expense_entry_id && !t.invoice_id);
+                        if (txn) setLinkDialog(txn);
+                      }
+                    }}
+                    title={entry.asaasLinked ? "Vinculado ao Asaas — clique para abrir" : "Vincular ao Asaas"}
+                    style={{ background: "none", border: "none", cursor: "pointer", padding: "4px", display: "inline-flex", color: entry.asaasLinked ? "#22C55E" : "#F59E0B" }}
+                  >
+                    {openingAsaas === entry.asaasTransactionId
+                      ? <RefreshCw size={14} style={{ animation: "spin 1s linear infinite" }} />
+                      : <Link2 size={14} style={{ opacity: entry.asaasLinked ? 1 : 0.5 }} />
+                    }
+                  </button>
+                  {hoveredVinculo === entry.id && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        bottom: "calc(100% + 4px)",
+                        left: "50%",
+                        transform: "translateX(-50%)",
+                        zIndex: 50,
+                        width: "220px",
+                        background: "rgba(18,18,18,0.98)",
+                        border: "1px solid var(--border)",
+                        borderRadius: "12px",
+                        padding: "12px",
+                        boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+                        pointerEvents: "none",
+                        textAlign: "left",
+                      }}
+                    >
+                      {entry.type === "receita" ? (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                          {entry.clientName && (
+                            <p style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--text-primary)", margin: 0 }}>{entry.clientName}</p>
+                          )}
+                          {entry.rawInvoice?.contract_id && (
+                            <span className="badge" style={{ fontSize: "0.72rem", alignSelf: "flex-start" }}>Contrato</span>
+                          )}
+                          <span style={{ fontSize: "0.72rem", fontWeight: 600, color: entry.asaasLinked ? "#22C55E" : "#F59E0B" }}>
+                            {entry.asaasLinked ? "Asaas ✓" : "Sem vínculo Asaas"}
+                          </span>
+                        </div>
+                      ) : (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                          {(() => {
+                            const group = expenses.find((e) => e.id === entry.rawEntry?.expense_id);
+                            return group ? (
+                              <p style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--text-primary)", margin: 0 }}>{group.description}</p>
+                            ) : null;
+                          })()}
+                          <span style={{ fontSize: "0.72rem", fontWeight: 600, color: entry.asaasLinked ? "#22C55E" : "#F59E0B" }}>
+                            {entry.asaasLinked ? "Asaas ✓" : "Sem vínculo Asaas"}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </td>
+
+                {/* Ações: Editar + Dar Baixa */}
                 <td style={{ textAlign: "right" }}>
                   <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "4px" }}>
-                    {/* Asaas */}
-                    {entry.asaasLinked ? (
-                      <button
-                        onClick={() => entry.asaasTransactionId && openAsaasLink(entry.asaasTransactionId)}
-                        disabled={openingAsaas === entry.asaasTransactionId}
-                        title="Abrir no Asaas"
-                        style={{ background: "none", border: "none", cursor: "pointer", color: "#22C55E", padding: "4px", display: "flex" }}
-                      >
-                        {openingAsaas === entry.asaasTransactionId
-                          ? <RefreshCw size={14} style={{ animation: "spin 1s linear infinite" }} />
-                          : <ExternalLink size={14} />
-                        }
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => {
-                          if (entry.type === "despesa") openExpenseLink(entry);
-                          else {
-                            const txn = asaasTransactions.find((t) => !t.expense_entry_id && !t.invoice_id);
-                            if (txn) setLinkDialog(txn);
-                          }
-                        }}
-                        title="Vincular Asaas"
-                        style={{ background: "none", border: "none", cursor: "pointer", color: "#F59E0B", padding: "4px", display: "flex" }}
-                      >
-                        <Link2 size={14} />
-                      </button>
-                    )}
-
-                    {/* Editar (apenas despesas) */}
                     {entry.type === "despesa" && (
                       <button
                         onClick={() => openEdit(entry)}
@@ -510,8 +552,6 @@ export function LancamentosTable({
                         <Pencil size={14} />
                       </button>
                     )}
-
-                    {/* Dar Baixa */}
                     {((entry.type === "receita" && entry.status !== "paid") ||
                       (entry.type === "despesa" && entry.status === "pending")) && (
                       <button

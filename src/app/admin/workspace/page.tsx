@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import {
   User,
@@ -14,8 +14,6 @@ import {
   Zap,
   GripVertical,
   X,
-  ArrowLeft,
-  ArrowRight,
   Loader2,
   Inbox,
   UserX,
@@ -31,7 +29,6 @@ import {
   Pin,
   FileText
 } from "lucide-react";
-import Spotlight from "@/components/Spotlight";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -39,6 +36,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/components/CustomToast";
 import { usePresence } from "@/hooks/usePresence";
 import { useTimeTracker } from "@/hooks/useTimeTracker";
+import { usePomodoro, WORK_MS, BREAK_MS } from "@/hooks/usePomodoro";
 
 // Definição dos Widgets Disponíveis
 const AVAILABLE_WIDGETS = [
@@ -66,8 +64,6 @@ export default function WorkspacePage() {
   const EMOJIS = ["☀️", "🌙", "🚀", "🔥", "☕", "💻", "🎨", "📈", "🎯", "✨", "✅", "⚡", "🌟", "🛠️", "📅", "💡", "🧠", "💼", "🤝", "🌈", "🍀", "💎", "🏆", "📣", "📝", "🌍", "🍕", "🦾", "💪", "🏄", "🧘", "🚲"];
   const [demands, setDemands] = useState<any[]>([]);
   const [loadingDemands, setLoadingDemands] = useState(true);
-  const [pomodoroPoints, setPomodoroPoints] = useState(0);
-  const [pomodoroSessionsToday, setPomodoroSessionsToday] = useState(0);
 
   useEffect(() => {
     if (currentUser) {
@@ -89,13 +85,6 @@ export default function WorkspacePage() {
       if (currentUser.workspace_settings?.layout) {
         setWidgets(currentUser.workspace_settings.layout);
       }
-
-      // Pomodoro: reset sessions diariamente
-      const today = new Date().toISOString().split('T')[0];
-      const lastDate = currentUser.workspace_settings?.pomodoro_last_date;
-      const savedSessions = lastDate === today ? (currentUser.workspace_settings?.pomodoro_sessions_today ?? 0) : 0;
-      setPomodoroPoints(currentUser.workspace_settings?.pomodoro_points ?? 0);
-      setPomodoroSessionsToday(savedSessions);
 
       fetchWorkspaceData();
     }
@@ -216,26 +205,6 @@ export default function WorkspacePage() {
       console.error("Erro ao atualizar emoji:", err);
       setCurrentEmoji(currentUser.emoji || "☀️");
       showToast("Erro ao atualizar emoji", "error");
-    }
-  };
-
-  const handlePomodoroComplete = async (newPoints: number, newSessions: number) => {
-    setPomodoroPoints(newPoints);
-    setPomodoroSessionsToday(newSessions);
-    if (!currentUser) return;
-    const today = new Date().toISOString().split('T')[0];
-    try {
-      await supabase.from('users').update({
-        workspace_settings: {
-          ...currentUser.workspace_settings,
-          pomodoro_points: newPoints,
-          pomodoro_sessions_today: newSessions,
-          pomodoro_last_date: today,
-        }
-      }).eq('id', currentUser.id);
-      showToast(`+10 pts! 🍅 Pomodoro ${newSessions} concluído!`, "success");
-    } catch (err) {
-      console.error('Erro ao salvar pomodoro:', err);
     }
   };
 
@@ -565,7 +534,7 @@ export default function WorkspacePage() {
                 <div style={{ opacity: isEditing ? 0.3 : 1, transition: 'opacity 0.3s', flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                   {w.id === 'stats' && <StatsWidget colSpan={w.colSpan} demandsCount={demands.length} todayHours={todayHours} isTracking={isTracking} onTimerToggle={isTracking ? clockOut : clockIn} />}
                   {w.id === 'timetracker' && <TimeTrackerWidget isTracking={isTracking} todayHours={todayHours} todayMinutes={todayMinutes} currentSession={currentSession} clockIn={clockIn} clockOut={clockOut} />}
-                  {w.id === 'pomodoro' && <PomodoroWidget totalPoints={pomodoroPoints} sessionsToday={pomodoroSessionsToday} onSessionComplete={handlePomodoroComplete} />}
+                  {w.id === 'pomodoro' && <PomodoroWidget />}
                   {w.id === 'demands' && <DemandsWidget demands={demands} loading={loadingDemands} />}
                   {w.id === 'notes' && <NotesWidget />}
                   {w.id === 'links' && <LinksWidget />}
@@ -829,99 +798,35 @@ function getPomodoroLevel(points: number) {
   return POMODORO_LEVELS.find(l => points >= l.min && points <= l.max) ?? POMODORO_LEVELS[0];
 }
 
-function PomodoroWidget({ totalPoints, sessionsToday, onSessionComplete }: {
-  totalPoints: number;
-  sessionsToday: number;
-  onSessionComplete: (newPoints: number, newSessions: number) => void;
-}) {
-  const WORK_TIME = 25 * 60;
-  const BREAK_TIME = 5 * 60;
+function PomodoroWidget() {
+  // All timer logic lives in the global context — runs even when this widget is unmounted
+  const {
+    mode, isRunning, justCompleted,
+    totalPoints, sessionsToday,
+    timeLeftMs, start, pause, reset, skip, switchMode,
+  } = usePomodoro();
 
-  const [mode, setMode] = useState<'work' | 'break'>('work');
-  const [timeLeft, setTimeLeft] = useState(WORK_TIME);
-  const [isRunning, setIsRunning] = useState(false);
-  const [localPoints, setLocalPoints] = useState(totalPoints);
-  const [localSessions, setLocalSessions] = useState(sessionsToday);
-  const [justCompleted, setJustCompleted] = useState(false);
-
-  const pointsRef = useRef(totalPoints);
-  const sessionsRef = useRef(sessionsToday);
-  const modeRef = useRef<'work' | 'break'>('work');
-  const onCompleteRef = useRef(onSessionComplete);
-
-  useEffect(() => { pointsRef.current = localPoints; }, [localPoints]);
-  useEffect(() => { sessionsRef.current = localSessions; }, [localSessions]);
-  useEffect(() => { modeRef.current = mode; }, [mode]);
-  useEffect(() => { onCompleteRef.current = onSessionComplete; }, [onSessionComplete]);
-
-  useEffect(() => { setLocalPoints(totalPoints); pointsRef.current = totalPoints; }, [totalPoints]);
-  useEffect(() => { setLocalSessions(sessionsToday); sessionsRef.current = sessionsToday; }, [sessionsToday]);
-
+  // Local tick only for display re-rendering — does not drive timer logic
+  const [, setTick] = useState(0);
   useEffect(() => {
     if (!isRunning) return;
-    const interval = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          setIsRunning(false);
-          setJustCompleted(true);
-          if (modeRef.current === 'work') {
-            const newPoints = pointsRef.current + 10;
-            const newSessions = sessionsRef.current + 1;
-            setLocalPoints(newPoints);
-            setLocalSessions(newSessions);
-            onCompleteRef.current(newPoints, newSessions);
-          }
-          setTimeout(() => {
-            setJustCompleted(false);
-            if (modeRef.current === 'work') {
-              setMode('break');
-              setTimeLeft(BREAK_TIME);
-              modeRef.current = 'break';
-            } else {
-              setMode('work');
-              setTimeLeft(WORK_TIME);
-              modeRef.current = 'work';
-            }
-          }, 2500);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(interval);
+    const id = setInterval(() => setTick(t => t + 1), 1000);
+    return () => clearInterval(id);
   }, [isRunning]);
 
-  const switchMode = (newMode: 'work' | 'break') => {
-    if (isRunning) return;
-    setMode(newMode);
-    setTimeLeft(newMode === 'work' ? WORK_TIME : BREAK_TIME);
-  };
-
-  const reset = () => {
-    setIsRunning(false);
-    setTimeLeft(mode === 'work' ? WORK_TIME : BREAK_TIME);
-  };
-
-  const skip = () => {
-    if (isRunning) return;
-    const next = mode === 'work' ? 'break' : 'work';
-    setMode(next);
-    setTimeLeft(next === 'work' ? WORK_TIME : BREAK_TIME);
-  };
-
-  const total = mode === 'work' ? WORK_TIME : BREAK_TIME;
-  const progress = (total - timeLeft) / total;
-  const radius = 54;
+  const remainingMs = timeLeftMs();
+  const totalMs     = mode === 'work' ? WORK_MS : BREAK_MS;
+  const progress    = (totalMs - remainingMs) / totalMs;
+  const radius      = 54;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference * (1 - progress);
 
-  const minutes = Math.floor(timeLeft / 60);
-  const seconds = timeLeft % 60;
+  const minutes  = Math.floor(remainingMs / 60000);
+  const seconds  = Math.floor((remainingMs % 60000) / 1000);
   const modeColor = mode === 'work' ? '#EF4444' : '#22C55E';
-  const level = getPomodoroLevel(localPoints);
-  const nextLevel = POMODORO_LEVELS.find(l => l.min > localPoints);
-  const progressToNext = nextLevel ? ((localPoints - level.min) / (nextLevel.min - level.min)) * 100 : 100;
+  const level = getPomodoroLevel(totalPoints);
+  const nextLevel = POMODORO_LEVELS.find(l => l.min > totalPoints);
+  const progressToNext = nextLevel ? ((totalPoints - level.min) / (nextLevel.min - level.min)) * 100 : 100;
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -937,7 +842,7 @@ function PomodoroWidget({ totalPoints, sessionsToday, onSessionComplete }: {
             padding: '3px 9px', borderRadius: '10px'
           }}>
             <span style={{ fontSize: '0.8rem' }}>⭐</span>
-            <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#EAB308' }}>{localPoints} pts</span>
+            <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#EAB308' }}>{totalPoints} pts</span>
           </div>
           <div style={{
             display: 'flex', alignItems: 'center', gap: '4px',
@@ -945,7 +850,7 @@ function PomodoroWidget({ totalPoints, sessionsToday, onSessionComplete }: {
             padding: '3px 9px', borderRadius: '10px'
           }}>
             <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
-              {localSessions} hoje
+              {sessionsToday} hoje
             </span>
           </div>
         </div>
@@ -959,7 +864,7 @@ function PomodoroWidget({ totalPoints, sessionsToday, onSessionComplete }: {
           </span>
           {nextLevel && (
             <span style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)' }}>
-              {nextLevel.min - localPoints} pts para {nextLevel.emoji}
+              {nextLevel.min - totalPoints} pts para {nextLevel.emoji}
             </span>
           )}
         </div>
@@ -1064,7 +969,7 @@ function PomodoroWidget({ totalPoints, sessionsToday, onSessionComplete }: {
           </button>
 
           <button
-            onClick={() => setIsRunning(r => !r)}
+            onClick={() => isRunning ? pause() : start()}
             title={isRunning ? 'Pausar' : 'Iniciar'}
             style={{
               width: '58px', height: '58px', borderRadius: '18px',
@@ -1095,7 +1000,7 @@ function PomodoroWidget({ totalPoints, sessionsToday, onSessionComplete }: {
 
         {/* Sessions row */}
         <div style={{ display: 'flex', gap: '6px' }}>
-          {Array.from({ length: Math.min(localSessions, 8) }).map((_, i) => (
+          {Array.from({ length: Math.min(sessionsToday, 8) }).map((_, i) => (
             <div
               key={i}
               style={{
@@ -1104,12 +1009,12 @@ function PomodoroWidget({ totalPoints, sessionsToday, onSessionComplete }: {
               }}
             />
           ))}
-          {localSessions > 8 && (
+          {sessionsToday > 8 && (
             <span style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)', fontWeight: 700, alignSelf: 'center' }}>
-              +{localSessions - 8}
+              +{sessionsToday - 8}
             </span>
           )}
-          {localSessions === 0 && (
+          {sessionsToday === 0 && (
             <span style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)' }}>Complete sessões para ganhar pontos</span>
           )}
         </div>

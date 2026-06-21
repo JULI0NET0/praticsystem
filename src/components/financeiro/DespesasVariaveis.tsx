@@ -114,6 +114,8 @@ export function DespesasVariaveis({
         status: "active",
       });
       setGroupDialog(false);
+    } catch {
+      // erro já foi exibido via showToast no handleSaveExpense do pai
     } finally {
       setGroupSaving(false);
     }
@@ -148,7 +150,7 @@ export function DespesasVariaveis({
           notes: entryForm.notes || undefined,
         });
       } else {
-        await onCreateEntry({
+        const created = await onCreateEntry({
           expense_id: entryDialog.id,
           description: entryForm.description,
           category: entryDialog.category,
@@ -157,9 +159,12 @@ export function DespesasVariaveis({
           status: "pending",
           notes: entryForm.notes || undefined,
         });
+        if (!created) return; // erro já tratado no pai
       }
       setEntryDialog(null);
       setEditingEntry(null);
+    } catch {
+      // erro exibido via toast no pai
     } finally {
       setEntrySaving(false);
     }
