@@ -414,52 +414,79 @@ export default function WorkspacePage() {
         </div>
 
         <div className="workspace-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto' }}>
+          {/* Presets de layout — visíveis apenas em modo edição */}
+          <AnimatePresence>
+            {isEditing && (
+              <motion.div
+                initial={{ opacity: 0, width: 0 }}
+                animate={{ opacity: 1, width: 'auto' }}
+                exit={{ opacity: 0, width: 0 }}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}
+              >
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>Presets:</span>
+                {(['default', 'finance', 'compact'] as const).map((key) => (
+                  <button
+                    key={key}
+                    onClick={() => applyPreset(key)}
+                    style={{
+                      padding: '4px 10px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 600,
+                      border: '1px solid var(--border)', background: 'rgba(255,255,255,0.05)',
+                      color: 'var(--text-secondary)', cursor: 'pointer', whiteSpace: 'nowrap',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.color = 'var(--accent)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                  >
+                    {key === 'default' ? 'Padrão' : key === 'finance' ? 'Financeiro' : 'Compacto'}
+                  </button>
+                ))}
+                <div style={{ width: '1px', height: '20px', background: 'var(--border)', margin: '0 4px' }} />
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {/* Timer Compacto */}
           <button
             onClick={isTracking ? clockOut : clockIn}
             title={isTracking ? "Parar Timer" : "Iniciar Timer"}
             style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: '12px',
+              height: '36px', padding: '0 12px', borderRadius: '10px',
               background: isTracking ? 'rgba(239, 68, 68, 0.1)' : 'rgba(34, 197, 94, 0.1)',
               color: isTracking ? '#EF4444' : '#22C55E',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              transition: 'all 0.3s ease',
+              display: 'flex', alignItems: 'center', gap: '6px',
+              transition: 'all 0.3s ease', fontSize: '0.8rem', fontWeight: 600,
               border: `1px solid ${isTracking ? 'rgba(239, 68, 68, 0.2)' : 'rgba(34, 197, 94, 0.2)'}`
             }}
           >
-            {isTracking ? <Square size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" />}
+            {isTracking ? <Square size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" />}
+            {isTracking ? 'Parar' : 'Iniciar'}
           </button>
 
-          {/* Botão Personalizar (Apenas Ícone) */}
+          {/* Botão Personalizar / Salvar */}
           <button
             onClick={() => isEditing ? saveLayout() : setIsEditing(true)}
             className={`btn ${isEditing ? 'btn-accent' : 'btn-secondary'}`}
-            title="Personalizar Layout"
             style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: '12px',
-              padding: 0,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
+              height: '36px', padding: '0 14px', borderRadius: '10px',
+              display: 'flex', alignItems: 'center', gap: '8px',
+              fontSize: '0.8rem', fontWeight: 600
             }}
           >
-            {isEditing ? <CheckCircle2 size={20} /> : <LayoutGrid size={20} />}
+            {isEditing ? <><CheckCircle2 size={16} /> Salvar</> : <><LayoutGrid size={16} /> Personalizar</>}
           </button>
 
+          {/* Botão Adicionar Widget */}
           {isEditing && (
             <button
               onClick={() => setIsAddModalOpen(true)}
               className="btn btn-secondary"
-              title="Adicionar Widget"
-              style={{ width: '40px', height: '40px', borderRadius: '12px', padding: 0 }}
+              style={{
+                height: '36px', padding: '0 14px', borderRadius: '10px',
+                display: 'flex', alignItems: 'center', gap: '8px',
+                fontSize: '0.8rem', fontWeight: 600
+              }}
             >
-              <Plus size={20} />
+              <Plus size={16} /> Adicionar
             </button>
           )}
         </div>
@@ -543,15 +570,15 @@ export default function WorkspacePage() {
 
                 {/* Controles de Redimensionamento */}
                 {isEditing && (
-                  <div style={{ position: 'absolute', bottom: '12px', right: '12px', display: 'flex', gap: '8px', zIndex: 20 }}>
-                    <div style={{ display: 'flex', background: 'rgba(0,0,0,0.3)', borderRadius: '8px', padding: '2px' }}>
-                      <button onClick={() => updateWidgetSize(w.id, 'colSpan', -1)} style={{ width: '24px', height: '24px', color: 'white' }}>-</button>
-                      <button onClick={() => updateWidgetSize(w.id, 'colSpan', 1)} style={{ width: '24px', height: '24px', color: 'white' }}>+</button>
-                    </div>
-                    <div style={{ display: 'flex', background: 'rgba(0,0,0,0.3)', borderRadius: '8px', padding: '2px' }}>
-                      <button onClick={() => updateWidgetSize(w.id, 'rowSpan', -1)} style={{ width: '24px', height: '24px', color: 'white' }}>-</button>
-                      <button onClick={() => updateWidgetSize(w.id, 'rowSpan', 1)} style={{ width: '24px', height: '24px', color: 'white' }}>+</button>
-                    </div>
+                  <div style={{ position: 'absolute', bottom: '10px', right: '10px', display: 'flex', gap: '6px', zIndex: 20 }}>
+                    {[{ label: 'L', dim: 'colSpan' as const }, { label: 'A', dim: 'rowSpan' as const }].map(({ label, dim }) => (
+                      <div key={dim} style={{ display: 'flex', alignItems: 'center', gap: '2px', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', borderRadius: '8px', padding: '3px 5px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                        <span style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.5)', fontWeight: 700, minWidth: '10px' }}>{label}</span>
+                        <button onClick={() => updateWidgetSize(w.id, dim, -1)} style={{ width: '18px', height: '18px', color: 'rgba(255,255,255,0.8)', fontSize: '0.9rem', lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.1)', borderRadius: '4px', border: 'none', cursor: 'pointer' }}>−</button>
+                        <span style={{ fontSize: '0.7rem', color: 'white', fontWeight: 700, minWidth: '14px', textAlign: 'center' }}>{dim === 'colSpan' ? w.colSpan : (w.rowSpan || 1)}</span>
+                        <button onClick={() => updateWidgetSize(w.id, dim, 1)} style={{ width: '18px', height: '18px', color: 'rgba(255,255,255,0.8)', fontSize: '0.9rem', lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.1)', borderRadius: '4px', border: 'none', cursor: 'pointer' }}>+</button>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
@@ -563,41 +590,79 @@ export default function WorkspacePage() {
       {/* Modal de Adicionar Widget */}
       <AnimatePresence>
         {isAddModalOpen && (
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(12px)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
             <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
+              initial={{ scale: 0.92, opacity: 0, y: 16 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.92, opacity: 0, y: 16 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 28 }}
               className="glass-card"
-              style={{ width: '100%', maxWidth: '500px', padding: '32px', position: 'relative' }}
+              style={{ width: '100%', maxWidth: '560px', padding: '36px', position: 'relative', background: 'rgba(12,12,12,0.98)', boxShadow: '0 32px 80px rgba(0,0,0,0.6)' }}
             >
-              <button onClick={() => setIsAddModalOpen(false)} style={{ position: 'absolute', top: '24px', right: '24px', color: 'var(--text-secondary)' }}>
-                <X size={24} />
+              <button onClick={() => setIsAddModalOpen(false)} style={{ position: 'absolute', top: '24px', right: '24px', background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border)', borderRadius: '10px', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                <X size={16} />
               </button>
-              <h3 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '8px' }}>Adicionar Widget</h3>
-              <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '0.9rem' }}>Escolha um bloco para adicionar ao seu workspace.</p>
 
-              <div className="responsive-grid-2" style={{ gap: '16px' }}>
-                {AVAILABLE_WIDGETS.map(w => (
-                  <button
-                    key={w.id}
-                    disabled={!!widgets.find(widget => widget.id === w.id)}
-                    onClick={() => addWidget(w.id)}
-                    style={{
-                      padding: '20px', borderRadius: '16px', border: '1px solid var(--border)',
-                      background: widgets.find(widget => widget.id === w.id) ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.05)',
-                      color: widgets.find(widget => widget.id === w.id) ? 'var(--text-secondary)' : 'var(--text-primary)',
-                      cursor: widgets.find(widget => widget.id === w.id) ? 'not-allowed' : 'pointer',
-                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px',
-                      transition: 'all 0.2s ease'
-                    }}
-                    onMouseEnter={(e) => !widgets.find(widget => widget.id === w.id) && (e.currentTarget.style.borderColor = 'var(--accent)')}
-                    onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--border)'}
-                  >
-                    <w.icon size={28} color={widgets.find(widget => widget.id === w.id) ? 'var(--text-secondary)' : 'var(--accent)'} />
-                    <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>{w.title}</span>
-                  </button>
-                ))}
+              <div style={{ marginBottom: '28px' }}>
+                <h3 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '6px' }}>Adicionar Widget</h3>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Selecione um bloco para adicionar ao seu workspace.</p>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                {AVAILABLE_WIDGETS.map(widget => {
+                  const isActive = !!widgets.find(w => w.id === widget.id);
+                  const descriptions: Record<string, string> = {
+                    stats: 'Métricas rápidas do seu dia',
+                    timetracker: 'Registro de horas trabalhadas',
+                    pomodoro: 'Timer de foco com gamificação',
+                    demands: 'Suas tarefas e demandas ativas',
+                    notes: 'Bloco de anotações rápidas',
+                    links: 'Atalhos e links importantes',
+                    team: 'Presença online da equipe',
+                  };
+                  return (
+                    <motion.button
+                      key={widget.id}
+                      disabled={isActive}
+                      onClick={() => addWidget(widget.id)}
+                      whileHover={!isActive ? { y: -2, scale: 1.01 } : {}}
+                      whileTap={!isActive ? { scale: 0.98 } : {}}
+                      style={{
+                        padding: '18px 16px', borderRadius: '16px',
+                        border: `1px solid ${isActive ? 'var(--border)' : 'var(--border)'}`,
+                        background: isActive ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.04)',
+                        cursor: isActive ? 'not-allowed' : 'pointer',
+                        display: 'flex', alignItems: 'center', gap: '14px',
+                        textAlign: 'left', transition: 'border-color 0.2s, background 0.2s',
+                        opacity: isActive ? 0.5 : 1
+                      }}
+                      onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.borderColor = 'var(--accent)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; }}
+                    >
+                      <div style={{
+                        width: '44px', height: '44px', borderRadius: '12px', flexShrink: 0,
+                        background: isActive ? 'rgba(255,255,255,0.04)' : 'rgba(217, 72, 15, 0.12)',
+                        border: `1px solid ${isActive ? 'var(--border)' : 'rgba(217, 72, 15, 0.25)'}`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center'
+                      }}>
+                        <widget.icon size={20} color={isActive ? 'var(--text-secondary)' : 'var(--accent)'} />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '3px' }}>
+                          <span style={{ fontWeight: 700, fontSize: '0.875rem', color: isActive ? 'var(--text-secondary)' : 'var(--text-primary)' }}>{widget.title}</span>
+                          {isActive && (
+                            <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#22C55E', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.2)', padding: '1px 6px', borderRadius: '6px' }}>
+                              ATIVO
+                            </span>
+                          )}
+                        </div>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.3, margin: 0 }}>
+                          {descriptions[widget.id]}
+                        </p>
+                      </div>
+                    </motion.button>
+                  );
+                })}
               </div>
             </motion.div>
           </div>

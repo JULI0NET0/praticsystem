@@ -301,5 +301,78 @@ VALUES
 ON CONFLICT (id) DO NOTHING;
 
 
+-- =============================================================
+-- BLOCO 9: USUÁRIOS INTERNOS (users)
+-- Espelha auth.users com dados de perfil da equipe
+-- =============================================================
+
+CREATE TABLE IF NOT EXISTS public.users (
+    id              UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    name            TEXT NOT NULL DEFAULT '',
+    email           TEXT NOT NULL DEFAULT '',
+    username        TEXT UNIQUE,
+    role            TEXT,
+    status_message  TEXT,
+    avatar_url      TEXT,
+    phone           TEXT,
+    created_at      TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS status_message TEXT;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS avatar_url     TEXT;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS phone          TEXT;
+
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "users_select" ON public.users;
+CREATE POLICY "users_select" ON public.users
+    FOR SELECT USING (auth.uid() IS NOT NULL);
+
+DROP POLICY IF EXISTS "users_insert" ON public.users;
+CREATE POLICY "users_insert" ON public.users
+    FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+
+DROP POLICY IF EXISTS "users_update" ON public.users;
+CREATE POLICY "users_update" ON public.users
+    FOR UPDATE USING (auth.uid() IS NOT NULL);
+
+DROP POLICY IF EXISTS "users_delete" ON public.users;
+CREATE POLICY "users_delete" ON public.users
+    FOR DELETE USING (auth.uid() IS NOT NULL);
+
+
+-- =============================================================
+-- BLOCO 10: CARGOS E PERMISSÕES (roles)
+-- id é slug TEXT (ex: 'admin', 'social_media')
+-- permissions é TEXT[] para corresponder ao tipo TypeScript
+-- =============================================================
+
+CREATE TABLE IF NOT EXISTS public.roles (
+    id          TEXT PRIMARY KEY,
+    name        TEXT NOT NULL,
+    permissions TEXT[] NOT NULL DEFAULT '{}',
+    created_at  TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.roles ENABLE ROW LEVEL SECURITY;
+
+-- Cargos são públicos para leitura (necessário no formulário de criação de usuário)
+DROP POLICY IF EXISTS "roles_select" ON public.roles;
+CREATE POLICY "roles_select" ON public.roles
+    FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "roles_insert" ON public.roles;
+CREATE POLICY "roles_insert" ON public.roles
+    FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+
+DROP POLICY IF EXISTS "roles_update" ON public.roles;
+CREATE POLICY "roles_update" ON public.roles
+    FOR UPDATE USING (auth.uid() IS NOT NULL);
+
+DROP POLICY IF EXISTS "roles_delete" ON public.roles;
+CREATE POLICY "roles_delete" ON public.roles
+    FOR DELETE USING (auth.uid() IS NOT NULL);
+
+
 -- Atualiza o cache do schema no Supabase
 NOTIFY pgrst, 'reload schema';

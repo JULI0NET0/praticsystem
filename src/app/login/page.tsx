@@ -64,7 +64,7 @@ export default function LoginPage() {
 
       if (staffData) {
         // É membro da equipe
-        router.push("/admin/dashboard");
+        router.push("/admin/workspace");
       } else {
         // É cliente
         router.push("/client/dashboard");
