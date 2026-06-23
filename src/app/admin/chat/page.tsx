@@ -7,12 +7,29 @@ import { useAuth } from "@/hooks/useAuth";
 import { usePresence } from "@/hooks/usePresence";
 import { useRealtimeChat, type ChatMessage } from "@/hooks/useRealtimeChat";
 import { useChatScroll } from "@/hooks/useChatScroll";
+import { useChatNotifications } from "@/hooks/useChatNotifications";
+import { useUnreadCounts } from "@/hooks/useUnreadCounts";
 import { ChatMessageItem } from "@/components/ChatMessageItem";
 import { supabase } from "@/lib/supabase";
+
+function PageUnreadBadge({ count }: { count: number }) {
+  return (
+    <div style={{
+      minWidth: '20px', height: '20px', borderRadius: '10px',
+      background: '#EF4444', color: 'white',
+      fontSize: '0.65rem', fontWeight: 800,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: '0 5px', flexShrink: 0,
+    }}>
+      {count > 99 ? '99+' : count}
+    </div>
+  )
+}
 
 export default function ChatPage() {
   const { currentUser, users } = useAuth();
   const { onlineUsers, isUserOnline } = usePresence();
+  const { notify } = useChatNotifications(currentUser?.id);
 
   const [activeChat, setActiveChat] = useState<'general' | string>('general');
   const [message, setMessage] = useState("");
@@ -37,15 +54,23 @@ export default function ChatPage() {
     return () => window.removeEventListener('resize', check);
   }, []);
 
-  const openChat = useCallback((id: string) => {
-    setActiveChat(id);
-    setMobileChatOpen(true);
-  }, []);
-
   const teamUsers = useMemo(
     () => users.filter(u => u.id !== currentUser?.id && ['admin', 'board', 'social_media', 'filmmaker'].includes(u.role)),
     [users, currentUser?.id]
   );
+
+  const { unread, clearUnread } = useUnreadCounts(
+    currentUser?.id,
+    teamUsers.map(u => u.id),
+    activeChat
+  );
+
+  const openChat = useCallback((id: string) => {
+    setActiveChat(id);
+    setMobileChatOpen(true);
+    clearUnread(id);
+  }, [clearUnread]);
+
   const filteredTeam = searchQuery
     ? teamUsers.filter(u => u.name.toLowerCase().includes(searchQuery.toLowerCase()))
     : teamUsers;
@@ -58,6 +83,8 @@ export default function ChatPage() {
     roomName,
     username: currentUser?.name ?? '',
     userId: currentUser?.id ?? '',
+    avatarUrl: currentUser?.avatar_url,
+    onMessage: (msg) => notify(msg, !document.hidden),
   });
 
   // Carregar histórico do banco ao trocar de conversa
@@ -81,13 +108,16 @@ export default function ChatPage() {
 
       const { data } = await query;
       if (data) {
-        setDbMessages(data.map(m => ({
-          id: m.id,
-          content: m.content,
-          user: { name: users.find(u => u.id === m.sender_id)?.name ?? 'Desconhecido', id: m.sender_id },
-          createdAt: m.timestamp,
-          ...m,
-        })));
+        setDbMessages(data.map(m => {
+          const sender = users.find(u => u.id === m.sender_id);
+          return {
+            id: m.id,
+            content: m.content,
+            user: { name: sender?.name ?? 'Desconhecido', id: m.sender_id, avatar_url: sender?.avatar_url },
+            createdAt: m.timestamp,
+            ...m,
+          };
+        }));
       }
     };
 
@@ -260,33 +290,39 @@ export default function ChatPage() {
           <p style={{ fontSize: '0.6rem', textTransform: 'uppercase', color: 'var(--text-secondary)', padding: '8px 8px 4px', letterSpacing: '0.05em', fontWeight: 700 }}>Canais</p>
           <button
             onClick={() => openChat('general')}
-            style={{ width: '100%', padding: '12px', borderRadius: '12px', border: 'none', background: activeChat === 'general' ? 'rgba(217, 72, 15, 0.1)' : 'transparent', color: activeChat === 'general' ? 'var(--accent)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', marginBottom: '4px', fontSize: '0.9rem', fontWeight: 600 }}
+            style={{ width: '100%', padding: '12px', borderRadius: '12px', border: 'none', background: activeChat === 'general' ? 'rgba(217, 72, 15, 0.1)' : 'transparent', color: activeChat === 'general' ? 'var(--accent)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', marginBottom: '4px', fontSize: '0.9rem', fontWeight: (unread['general'] ?? 0) > 0 ? 800 : 600 }}
           >
-            <Hash size={18} /> Canal Geral
-            <span style={{ marginLeft: 'auto', fontSize: '0.65rem', color: 'var(--text-secondary)' }}>{onlineUsers.length} online</span>
+            <Hash size={18} />
+            <span style={{ flex: 1, textAlign: 'left' }}>Canal Geral</span>
+            {(unread['general'] ?? 0) > 0
+              ? <PageUnreadBadge count={unread['general']} />
+              : <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>{onlineUsers.length} online</span>
+            }
           </button>
 
           <p style={{ fontSize: '0.6rem', textTransform: 'uppercase', color: 'var(--text-secondary)', padding: '16px 8px 4px', letterSpacing: '0.05em', fontWeight: 700 }}>Mensagens Diretas</p>
           {filteredTeam.map(user => {
             const online = isUserOnline(user.id);
             const isActive = activeChat === user.id;
+            const userUnread = unread[user.id] ?? 0;
             return (
               <button
                 key={user.id} onClick={() => openChat(user.id)}
                 style={{ width: '100%', padding: '10px 12px', borderRadius: '12px', border: 'none', background: isActive ? 'rgba(217, 72, 15, 0.1)' : 'transparent', color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', marginBottom: '2px', transition: 'all 0.15s' }}
               >
                 <div style={{ position: 'relative', flexShrink: 0 }}>
-                  <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--accent)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700 }}>
+                  <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--accent)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700, overflow: 'hidden' }}>
                     {user.avatar_url
-                      ? <img src={user.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} alt="" />
+                      ? <img src={user.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
                       : user.name.substring(0, 2).toUpperCase()}
                   </div>
                   <div style={{ position: 'absolute', bottom: 0, right: 0, width: '10px', height: '10px', background: online ? '#22C55E' : '#6B7280', borderRadius: '50%', border: '2px solid var(--bg-primary)' }} />
                 </div>
                 <div style={{ flex: 1, textAlign: 'left', overflow: 'hidden' }}>
-                  <span style={{ fontWeight: 600, fontSize: '0.85rem', display: 'block' }}>{user.name}</span>
+                  <span style={{ fontWeight: userUnread > 0 ? 800 : 600, fontSize: '0.85rem', display: 'block', color: userUnread > 0 ? 'var(--text-primary)' : undefined }}>{user.name}</span>
                   <span style={{ fontSize: '0.65rem', color: online ? '#22C55E' : '#6B7280' }}>{online ? 'Online' : 'Offline'}</span>
                 </div>
+                {userUnread > 0 && <PageUnreadBadge count={userUnread} />}
               </button>
             );
           })}

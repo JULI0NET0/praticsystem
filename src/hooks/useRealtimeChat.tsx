@@ -9,6 +9,7 @@ export interface ChatMessage {
   user: {
     name: string
     id: string
+    avatar_url?: string
   }
   createdAt: string
   // campos persistidos no banco
@@ -23,12 +24,13 @@ interface UseRealtimeChatProps {
   roomName: string
   username: string
   userId: string
+  avatarUrl?: string
   onMessage?: (message: ChatMessage) => void
 }
 
 const EVENT_MESSAGE_TYPE = 'message'
 
-export function useRealtimeChat({ roomName, username, userId, onMessage }: UseRealtimeChatProps) {
+export function useRealtimeChat({ roomName, username, userId, avatarUrl, onMessage }: UseRealtimeChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [isConnected, setIsConnected] = useState(false)
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
@@ -67,7 +69,7 @@ export function useRealtimeChat({ roomName, username, userId, onMessage }: UseRe
       const message: ChatMessage = {
         id: crypto.randomUUID(),
         content,
-        user: { name: username, id: userId },
+        user: { name: username, id: userId, avatar_url: avatarUrl },
         createdAt: new Date().toISOString(),
         ...extras,
       }

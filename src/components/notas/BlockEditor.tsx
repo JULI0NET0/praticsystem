@@ -439,6 +439,37 @@ const MentionConfig = MentionExtension.configure({
   },
 });
 
+function isDarkColor(colorStr: string): boolean {
+  const trimmed = colorStr.trim().toLowerCase();
+  if (!trimmed) return false;
+  if (trimmed === 'black' || trimmed === 'darkgray' || trimmed === 'dimgray' || trimmed === 'gray') return true;
+  
+  if (trimmed.startsWith('#')) {
+    const hex = trimmed.substring(1);
+    if (hex.length === 3) {
+      const r = parseInt(hex[0] + hex[0], 16);
+      const g = parseInt(hex[1] + hex[1], 16);
+      const b = parseInt(hex[2] + hex[2], 16);
+      return (r < 80 && g < 80 && b < 80);
+    } else if (hex.length === 6) {
+      const r = parseInt(hex.substring(0, 2), 16);
+      const g = parseInt(hex.substring(2, 4), 16);
+      const b = parseInt(hex.substring(4, 6), 16);
+      return (r < 80 && g < 80 && b < 80);
+    }
+  }
+  
+  const rgbMatch = trimmed.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+  if (rgbMatch) {
+    const r = parseInt(rgbMatch[1], 10);
+    const g = parseInt(rgbMatch[2], 10);
+    const b = parseInt(rgbMatch[3], 10);
+    return (r < 80 && g < 80 && b < 80);
+  }
+  
+  return false;
+}
+
 // ─── BlockEditor component ─────────────────────────────────────────────────
 
 interface BlockEditorProps {
@@ -603,6 +634,46 @@ export default function BlockEditor({
     onUpdate: ({ editor }) => onChange?.(editor.getJSON()),
     editorProps: {
       attributes: { class: 'block-editor-content' },
+      transformPastedHTML(html) {
+        try {
+          const parser = new window.DOMParser();
+          const doc = parser.parseFromString(html, 'text/html');
+          
+          const elementsWithStyle = doc.querySelectorAll('[style]');
+          elementsWithStyle.forEach((el) => {
+            const style = el.getAttribute('style') || '';
+            const parts = style.split(';');
+            const cleanedParts = parts.filter(part => {
+              const cleanedPart = part.trim();
+              if (!cleanedPart) return false;
+              if (cleanedPart.toLowerCase().startsWith('color')) {
+                const colorVal = cleanedPart.substring(cleanedPart.indexOf(':') + 1).trim();
+                return !isDarkColor(colorVal);
+              }
+              return true;
+            });
+            const newStyle = cleanedParts.join(';').trim();
+            if (newStyle === '') {
+              el.removeAttribute('style');
+            } else {
+              el.setAttribute('style', newStyle);
+            }
+          });
+
+          const fontElements = doc.querySelectorAll('font[color]');
+          fontElements.forEach((el) => {
+            const color = el.getAttribute('color') || '';
+            if (isDarkColor(color)) {
+              el.removeAttribute('color');
+            }
+          });
+
+          return doc.body.innerHTML;
+        } catch (e) {
+          console.error('Error transforming pasted HTML:', e);
+          return html;
+        }
+      },
       handlePaste(view, event) {
         const text = event.clipboardData?.getData('text/plain');
         if (!text) return false;

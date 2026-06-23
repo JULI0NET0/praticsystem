@@ -39,9 +39,38 @@ function renderContent(content: string, isOwnMessage: boolean) {
   )
 }
 
+function Avatar({ name, avatarUrl, size, fontSize }: { name: string; avatarUrl?: string; size: number; fontSize: string }) {
+  return (
+    <div
+      style={{
+        width: size,
+        height: size,
+        borderRadius: '50%',
+        flexShrink: 0,
+        marginTop: '2px',
+        background: 'var(--accent)',
+        overflow: 'hidden',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: 'white',
+        fontSize,
+        fontWeight: 700,
+      }}
+    >
+      {avatarUrl ? (
+        <img src={avatarUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
+      ) : (
+        name.substring(0, 2).toUpperCase()
+      )}
+    </div>
+  )
+}
+
 export function ChatMessageItem({ message, isOwnMessage, showHeader, compact = false, sendError = false }: ChatMessageItemProps) {
   const avatarSize = compact ? 26 : 32
   const fontSize = compact ? '0.82rem' : '0.88rem'
+  const avatarFontSize = compact ? '0.6rem' : '0.7rem'
   const padding = compact ? '8px 12px' : '10px 14px'
 
   return (
@@ -49,35 +78,26 @@ export function ChatMessageItem({ message, isOwnMessage, showHeader, compact = f
       style={{
         display: 'flex',
         gap: compact ? '8px' : '10px',
-        padding: '3px 0',
+        padding: showHeader ? '6px 0 1px' : '1px 0',
         flexDirection: isOwnMessage ? 'row-reverse' : 'row',
         alignItems: 'flex-start',
       }}
     >
+      {/* Avatar — mostra só na primeira mensagem do grupo; spacer nas demais para alinhar */}
       {!isOwnMessage && (
-        <div
-          style={{
-            width: avatarSize,
-            height: avatarSize,
-            borderRadius: '50%',
-            flexShrink: 0,
-            marginTop: '2px',
-            background: 'var(--accent)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: 'white',
-            fontSize: compact ? '0.6rem' : '0.7rem',
-            fontWeight: 700,
-          }}
-        >
-          {message.user.name.substring(0, 2).toUpperCase()}
-        </div>
+        showHeader
+          ? <Avatar
+              name={message.user.name}
+              avatarUrl={message.user.avatar_url}
+              size={avatarSize}
+              fontSize={avatarFontSize}
+            />
+          : <div style={{ width: avatarSize, height: avatarSize, flexShrink: 0 }} />
       )}
 
       <div style={{ maxWidth: '75%' }}>
         {showHeader && !isOwnMessage && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '3px' }}>
             <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--accent)' }}>
               {message.user.name.split(' ')[0]}
             </span>
@@ -104,12 +124,7 @@ export function ChatMessageItem({ message, isOwnMessage, showHeader, compact = f
 
         {isOwnMessage && (
           <div style={{ textAlign: 'right', marginTop: '2px' }}>
-            <span
-              style={{
-                fontSize: '0.55rem',
-                color: 'var(--text-secondary)',
-              }}
-            >
+            <span style={{ fontSize: '0.55rem', color: 'var(--text-secondary)' }}>
               {formatTime(message.createdAt)}
             </span>
             {sendError && (

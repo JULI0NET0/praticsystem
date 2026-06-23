@@ -1,63 +1,148 @@
-// Utilitário de áudio para feedback sonoro no Prátic System utilizando Web Audio API
-// Garante execução exclusiva no lado do cliente e sons procedurais premium
-
-type SoundType = 'success' | 'error' | 'info' | 'warning';
+type SoundType = 'success' | 'error' | 'info' | 'warning' | 'chat' | 'mention';
 
 class SoundManager {
   private audioCtx: AudioContext | null = null;
 
-  private getAudioContext(): AudioContext | null {
+  private getCtx(): AudioContext | null {
     if (typeof window === 'undefined') return null;
-
     if (!this.audioCtx) {
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-      if (AudioContextClass) {
-        this.audioCtx = new AudioContextClass();
-      }
+      const Cls = window.AudioContext || (window as any).webkitAudioContext;
+      if (Cls) this.audioCtx = new Cls();
     }
-
-    if (this.audioCtx && this.audioCtx.state === 'suspended') {
-      this.audioCtx.resume();
-    }
-
+    if (this.audioCtx?.state === 'suspended') this.audioCtx.resume();
     return this.audioCtx;
   }
 
   public play(type: SoundType) {
     try {
-      const ctx = this.getAudioContext();
+      const ctx = this.getCtx();
       if (!ctx) return;
-
-      const now = ctx.currentTime;
+      const t = ctx.currentTime;
 
       switch (type) {
         case 'success':
-          this.playTone(ctx, 523.25, now, 0.08, 'sine', 0.15); // C5
-          this.playTone(ctx, 659.25, now + 0.08, 0.08, 'sine', 0.15); // E5
-          this.playTone(ctx, 783.99, now + 0.16, 0.15, 'sine', 0.2); // G5
+          this.tone(ctx, 523.25, t,        0.08, 'sine', 0.15);
+          this.tone(ctx, 659.25, t + 0.08, 0.08, 'sine', 0.15);
+          this.tone(ctx, 783.99, t + 0.16, 0.15, 'sine', 0.2);
           break;
 
         case 'error':
-          this.playTone(ctx, 220, now, 0.12, 'sawtooth', 0.15); // A3 grave
-          this.playTone(ctx, 180, now + 0.12, 0.18, 'sawtooth', 0.2); // mais grave
+          this.tone(ctx, 220, t,        0.12, 'sawtooth', 0.15);
+          this.tone(ctx, 180, t + 0.12, 0.18, 'sawtooth', 0.2);
           break;
 
         case 'info':
-          this.playTone(ctx, 440, now, 0.08, 'sine', 0.1); // A4
-          this.playTone(ctx, 880, now + 0.08, 0.12, 'sine', 0.15); // A5 cristalino
+          this.tone(ctx, 440, t,        0.08, 'sine', 0.1);
+          this.tone(ctx, 880, t + 0.08, 0.12, 'sine', 0.15);
           break;
 
         case 'warning':
-          this.playTone(ctx, 587.33, now, 0.1, 'triangle', 0.15); // D5
-          this.playTone(ctx, 587.33, now + 0.15, 0.15, 'triangle', 0.2); // D5 repetido
+          this.tone(ctx, 587.33, t,        0.1,  'triangle', 0.15);
+          this.tone(ctx, 587.33, t + 0.15, 0.15, 'triangle', 0.2);
+          break;
+
+        // ──────────────────────────────────────────────
+        // CHAT: "pop" suave tipo iMessage
+        //  • glide de frequência no ataque (caráter de sino)
+        //  • harmônicos inarmônicos (soam naturais, não sintéticos)
+        //  • burst de ruído de impacto ultra-curto (sensação física)
+        // ──────────────────────────────────────────────
+        case 'chat':
+          this.bell(ctx, 1046.5, t, 0.13, 0.13);   // C6 fundamental
+          this.impact(ctx, t, 0.04);
+          break;
+
+        // ──────────────────────────────────────────────
+        // MENTION: dois sinos ascendentes tipo Slack
+        //  • A5 → E6 com 130 ms de intervalo
+        //  • segundo sino levemente mais alto
+        // ──────────────────────────────────────────────
+        case 'mention':
+          this.bell(ctx, 880,    t,        0.15, 0.10);  // A5
+          this.impact(ctx, t, 0.045);
+          this.bell(ctx, 1318.5, t + 0.13, 0.17, 0.12);  // E6
+          this.impact(ctx, t + 0.13, 0.05);
           break;
       }
     } catch (err) {
-      console.warn('Erro ao reproduzir feedback sonoro:', err);
+      console.warn('Erro no SoundManager:', err);
     }
   }
 
-  private playTone(
+  /**
+   * Sino com harmônicos inarmônicos e pitch glide no ataque.
+   * @param freq   frequência fundamental
+   * @param tau    constante de decaimento (quanto maior, mais longo o sino)
+   */
+  private bell(ctx: AudioContext, freq: number, startTime: number, gain: number, tau: number) {
+    // Parciais inarmônicas aproximadas de um sino real
+    const partials: [ratio: number, amp: number][] = [
+      [1,     1.00],
+      [2.0,   0.40],   // oitava
+      [3.12,  0.18],   // 3ª parcial
+      [4.24,  0.06],   // 4ª parcial (suave)
+    ];
+
+    for (const [ratio, amp] of partials) {
+      const osc  = ctx.createOscillator();
+      const gnd  = ctx.createGain();
+
+      osc.type = 'sine';
+
+      // Glide: começa ligeiramente acima e cai até a nota alvo em 22 ms
+      const target = freq * ratio;
+      osc.frequency.setValueAtTime(target * 1.018, startTime);
+      osc.frequency.exponentialRampToValueAtTime(target, startTime + 0.022);
+
+      // Envelope: ataque rapidíssimo (6 ms) + decaimento exponencial suave
+      const peak = gain * amp;
+      gnd.gain.setValueAtTime(0, startTime);
+      gnd.gain.linearRampToValueAtTime(peak, startTime + 0.006);
+      gnd.gain.setTargetAtTime(0, startTime + 0.010, tau);
+
+      osc.connect(gnd);
+      gnd.connect(ctx.destination);
+      osc.start(startTime);
+      osc.stop(startTime + tau * 6);
+    }
+  }
+
+  /**
+   * Burst de ruído filtrado em alta frequência — simula o impacto físico
+   * do dedo/martelo ao tocar o sino, adicionando presença e realismo.
+   */
+  private impact(ctx: AudioContext, startTime: number, gain: number) {
+    const sampleRate = ctx.sampleRate;
+    const dur = 0.018; // 18 ms de ruído
+    const buf = ctx.createBuffer(1, Math.floor(sampleRate * dur), sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+
+    const src    = ctx.createBufferSource();
+    const filter = ctx.createBiquadFilter();
+    const gnd    = ctx.createGain();
+
+    src.buffer = buf;
+
+    // Passa-alta em 4 kHz → soa como "click" cristalino, não como ruído bruto
+    filter.type = 'highpass';
+    filter.frequency.value = 4000;
+    filter.Q.value = 0.8;
+
+    gnd.gain.setValueAtTime(gain, startTime);
+    gnd.gain.exponentialRampToValueAtTime(0.0001, startTime + dur);
+
+    src.connect(filter);
+    filter.connect(gnd);
+    gnd.connect(ctx.destination);
+    src.start(startTime);
+    src.stop(startTime + dur);
+  }
+
+  /**
+   * Tom simples para os sons legados (success, error, info, warning).
+   */
+  private tone(
     ctx: AudioContext,
     frequency: number,
     startTime: number,
@@ -65,20 +150,18 @@ class SoundManager {
     type: OscillatorType = 'sine',
     maxGain: number = 0.15
   ) {
-    const osc = ctx.createOscillator();
-    const gainNode = ctx.createGain();
+    const osc  = ctx.createOscillator();
+    const gnd  = ctx.createGain();
 
     osc.type = type;
     osc.frequency.setValueAtTime(frequency, startTime);
 
-    // Envelope de volume (Attack, Decay suave)
-    gainNode.gain.setValueAtTime(0, startTime);
-    gainNode.gain.linearRampToValueAtTime(maxGain, startTime + 0.02);
-    gainNode.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+    gnd.gain.setValueAtTime(0, startTime);
+    gnd.gain.linearRampToValueAtTime(maxGain, startTime + 0.02);
+    gnd.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
 
-    osc.connect(gainNode);
-    gainNode.connect(ctx.destination);
-
+    osc.connect(gnd);
+    gnd.connect(ctx.destination);
     osc.start(startTime);
     osc.stop(startTime + duration);
   }

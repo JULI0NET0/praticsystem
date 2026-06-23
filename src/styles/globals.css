@@ -456,29 +456,8 @@ select {
 }
 
 .fc-event-premium {
-  padding: 6px 10px !important;
-  border-radius: 12px !important;
-  border: none !important;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
-  transition: all 0.2s ease !important;
   overflow: hidden;
   position: relative;
-}
-
-.fc-event-premium::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 4px;
-  background: currentColor;
-  opacity: 0.8;
-}
-
-.fc-event-premium:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0,0,0,0.2) !important;
 }
 
 .fc-daygrid-day.fc-day-today {

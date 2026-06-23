@@ -3,9 +3,8 @@
 import { supabase } from "@/lib/supabase";
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
-  Plus, Loader2, Shield, ShieldOff, Trash2, X, CheckCircle2, Clock,
-  Calendar as CalendarIcon, Filter, Info, Users, MapPin, ExternalLink,
-  ChevronLeft, ChevronRight, Search, LayoutGrid, List, Edit2, Share2
+  Plus, Shield, ShieldOff, Trash2, X, CheckCircle2, Clock,
+  Calendar as CalendarIcon, Info, Users, MapPin, ExternalLink, Edit2
 } from "lucide-react";
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
@@ -46,7 +45,6 @@ export default function SchedulePage() {
 
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [clients, setClients] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -161,6 +159,39 @@ export default function SchedulePage() {
     fetchEvents();
     fetchClients();
   }, [fetchEvents, fetchClients]);
+
+  const equalizeRowHeights = useCallback(() => {
+    // Duplo rAF: roda após os dois passes de layout do FullCalendar
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const calEl = calendarRef.current?.el as HTMLElement | null;
+      if (!calEl) return;
+
+      const bodyEl = calEl.querySelector('.fc-daygrid-body') as HTMLElement | null;
+      if (!bodyEl) return;
+
+      const rows = Array.from(bodyEl.querySelectorAll('tbody tr')) as HTMLElement[];
+      if (!rows.length) return;
+
+      const bodyHeight = bodyEl.offsetHeight;
+      if (!bodyHeight) return;
+
+      const rowHeight = Math.floor(bodyHeight / rows.length);
+      rows.forEach(row => {
+        // setProperty(..., 'important') gera height: Xpx !important inline,
+        // que tem prioridade sobre o style.height = 'Xpx' regular do FullCalendar
+        row.style.setProperty('height', `${rowHeight}px`, 'important');
+      });
+    }));
+  }, []);
+
+  useEffect(() => {
+    equalizeRowHeights();
+  }, [events, equalizeRowHeights]);
+
+  useEffect(() => {
+    window.addEventListener('resize', equalizeRowHeights);
+    return () => window.removeEventListener('resize', equalizeRowHeights);
+  }, [equalizeRowHeights]);
 
   const handleDateClick = (arg: any) => {
     let x = window.innerWidth / 2;
@@ -305,7 +336,6 @@ export default function SchedulePage() {
 
   const handleDeleteEvent = async () => {
     if (!selectedEvent || selectedEvent.id.startsWith('inv-')) return;
-    setIsDeleting(true);
     try {
       const { error } = await supabase
         .from('agenda_events')
@@ -319,8 +349,6 @@ export default function SchedulePage() {
     } catch (err) {
       console.error("Erro ao excluir:", err);
       showToast("Erro ao excluir", "error");
-    } finally {
-      setIsDeleting(false);
     }
   };
 
@@ -344,24 +372,76 @@ export default function SchedulePage() {
   const renderEventContent = (eventInfo: any) => {
     const type = eventInfo.event.extendedProps.type;
     const category = CATEGORIES.find(c => c.id === type);
-    const Icon = category?.icon || Info;
+    const color = category?.color || '#A8A8A8';
+    const isCompleted = eventInfo.event.extendedProps.status === 'completed';
+
+    if (eventInfo.event.allDay) {
+      return (
+        <div style={{
+          backgroundColor: color,
+          color: 'white',
+          width: '100%',
+          padding: '1px 8px',
+          borderRadius: '4px',
+          fontSize: '0.72rem',
+          fontWeight: 600,
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+          opacity: isCompleted ? 0.5 : 1,
+          textDecoration: isCompleted ? 'line-through' : 'none',
+        }}>
+          {eventInfo.event.title}
+        </div>
+      );
+    }
 
     return (
-      <div className="fc-event-premium" style={{ backgroundColor: `${category?.color}20`, color: category?.color, width: '100%' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <Icon size={12} />
-          <span style={{ fontWeight: 600, fontSize: '0.75rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {eventInfo.event.title}
-          </span>
-        </div>
-        {!eventInfo.event.allDay && (
-          <div style={{ fontSize: '0.65rem', opacity: 0.8, marginTop: '2px' }}>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '5px',
+        overflow: 'hidden',
+        padding: '1px 4px',
+        width: '100%',
+        opacity: isCompleted ? 0.5 : 1,
+      }}>
+        <span style={{
+          width: '7px',
+          height: '7px',
+          borderRadius: '50%',
+          backgroundColor: color,
+          flexShrink: 0,
+        }} />
+        {eventInfo.timeText && (
+          <span style={{
+            fontSize: '0.7rem',
+            color: 'var(--text-secondary)',
+            flexShrink: 0,
+            fontWeight: 500,
+          }}>
             {eventInfo.timeText}
-          </div>
+          </span>
         )}
+        <span style={{
+          fontSize: '0.72rem',
+          fontWeight: 500,
+          color: 'var(--text-primary)',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+          textDecoration: isCompleted ? 'line-through' : 'none',
+        }}>
+          {eventInfo.event.title}
+        </span>
       </div>
     );
   };
+
+  const eventCountByType = CATEGORIES.reduce((acc, cat) => {
+    acc[cat.id] = events.filter(e => e.extendedProps?.type === cat.id).length;
+    return acc;
+  }, {} as Record<string, number>);
 
   const filteredEvents = events.filter(e =>
     e.title.toLowerCase().includes(searchQuery.toLowerCase()) &&
@@ -375,12 +455,15 @@ export default function SchedulePage() {
   };
 
   return (
-    <div id="agenda-page-container" ref={pageRef} style={{ display: 'flex', flexDirection: 'column', gap: '32px', position: 'relative' }}>
-      <div className="mobile-stack" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '20px' }}>
-        <div>
-          <h1 style={{ fontSize: '2rem', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>Agenda</h1>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginTop: '12px' }}>
-            {CATEGORIES.map(cat => (
+    <div id="agenda-page-container" ref={pageRef} style={{ display: 'flex', flexDirection: 'column', gap: '20px', position: 'relative' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <h1 style={{ fontSize: '2rem', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)', flexShrink: 0 }}>Agenda</h1>
+
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', flex: 1 }}>
+          {CATEGORIES.map(cat => {
+            const count = eventCountByType[cat.id] ?? 0;
+            const isActive = activeFilters.includes(cat.id);
+            return (
               <button
                 key={cat.id}
                 onClick={() => toggleFilter(cat.id)}
@@ -388,22 +471,35 @@ export default function SchedulePage() {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px',
-                  padding: '6px 12px',
+                  padding: '5px 10px',
                   borderRadius: '20px',
-                  background: activeFilters.includes(cat.id) ? `${cat.color}20` : 'transparent',
-                  border: `1px solid ${activeFilters.includes(cat.id) ? cat.color : 'rgba(255,255,255,0.1)'}`,
+                  background: isActive ? `${cat.color}20` : 'transparent',
+                  border: `1px solid ${isActive ? cat.color : 'rgba(255,255,255,0.1)'}`,
                   transition: 'all 0.2s',
                   cursor: 'pointer'
                 }}
               >
-                <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: cat.color }} />
-                <span style={{ fontSize: '0.75rem', color: activeFilters.includes(cat.id) ? 'white' : 'var(--text-secondary)', fontWeight: 600 }}>{cat.label}</span>
+                <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: cat.color }} />
+                <span style={{ fontSize: '0.72rem', color: isActive ? 'white' : 'var(--text-secondary)', fontWeight: 600 }}>{cat.label}</span>
+                {count > 0 && (
+                  <span style={{
+                    fontSize: '0.62rem',
+                    fontWeight: 700,
+                    lineHeight: 1,
+                    padding: '2px 5px',
+                    borderRadius: '10px',
+                    backgroundColor: isActive ? cat.color : 'rgba(255,255,255,0.1)',
+                    color: isActive ? 'white' : 'var(--text-secondary)',
+                  }}>
+                    {count}
+                  </span>
+                )}
               </button>
-            ))}
-          </div>
+            );
+          })}
         </div>
 
-        <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexShrink: 0 }}>
           <SearchInput
             value={searchQuery}
             onChange={setSearchQuery}
@@ -433,8 +529,8 @@ export default function SchedulePage() {
               x,
               y
             });
-          }} style={{ height: '40px' }}>
-            <Plus size={18} /> Novo
+          }} style={{ height: '36px' }}>
+            <Plus size={16} /> Novo
           </Spotlight>
         </div>
       </div>
@@ -475,6 +571,7 @@ export default function SchedulePage() {
             weekends={true}
             height="100%"
             expandRows={true}
+            datesSet={equalizeRowHeights}
             dateClick={handleDateClick}
             eventClick={handleEventClick}
             eventDrop={handleEventDrop}
@@ -814,12 +911,7 @@ export default function SchedulePage() {
         .fc-event {
           background: transparent !important;
           border: none !important;
-        }
-        .event-completed {
-          opacity: 0.5;
-        }
-        .event-completed .fc-event-premium {
-          text-decoration: line-through;
+          box-shadow: none !important;
         }
         .fc-day-today {
           background: rgba(217, 72, 15, 0.08) !important;
@@ -877,6 +969,40 @@ export default function SchedulePage() {
         [data-theme='light'] .agenda-popover {
           background: rgba(255, 255, 255, 0.98) !important;
           border: 1px solid rgba(0, 0, 0, 0.12) !important;
+        }
+        .fc-daygrid-day {
+          position: relative !important;
+          overflow: hidden !important;
+        }
+        .fc-daygrid-day-frame {
+          position: absolute !important;
+          inset: 0 !important;
+          min-height: 0 !important;
+          overflow: hidden !important;
+        }
+        .fc-daygrid-day-events {
+          min-height: 0 !important;
+        }
+        .fc-daygrid-more-link {
+          font-size: 0.68rem !important;
+          font-weight: 700 !important;
+          color: var(--text-secondary) !important;
+          padding: 1px 8px !important;
+          border-radius: 5px !important;
+          background: rgba(255,255,255,0.05) !important;
+          margin-top: 1px !important;
+          display: block !important;
+          text-decoration: none !important;
+        }
+        .fc-daygrid-more-link:hover {
+          background: rgba(255,255,255,0.1) !important;
+          color: var(--text-primary) !important;
+        }
+        [data-theme='light'] .fc-daygrid-more-link {
+          background: rgba(0,0,0,0.05) !important;
+        }
+        [data-theme='light'] .fc-daygrid-more-link:hover {
+          background: rgba(0,0,0,0.1) !important;
         }
       `}</style>
     </div>
