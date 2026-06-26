@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import {
   RefreshCw, Link2, CheckCircle2, AlertCircle, Wallet,
-  Sparkles, User, Building2, X,
+  Sparkles, User, Building2, X, Search, Unlink,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import DialogShell from "@/components/DialogShell";
@@ -26,9 +26,12 @@ interface AsaasSyncProps {
   syncing: boolean;
   onSync: (startDate: string, endDate: string) => Promise<{ imported: number; skipped: number } | void>;
   onLink: (asaasId: string, expenseEntryId?: string, invoiceId?: string) => Promise<void>;
+  onUnlink: (asaasId: string) => Promise<void>;
   onCreateEntry: (data: Partial<ExpenseEntry>) => Promise<ExpenseEntry | null>;
   onUpdateInvoiceStatus?: (id: string, status: string) => Promise<void>;
   selectedMonth: string;
+  startDate?: string;
+  endDate?: string;
   balance?: AsaasBalance | null;
   onRefreshBalance?: () => Promise<void>;
 }
@@ -45,14 +48,29 @@ export function AsaasSync({
   syncing,
   onSync,
   onLink,
+  onUnlink,
   onCreateEntry,
   onUpdateInvoiceStatus,
   selectedMonth,
+  startDate: filterStart,
+  endDate: filterEnd,
   balance,
   onRefreshBalance,
 }: AsaasSyncProps) {
   const [lastSyncResult, setLastSyncResult] = useState<{ imported: number; skipped: number } | null>(null);
   const [filterStatus, setFilterStatus] = useState<"all" | "linked" | "unlinked">("all");
+  const [search, setSearch] = useState("");
+  const [unlinkingId, setUnlinkingId] = useState<string | null>(null);
+
+  async function handleUnlink(txnId: string) {
+    if (!confirm("Desfazer este vínculo? O lançamento volta a Pendente/Parcial conforme o restante.")) return;
+    setUnlinkingId(txnId);
+    try {
+      await onUnlink(txnId);
+    } finally {
+      setUnlinkingId(null);
+    }
+  }
 
   // Advanced link dialog
   const [linkDialogTxn, setLinkDialogTxn] = useState<AsaasTransaction | null>(null);
@@ -225,12 +243,36 @@ export function AsaasSync({
   }
 
   const filtered = useMemo(() => {
-    return asaasTransactions.filter((t) => {
-      if (filterStatus === "linked") return t.expense_entry_id || t.invoice_id;
-      if (filterStatus === "unlinked") return !t.expense_entry_id && !t.invoice_id;
-      return true;
-    });
-  }, [asaasTransactions, filterStatus]);
+    const q = search.trim().toLowerCase();
+    return asaasTransactions
+      .filter((t) => {
+        const d = t.date.split("T")[0];
+        if (filterStart && d < filterStart) return false;
+        if (filterEnd && d > filterEnd) return false;
+        if (filterStatus === "linked" && !(t.expense_entry_id || t.invoice_id)) return false;
+        if (filterStatus === "unlinked" && (t.expense_entry_id || t.invoice_id)) return false;
+        if (q) {
+          const label = resolveResponsible(t).label.toLowerCase();
+          if (!(t.description || "").toLowerCase().includes(q) && !label.includes(q)) return false;
+        }
+        return true;
+      })
+      .sort((a, b) => b.date.localeCompare(a.date));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [asaasTransactions, filterStatus, filterStart, filterEnd, search, invoices, clients, expenseEntries, expenses, users]);
+
+  // Totalizadores do período (ignora busca e filtro de vínculo)
+  const periodTotals = useMemo(() => {
+    let entrou = 0, saiu = 0;
+    for (const t of asaasTransactions) {
+      const d = t.date.split("T")[0];
+      if (filterStart && d < filterStart) continue;
+      if (filterEnd && d > filterEnd) continue;
+      if (t.type === "CREDIT") entrou += Number(t.value);
+      else saiu += Number(t.value);
+    }
+    return { entrou, saiu, saldo: entrou - saiu };
+  }, [asaasTransactions, filterStart, filterEnd]);
 
   const unlinkedCount = asaasTransactions.filter((t) => !t.expense_entry_id && !t.invoice_id).length;
   const batchTotal = useMemo(() => {
@@ -275,6 +317,27 @@ export function AsaasSync({
         </button>
       </div>
 
+      {/* Totalizadores do período */}
+      <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", alignItems: "stretch" }}>
+        {[
+          { label: "Entrou", value: periodTotals.entrou, color: "#22C55E", bg: "rgba(34,197,94,0.06)", border: "rgba(34,197,94,0.15)" },
+          { label: "Saiu", value: periodTotals.saiu, color: "#EF4444", bg: "rgba(239,68,68,0.06)", border: "rgba(239,68,68,0.15)" },
+          {
+            label: "Saldo do período", value: periodTotals.saldo,
+            color: periodTotals.saldo >= 0 ? "#22C55E" : "#EF4444",
+            bg: periodTotals.saldo >= 0 ? "rgba(34,197,94,0.06)" : "rgba(239,68,68,0.06)",
+            border: periodTotals.saldo >= 0 ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.15)",
+          },
+        ].map((card) => (
+          <div key={card.label} className="glass-card" style={{ padding: "16px 22px", flex: "1 1 180px", background: card.bg, border: `1px solid ${card.border}` }}>
+            <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.05em" }}>{card.label}</span>
+            <p style={{ fontSize: "1.4rem", fontWeight: 800, color: card.color, letterSpacing: "-0.02em", marginTop: "6px" }}>
+              {card.label === "Saiu" ? "− " : card.label === "Entrou" ? "+ " : ""}{formatCurrency(Math.abs(card.value))}
+            </p>
+          </div>
+        ))}
+      </div>
+
       {/* Sync control */}
       <div className="glass-card" style={{ padding: "24px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "24px", flexWrap: "wrap" }}>
         <div>
@@ -315,6 +378,16 @@ export function AsaasSync({
 
       {/* Filters */}
       <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
+        <div style={{ position: "relative", flex: "1 1 220px", minWidth: "180px" }}>
+          <Search size={14} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--text-tertiary)" }} />
+          <input
+            className="input-dark"
+            style={{ width: "100%", paddingLeft: "34px" }}
+            placeholder="Buscar por cliente ou descrição..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
         {[{ value: "all", label: "Todas" }, { value: "unlinked", label: `Sem vínculo (${unlinkedCount})` }, { value: "linked", label: "Vinculadas" }].map((opt) => (
           <button key={opt.value} onClick={() => setFilterStatus(opt.value as typeof filterStatus)}
             className={`btn ${filterStatus === opt.value ? "btn-accent" : "btn-secondary"}`}
@@ -357,10 +430,10 @@ export function AsaasSync({
           <thead>
             <tr>
               <th style={{ width: "36px" }}></th>
-              <th style={{ width: "80px" }}>Data</th>
+              <th style={{ width: "90px" }}>Data</th>
+              <th style={{ width: "150px" }}>Cliente</th>
               <th>Descrição</th>
-              <th style={{ width: "120px" }}>Responsável</th>
-              <th style={{ width: "100px" }}>Categoria</th>
+              <th style={{ width: "90px" }}>Tipo</th>
               <th style={{ textAlign: "right", width: "120px" }}>Valor</th>
               <th style={{ width: "130px" }}>Vínculo</th>
               <th style={{ width: "60px" }}></th>
@@ -407,6 +480,15 @@ export function AsaasSync({
                     {new Date(`${txn.date}T12:00:00`).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit" })}
                   </td>
 
+                  {/* Cliente */}
+                  <td>
+                    <span style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "0.82rem", color: responsible.kind === "empresa" ? "var(--text-tertiary)" : "var(--text-secondary)", fontWeight: 600 }}>
+                      {responsible.kind === "funcionario" && <User size={11} />}
+                      {responsible.kind === "cliente" && <Building2 size={11} />}
+                      {responsible.kind === "empresa" ? "—" : responsible.label}
+                    </span>
+                  </td>
+
                   {/* Descrição */}
                   <td style={{ maxWidth: "240px" }}>
                     <p style={{ fontWeight: 600, fontSize: "0.875rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -414,16 +496,7 @@ export function AsaasSync({
                     </p>
                   </td>
 
-                  {/* Responsável */}
-                  <td>
-                    <span style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "0.82rem", color: responsible.kind === "empresa" ? "var(--text-tertiary)" : "var(--text-secondary)", fontWeight: 600 }}>
-                      {responsible.kind === "funcionario" && <User size={11} />}
-                      {responsible.kind === "cliente" && <Building2 size={11} />}
-                      {responsible.label}
-                    </span>
-                  </td>
-
-                  {/* Categoria */}
+                  {/* Tipo */}
                   <td>
                     <span className="badge" style={{
                       color: txn.type === "CREDIT" ? "#22C55E" : "#EF4444",
@@ -508,7 +581,7 @@ export function AsaasSync({
 
                   {/* Ação */}
                   <td style={{ textAlign: "right" }}>
-                    {!isLinked && (
+                    {!isLinked ? (
                       <button
                         onClick={() => setLinkDialogTxn(txn)}
                         style={{ background: "none", border: "none", cursor: "pointer", color: "#F59E0B", padding: "4px", display: "inline-flex" }}
@@ -516,8 +589,18 @@ export function AsaasSync({
                       >
                         <Link2 size={15} />
                       </button>
+                    ) : (
+                      <button
+                        onClick={() => handleUnlink(txn.id)}
+                        disabled={unlinkingId === txn.id}
+                        style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-tertiary)", padding: "4px", display: "inline-flex" }}
+                        title="Desvincular"
+                      >
+                        {unlinkingId === txn.id
+                          ? <RefreshCw size={15} className="animate-spin" />
+                          : <Unlink size={15} />}
+                      </button>
                     )}
-                    {isLinked && <CheckCircle2 size={15} color="#22C55E" style={{ opacity: 0.5, display: "inline-block", verticalAlign: "middle" }} />}
                   </td>
                 </motion.tr>
               );

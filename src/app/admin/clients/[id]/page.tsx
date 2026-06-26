@@ -49,7 +49,8 @@ import {
   Loader2,
   Palette,
   Image,
-  RefreshCw
+  RefreshCw,
+  Pin
 } from "lucide-react";
 import Spotlight from "@/components/Spotlight";
 import DialogShell from "@/components/DialogShell";
@@ -139,6 +140,7 @@ export default function ClientDetailPage() {
   const [isBrandModalOpen, setIsBrandModalOpen] = useState(false);
   const [tempBrandDriveUrl, setTempBrandDriveUrl] = useState("");
   const [tempBrandCanvaUrl, setTempBrandCanvaUrl] = useState("");
+  const [tempBrandPinterestUrl, setTempBrandPinterestUrl] = useState("");
   const [isBrandUploading, setIsBrandUploading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -707,10 +709,10 @@ export default function ClientDetailPage() {
     try {
       const { error } = await supabase
         .from('clients')
-        .update({ brand_drive_url: tempBrandDriveUrl, brand_canva_url: tempBrandCanvaUrl })
+        .update({ brand_drive_url: tempBrandDriveUrl, brand_canva_url: tempBrandCanvaUrl, brand_pinterest_url: tempBrandPinterestUrl })
         .eq('id', id);
       if (error) throw error;
-      setClientData({ ...clientData, brand_drive_url: tempBrandDriveUrl, brand_canva_url: tempBrandCanvaUrl });
+      setClientData({ ...clientData, brand_drive_url: tempBrandDriveUrl, brand_canva_url: tempBrandCanvaUrl, brand_pinterest_url: tempBrandPinterestUrl });
       setIsBrandModalOpen(false);
       showToast('ID Visual da Marca atualizado!', 'success');
     } catch (err) {
@@ -2380,6 +2382,7 @@ export default function ClientDetailPage() {
                     onClick={() => {
                       setTempBrandDriveUrl(clientData.brand_drive_url || '');
                       setTempBrandCanvaUrl(clientData.brand_canva_url || '');
+                      setTempBrandPinterestUrl(clientData.brand_pinterest_url || '');
                       setIsBrandModalOpen(true);
                     }}
                     className="btn btn-secondary btn-sm"
@@ -2389,8 +2392,8 @@ export default function ClientDetailPage() {
                   </button>
                 </div>
 
-                {/* Drive + Canva Cards */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                {/* Drive + Canva + Pinterest Cards */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
                   {/* Google Drive Card */}
                   <Spotlight className="glass-card" style={{ padding: '24px', display: 'flex', alignItems: 'center', gap: '16px', border: '1px solid rgba(66, 133, 244, 0.2)', background: 'rgba(66, 133, 244, 0.03)' }}>
                     <div style={{ width: '48px', height: '48px', borderRadius: '12px', backgroundColor: 'rgba(66, 133, 244, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4285F4', flexShrink: 0 }}>
@@ -2412,7 +2415,7 @@ export default function ClientDetailPage() {
                       </button>
                     ) : (
                       <button
-                        onClick={() => { setTempBrandDriveUrl(''); setTempBrandCanvaUrl(clientData.brand_canva_url || ''); setIsBrandModalOpen(true); }}
+                        onClick={() => { setTempBrandDriveUrl(''); setTempBrandCanvaUrl(clientData.brand_canva_url || ''); setTempBrandPinterestUrl(clientData.brand_pinterest_url || ''); setIsBrandModalOpen(true); }}
                         className="btn btn-secondary btn-sm"
                         style={{ display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid rgba(66, 133, 244, 0.2)', color: '#4285F4', flexShrink: 0, fontSize: '0.8rem' }}
                       >
@@ -2442,9 +2445,39 @@ export default function ClientDetailPage() {
                       </button>
                     ) : (
                       <button
-                        onClick={() => { setTempBrandDriveUrl(clientData.brand_drive_url || ''); setTempBrandCanvaUrl(''); setIsBrandModalOpen(true); }}
+                        onClick={() => { setTempBrandDriveUrl(clientData.brand_drive_url || ''); setTempBrandCanvaUrl(''); setTempBrandPinterestUrl(clientData.brand_pinterest_url || ''); setIsBrandModalOpen(true); }}
                         className="btn btn-secondary btn-sm"
                         style={{ display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid rgba(126, 86, 222, 0.2)', color: '#7E56DE', flexShrink: 0, fontSize: '0.8rem' }}
+                      >
+                        <Plus size={14} /> Vincular
+                      </button>
+                    )}
+                  </Spotlight>
+
+                  {/* Pinterest Card */}
+                  <Spotlight className="glass-card" style={{ padding: '24px', display: 'flex', alignItems: 'center', gap: '16px', border: '1px solid rgba(230, 0, 35, 0.2)', background: 'rgba(230, 0, 35, 0.03)' }}>
+                    <div style={{ width: '48px', height: '48px', borderRadius: '12px', backgroundColor: 'rgba(230, 0, 35, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#E60023', flexShrink: 0 }}>
+                      <Pin size={24} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: '2px' }}>Pinterest</p>
+                      <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                        {clientData.brand_pinterest_url ? 'Pasta vinculada' : 'Nenhuma pasta vinculada'}
+                      </p>
+                    </div>
+                    {clientData.brand_pinterest_url ? (
+                      <button
+                        onClick={() => window.open(clientData.brand_pinterest_url, '_blank')}
+                        className="btn btn-secondary btn-sm"
+                        style={{ display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid rgba(230, 0, 35, 0.3)', color: '#E60023', flexShrink: 0, fontSize: '0.8rem' }}
+                      >
+                        <ExternalLink size={14} /> Abrir
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => { setTempBrandDriveUrl(clientData.brand_drive_url || ''); setTempBrandCanvaUrl(clientData.brand_canva_url || ''); setTempBrandPinterestUrl(''); setIsBrandModalOpen(true); }}
+                        className="btn btn-secondary btn-sm"
+                        style={{ display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid rgba(230, 0, 35, 0.2)', color: '#E60023', flexShrink: 0, fontSize: '0.8rem' }}
                       >
                         <Plus size={14} /> Vincular
                       </button>
@@ -3371,6 +3404,23 @@ export default function ClientDetailPage() {
                       style={{ paddingLeft: '42px' }}
                       value={tempBrandCanvaUrl}
                       onChange={(e) => setTempBrandCanvaUrl(e.target.value)}
+                    />
+                  </div>
+                </div>
+                {/* Pinterest field */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Pin size={15} color="#E60023" /> Pinterest
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <Link size={16} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
+                    <input
+                      type="url"
+                      className="input-dark"
+                      placeholder="https://br.pinterest.com/..."
+                      style={{ paddingLeft: '42px' }}
+                      value={tempBrandPinterestUrl}
+                      onChange={(e) => setTempBrandPinterestUrl(e.target.value)}
                     />
                   </div>
                 </div>

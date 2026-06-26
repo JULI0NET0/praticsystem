@@ -1,7 +1,7 @@
 "use client";
 
 // import { roles } from "@/mocks/db"; // Removido mock
-import { Plus, Search, Shield, User as UserIcon, ShieldAlert, MoreVertical, AtSign, Loader2, Trash2 } from "lucide-react";
+import { Plus, Search, Shield, User as UserIcon, ShieldAlert, MoreVertical, AtSign, Loader2, Trash2, Pencil } from "lucide-react";
 import Spotlight from "@/components/Spotlight";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
@@ -9,6 +9,7 @@ import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import SearchInput from "@/components/ui/SearchInput";
 import { useToast } from "@/components/CustomToast";
+import DialogShell from "@/components/DialogShell";
 
 export default function UsersPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -18,7 +19,10 @@ export default function UsersPage() {
   const [loading, setLoading] = useState(true);
   const [userToDelete, setUserToDelete] = useState<any | null>(null);
   const [userToReset, setUserToReset] = useState<any | null>(null);
+  const [userToEdit, setUserToEdit] = useState<any | null>(null);
+  const [editForm, setEditForm] = useState({ name: '', username: '', role: '', status_message: '' });
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -78,6 +82,46 @@ export default function UsersPage() {
       showToast('Erro ao excluir usuário. Verifique as permissões.', 'error');
     } finally {
       setIsProcessing(false);
+    }
+  };
+
+  const handleOpenEdit = (user: any) => {
+    setEditForm({
+      name: user.name || '',
+      username: user.username || '',
+      role: user.role || '',
+      status_message: user.statusMessage || user.status_message || '',
+    });
+    setUserToEdit(user);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!userToEdit) return;
+    setIsSaving(true);
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({
+          name: editForm.name,
+          username: editForm.username,
+          role: editForm.role,
+          status_message: editForm.status_message,
+        })
+        .eq('id', userToEdit.id);
+
+      if (error) throw error;
+
+      setUsers(users.map(u => u.id === userToEdit.id
+        ? { ...u, ...editForm, statusMessage: editForm.status_message }
+        : u
+      ));
+      showToast('Usuário atualizado com sucesso!', 'success');
+      setUserToEdit(null);
+    } catch (err) {
+      console.error("Erro ao atualizar usuário:", err);
+      showToast('Erro ao atualizar usuário.', 'error');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -251,6 +295,20 @@ export default function UsersPage() {
                             <motion.button
                               whileHover={{ scale: 1.1 }}
                               whileTap={{ scale: 0.9 }}
+                              onClick={() => handleOpenEdit(user)}
+                              title="Editar Usuário"
+                              style={{
+                                width: '32px', height: '32px', borderRadius: '8px',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                background: 'rgba(255, 255, 255, 0.05)', color: 'var(--text-secondary)',
+                                border: '1px solid var(--border)'
+                              }}
+                            >
+                              <Pencil size={16} />
+                            </motion.button>
+                            <motion.button
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
                               onClick={() => setUserToDelete(user)}
                               title="Excluir Usuário"
                               style={{
@@ -345,7 +403,17 @@ export default function UsersPage() {
                           <span style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>@{user.username}</span>
                         </div>
                       </div>
-                      <MoreVertical size={16} color="var(--text-secondary)" />
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleOpenEdit(user); }}
+                        style={{
+                          width: '32px', height: '32px', borderRadius: '8px', flexShrink: 0,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          background: 'rgba(255,255,255,0.05)', color: 'var(--text-secondary)',
+                          border: '1px solid var(--border)'
+                        }}
+                      >
+                        <Pencil size={15} />
+                      </button>
                     </div>
                     {user.statusMessage && (
                       <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontStyle: 'italic', background: 'var(--card-inner-bg)', padding: '8px 12px', borderRadius: '8px' }}>
@@ -408,6 +476,86 @@ export default function UsersPage() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Edit User Modal */}
+      <DialogShell
+        isOpen={!!userToEdit}
+        onClose={() => setUserToEdit(null)}
+        title="Editar Membro"
+        maxWidth="520px"
+        zIndex={110}
+        footer={
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+            <button className="btn btn-secondary" onClick={() => setUserToEdit(null)} disabled={isSaving}>
+              Cancelar
+            </button>
+            <button className="btn btn-accent" onClick={handleSaveEdit} disabled={isSaving}>
+              {isSaving ? 'Salvando...' : 'Salvar'}
+            </button>
+          </div>
+        }
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div>
+            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px' }}>
+              Nome
+            </label>
+            <input
+              className="input-dark"
+              style={{ width: '100%' }}
+              value={editForm.name}
+              onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+              placeholder="Nome completo"
+            />
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px' }}>
+              Username
+            </label>
+            <div style={{ position: 'relative' }}>
+              <span style={{
+                position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)',
+                color: 'var(--accent)', fontSize: '0.9rem', pointerEvents: 'none'
+              }}>@</span>
+              <input
+                className="input-dark"
+                style={{ width: '100%', paddingLeft: '30px' }}
+                value={editForm.username}
+                onChange={(e) => setEditForm({ ...editForm, username: e.target.value })}
+                placeholder="usuario"
+              />
+            </div>
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px' }}>
+              Cargo
+            </label>
+            <select
+              className="input-dark"
+              style={{ width: '100%' }}
+              value={editForm.role}
+              onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
+            >
+              <option value="">Selecionar cargo...</option>
+              {roles.map(role => (
+                <option key={role.id} value={role.id}>{role.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px' }}>
+              Frase de Status
+            </label>
+            <input
+              className="input-dark"
+              style={{ width: '100%' }}
+              value={editForm.status_message}
+              onChange={(e) => setEditForm({ ...editForm, status_message: e.target.value })}
+              placeholder="Ex: Trabalhando duro..."
+            />
+          </div>
+        </div>
+      </DialogShell>
 
       {/* Reset Password Modal */}
       <AnimatePresence>

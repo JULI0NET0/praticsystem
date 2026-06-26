@@ -55,6 +55,9 @@ export interface Client {
   servico_interesse?: string;
   onboarding_date?: string;
   google_drive_url?: string;
+  brand_drive_url?: string;
+  brand_canva_url?: string;
+  brand_pinterest_url?: string;
   essential_links?: { id: string; title: string; url: string; icon?: string }[];
   drive_settings?: {
     auto_create_folder: boolean;
@@ -133,6 +136,8 @@ export interface Invoice {
   due_date: string;
   status: 'pending' | 'paid' | 'overdue';
   description: string;
+  paid_at?: string;
+  asaas_payment_id?: string;
 }
 
 export interface AgendaEvent {

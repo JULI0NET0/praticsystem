@@ -160,38 +160,6 @@ export default function SchedulePage() {
     fetchClients();
   }, [fetchEvents, fetchClients]);
 
-  const equalizeRowHeights = useCallback(() => {
-    // Duplo rAF: roda após os dois passes de layout do FullCalendar
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      const calEl = calendarRef.current?.el as HTMLElement | null;
-      if (!calEl) return;
-
-      const bodyEl = calEl.querySelector('.fc-daygrid-body') as HTMLElement | null;
-      if (!bodyEl) return;
-
-      const rows = Array.from(bodyEl.querySelectorAll('tbody tr')) as HTMLElement[];
-      if (!rows.length) return;
-
-      const bodyHeight = bodyEl.offsetHeight;
-      if (!bodyHeight) return;
-
-      const rowHeight = Math.floor(bodyHeight / rows.length);
-      rows.forEach(row => {
-        // setProperty(..., 'important') gera height: Xpx !important inline,
-        // que tem prioridade sobre o style.height = 'Xpx' regular do FullCalendar
-        row.style.setProperty('height', `${rowHeight}px`, 'important');
-      });
-    }));
-  }, []);
-
-  useEffect(() => {
-    equalizeRowHeights();
-  }, [events, equalizeRowHeights]);
-
-  useEffect(() => {
-    window.addEventListener('resize', equalizeRowHeights);
-    return () => window.removeEventListener('resize', equalizeRowHeights);
-  }, [equalizeRowHeights]);
 
   const handleDateClick = (arg: any) => {
     let x = window.innerWidth / 2;
@@ -369,6 +337,22 @@ export default function SchedulePage() {
     }
   };
 
+  const toggleEventCompleteById = async (eventId: string, currentStatus: string) => {
+    if (eventId.startsWith('inv-')) return;
+    const nextStatus = currentStatus === 'completed' ? 'scheduled' : 'completed';
+    try {
+      const { error } = await supabase
+        .from('agenda_events')
+        .update({ status: nextStatus })
+        .eq('id', eventId);
+      if (error) throw error;
+      fetchEvents();
+      showToast(nextStatus === 'completed' ? "Concluído! 🎉" : "Marcado como pendente", "success");
+    } catch (err) {
+      showToast("Erro ao atualizar status", "error");
+    }
+  };
+
   const renderEventContent = (eventInfo: any) => {
     const type = eventInfo.event.extendedProps.type;
     const category = CATEGORIES.find(c => c.id === type);
@@ -396,6 +380,8 @@ export default function SchedulePage() {
       );
     }
 
+    const isInvoice = eventInfo.event.id.startsWith('inv-');
+
     return (
       <div style={{
         display: 'flex',
@@ -406,13 +392,37 @@ export default function SchedulePage() {
         width: '100%',
         opacity: isCompleted ? 0.5 : 1,
       }}>
-        <span style={{
-          width: '7px',
-          height: '7px',
-          borderRadius: '50%',
-          backgroundColor: color,
-          flexShrink: 0,
-        }} />
+        {!isInvoice ? (
+          <span
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleEventCompleteById(eventInfo.event.id, eventInfo.event.extendedProps.status);
+            }}
+            title={isCompleted ? 'Marcar como pendente' : 'Marcar como concluído'}
+            style={{
+              width: '13px',
+              height: '13px',
+              borderRadius: '50%',
+              border: isCompleted ? 'none' : `1.5px solid ${color}`,
+              backgroundColor: isCompleted ? color : 'transparent',
+              flexShrink: 0,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            {isCompleted && <CheckCircle2 size={9} color="white" />}
+          </span>
+        ) : (
+          <span style={{
+            width: '7px',
+            height: '7px',
+            borderRadius: '50%',
+            backgroundColor: color,
+            flexShrink: 0,
+          }} />
+        )}
         {eventInfo.timeText && (
           <span style={{
             fontSize: '0.7rem',
@@ -535,8 +545,8 @@ export default function SchedulePage() {
         </div>
       </div>
 
-      <div style={{ width: '100%', flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-        <div className="glass-card" style={{ padding: isMobile ? '8px 0' : '16px 0', backgroundColor: 'var(--bg-secondary)', flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+      <div style={{ width: '100%' }}>
+        <div className="glass-card" style={{ padding: isMobile ? '8px 0' : '16px 0', backgroundColor: 'var(--bg-secondary)' }}>
           <FullCalendar
             ref={calendarRef}
             plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin]}
@@ -567,11 +577,10 @@ export default function SchedulePage() {
             editable={true}
             selectable={true}
             selectMirror={true}
-            dayMaxEvents={3}
+            dayMaxEvents={2}
             weekends={true}
-            height="100%"
-            expandRows={true}
-            datesSet={equalizeRowHeights}
+            fixedWeekCount={false}
+            height="auto"
             dateClick={handleDateClick}
             eventClick={handleEventClick}
             eventDrop={handleEventDrop}

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/components/CustomToast";
-import { Loader2, LayoutDashboard, AlertTriangle, ListOrdered, Wallet, RefreshCw, Users, Layers } from "lucide-react";
+import { Loader2, LayoutDashboard, AlertTriangle, ListOrdered, Wallet, RefreshCw, Layers } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { FinancialKPIs } from "@/components/financeiro/FinancialKPIs";
 import { DespesasList } from "@/components/financeiro/DespesasList";
@@ -17,10 +17,10 @@ type Tab = "dashboard" | "despesas" | "lancamentos" | "fluxo" | "asaas" | "varia
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "dashboard", label: "Dashboard", icon: <LayoutDashboard size={16} /> },
   { id: "despesas", label: "Despesas Fixas", icon: <AlertTriangle size={16} /> },
-  { id: "lancamentos", label: "Lançamentos", icon: <ListOrdered size={16} /> },
+  { id: "variaveis", label: "Despesas Variáveis", icon: <Layers size={16} /> },
+  { id: "lancamentos", label: "Sistema", icon: <ListOrdered size={16} /> },
+  { id: "asaas", label: "Banco", icon: <RefreshCw size={16} /> },
   { id: "fluxo", label: "Fluxo de Caixa", icon: <Wallet size={16} /> },
-  { id: "asaas", label: "Asaas", icon: <RefreshCw size={16} /> },
-  { id: "variaveis", label: "Variáveis", icon: <Layers size={16} /> },
 ];
 
 export default function FinanceiroPage() {
@@ -28,12 +28,17 @@ export default function FinanceiroPage() {
   const { showToast } = useToast();
 
   const [tab, setTab] = useState<Tab>("dashboard");
-  const [dateRange, setDateRange] = useState({ start: "", end: "" });
-  const [datePreset, setDatePreset] = useState<'all' | 'this_month' | 'prev_month' | 'next_month' | 'custom'>('all');
+  const [dateRange, setDateRange] = useState(() => {
+    const y = now.getFullYear();
+    const m = now.getMonth();
+    return {
+      start: new Date(y, m, 1).toISOString().split('T')[0],
+      end: new Date(y, m + 1, 0).toISOString().split('T')[0],
+    };
+  });
+  const [datePreset, setDatePreset] = useState<'all' | 'this_month' | 'prev_month' | 'next_month' | 'custom'>('this_month');
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
-  const [syncingClients, setSyncingClients] = useState(false);
-  const [syncClientsReport, setSyncClientsReport] = useState<any | null>(null);
 
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -84,7 +89,7 @@ export default function FinanceiroPage() {
         supabase.from("expense_entries").select("*, expenses(id, description, category)").order("date", { ascending: false }),
         supabase.from("asaas_transactions").select("*").order("date", { ascending: false }),
         supabase.from("users").select("id, name"),
-        supabase.from("contracts").select("id, status"),
+        supabase.from("contracts").select("id, status, client_id, billing_cycle"),
         supabase.from("clients").select("id, name, nome_fantasia"),
       ]);
 
@@ -224,34 +229,60 @@ export default function FinanceiroPage() {
     if (entRes.data) setExpenseEntries(entRes.data);
   }
 
-  async function handleSyncAllClients(startDate = '2025-01-01', endDate = '2026-12-31') {
-    setSyncingClients(true);
-    setSyncClientsReport(null);
-    try {
-      const res = await fetch('/api/financeiro/asaas/sync-clients', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ startDate, endDate }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Erro ao sincronizar');
-      setSyncClientsReport(data);
-      // Recarrega invoices e transações após sync
-      const [invRes, txRes] = await Promise.all([
-        supabase.from('invoices').select('*').order('due_date', { ascending: false }),
-        supabase.from('asaas_transactions').select('*').order('date', { ascending: false }),
-      ]);
-      if (invRes.data) setInvoices(invRes.data as Invoice[]);
-      if (txRes.data) setAsaasTransactions(txRes.data as AsaasTransaction[]);
-    } catch (err: any) {
-      console.error('Sync all clients error:', err);
-    } finally {
-      setSyncingClients(false);
-    }
+  async function handleUnlinkTransaction(asaasId: string) {
+    await fetch("/api/financeiro/asaas/unlink", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ asaas_transaction_id: asaasId }),
+    });
+    const [txnRes, invRes, entRes] = await Promise.all([
+      supabase.from("asaas_transactions").select("*").order("date", { ascending: false }),
+      supabase.from("invoices").select("*"),
+      supabase.from("expense_entries").select("*, expenses(id,description,category)").order("date", { ascending: false }),
+    ]);
+    if (txnRes.data) setAsaasTransactions(txnRes.data);
+    if (invRes.data) setInvoices(invRes.data);
+    if (entRes.data) setExpenseEntries(entRes.data);
   }
 
-  async function handleUpdateInvoiceStatus(id: string, status: string) {
-    const { error } = await supabase.from("invoices").update({ status }).eq("id", id);
+  async function handleCreateInvoice(data: Partial<Invoice>) {
+    const { data: created, error } = await supabase.from("invoices").insert([data]).select("*").single();
+    if (error) {
+      showToast(`Erro ao registrar cobrança: ${error.message}`, "error");
+      throw error;
+    }
+    if (created) {
+      setInvoices((prev) => [created, ...prev]);
+
+      if (data.status === "paid") {
+        const txnDate = (data.paid_at || data.due_date || new Date().toISOString().split("T")[0]) as string;
+        const { data: txn } = await supabase
+          .from("asaas_transactions")
+          .insert([{
+            description: data.description,
+            value: data.amount,
+            type: "CREDIT",
+            date: txnDate,
+            status: "RECEIVED",
+            invoice_id: created.id,
+            synced_at: new Date().toISOString(),
+          }])
+          .select("*")
+          .single();
+        if (txn) setAsaasTransactions((prev) => [txn, ...prev]);
+      }
+    }
+    showToast("Cobrança registrada com sucesso!", "success");
+  }
+
+  async function handleUpdateInvoiceStatus(id: string, status: string, paidAt?: string) {
+    const update: { status: string; paid_at?: string | null } = { status };
+    if (status === "paid") {
+      update.paid_at = paidAt || new Date().toISOString().split("T")[0];
+    } else {
+      update.paid_at = null;
+    }
+    const { error } = await supabase.from("invoices").update(update).eq("id", id);
     if (!error) {
       fetchAll();
     }
@@ -428,28 +459,27 @@ export default function FinanceiroPage() {
           expenses={expenses}
           expenseEntries={expenseEntries}
           users={users}
+          asaasTransactions={asaasTransactions}
           onSave={handleSaveExpense}
           onDelete={handleDeleteExpense}
           onToggle={handleToggleExpense}
           onGenerateEntries={handleGenerateEntries}
           onUpdateEntry={handleUpdateEntry}
+          onLinkTransaction={handleLinkTransaction}
         />
       )}
 
       {tab === "lancamentos" && (
         <LancamentosTable
           invoices={invoices}
-          expenseEntries={expenseEntries}
           asaasTransactions={asaasTransactions}
           clients={clients}
-          users={users}
-          expenses={expenses}
+          contracts={contracts}
           syncing={syncing}
           onSync={handleSync}
           onLinkTransaction={handleLinkTransaction}
-          onCreateEntry={handleCreateEntry}
-          onUpdateEntry={handleUpdateEntry}
           onUpdateInvoiceStatus={handleUpdateInvoiceStatus}
+          onCreateInvoice={handleCreateInvoice}
           startDate={startDate}
           endDate={endDate}
         />
@@ -465,91 +495,25 @@ export default function FinanceiroPage() {
       )}
 
       {tab === "asaas" && (
-        <>
-          {/* Sincronização em massa de todos os clientes */}
-          <div className="glass-card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-              <div>
-                <p style={{ fontWeight: 600, fontSize: '0.95rem' }}>Vínculo financeiro — todos os clientes</p>
-                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                  Busca cobranças no Asaas pelo CPF/CNPJ de cada cliente (ativos e inativos) e cria os vínculos de invoice.
-                </p>
-              </div>
-              <button
-                className="btn btn-secondary"
-                onClick={() => handleSyncAllClients('2025-01-01', '2026-12-31')}
-                disabled={syncingClients}
-                style={{ display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap' }}
-              >
-                {syncingClients
-                  ? <><Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> Sincronizando...</>
-                  : <><Users size={16} /> Sincronizar 2025–2026</>
-                }
-              </button>
-            </div>
-
-            {syncClientsReport && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                  {[
-                    { label: 'Clientes', value: syncClientsReport.summary.clientsProcessed },
-                    { label: 'No Asaas', value: syncClientsReport.summary.clientsFoundInAsaas, color: '#4ade80' },
-                    { label: 'Criados', value: syncClientsReport.summary.invoicesCreated, color: '#60a5fa' },
-                    { label: 'Atualizados', value: syncClientsReport.summary.invoicesUpdated, color: '#facc15' },
-                    { label: 'Inalterados', value: syncClientsReport.summary.invoicesSkipped },
-                  ].map(item => (
-                    <div key={item.label} style={{
-                      padding: '10px 16px', borderRadius: '10px',
-                      background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)',
-                      textAlign: 'center', minWidth: '80px',
-                    }}>
-                      <p style={{ fontSize: '1.4rem', fontWeight: 700, color: item.color || 'white', lineHeight: 1 }}>{item.value}</p>
-                      <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '4px' }}>{item.label}</p>
-                    </div>
-                  ))}
-                </div>
-                <div style={{ maxHeight: '200px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  {syncClientsReport.results
-                    .filter((r: any) => r.asaas_found || r.error)
-                    .map((r: any) => (
-                      <div key={r.clientId} style={{
-                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                        padding: '6px 10px', borderRadius: '6px',
-                        background: r.error ? 'rgba(239,68,68,0.08)' : 'rgba(255,255,255,0.02)',
-                        fontSize: '0.78rem',
-                      }}>
-                        <span style={{ fontWeight: 500 }}>{r.clientName}</span>
-                        <span style={{ color: 'var(--text-secondary)', fontSize: '0.72rem' }}>
-                          {r.error
-                            ? <span style={{ color: '#f87171' }}>{r.error}</span>
-                            : `${r.paymentsFound} cob. · +${r.created} · ~${r.updated}`
-                          }
-                        </span>
-                      </div>
-                    ))
-                  }
-                </div>
-              </div>
-            )}
-          </div>
-
-          <AsaasSync
-            asaasTransactions={asaasTransactions}
-            expenseEntries={expenseEntries}
-            invoices={invoices}
-            expenses={expenses}
-            clients={clients}
-            users={users}
-            syncing={syncing}
-            onSync={handleSync}
-            onLink={handleLinkTransaction}
-            onUpdateInvoiceStatus={handleUpdateInvoiceStatus}
-            onCreateEntry={handleCreateEntry}
-            selectedMonth={selectedMonthForComponents}
-            balance={asaasBalance}
-            onRefreshBalance={fetchBalance}
-          />
-        </>
+        <AsaasSync
+          asaasTransactions={asaasTransactions}
+          expenseEntries={expenseEntries}
+          invoices={invoices}
+          expenses={expenses}
+          clients={clients}
+          users={users}
+          syncing={syncing}
+          onSync={handleSync}
+          onLink={handleLinkTransaction}
+          onUnlink={handleUnlinkTransaction}
+          onUpdateInvoiceStatus={handleUpdateInvoiceStatus}
+          onCreateEntry={handleCreateEntry}
+          selectedMonth={selectedMonthForComponents}
+          startDate={startDate}
+          endDate={endDate}
+          balance={asaasBalance}
+          onRefreshBalance={fetchBalance}
+        />
       )}
 
       {tab === "variaveis" && (
@@ -558,6 +522,7 @@ export default function FinanceiroPage() {
           expenseEntries={expenseEntries}
           clients={clients}
           users={users}
+          asaasTransactions={asaasTransactions}
           startDate={startDate}
           endDate={endDate}
           onSaveGroup={handleSaveExpense}
@@ -565,6 +530,7 @@ export default function FinanceiroPage() {
           onCreateEntry={handleCreateEntry}
           onUpdateEntry={handleUpdateEntry}
           onDeleteEntry={handleDeleteEntry}
+          onLinkTransaction={handleLinkTransaction}
         />
       )}
     </div>

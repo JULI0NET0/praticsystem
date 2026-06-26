@@ -103,11 +103,14 @@ export function AsaasLinkDialog({
     }
   }
 
-  const TAB_DEFS: { id: ActiveTab; label: string; icon: React.ReactNode }[] = [
+  // Cobrança recebida (CREDIT) só vincula a Fatura (receita); saída (DEBIT) só a Despesa.
+  const allowedTabs: ActiveTab[] = transaction?.type === "CREDIT" ? ["fatura"] : ["fixa", "variavel"];
+  const ALL_TABS: { id: ActiveTab; label: string; icon: React.ReactNode }[] = [
     { id: "fatura", label: "Fatura Cliente", icon: <Building2 size={13} /> },
     { id: "fixa", label: "Despesa Fixa", icon: <FileText size={13} /> },
     { id: "variavel", label: "Despesa Variável", icon: <Layers size={13} /> },
   ];
+  const TAB_DEFS = ALL_TABS.filter((t) => allowedTabs.includes(t.id));
 
   return (
     <DialogShell

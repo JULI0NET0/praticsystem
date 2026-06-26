@@ -4,11 +4,12 @@ import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus, ChevronDown, ChevronRight, Pencil, Trash2,
-  Check, TrendingDown, Layers,
+  Check, Layers, Link2, CheckCircle2,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import DialogShell from "@/components/DialogShell";
-import type { Expense, ExpenseEntry, ExpenseCategory } from "@/types/database";
+import { ExpenseLinkDialog } from "@/components/financeiro/ExpenseLinkDialog";
+import type { Expense, ExpenseEntry, ExpenseCategory, AsaasTransaction } from "@/types/database";
 
 const CATEGORIES: Record<string, string> = {
   taxa_asaas: "Taxas Asaas",
@@ -24,6 +25,7 @@ interface DespesasVariaveisProps {
   expenseEntries: ExpenseEntry[];
   clients: { id: string; name: string; nome_fantasia?: string }[];
   users: { id: string; name: string }[];
+  asaasTransactions: AsaasTransaction[];
   startDate: string;
   endDate: string;
   onSaveGroup: (data: Partial<Expense>) => Promise<void>;
@@ -31,6 +33,7 @@ interface DespesasVariaveisProps {
   onCreateEntry: (data: Partial<ExpenseEntry>) => Promise<ExpenseEntry | null>;
   onUpdateEntry: (id: string, data: Partial<ExpenseEntry>) => Promise<void>;
   onDeleteEntry?: (id: string) => Promise<void>;
+  onLinkTransaction: (asaasId: string, expenseEntryId?: string, invoiceId?: string) => Promise<void>;
 }
 
 export function DespesasVariaveis({
@@ -38,6 +41,7 @@ export function DespesasVariaveis({
   expenseEntries,
   clients,
   users,
+  asaasTransactions,
   startDate,
   endDate,
   onSaveGroup,
@@ -45,6 +49,7 @@ export function DespesasVariaveis({
   onCreateEntry,
   onUpdateEntry,
   onDeleteEntry,
+  onLinkTransaction,
 }: DespesasVariaveisProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -64,6 +69,49 @@ export function DespesasVariaveis({
 
   const [baixaEntry, setBaixaEntry] = useState<ExpenseEntry | null>(null);
   const [baixaDate, setBaixaDate] = useState("");
+
+  const [linkEntry, setLinkEntry] = useState<ExpenseEntry | null>(null);
+  const [linking, setLinking] = useState(false);
+
+  const unlinkedDebits = useMemo(
+    () => asaasTransactions.filter((t) => t.type === "DEBIT" && !t.expense_entry_id && !t.invoice_id),
+    [asaasTransactions]
+  );
+
+  function linkedSumEntry(entryId: string) {
+    return asaasTransactions.filter((t) => t.expense_entry_id === entryId).reduce((s, t) => s + Number(t.value), 0);
+  }
+
+  function isEntryLinked(entry: ExpenseEntry) {
+    return !!entry.asaas_transaction_id || asaasTransactions.some((t) => t.expense_entry_id === entry.id);
+  }
+
+  function effectiveEntryStatus(entry: ExpenseEntry): "paid" | "partial" | "pending" | "cancelled" {
+    if (entry.status === "paid" || entry.status === "cancelled") return entry.status;
+    const linked = linkedSumEntry(entry.id);
+    const amount = Number(entry.amount);
+    if (linked >= amount && amount > 0) return "paid";
+    if (linked > 0) return "partial";
+    return entry.status;
+  }
+
+  async function handleConfirmLink(txnIds: string[], paymentDate: string) {
+    if (!linkEntry) return;
+    setLinking(true);
+    try {
+      for (const txnId of txnIds) {
+        await onLinkTransaction(txnId, linkEntry.id, undefined);
+      }
+      const selectedSum = asaasTransactions.filter((t) => txnIds.includes(t.id)).reduce((s, t) => s + Number(t.value), 0);
+      const totalLinked = linkedSumEntry(linkEntry.id) + selectedSum;
+      if (totalLinked >= Number(linkEntry.amount)) {
+        await onUpdateEntry(linkEntry.id, { status: "paid", date: paymentDate });
+      }
+      setLinkEntry(null);
+    } finally {
+      setLinking(false);
+    }
+  }
 
   const groups = useMemo(
     () => expenses.filter((e) => e.type === "variable").sort((a, b) => a.description.localeCompare(b.description)),
@@ -171,10 +219,10 @@ export function DespesasVariaveis({
   }
 
   const STATUS_COLOR: Record<string, string> = {
-    paid: "#22C55E", pending: "#F59E0B", cancelled: "var(--text-tertiary)",
+    paid: "#22C55E", partial: "#F59E0B", pending: "#F59E0B", cancelled: "var(--text-tertiary)",
   };
   const STATUS_LABEL: Record<string, string> = {
-    paid: "Pago", pending: "Pendente", cancelled: "Cancelado",
+    paid: "Pago", partial: "Parcial", pending: "Pendente", cancelled: "Cancelado",
   };
 
   return (
@@ -295,12 +343,15 @@ export function DespesasVariaveis({
                                   <th>Responsável</th>
                                   <th style={{ textAlign: "right" }}>Valor</th>
                                   <th>Status</th>
+                                  <th>Vínculo</th>
                                   <th></th>
                                 </tr>
                               </thead>
                               <tbody>
                                 {entries.map((entry, i) => {
-                                  const sc = STATUS_COLOR[entry.status] || "var(--text-tertiary)";
+                                  const effStatus = effectiveEntryStatus(entry);
+                                  const sc = STATUS_COLOR[effStatus] || "var(--text-tertiary)";
+                                  const linkedSum = linkedSumEntry(entry.id);
                                   const responsible = resolveResponsible(entry);
                                   return (
                                     <motion.tr
@@ -324,12 +375,28 @@ export function DespesasVariaveis({
                                         {formatCurrency(Number(entry.amount))}
                                       </td>
                                       <td>
-                                        <span style={{
-                                          fontSize: "0.68rem", fontWeight: 700, padding: "2px 7px", borderRadius: "6px",
-                                          color: sc, background: `${sc}18`, border: `1px solid ${sc}30`,
-                                        }}>
-                                          {STATUS_LABEL[entry.status] ?? entry.status}
-                                        </span>
+                                        <div style={{ display: "flex", flexDirection: "column", gap: "1px" }}>
+                                          <span style={{
+                                            fontSize: "0.68rem", fontWeight: 700, padding: "2px 7px", borderRadius: "6px",
+                                            color: sc, background: `${sc}18`, border: `1px solid ${sc}30`, alignSelf: "flex-start",
+                                          }}>
+                                            {STATUS_LABEL[effStatus] ?? effStatus}
+                                          </span>
+                                          {effStatus === "partial" && (
+                                            <span style={{ fontSize: "0.62rem", color: "var(--text-tertiary)", whiteSpace: "nowrap" }}>
+                                              {formatCurrency(linkedSum)} de {formatCurrency(Number(entry.amount))}
+                                            </span>
+                                          )}
+                                        </div>
+                                      </td>
+                                      <td>
+                                        {isEntryLinked(entry) ? (
+                                          <span style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "0.72rem", color: "#22C55E", fontWeight: 600 }}>
+                                            <CheckCircle2 size={11} /> Banco
+                                          </span>
+                                        ) : (
+                                          <span style={{ fontSize: "0.72rem", color: "#F59E0B", fontWeight: 600 }}>Sem vínculo</span>
+                                        )}
                                       </td>
                                       <td>
                                         <div style={{ display: "flex", gap: "2px", justifyContent: "flex-end" }}>
@@ -340,7 +407,16 @@ export function DespesasVariaveis({
                                           >
                                             <Pencil size={13} />
                                           </button>
-                                          {entry.status === "pending" && (
+                                          {effStatus !== "paid" && effStatus !== "cancelled" && (
+                                            <button
+                                              onClick={() => setLinkEntry(entry)}
+                                              style={{ background: "none", border: "none", cursor: "pointer", color: "#F59E0B", padding: "4px", display: "flex" }}
+                                              title="Vincular ao banco"
+                                            >
+                                              <Link2 size={13} />
+                                            </button>
+                                          )}
+                                          {effStatus !== "paid" && effStatus !== "cancelled" && (
                                             <button
                                               onClick={() => { setBaixaDate(new Date().toISOString().split("T")[0]); setBaixaEntry(entry); }}
                                               style={{ background: "none", border: "none", cursor: "pointer", color: "#22C55E", padding: "4px", display: "flex" }}
@@ -532,6 +608,16 @@ export function DespesasVariaveis({
           </div>
         )}
       </DialogShell>
+
+      {/* Dialog: Vínculo ao banco */}
+      <ExpenseLinkDialog
+        isOpen={!!linkEntry}
+        entry={linkEntry ? { id: linkEntry.id, description: linkEntry.description, amount: Number(linkEntry.amount), date: linkEntry.date } : null}
+        debits={unlinkedDebits}
+        linking={linking}
+        onClose={() => setLinkEntry(null)}
+        onConfirm={handleConfirmLink}
+      />
     </div>
   );
 }

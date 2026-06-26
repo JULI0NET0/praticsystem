@@ -38,11 +38,12 @@ export async function POST(request: Request) {
 
     if (txnError) return NextResponse.json({ error: txnError.message }, { status: 400 });
 
-    // Se vinculou a um expense_entry, grava o ID do Asaas nele também
+    // Se vinculou a um expense_entry, marca como pago com a data da transação
     if (expense_entry_id) {
+      const txnDate = txn?.date ? txn.date.split('T')[0] : new Date().toISOString().split('T')[0];
       await supabase
         .from('expense_entries')
-        .update({ asaas_transaction_id })
+        .update({ asaas_transaction_id, status: 'paid', date: txnDate })
         .eq('id', expense_entry_id);
     }
 

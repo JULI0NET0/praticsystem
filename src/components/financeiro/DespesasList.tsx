@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight, ChevronDown, CalendarPlus, FileText, Check } from "lucide-react";
+import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight, ChevronDown, CalendarPlus, FileText, Check, Link2, CheckCircle2 } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import DialogShell from "@/components/DialogShell";
-import type { Expense, ExpenseCategory, ExpenseRecurrence, ExpenseEntry } from "@/types/database";
+import { ExpenseLinkDialog } from "@/components/financeiro/ExpenseLinkDialog";
+import type { Expense, ExpenseCategory, ExpenseRecurrence, ExpenseEntry, AsaasTransaction } from "@/types/database";
 
 const CATEGORIES: Record<ExpenseCategory, string> = {
   pro_labore: "Pro-labore",
@@ -40,11 +41,13 @@ interface DespesasListProps {
   expenses: Expense[];
   expenseEntries: ExpenseEntry[];
   users: { id: string; name: string }[];
+  asaasTransactions: AsaasTransaction[];
   onSave: (data: Partial<Expense>) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onToggle: (id: string, status: 'active' | 'inactive') => Promise<void>;
   onGenerateEntries: (expenseId: string, startMonth: string, months: number) => Promise<void>;
   onUpdateEntry: (id: string, data: Partial<ExpenseEntry>) => Promise<void>;
+  onLinkTransaction: (asaasId: string, expenseEntryId?: string, invoiceId?: string) => Promise<void>;
 }
 
 const EMPTY_FORM: Partial<Expense> = {
@@ -74,7 +77,7 @@ function generatePreviewDates(startMonth: string, months: number, dueDay: number
   });
 }
 
-export function DespesasList({ expenses, expenseEntries, users, onSave, onDelete, onToggle, onGenerateEntries, onUpdateEntry }: DespesasListProps) {
+export function DespesasList({ expenses, expenseEntries, users, asaasTransactions, onSave, onDelete, onToggle, onGenerateEntries, onUpdateEntry, onLinkTransaction }: DespesasListProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Expense | null>(null);
   const [form, setForm] = useState<Partial<Expense>>(EMPTY_FORM);
@@ -90,6 +93,46 @@ export function DespesasList({ expenses, expenseEntries, users, onSave, onDelete
   const [genSaving, setGenSaving] = useState(false);
   const [baixaEntry, setBaixaEntry] = useState<ExpenseEntry | null>(null);
   const [baixaDate, setBaixaDate] = useState("");
+
+  const [linkEntry, setLinkEntry] = useState<ExpenseEntry | null>(null);
+  const [linking, setLinking] = useState(false);
+
+  const unlinkedDebits = asaasTransactions.filter((t) => t.type === "DEBIT" && !t.expense_entry_id && !t.invoice_id);
+
+  function linkedSumEntry(entryId: string) {
+    return asaasTransactions.filter((t) => t.expense_entry_id === entryId).reduce((s, t) => s + Number(t.value), 0);
+  }
+
+  function isEntryLinked(entry: ExpenseEntry) {
+    return !!entry.asaas_transaction_id || asaasTransactions.some((t) => t.expense_entry_id === entry.id);
+  }
+
+  function effectiveEntryStatus(entry: ExpenseEntry): "paid" | "partial" | "pending" | "cancelled" {
+    if (entry.status === "paid" || entry.status === "cancelled") return entry.status;
+    const linked = linkedSumEntry(entry.id);
+    const amount = Number(entry.amount);
+    if (linked >= amount && amount > 0) return "paid";
+    if (linked > 0) return "partial";
+    return entry.status;
+  }
+
+  async function handleConfirmLink(txnIds: string[], paymentDate: string) {
+    if (!linkEntry) return;
+    setLinking(true);
+    try {
+      for (const txnId of txnIds) {
+        await onLinkTransaction(txnId, linkEntry.id, undefined);
+      }
+      const selectedSum = asaasTransactions.filter((t) => txnIds.includes(t.id)).reduce((s, t) => s + Number(t.value), 0);
+      const totalLinked = linkedSumEntry(linkEntry.id) + selectedSum;
+      if (totalLinked >= Number(linkEntry.amount)) {
+        await onUpdateEntry(linkEntry.id, { status: "paid", date: paymentDate });
+      }
+      setLinkEntry(null);
+    } finally {
+      setLinking(false);
+    }
+  }
 
   const totalMensal = expenses
     .filter((e) => e.type !== "variable" && e.status === "active" && e.recurrence === "monthly")
@@ -456,8 +499,10 @@ export function DespesasList({ expenses, expenseEntries, users, onSave, onDelete
                       const dateObj = new Date(`${entry.date}T12:00:00`);
                       const mesLabel = dateObj.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
                       const diaLabel = dateObj.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit" });
-                      const sc = entry.status === "paid" ? "#22C55E" : entry.status === "cancelled" ? "var(--text-tertiary)" : "#F59E0B";
-                      const sl = entry.status === "paid" ? "Pago" : entry.status === "cancelled" ? "Cancelado" : "Pendente";
+                      const effStatus = effectiveEntryStatus(entry);
+                      const linkedSum = linkedSumEntry(entry.id);
+                      const sc = effStatus === "paid" ? "#22C55E" : effStatus === "cancelled" ? "var(--text-tertiary)" : "#F59E0B";
+                      const sl = effStatus === "paid" ? "Pago" : effStatus === "cancelled" ? "Cancelado" : effStatus === "partial" ? "Parcial" : "Pendente";
                       return (
                         <div
                           key={entry.id}
@@ -468,8 +513,28 @@ export function DespesasList({ expenses, expenseEntries, users, onSave, onDelete
                             <p style={{ fontSize: "0.72rem", color: "var(--text-tertiary)", marginTop: "1px" }}>vcto {diaLabel}</p>
                           </div>
                           <span style={{ fontWeight: 700, color: "#EF4444", fontSize: "0.9rem" }}>{formatCurrency(Number(entry.amount))}</span>
-                          <span style={{ fontSize: "0.72rem", fontWeight: 700, padding: "3px 8px", borderRadius: "6px", color: sc, background: `${sc}18`, border: `1px solid ${sc}30`, flexShrink: 0 }}>{sl}</span>
-                          {entry.status === "pending" && (
+                          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "1px", flexShrink: 0 }}>
+                            <span style={{ fontSize: "0.72rem", fontWeight: 700, padding: "3px 8px", borderRadius: "6px", color: sc, background: `${sc}18`, border: `1px solid ${sc}30` }}>{sl}</span>
+                            {effStatus === "partial" && (
+                              <span style={{ fontSize: "0.62rem", color: "var(--text-tertiary)", whiteSpace: "nowrap" }}>
+                                {formatCurrency(linkedSum)} de {formatCurrency(Number(entry.amount))}
+                              </span>
+                            )}
+                          </div>
+                          {effStatus === "paid" ? (
+                            <span title="Vinculado ao banco" style={{ display: "flex", flexShrink: 0, color: "#22C55E" }}>
+                              <CheckCircle2 size={15} />
+                            </span>
+                          ) : effStatus !== "cancelled" && (
+                            <button
+                              onClick={() => setLinkEntry(entry)}
+                              style={{ background: "none", border: "none", cursor: "pointer", color: "#F59E0B", padding: "2px", display: "flex", flexShrink: 0 }}
+                              title="Vincular ao banco"
+                            >
+                              <Link2 size={15} />
+                            </button>
+                          )}
+                          {effStatus !== "paid" && effStatus !== "cancelled" && (
                             <button
                               onClick={() => {
                                 setBaixaDate(new Date().toISOString().split("T")[0]);
@@ -755,6 +820,16 @@ export function DespesasList({ expenses, expenseEntries, users, onSave, onDelete
           </div>
         )}
       </DialogShell>
+
+      {/* Dialog: Vínculo ao banco */}
+      <ExpenseLinkDialog
+        isOpen={!!linkEntry}
+        entry={linkEntry ? { id: linkEntry.id, description: linkEntry.description, amount: Number(linkEntry.amount), date: linkEntry.date } : null}
+        debits={unlinkedDebits}
+        linking={linking}
+        onClose={() => setLinkEntry(null)}
+        onConfirm={handleConfirmLink}
+      />
     </div>
   );
 }

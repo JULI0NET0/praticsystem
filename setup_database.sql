@@ -53,9 +53,12 @@ ALTER TABLE public.clients ADD COLUMN IF NOT EXISTS portal_password    TEXT;
 ALTER TABLE public.clients ADD COLUMN IF NOT EXISTS briefing           TEXT;
 ALTER TABLE public.clients ADD COLUMN IF NOT EXISTS servico_interesse  TEXT;
 ALTER TABLE public.clients ADD COLUMN IF NOT EXISTS onboarding_date    DATE;
-ALTER TABLE public.clients ADD COLUMN IF NOT EXISTS google_drive_url   TEXT;
-ALTER TABLE public.clients ADD COLUMN IF NOT EXISTS essential_links    JSONB DEFAULT '[]'::jsonb;
-ALTER TABLE public.clients ADD COLUMN IF NOT EXISTS drive_settings     JSONB;
+ALTER TABLE public.clients ADD COLUMN IF NOT EXISTS google_drive_url     TEXT;
+ALTER TABLE public.clients ADD COLUMN IF NOT EXISTS essential_links      JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE public.clients ADD COLUMN IF NOT EXISTS drive_settings       JSONB;
+ALTER TABLE public.clients ADD COLUMN IF NOT EXISTS brand_drive_url      TEXT;
+ALTER TABLE public.clients ADD COLUMN IF NOT EXISTS brand_canva_url      TEXT;
+ALTER TABLE public.clients ADD COLUMN IF NOT EXISTS brand_pinterest_url  TEXT;
 
 
 -- =============================================================

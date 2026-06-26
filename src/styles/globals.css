@@ -460,6 +460,15 @@ select {
   position: relative;
 }
 
+/* Altura fixa e uniforme para todas as células do mês */
+.fc-daygrid-body > table > tbody > tr {
+  height: 120px !important;
+}
+.fc-daygrid-day-frame {
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
 .fc-daygrid-day.fc-day-today {
   background: rgba(217, 72, 15, 0.05) !important;
 }
