@@ -20,7 +20,7 @@ export default function UsersPage() {
   const [userToDelete, setUserToDelete] = useState<any | null>(null);
   const [userToReset, setUserToReset] = useState<any | null>(null);
   const [userToEdit, setUserToEdit] = useState<any | null>(null);
-  const [editForm, setEditForm] = useState({ name: '', username: '', role: '', status_message: '' });
+  const [editForm, setEditForm] = useState({ name: '', username: '', role: '', status_message: '', resetPassword: false });
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const { showToast } = useToast();
@@ -91,6 +91,7 @@ export default function UsersPage() {
       username: user.username || '',
       role: user.role || '',
       status_message: user.statusMessage || user.status_message || '',
+      resetPassword: false,
     });
     setUserToEdit(user);
   };
@@ -111,8 +112,22 @@ export default function UsersPage() {
 
       if (error) throw error;
 
+      // Dispara o e-mail de redefinição se a opção estiver marcada
+      if (editForm.resetPassword) {
+        try {
+          await fetch("/api/auth/reset-password", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: userToEdit.email }),
+          });
+          showToast(`E-mail de redefinição enviado para ${userToEdit.email}`, 'success');
+        } catch (resetErr) {
+          console.error("Erro ao enviar e-mail de redefinição:", resetErr);
+        }
+      }
+
       setUsers(users.map(u => u.id === userToEdit.id
-        ? { ...u, ...editForm, statusMessage: editForm.status_message }
+        ? { ...u, name: editForm.name, username: editForm.username, role: editForm.role, statusMessage: editForm.status_message }
         : u
       ));
       showToast('Usuário atualizado com sucesso!', 'success');
@@ -129,11 +144,21 @@ export default function UsersPage() {
     if (!userToReset) return;
     setIsProcessing(true);
     try {
-      showToast('Senha resetada com sucesso!', 'success');
+      const res = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: userToReset.email }),
+      });
+      if (res.ok) {
+        showToast(`E-mail de redefinição enviado para ${userToReset.email}!`, 'success');
+      } else {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Erro ao enviar e-mail de redefinição.');
+      }
       setUserToReset(null);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Erro ao resetar senha:", err);
-      showToast('Erro ao resetar senha.', 'error');
+      showToast(err.message || 'Erro ao resetar senha.', 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -553,6 +578,21 @@ export default function UsersPage() {
               onChange={(e) => setEditForm({ ...editForm, status_message: e.target.value })}
               placeholder="Ex: Trabalhando duro..."
             />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '4px' }}>
+            <input
+              type="checkbox"
+              id="editResetPassword"
+              checked={editForm.resetPassword}
+              onChange={(e) => setEditForm({ ...editForm, resetPassword: e.target.checked })}
+              style={{
+                width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--accent)',
+                borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--bg-secondary)'
+              }}
+            />
+            <label htmlFor="editResetPassword" style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', cursor: 'pointer', userSelect: 'none' }}>
+              Enviar e-mail para o usuário redefinir/criar nova senha
+            </label>
           </div>
         </div>
       </DialogShell>

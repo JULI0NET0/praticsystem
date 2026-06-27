@@ -43,12 +43,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ imported: 0, skipped: transactions.length });
     }
 
+    // Asaas returns many type values; these all represent money received (income)
+    const ASAAS_CREDIT_TYPES = new Set([
+      'CREDIT',
+      'PAYMENT',        // cobrança recebida de cliente
+      'PIX_CREDIT',     // PIX recebido
+      'RECEIVED_IN_CASH_CREDIT',
+      'REFUND_CREDIT',
+      'CHARGEBACK_CREDIT',
+    ]);
+
     const rows = newTransactions.map((t) => ({
       id: t.id,
       description: t.description || null,
       value: t.value,
-      // Normaliza para CREDIT/DEBIT — Asaas pode retornar outros tipos (PIX, TRANSFER, etc.)
-      type: t.type === 'CREDIT' ? 'CREDIT' : 'DEBIT',
+      type: ASAAS_CREDIT_TYPES.has(t.type) ? 'CREDIT' : 'DEBIT',
       date: t.date,
       status: t.status,
       synced_at: new Date().toISOString(),

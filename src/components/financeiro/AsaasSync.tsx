@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import {
   RefreshCw, Link2, CheckCircle2, AlertCircle, Wallet,
-  Sparkles, User, Building2, X, Search, Unlink,
+  Sparkles, User, Building2, X, Search, Unlink, HelpCircle,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import DialogShell from "@/components/DialogShell";
@@ -25,8 +25,9 @@ interface AsaasSyncProps {
   users: { id: string; name: string }[];
   syncing: boolean;
   onSync: (startDate: string, endDate: string) => Promise<{ imported: number; skipped: number } | void>;
-  onLink: (asaasId: string, expenseEntryId?: string, invoiceId?: string) => Promise<void>;
+  onLink: (asaasId: string, expenseEntryId?: string, invoiceId?: string, notes?: string) => Promise<void>;
   onUnlink: (asaasId: string) => Promise<void>;
+  onMarkAsConfirmation?: (confirmationTxnId: string, paymentTxnId: string) => Promise<void>;
   onCreateEntry: (data: Partial<ExpenseEntry>) => Promise<ExpenseEntry | null>;
   onUpdateInvoiceStatus?: (id: string, status: string) => Promise<void>;
   selectedMonth: string;
@@ -49,6 +50,7 @@ export function AsaasSync({
   onSync,
   onLink,
   onUnlink,
+  onMarkAsConfirmation,
   onCreateEntry,
   onUpdateInvoiceStatus,
   selectedMonth,
@@ -87,6 +89,7 @@ export function AsaasSync({
 
   const [refreshingBalance, setRefreshingBalance] = useState(false);
   const [hoveredVinculo, setHoveredVinculo] = useState<string | null>(null);
+  const [detailTxn, setDetailTxn] = useState<AsaasTransaction | null>(null);
 
   const [year, month] = selectedMonth.split("-");
   const startDate = `${year}-${month}-01`;
@@ -149,14 +152,14 @@ export function AsaasSync({
   }
 
   // Handle single link from AsaasLinkDialog
-  async function handleLinkConfirm(target: { kind: string; id?: string; groupId?: string; label: string }) {
+  async function handleLinkConfirm(target: { kind: string; id?: string; groupId?: string; label: string }, notes?: string) {
     if (!linkDialogTxn) return;
     setLinking(true);
     try {
       if (target.kind === "invoice") {
-        await onLink(linkDialogTxn.id, undefined, target.id);
+        await onLink(linkDialogTxn.id, undefined, target.id, notes);
       } else if (target.kind === "expense_entry") {
-        await onLink(linkDialogTxn.id, target.id, undefined);
+        await onLink(linkDialogTxn.id, target.id, undefined, notes);
       }
       setLinkDialogTxn(null);
     } finally {
@@ -220,8 +223,37 @@ export function AsaasSync({
     });
   }
 
-  // Derive responsible for a transaction
-  function resolveResponsible(txn: AsaasTransaction): { kind: "cliente" | "funcionario" | "empresa"; label: string } {
+  function normalizeStr(s: string) {
+    return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9 ]/g, " ");
+  }
+
+  function suggestClientFromDescription(
+    description: string,
+    clientList: { id: string; name: string; nome_fantasia?: string }[]
+  ): { id: string; name: string; nome_fantasia?: string } | null {
+    const descNorm = normalizeStr(description);
+    let best: { client: (typeof clientList)[0]; score: number } | null = null;
+    for (const client of clientList) {
+      const clientName = normalizeStr(client.nome_fantasia || client.name);
+      const words = clientName.split(/\s+/).filter((w) => w.length >= 4);
+      if (words.length === 0) continue;
+      let matches = 0;
+      for (const word of words) {
+        if (descNorm.includes(word)) { matches++; continue; }
+        // prefix match (5 chars) to tolerate minor spelling variations
+        const prefix = word.slice(0, 5);
+        if (prefix.length >= 4 && descNorm.includes(prefix)) matches++;
+      }
+      const score = matches / words.length;
+      if (matches >= 1 && score >= 0.5 && (!best || score > best.score)) {
+        best = { client, score };
+      }
+    }
+    return best ? best.client : null;
+  }
+
+  // Derive responsible for a transaction; suggested=true means name came from description, not a confirmed link
+  function resolveResponsible(txn: AsaasTransaction): { kind: "cliente" | "funcionario" | "empresa"; label: string; suggested?: boolean } {
     if (txn.invoice_id) {
       const inv = invoices.find((i) => i.id === txn.invoice_id);
       if (inv) {
@@ -238,6 +270,11 @@ export function AsaasSync({
           if (user) return { kind: "funcionario", label: user.name.split(" ").slice(0, 2).join(" ") };
         }
       }
+    }
+    // For unlinked CREDIT transactions, try to suggest a client from the description
+    if (!txn.invoice_id && !txn.expense_entry_id && txn.type === "CREDIT" && txn.description) {
+      const suggested = suggestClientFromDescription(txn.description, clients);
+      if (suggested) return { kind: "cliente", label: suggested.nome_fantasia || suggested.name, suggested: true };
     }
     return { kind: "empresa", label: "Empresa" };
   }
@@ -274,9 +311,111 @@ export function AsaasSync({
     return { entrou, saiu, saldo: entrou - saiu };
   }, [asaasTransactions, filterStart, filterEnd]);
 
-  const unlinkedCount = asaasTransactions.filter((t) => !t.expense_entry_id && !t.invoice_id).length;
+  // ─── Grouping utilities ───────────────────────────────────────────────────
+  function extractFaturaNumber(desc: string): string | null {
+    const m = desc.match(/(?:fatura|cobran[cç]a)\s+(?:nr\.?\s*)?(\d{6,})/i);
+    return m ? m[1] : null;
+  }
+
+  function detectFeeCategory(desc: string): string | null {
+    if (/taxa\s+do?\s+pix/i.test(desc)) return "taxa_asaas";
+    if (/taxa\s+de\s+notifica[cç][aã]o/i.test(desc)) return "taxa_mensageria";
+    if (/taxa\s+de\s+mensageria/i.test(desc)) return "taxa_mensageria";
+    if (/taxa\s+(?:de\s+)?boleto/i.test(desc)) return "taxa_boleto";
+    if (/taxa\s+asaas/i.test(desc)) return "taxa_asaas";
+    return null;
+  }
+
+  interface FaturaGroup {
+    faturaNumber: string;
+    clientLabel: string;
+    date: string;
+    amount: number;
+    totalFees: number;
+    bankConfirmationTxn: AsaasTransaction | null;
+    paymentTxn: AsaasTransaction | null;
+    paymentInvoice: Invoice | null;
+    feeTxns: Array<{ txn: AsaasTransaction; category: string | null }>;
+    isAutoReconciled: boolean;
+  }
+
+  const faturaGroups = useMemo<FaturaGroup[]>(() => {
+    const map = new Map<string, FaturaGroup>();
+
+    for (const txn of asaasTransactions) {
+      if (!txn.description) continue;
+      const faturaNum = extractFaturaNumber(txn.description);
+      if (!faturaNum) continue;
+
+      if (!map.has(faturaNum)) {
+        map.set(faturaNum, {
+          faturaNumber: faturaNum, clientLabel: "", date: txn.date,
+          amount: 0, totalFees: 0,
+          bankConfirmationTxn: null, paymentTxn: null, paymentInvoice: null,
+          feeTxns: [], isAutoReconciled: false,
+        });
+      }
+      const g = map.get(faturaNum)!;
+
+      if (txn.type === "CREDIT" && /cobran[cç]a\s+recebida/i.test(txn.description)) {
+        g.bankConfirmationTxn = txn;
+        g.amount = Number(txn.value);
+        g.date = txn.date;
+        const sc = suggestClientFromDescription(txn.description, clients);
+        g.clientLabel = sc?.nome_fantasia || sc?.name || "";
+      } else if (txn.type === "DEBIT") {
+        g.feeTxns.push({ txn, category: detectFeeCategory(txn.description) });
+        g.totalFees += Number(txn.value);
+      }
+    }
+
+    // Match each group to its payment transaction (already linked via sync-clients)
+    for (const g of map.values()) {
+      if (!g.bankConfirmationTxn || g.amount === 0) continue;
+      const bcMonth = g.bankConfirmationTxn.date.slice(0, 7);
+      for (const inv of invoices) {
+        if (Math.abs(Number(inv.amount) - g.amount) >= 0.02) continue;
+        if (inv.due_date.slice(0, 7) !== bcMonth) continue;
+        const client = clients.find((c) => c.id === inv.client_id);
+        if (!client || !g.clientLabel) continue;
+        const cNorm = normalizeStr(client.nome_fantasia || client.name);
+        const lNorm = normalizeStr(g.clientLabel);
+        const overlap = lNorm.split(/\s+/).filter((w) => w.length >= 4 && cNorm.includes(w)).length;
+        if (overlap < 1) continue;
+        const payTxn = asaasTransactions.find(
+          (t) => t.invoice_id === inv.id && t.type === "CREDIT" && t.id !== g.bankConfirmationTxn?.id
+        );
+        if (payTxn) {
+          g.paymentTxn = payTxn;
+          g.paymentInvoice = inv;
+          g.isAutoReconciled = true;
+          g.clientLabel = client.nome_fantasia || client.name;
+          break;
+        }
+      }
+    }
+
+    return Array.from(map.values())
+      .filter((g) => g.bankConfirmationTxn !== null)
+      .sort((a, b) => b.date.localeCompare(a.date));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [asaasTransactions, invoices, clients]);
+
+  const bankConfirmationIds = useMemo(
+    () => new Set(faturaGroups.filter((g) => g.isAutoReconciled).map((g) => g.bankConfirmationTxn!.id)),
+    [faturaGroups]
+  );
+
+  const unlinkedCount = asaasTransactions.filter(
+    (t) => !t.expense_entry_id && !t.invoice_id && !t.confirms_asaas_transaction_id && !bankConfirmationIds.has(t.id)
+  ).length;
   const batchTotal = useMemo(() => {
     return asaasTransactions.filter((t) => selectedBatch.has(t.id)).reduce((s, t) => s + Number(t.value), 0);
+  }, [asaasTransactions, selectedBatch]);
+
+  const batchType = useMemo(() => {
+    const sel = asaasTransactions.filter((t) => selectedBatch.has(t.id));
+    return sel.length > 0 && sel.every((t) => t.type === "CREDIT") ? "CREDIT" : "DEBIT";
   }, [asaasTransactions, selectedBatch]);
 
   // Fake transaction shape for batch link dialog
@@ -284,9 +423,12 @@ export function AsaasSync({
     id: "__batch__",
     description: `${selectedBatch.size} transações selecionadas`,
     value: batchTotal,
-    type: "DEBIT" as const,
+    type: batchType as "CREDIT" | "DEBIT",
     date: new Date().toISOString().split("T")[0],
   } : null;
+
+  const [viewMode, setViewMode] = useState<"flat" | "grouped">("flat");
+  const [linkDialogDefaultCategory, setLinkDialogDefaultCategory] = useState<string | undefined>(undefined);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
@@ -395,6 +537,15 @@ export function AsaasSync({
             {opt.label}
           </button>
         ))}
+        <div style={{ display: "flex", gap: "2px", background: "rgba(255,255,255,0.02)", padding: "2px", borderRadius: "8px", border: "1px solid var(--border)" }}>
+          {[{ id: "flat" as const, label: "Lista" }, { id: "grouped" as const, label: "Por cobrança" }].map((opt) => (
+            <button key={opt.id} onClick={() => setViewMode(opt.id)}
+              className={`btn ${viewMode === opt.id ? "btn-accent" : "btn-secondary"}`}
+              style={{ fontSize: "0.78rem", padding: "5px 12px" }}>
+              {opt.label}
+            </button>
+          ))}
+        </div>
         {selectedBatch.size > 0 && (
           <button className="btn btn-secondary" onClick={() => setSelectedBatch(new Set())} style={{ fontSize: "0.8rem", padding: "6px 10px", color: "var(--text-tertiary)", display: "flex", alignItems: "center", gap: "5px" }}>
             <X size={12} /> Limpar seleção
@@ -424,8 +575,205 @@ export function AsaasSync({
         </div>
       )}
 
-      {/* Table */}
-      <div className="table-container">
+      {/* ── Grouped view: por cobrança ─────────────────────────────────────── */}
+      {viewMode === "grouped" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          {faturaGroups.length === 0 ? (
+            <div className="glass-card" style={{ padding: "40px", textAlign: "center", color: "var(--text-tertiary)" }}>
+              <p style={{ fontSize: "0.9rem" }}>Nenhuma cobrança com número de fatura identificado no período.</p>
+            </div>
+          ) : faturaGroups.map((group) => {
+            const net = group.amount - group.totalFees;
+            return (
+              <div key={group.faturaNumber} className="glass-card" style={{ padding: 0, overflow: "hidden" }}>
+                {/* Group header */}
+                <div style={{
+                  padding: "14px 20px",
+                  background: group.isAutoReconciled ? "rgba(34,197,94,0.04)" : "rgba(245,158,11,0.04)",
+                  borderBottom: "1px solid var(--border)",
+                  display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px",
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <Building2 size={14} color={group.isAutoReconciled ? "#22C55E" : "#F59E0B"} />
+                    <div>
+                      <p style={{ fontWeight: 700, fontSize: "0.9rem" }}>
+                        {group.clientLabel || "Cliente não identificado"}
+                      </p>
+                      <p style={{ fontSize: "0.72rem", color: "var(--text-tertiary)", marginTop: "1px" }}>
+                        Fatura nº {group.faturaNumber} · {new Date(`${group.date}T12:00:00`).toLocaleDateString("pt-BR")}
+                      </p>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: "14px", alignItems: "center" }}>
+                    <span style={{ fontSize: "0.82rem", color: "#22C55E", fontWeight: 700 }}>+ {formatCurrency(group.amount)}</span>
+                    {group.totalFees > 0 && (
+                      <span style={{ fontSize: "0.82rem", color: "#EF4444", fontWeight: 700 }}>− {formatCurrency(group.totalFees)}</span>
+                    )}
+                    <span style={{ fontSize: "0.95rem", fontWeight: 800, color: net >= 0 ? "#22C55E" : "#EF4444" }}>
+                      = {formatCurrency(Math.abs(net))}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Rows */}
+                <div style={{ display: "flex", flexDirection: "column" }}>
+                  {/* Payment txn (from sync-clients, already linked to invoice) */}
+                  {group.paymentTxn && (
+                    <div style={{ padding: "10px 20px", display: "flex", alignItems: "center", gap: "12px", borderBottom: "1px solid rgba(255,255,255,0.04)", background: "rgba(34,197,94,0.02)" }}>
+                      <CheckCircle2 size={13} color="#22C55E" />
+                      <p style={{ flex: 1, fontSize: "0.85rem", fontWeight: 600 }}>{group.paymentTxn.description || "Pagamento"}</p>
+                      <span style={{ fontSize: "0.8rem", color: "#22C55E", fontWeight: 700 }}>+ {formatCurrency(Number(group.paymentTxn.value))}</span>
+                      <span className="badge" style={{ color: "#22C55E", background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)", fontSize: "0.7rem", whiteSpace: "nowrap" }}>Sistema ✓</span>
+                    </div>
+                  )}
+
+                  {/* Bank confirmation (Cobrança recebida) */}
+                  {group.bankConfirmationTxn && (() => {
+                    const isConfirmedInDb = !!group.bankConfirmationTxn.confirms_asaas_transaction_id;
+                    const canMarkConfirmation = group.isAutoReconciled && !isConfirmedInDb && group.paymentTxn;
+                    return (
+                      <div style={{ padding: "10px 20px", display: "flex", alignItems: "center", gap: "12px", borderBottom: "1px solid rgba(255,255,255,0.04)", opacity: isConfirmedInDb ? 0.6 : 1 }}>
+                        {isConfirmedInDb
+                          ? <CheckCircle2 size={13} color="#60A5FA" />
+                          : <button style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "inline-flex" }} onClick={() => { setLinkDialogDefaultCategory(undefined); setLinkDialogTxn(group.bankConfirmationTxn); }}>
+                              <Link2 size={13} color="#F59E0B" />
+                            </button>
+                        }
+                        <p style={{ flex: 1, fontSize: "0.85rem", fontWeight: 600, color: "var(--text-secondary)" }}>
+                          {group.bankConfirmationTxn.description || "Cobrança recebida"}
+                        </p>
+                        <span style={{ fontSize: "0.8rem", color: "#60A5FA", fontWeight: 700 }}>+ {formatCurrency(Number(group.bankConfirmationTxn.value))}</span>
+                        {isConfirmedInDb ? (
+                          <span className="badge" style={{ color: "#60A5FA", background: "rgba(96,165,250,0.08)", border: "1px solid rgba(96,165,250,0.2)", fontSize: "0.7rem", whiteSpace: "nowrap" }}>
+                            Confirmação bancária ✓
+                          </span>
+                        ) : canMarkConfirmation ? (
+                          <button
+                            onClick={() => onMarkAsConfirmation?.(group.bankConfirmationTxn!.id, group.paymentTxn!.id)}
+                            className="btn btn-secondary"
+                            style={{ fontSize: "0.72rem", padding: "4px 10px", display: "flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap", color: "#60A5FA", borderColor: "rgba(96,165,250,0.3)" }}
+                          >
+                            <CheckCircle2 size={10} /> Marcar como confirmação
+                          </button>
+                        ) : (
+                          <span className="badge" style={{ color: "#F59E0B", background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)", fontSize: "0.7rem", whiteSpace: "nowrap" }}>
+                            Sem vínculo
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })()}
+
+                  {/* Fee rows */}
+                  {group.feeTxns.map(({ txn, category }) => (
+                    <div key={txn.id} style={{ padding: "10px 20px", display: "flex", alignItems: "center", gap: "12px", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                      {txn.expense_entry_id
+                        ? <CheckCircle2 size={13} color="#22C55E" />
+                        : <AlertCircle size={13} color="#F59E0B" />
+                      }
+                      <p style={{ flex: 1, fontSize: "0.82rem", color: "var(--text-secondary)" }}>{txn.description || "Taxa Asaas"}</p>
+                      <span style={{ fontSize: "0.8rem", color: "#EF4444", fontWeight: 700 }}>− {formatCurrency(Number(txn.value))}</span>
+                      {txn.expense_entry_id ? (
+                        <span className="badge" style={{ color: "#22C55E", background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)", fontSize: "0.7rem" }}>Vinculado</span>
+                      ) : (
+                        <button
+                          onClick={() => { setLinkDialogDefaultCategory(category || undefined); setLinkDialogTxn(txn); }}
+                          className="btn btn-secondary"
+                          style={{ fontSize: "0.72rem", padding: "4px 10px", display: "flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap" }}
+                        >
+                          <Link2 size={10} /> Vincular{category ? ` → ${category}` : ""}
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+
+          {/* Ungrouped transactions in grouped mode */}
+          {(() => {
+            const groupedIds = new Set<string>([
+              ...faturaGroups.map((g) => g.bankConfirmationTxn?.id).filter(Boolean) as string[],
+              ...faturaGroups.flatMap((g) => g.feeTxns.map((f) => f.txn.id)),
+              ...faturaGroups.map((g) => g.paymentTxn?.id).filter(Boolean) as string[],
+            ]);
+            const ungrouped = filtered.filter((t) => !groupedIds.has(t.id));
+            if (ungrouped.length === 0) return null;
+            return (
+              <div>
+                <p style={{ fontSize: "0.78rem", color: "var(--text-tertiary)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "8px", paddingLeft: "2px" }}>
+                  Outras transações ({ungrouped.length})
+                </p>
+                <div className="table-container">
+                  <table className="table">
+                    <thead>
+                      <tr>
+                        <th style={{ width: "90px" }}>Data</th>
+                        <th style={{ width: "150px" }}>Cliente</th>
+                        <th>Descrição</th>
+                        <th style={{ width: "90px" }}>Tipo</th>
+                        <th style={{ textAlign: "right", width: "120px" }}>Valor</th>
+                        <th style={{ width: "130px" }}>Vínculo</th>
+                        <th style={{ width: "60px" }}></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {ungrouped.map((txn) => {
+                        const isLinked = !!(txn.expense_entry_id || txn.invoice_id);
+                        const responsible = resolveResponsible(txn);
+                        return (
+                          <tr key={txn.id}>
+                            <td style={{ color: "var(--text-secondary)", fontSize: "0.82rem" }}>
+                              {new Date(`${txn.date}T12:00:00`).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit" })}
+                            </td>
+                            <td>
+                              <span style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "0.82rem", color: responsible.suggested ? "#F59E0B" : responsible.kind === "empresa" ? "var(--text-tertiary)" : "var(--text-secondary)", fontWeight: 600 }}>
+                                {responsible.suggested && <HelpCircle size={11} />}
+                                {responsible.kind === "funcionario" && <User size={11} />}
+                                {responsible.kind === "cliente" && !responsible.suggested && <Building2 size={11} />}
+                                {responsible.kind === "empresa" ? "—" : responsible.label}
+                              </span>
+                            </td>
+                            <td style={{ maxWidth: "240px" }}>
+                              <p style={{ fontWeight: 600, fontSize: "0.875rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{txn.description || "—"}</p>
+                            </td>
+                            <td>
+                              <span className="badge" style={{ color: txn.type === "CREDIT" ? "#22C55E" : "#EF4444", background: txn.type === "CREDIT" ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)", border: `1px solid ${txn.type === "CREDIT" ? "rgba(34,197,94,0.25)" : "rgba(239,68,68,0.25)"}`, fontSize: "0.75rem" }}>
+                                {txn.type === "CREDIT" ? "Receita" : "Despesa"}
+                              </span>
+                            </td>
+                            <td style={{ textAlign: "right", fontWeight: 700, fontSize: "0.9rem", color: txn.type === "CREDIT" ? "#22C55E" : "#EF4444" }}>
+                              {txn.type === "DEBIT" ? "−" : "+"} {formatCurrency(Number(txn.value))}
+                            </td>
+                            <td>
+                              <span style={{ fontSize: "0.82rem", color: isLinked ? "#22C55E" : "#F59E0B", fontWeight: 600 }}>
+                                {isLinked ? "Vinculado" : "Sem vínculo"}
+                              </span>
+                            </td>
+                            <td style={{ textAlign: "right" }}>
+                              {!isLinked ? (
+                                <button onClick={() => { setLinkDialogDefaultCategory(undefined); setLinkDialogTxn(txn); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#F59E0B", padding: "4px", display: "inline-flex" }}><Link2 size={15} /></button>
+                              ) : (
+                                <button onClick={() => handleUnlink(txn.id)} disabled={unlinkingId === txn.id} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-tertiary)", padding: "4px", display: "inline-flex" }}>
+                                  {unlinkingId === txn.id ? <RefreshCw size={15} className="animate-spin" /> : <Unlink size={15} />}
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
+      {/* Table (flat view) */}
+      <div className="table-container" style={{ display: viewMode === "grouped" ? "none" : undefined }}>
         <table className="table">
           <thead>
             <tr>
@@ -447,7 +795,7 @@ export function AsaasSync({
                 </td>
               </tr>
             )}
-            {filtered.map((txn, i) => {
+            {filtered.filter((t) => !t.confirms_asaas_transaction_id).map((txn, i) => {
               const isLinked = !!(txn.expense_entry_id || txn.invoice_id);
               const linkedEntry = txn.expense_entry_id ? expenseEntries.find((e) => e.id === txn.expense_entry_id) : null;
               const linkedInvoice = txn.invoice_id ? invoices.find((inv) => inv.id === txn.invoice_id) : null;
@@ -482,9 +830,13 @@ export function AsaasSync({
 
                   {/* Cliente */}
                   <td>
-                    <span style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "0.82rem", color: responsible.kind === "empresa" ? "var(--text-tertiary)" : "var(--text-secondary)", fontWeight: 600 }}>
+                    <span style={{
+                      display: "flex", alignItems: "center", gap: "5px", fontSize: "0.82rem", fontWeight: 600,
+                      color: responsible.suggested ? "#F59E0B" : responsible.kind === "empresa" ? "var(--text-tertiary)" : "var(--text-secondary)",
+                    }}>
                       {responsible.kind === "funcionario" && <User size={11} />}
-                      {responsible.kind === "cliente" && <Building2 size={11} />}
+                      {responsible.kind === "cliente" && !responsible.suggested && <Building2 size={11} />}
+                      {responsible.suggested && <HelpCircle size={11} />}
                       {responsible.kind === "empresa" ? "—" : responsible.label}
                     </span>
                   </td>
@@ -513,23 +865,28 @@ export function AsaasSync({
                     {txn.type === "DEBIT" ? "−" : "+"} {formatCurrency(Number(txn.value))}
                   </td>
 
-                  {/* Vínculo com hover */}
+                  {/* Vínculo com hover + clique para detalhes */}
                   <td style={{ position: "relative" }}>
                     <div
                       onMouseEnter={() => setHoveredVinculo(txn.id)}
                       onMouseLeave={() => setHoveredVinculo(null)}
-                      style={{ display: "inline-flex", cursor: isLinked ? "default" : "pointer" }}
+                      style={{ display: "inline-flex" }}
                     >
-                      {isLinked ? (
-                        <span style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "0.82rem", color: "#22C55E", fontWeight: 600 }}>
-                          <CheckCircle2 size={11} />
-                          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100px" }}>
-                            {linkedLabel || "Vinculado"}
+                      <button
+                        onClick={() => isLinked ? setDetailTxn(txn) : setLinkDialogTxn(txn)}
+                        style={{ background: "none", border: "none", cursor: "pointer", display: "inline-flex", padding: "2px" }}
+                      >
+                        {isLinked ? (
+                          <span style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "0.82rem", color: "#22C55E", fontWeight: 600 }}>
+                            <CheckCircle2 size={11} />
+                            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100px" }}>
+                              {linkedLabel || "Vinculado"}
+                            </span>
                           </span>
-                        </span>
-                      ) : (
-                        <span style={{ fontSize: "0.82rem", color: "#F59E0B", fontWeight: 600 }}>Sem vínculo</span>
-                      )}
+                        ) : (
+                          <span style={{ fontSize: "0.82rem", color: "#F59E0B", fontWeight: 600 }}>Sem vínculo</span>
+                        )}
+                      </button>
                     </div>
                     {hoveredVinculo === txn.id && (
                       <div
@@ -624,7 +981,13 @@ export function AsaasSync({
         expenses={expenses}
         clients={clients}
         linking={linking}
-        onClose={() => setLinkDialogTxn(null)}
+        suggestedClientId={
+          linkDialogTxn?.description
+            ? suggestClientFromDescription(linkDialogTxn.description, clients)?.id
+            : undefined
+        }
+        defaultCategory={linkDialogDefaultCategory}
+        onClose={() => { setLinkDialogTxn(null); setLinkDialogDefaultCategory(undefined); }}
         onConfirm={handleLinkConfirm as any}
         onCreateVariableEntry={handleCreateVariableEntry}
       />
@@ -645,6 +1008,114 @@ export function AsaasSync({
         }}
         onCreateVariableEntry={handleCreateVariableEntry}
       />
+
+      {/* Modal de detalhes do vínculo */}
+      {detailTxn && (() => {
+        const dEntry = detailTxn.expense_entry_id ? expenseEntries.find((e) => e.id === detailTxn.expense_entry_id) : null;
+        const dInvoice = detailTxn.invoice_id ? invoices.find((i) => i.id === detailTxn.invoice_id) : null;
+        const dGroup = dEntry?.expense_id ? expenses.find((e) => e.id === dEntry.expense_id) : null;
+        const dClient = dInvoice ? clients.find((c) => c.id === dInvoice.client_id) : null;
+        const entryPayments = dEntry ? asaasTransactions.filter((t) => t.expense_entry_id === dEntry.id).sort((a, b) => a.date.localeCompare(b.date)) : [];
+        const totalPaid = entryPayments.reduce((s, t) => s + Math.abs(Number(t.value)), 0);
+        return (
+          <DialogShell
+            isOpen
+            onClose={() => setDetailTxn(null)}
+            title="Detalhe do Vínculo"
+            maxWidth="440px"
+            footer={
+              <div style={{ display: "flex", justifyContent: "space-between", gap: "12px" }}>
+                <button
+                  className="btn btn-secondary"
+                  style={{ color: "#EF4444" }}
+                  onClick={() => { handleUnlink(detailTxn.id); setDetailTxn(null); }}
+                >
+                  Desvincular
+                </button>
+                <button className="btn btn-accent" onClick={() => setDetailTxn(null)}>Fechar</button>
+              </div>
+            }
+          >
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              {/* Transação */}
+              <div style={{ padding: "12px 16px", borderRadius: "12px", background: detailTxn.type === "CREDIT" ? "rgba(34,197,94,0.06)" : "rgba(239,68,68,0.06)", border: `1px solid ${detailTxn.type === "CREDIT" ? "rgba(34,197,94,0.2)" : "rgba(239,68,68,0.2)"}` }}>
+                <p style={{ fontSize: "0.72rem", color: "var(--text-secondary)", marginBottom: "2px" }}>Transação Asaas · {detailTxn.type === "CREDIT" ? "Receita" : "Despesa"}</p>
+                <p style={{ fontWeight: 700, fontSize: "0.9rem" }}>{detailTxn.description || "Sem descrição"}</p>
+                <p style={{ fontWeight: 800, fontSize: "1.05rem", color: detailTxn.type === "CREDIT" ? "#22C55E" : "#EF4444", marginTop: "2px" }}>
+                  {detailTxn.type === "CREDIT" ? "+" : "−"} {formatCurrency(Number(detailTxn.value))}
+                  <span style={{ fontSize: "0.75rem", fontWeight: 400, color: "var(--text-tertiary)", marginLeft: "8px" }}>
+                    {new Date(`${detailTxn.date.split("T")[0]}T12:00:00`).toLocaleDateString("pt-BR")}
+                  </span>
+                </p>
+                {detailTxn.notes && (
+                  <p style={{ fontSize: "0.78rem", color: "var(--text-secondary)", marginTop: "6px", fontStyle: "italic" }}>
+                    "{detailTxn.notes}"
+                  </p>
+                )}
+              </div>
+
+              {/* Vinculado a despesa */}
+              {dEntry && (
+                <div style={{ padding: "12px 16px", borderRadius: "12px", background: "rgba(255,255,255,0.02)", border: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: "8px" }}>
+                  <p style={{ fontSize: "0.7rem", color: "var(--text-secondary)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>Despesa vinculada</p>
+                  <p style={{ fontWeight: 700 }}>{dEntry.description}</p>
+                  {dGroup && <p style={{ fontSize: "0.8rem", color: "var(--text-tertiary)" }}>{dGroup.description}</p>}
+                  <p style={{ fontSize: "0.78rem", color: "var(--text-tertiary)" }}>
+                    Vcto {new Date(`${dEntry.date.split("T")[0]}T12:00:00`).toLocaleDateString("pt-BR")} · Total {formatCurrency(Number(dEntry.amount))}
+                  </p>
+                  {entryPayments.length > 0 && (
+                    <div style={{ padding: "8px", borderRadius: "8px", background: "rgba(245,158,11,0.04)", border: "1px solid rgba(245,158,11,0.12)", display: "flex", flexDirection: "column", gap: "4px" }}>
+                      {entryPayments.map((p) => (
+                        <div key={p.id} style={{ display: "flex", flexDirection: "column", gap: "1px" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem" }}>
+                            <span style={{ color: p.id === detailTxn.id ? "#22C55E" : "var(--text-tertiary)", fontWeight: p.id === detailTxn.id ? 700 : 400 }}>
+                              {p.id === detailTxn.id ? "▶ " : ""}{new Date(`${p.date.split("T")[0]}T12:00:00`).toLocaleDateString("pt-BR")}
+                            </span>
+                            <span style={{ fontWeight: 600, color: p.id === detailTxn.id ? "#22C55E" : "#F59E0B" }}>
+                              − {formatCurrency(Math.abs(Number(p.value)))}
+                            </span>
+                          </div>
+                          {p.notes && (
+                            <p style={{ fontSize: "0.68rem", color: "var(--text-tertiary)", fontStyle: "italic", paddingLeft: p.id === detailTxn.id ? "12px" : "4px" }}>
+                              {p.notes}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", fontWeight: 700, borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "4px", marginTop: "2px" }}>
+                        <span>Total pago</span>
+                        <span style={{ color: totalPaid >= Number(dEntry.amount) ? "#22C55E" : "#F59E0B" }}>
+                          {formatCurrency(totalPaid)} / {formatCurrency(Number(dEntry.amount))}
+                        </span>
+                      </div>
+                      {totalPaid < Number(dEntry.amount) && (
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem" }}>
+                          <span style={{ color: "var(--text-secondary)" }}>Saldo em aberto</span>
+                          <span style={{ color: "#EF4444", fontWeight: 700 }}>{formatCurrency(Number(dEntry.amount) - totalPaid)}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Vinculado a fatura */}
+              {dInvoice && dClient && (
+                <div style={{ padding: "12px 16px", borderRadius: "12px", background: "rgba(255,255,255,0.02)", border: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <p style={{ fontSize: "0.7rem", color: "var(--text-secondary)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>Fatura vinculada</p>
+                  <p style={{ fontWeight: 700 }}>{dClient.nome_fantasia || dClient.name}</p>
+                  <p style={{ fontSize: "0.8rem", color: "var(--text-tertiary)" }}>{dInvoice.description}</p>
+                  <p style={{ fontWeight: 800, color: "#22C55E" }}>{formatCurrency(Number(dInvoice.amount))}</p>
+                  <p style={{ fontSize: "0.75rem", color: "var(--text-tertiary)" }}>
+                    Vcto {new Date(`${dInvoice.due_date.split("T")[0]}T12:00:00`).toLocaleDateString("pt-BR")}
+                    {dInvoice.paid_at && ` · Pago ${new Date(`${dInvoice.paid_at.split("T")[0]}T12:00:00`).toLocaleDateString("pt-BR")}`}
+                  </p>
+                </div>
+              )}
+            </div>
+          </DialogShell>
+        );
+      })()}
 
       {/* Auto-link review dialog */}
       <DialogShell

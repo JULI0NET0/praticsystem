@@ -12,7 +12,7 @@ interface ExpenseLinkDialogProps {
   debits: AsaasTransaction[];
   linking: boolean;
   onClose: () => void;
-  onConfirm: (txnIds: string[], paymentDate: string) => Promise<void>;
+  onConfirm: (txnIds: string[], paymentDate: string, notes?: string) => Promise<void>;
 }
 
 export function ExpenseLinkDialog({
@@ -26,12 +26,14 @@ export function ExpenseLinkDialog({
   const [search, setSearch] = useState("");
   const [month, setMonth] = useState("");
   const [selection, setSelection] = useState<Set<string>>(new Set());
+  const [notes, setNotes] = useState("");
 
   useEffect(() => {
     if (entry) {
       setSearch("");
-      setMonth(entry.date.split("T")[0].slice(0, 7));
+      setMonth(""); // mostra todos os meses — permite adiantamentos de meses anteriores
       setSelection(new Set());
+      setNotes("");
     }
   }, [entry?.id]);
 
@@ -64,7 +66,7 @@ export function ExpenseLinkDialog({
       const txn = debits.find((t) => t.id === id);
       if (txn) paymentDate = txn.date.split("T")[0];
     }
-    await onConfirm(Array.from(selection), paymentDate);
+    await onConfirm(Array.from(selection), paymentDate, notes || undefined);
   }
 
   return (
@@ -74,15 +76,27 @@ export function ExpenseLinkDialog({
       title="Vincular Pagamento ao Banco"
       maxWidth="520px"
       footer={
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px" }}>
-          <button className="btn btn-secondary" onClick={onClose}>Cancelar</button>
-          <button
-            className="btn btn-accent"
-            onClick={handleConfirm}
-            disabled={linking || selection.size === 0}
-          >
-            {linking ? "Vinculando..." : `Vincular${selection.size > 0 ? ` (${selection.size})` : ""}`}
-          </button>
+        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+          {selection.size > 0 && (
+            <textarea
+              className="input-dark"
+              rows={2}
+              style={{ width: "100%", fontSize: "0.82rem", resize: "none" }}
+              placeholder="Observação interna (opcional) — ex: adiantamento, parte 1/2..."
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+            />
+          )}
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px" }}>
+            <button className="btn btn-secondary" onClick={onClose}>Cancelar</button>
+            <button
+              className="btn btn-accent"
+              onClick={handleConfirm}
+              disabled={linking || selection.size === 0}
+            >
+              {linking ? "Vinculando..." : `Vincular${selection.size > 0 ? ` (${selection.size})` : ""}`}
+            </button>
+          </div>
         </div>
       }
     >

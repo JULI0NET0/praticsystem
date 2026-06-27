@@ -27,8 +27,10 @@ interface AsaasLinkDialogProps {
   expenses: Expense[];
   clients: { id: string; name: string; nome_fantasia?: string }[];
   linking: boolean;
+  suggestedClientId?: string;
+  defaultCategory?: string;
   onClose: () => void;
-  onConfirm: (target: LinkTarget) => Promise<void>;
+  onConfirm: (target: LinkTarget, notes?: string) => Promise<void>;
   onCreateVariableEntry: (groupId: string, amount: number, date: string) => Promise<ExpenseEntry | null>;
 }
 
@@ -40,29 +42,44 @@ export function AsaasLinkDialog({
   expenses,
   clients,
   linking,
+  suggestedClientId,
+  defaultCategory,
   onClose,
   onConfirm,
   onCreateVariableEntry,
 }: AsaasLinkDialogProps) {
-  const defaultTab: ActiveTab = transaction?.type === "CREDIT" ? "fatura" : "fixa";
+  const defaultTab: ActiveTab = transaction?.type === "CREDIT" ? "fatura" : (defaultCategory ? "variavel" : "fixa");
   const [tab, setTab] = useState<ActiveTab>(defaultTab);
   const [search, setSearch] = useState("");
 
   const txnMonth = transaction ? transaction.date.slice(0, 7) : "";
   const [monthFilter, setMonthFilter] = useState(txnMonth);
 
+  function nextMonthOf(ym: string): string {
+    if (!ym) return "";
+    const [y, m] = ym.split("-").map(Number);
+    const d = new Date(y, m, 1); // m is already 1-based; new Date(y, m, 1) gives first day of next month
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  }
+
   const [selected, setSelected] = useState<LinkTarget | null>(null);
   const [creatingForGroup, setCreatingForGroup] = useState<string | null>(null);
   const [newEntryAmount, setNewEntryAmount] = useState("");
+  const [notes, setNotes] = useState("");
+
+  const suggestedClient = suggestedClientId ? clients.find((c) => c.id === suggestedClientId) : undefined;
 
   // Reset when transaction changes
   useMemo(() => {
-    setTab(transaction?.type === "CREDIT" ? "fatura" : "fixa");
-    setSearch("");
+    setTab(transaction?.type === "CREDIT" ? "fatura" : (defaultCategory ? "variavel" : "fixa"));
+    // Pre-populate search with suggested client name (invoices) or skip for fees
+    setSearch(suggestedClient && !defaultCategory ? (suggestedClient.nome_fantasia || suggestedClient.name) : "");
     setSelected(null);
     setCreatingForGroup(null);
     setNewEntryAmount(transaction ? String(transaction.value) : "");
+    setNotes("");
     if (transaction) setMonthFilter(transaction.date.slice(0, 7));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [transaction?.id]);
 
   const pendingInvoices = useMemo(() => {
@@ -74,10 +91,13 @@ export function AsaasLinkDialog({
   }, [invoices, monthFilter, search, clients]);
 
   const pendingEntries = useMemo(() => {
+    const next = nextMonthOf(monthFilter);
     return expenseEntries.filter((e) => {
       const parentExpense = expenses.find((ex) => ex.id === e.expense_id);
       if (parentExpense?.type !== "fixed" && e.expense_id) return false;
-      const inMonth = !monthFilter || e.date.slice(0, 7) === monthFilter;
+      // inclui mês atual do filtro + próximo mês (adiantamentos para o mês seguinte)
+      const entryMonth = e.date.slice(0, 7);
+      const inMonth = !monthFilter || entryMonth === monthFilter || entryMonth === next;
       const matchSearch = !search || e.description.toLowerCase().includes(search.toLowerCase());
       return inMonth && matchSearch && e.status === "pending";
     });
@@ -86,9 +106,11 @@ export function AsaasLinkDialog({
   const variableGroups = useMemo(() => {
     return expenses.filter((e) => {
       if (e.type !== "variable") return false;
+      // When opened from a fee quick-link, show matching category groups first
+      if (defaultCategory && !search && e.category !== defaultCategory) return false;
       return !search || e.description.toLowerCase().includes(search.toLowerCase());
     });
-  }, [expenses, search]);
+  }, [expenses, search, defaultCategory]);
 
   async function handleConfirm() {
     if (!selected) return;
@@ -96,10 +118,10 @@ export function AsaasLinkDialog({
       const amount = Number(newEntryAmount) || transaction?.value || 0;
       const entry = await onCreateVariableEntry(selected.groupId, amount, transaction?.date ?? new Date().toISOString().split("T")[0]);
       if (entry) {
-        await onConfirm({ kind: "expense_entry", id: entry.id, label: selected.label });
+        await onConfirm({ kind: "expense_entry", id: entry.id, label: selected.label }, notes || undefined);
       }
     } else {
-      await onConfirm(selected);
+      await onConfirm(selected, notes || undefined);
     }
   }
 
@@ -119,15 +141,27 @@ export function AsaasLinkDialog({
       title="Vincular Transação"
       maxWidth="520px"
       footer={
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px" }}>
-          <button className="btn btn-secondary" onClick={onClose}>Cancelar</button>
-          <button
-            className="btn btn-accent"
-            onClick={handleConfirm}
-            disabled={!selected || linking}
-          >
-            {linking ? "Vinculando..." : "Confirmar Vínculo"}
-          </button>
+        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+          {selected && (
+            <textarea
+              className="input-dark"
+              rows={2}
+              style={{ width: "100%", fontSize: "0.82rem", resize: "none" }}
+              placeholder="Observação interna (opcional) — ex: adiantamento, parte 1/2..."
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+            />
+          )}
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px" }}>
+            <button className="btn btn-secondary" onClick={onClose}>Cancelar</button>
+            <button
+              className="btn btn-accent"
+              onClick={handleConfirm}
+              disabled={!selected || linking}
+            >
+              {linking ? "Vinculando..." : "Confirmar Vínculo"}
+            </button>
+          </div>
         </div>
       }
     >
@@ -148,6 +182,21 @@ export function AsaasLinkDialog({
               <span style={{ fontSize: "0.75rem", fontWeight: 400, color: "var(--text-tertiary)", marginLeft: "8px" }}>
                 {new Date(`${transaction.date}T12:00:00`).toLocaleDateString("pt-BR")}
               </span>
+            </p>
+          </div>
+        )}
+
+        {/* Suggested client banner */}
+        {suggestedClient && tab === "fatura" && (
+          <div style={{
+            padding: "10px 14px", borderRadius: "10px",
+            background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.2)",
+            display: "flex", alignItems: "center", gap: "8px",
+          }}>
+            <span style={{ fontSize: "0.78rem", color: "#F59E0B" }}>?</span>
+            <p style={{ fontSize: "0.82rem", color: "#F59E0B", fontWeight: 600, margin: 0 }}>
+              Possível cliente:{" "}
+              <span style={{ fontWeight: 800 }}>{suggestedClient.nome_fantasia || suggestedClient.name}</span>
             </p>
           </div>
         )}

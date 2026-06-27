@@ -42,12 +42,13 @@ interface DespesasListProps {
   expenseEntries: ExpenseEntry[];
   users: { id: string; name: string }[];
   asaasTransactions: AsaasTransaction[];
+  selectedMonth?: string;
   onSave: (data: Partial<Expense>) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onToggle: (id: string, status: 'active' | 'inactive') => Promise<void>;
   onGenerateEntries: (expenseId: string, startMonth: string, months: number) => Promise<void>;
   onUpdateEntry: (id: string, data: Partial<ExpenseEntry>) => Promise<void>;
-  onLinkTransaction: (asaasId: string, expenseEntryId?: string, invoiceId?: string) => Promise<void>;
+  onLinkTransaction: (asaasId: string, expenseEntryId?: string, invoiceId?: string, notes?: string) => Promise<void>;
 }
 
 const EMPTY_FORM: Partial<Expense> = {
@@ -77,7 +78,7 @@ function generatePreviewDates(startMonth: string, months: number, dueDay: number
   });
 }
 
-export function DespesasList({ expenses, expenseEntries, users, asaasTransactions, onSave, onDelete, onToggle, onGenerateEntries, onUpdateEntry, onLinkTransaction }: DespesasListProps) {
+export function DespesasList({ expenses, expenseEntries, users, asaasTransactions, selectedMonth, onSave, onDelete, onToggle, onGenerateEntries, onUpdateEntry, onLinkTransaction }: DespesasListProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Expense | null>(null);
   const [form, setForm] = useState<Partial<Expense>>(EMPTY_FORM);
@@ -100,7 +101,7 @@ export function DespesasList({ expenses, expenseEntries, users, asaasTransaction
   const unlinkedDebits = asaasTransactions.filter((t) => t.type === "DEBIT" && !t.expense_entry_id && !t.invoice_id);
 
   function linkedSumEntry(entryId: string) {
-    return asaasTransactions.filter((t) => t.expense_entry_id === entryId).reduce((s, t) => s + Number(t.value), 0);
+    return asaasTransactions.filter((t) => t.expense_entry_id === entryId).reduce((s, t) => s + Math.abs(Number(t.value)), 0);
   }
 
   function isEntryLinked(entry: ExpenseEntry) {
@@ -116,14 +117,14 @@ export function DespesasList({ expenses, expenseEntries, users, asaasTransaction
     return entry.status;
   }
 
-  async function handleConfirmLink(txnIds: string[], paymentDate: string) {
+  async function handleConfirmLink(txnIds: string[], paymentDate: string, notes?: string) {
     if (!linkEntry) return;
     setLinking(true);
     try {
       for (const txnId of txnIds) {
-        await onLinkTransaction(txnId, linkEntry.id, undefined);
+        await onLinkTransaction(txnId, linkEntry.id, undefined, notes);
       }
-      const selectedSum = asaasTransactions.filter((t) => txnIds.includes(t.id)).reduce((s, t) => s + Number(t.value), 0);
+      const selectedSum = asaasTransactions.filter((t) => txnIds.includes(t.id)).reduce((s, t) => s + Math.abs(Number(t.value)), 0);
       const totalLinked = linkedSumEntry(linkEntry.id) + selectedSum;
       if (totalLinked >= Number(linkEntry.amount)) {
         await onUpdateEntry(linkEntry.id, { status: "paid", date: paymentDate });
@@ -235,6 +236,7 @@ export function DespesasList({ expenses, expenseEntries, users, asaasTransaction
               <th>Dia Vcto</th>
               <th>Recorrência</th>
               <th>Valor</th>
+              <th>Mês Atual</th>
               <th>Status</th>
               <th>Ações</th>
             </tr>
@@ -242,7 +244,7 @@ export function DespesasList({ expenses, expenseEntries, users, asaasTransaction
           <tbody>
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={7} style={{ textAlign: "center", padding: "40px", color: "var(--text-tertiary)" }}>
+                <td colSpan={8} style={{ textAlign: "center", padding: "40px", color: "var(--text-tertiary)" }}>
                   Nenhuma despesa cadastrada.
                 </td>
               </tr>
@@ -279,6 +281,33 @@ export function DespesasList({ expenses, expenseEntries, users, asaasTransaction
                     {RECURRENCES[expense.recurrence]}
                   </td>
                   <td style={{ fontWeight: 700, color: "#EF4444" }}>{formatCurrency(Number(expense.amount))}</td>
+                  <td>
+                    {(() => {
+                      if (!selectedMonth) return <span style={{ color: "var(--text-tertiary)", fontSize: "0.78rem" }}>—</span>;
+                      const monthEntry = entries.find((e) => e.date.slice(0, 7) === selectedMonth);
+                      if (!monthEntry) return <span style={{ color: "var(--text-tertiary)", fontSize: "0.78rem" }}>Sem fatura</span>;
+                      const effStatus = effectiveEntryStatus(monthEntry);
+                      const sum = linkedSumEntry(monthEntry.id);
+                      const remaining = Math.max(0, Number(monthEntry.amount) - sum);
+                      if (effStatus === "paid") {
+                        return <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "#22C55E" }}>✓ Pago</span>;
+                      }
+                      if (effStatus === "partial") {
+                        return (
+                          <div style={{ display: "flex", flexDirection: "column", gap: "1px" }}>
+                            <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "#F59E0B" }}>Parcial</span>
+                            <span style={{ fontSize: "0.7rem", color: "#EF4444" }}>{formatCurrency(remaining)} em aberto</span>
+                          </div>
+                        );
+                      }
+                      return (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "1px" }}>
+                          <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "#EF4444" }}>Pendente</span>
+                          <span style={{ fontSize: "0.7rem", color: "#EF4444" }}>{formatCurrency(Number(monthEntry.amount))}</span>
+                        </div>
+                      );
+                    })()}
+                  </td>
                   <td>
                     <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                       <span className={`badge ${expense.status === "active" ? "badge-success" : ""}`}
@@ -428,10 +457,20 @@ export function DespesasList({ expenses, expenseEntries, users, asaasTransaction
       {(() => {
         if (!viewEntriesDialog) return null;
         const entries = expenseEntries.filter((e) => e.expense_id === viewEntriesDialog.id);
-        const paidCount = entries.filter((e) => e.status === "paid").length;
-        const pendingCount = entries.filter((e) => e.status === "pending").length;
-        const totalPago = entries.filter((e) => e.status === "paid").reduce((s, e) => s + Number(e.amount), 0);
-        const totalPendente = entries.filter((e) => e.status === "pending").reduce((s, e) => s + Number(e.amount), 0);
+        const paidCount = entries.filter((e) => effectiveEntryStatus(e) === "paid").length;
+        const pendingCount = entries.filter((e) => ["pending", "partial"].includes(effectiveEntryStatus(e))).length;
+        const totalPago = entries.reduce((s, e) => {
+          const eff = effectiveEntryStatus(e);
+          if (eff === "paid") return s + Number(e.amount);
+          if (eff === "partial") return s + linkedSumEntry(e.id);
+          return s;
+        }, 0);
+        const totalPendente = entries.reduce((s, e) => {
+          const eff = effectiveEntryStatus(e);
+          if (eff === "pending") return s + Number(e.amount);
+          if (eff === "partial") return s + Math.max(0, Number(e.amount) - linkedSumEntry(e.id));
+          return s;
+        }, 0);
         return (
           <DialogShell
             isOpen
@@ -506,9 +545,10 @@ export function DespesasList({ expenses, expenseEntries, users, asaasTransaction
                       return (
                         <div
                           key={entry.id}
-                          style={{ display: "flex", alignItems: "center", gap: "12px", padding: "10px 14px", borderRadius: "10px", background: "rgba(255,255,255,0.02)", border: "1px solid var(--border)" }}
+                          style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "12px", padding: "10px 14px", borderRadius: "10px", background: "rgba(255,255,255,0.02)", border: "1px solid var(--border)" }}
                         >
-                          <div style={{ flex: 1 }}>
+                          {/* Linha principal */}
+                          <div style={{ flex: 1, minWidth: 0 }}>
                             <p style={{ fontSize: "0.875rem", fontWeight: 600, textTransform: "capitalize" }}>{mesLabel}</p>
                             <p style={{ fontSize: "0.72rem", color: "var(--text-tertiary)", marginTop: "1px" }}>vcto {diaLabel}</p>
                           </div>
@@ -546,6 +586,34 @@ export function DespesasList({ expenses, expenseEntries, users, asaasTransaction
                               <Check size={15} />
                             </button>
                           )}
+                          {/* Histórico de pagamentos via banco — aparece para qualquer entry com transações vinculadas */}
+                          {(() => {
+                            const partials = asaasTransactions.filter((t) => t.expense_entry_id === entry.id);
+                            if (partials.length === 0) return null;
+                            const remaining = Math.max(0, Number(entry.amount) - linkedSum);
+                            const isPaid = effStatus === "paid";
+                            return (
+                              <div style={{ flexBasis: "100%", padding: "8px 10px", borderRadius: "8px", background: isPaid ? "rgba(34,197,94,0.05)" : "rgba(245,158,11,0.05)", border: `1px solid ${isPaid ? "rgba(34,197,94,0.15)" : "rgba(245,158,11,0.15)"}`, display: "flex", flexDirection: "column", gap: "4px" }}>
+                                {partials.map((t) => (
+                                  <div key={t.id} style={{ display: "flex", flexDirection: "column", gap: "1px" }}>
+                                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.68rem", color: "var(--text-tertiary)" }}>
+                                      <span>{isPaid ? "Pgto." : "Adiant."} {new Date(`${t.date.split("T")[0]}T12:00:00`).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}</span>
+                                      <span style={{ color: isPaid ? "#22C55E" : "#F59E0B", fontWeight: 600 }}>− {formatCurrency(Math.abs(Number(t.value)))}</span>
+                                    </div>
+                                    {t.notes && (
+                                      <p style={{ fontSize: "0.65rem", color: "var(--text-tertiary)", fontStyle: "italic", margin: 0 }}>{t.notes}</p>
+                                    )}
+                                  </div>
+                                ))}
+                                {remaining > 0 && (
+                                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.72rem", fontWeight: 700, borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "4px", marginTop: "2px" }}>
+                                    <span style={{ color: "var(--text-secondary)" }}>Saldo em aberto</span>
+                                    <span style={{ color: "#EF4444" }}>{formatCurrency(remaining)}</span>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </div>
                       );
                     })}

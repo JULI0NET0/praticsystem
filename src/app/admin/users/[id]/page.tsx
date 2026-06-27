@@ -152,7 +152,8 @@ export default function UserDetailPage() {
       if (res.ok) {
         showToast("Email de redefinição enviado para " + user.email, "success");
       } else {
-        showToast("Erro ao enviar email de redefinição.", "error");
+        const errorData = await res.json().catch(() => ({}));
+        showToast(errorData.error || "Erro ao enviar email de redefinição.", "error");
       }
       setShowResetConfirm(false);
     } catch {

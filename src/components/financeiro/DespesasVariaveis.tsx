@@ -33,7 +33,7 @@ interface DespesasVariaveisProps {
   onCreateEntry: (data: Partial<ExpenseEntry>) => Promise<ExpenseEntry | null>;
   onUpdateEntry: (id: string, data: Partial<ExpenseEntry>) => Promise<void>;
   onDeleteEntry?: (id: string) => Promise<void>;
-  onLinkTransaction: (asaasId: string, expenseEntryId?: string, invoiceId?: string) => Promise<void>;
+  onLinkTransaction: (asaasId: string, expenseEntryId?: string, invoiceId?: string, notes?: string) => Promise<void>;
 }
 
 export function DespesasVariaveis({
@@ -79,7 +79,7 @@ export function DespesasVariaveis({
   );
 
   function linkedSumEntry(entryId: string) {
-    return asaasTransactions.filter((t) => t.expense_entry_id === entryId).reduce((s, t) => s + Number(t.value), 0);
+    return asaasTransactions.filter((t) => t.expense_entry_id === entryId).reduce((s, t) => s + Math.abs(Number(t.value)), 0);
   }
 
   function isEntryLinked(entry: ExpenseEntry) {
@@ -95,14 +95,14 @@ export function DespesasVariaveis({
     return entry.status;
   }
 
-  async function handleConfirmLink(txnIds: string[], paymentDate: string) {
+  async function handleConfirmLink(txnIds: string[], paymentDate: string, notes?: string) {
     if (!linkEntry) return;
     setLinking(true);
     try {
       for (const txnId of txnIds) {
-        await onLinkTransaction(txnId, linkEntry.id, undefined);
+        await onLinkTransaction(txnId, linkEntry.id, undefined, notes);
       }
-      const selectedSum = asaasTransactions.filter((t) => txnIds.includes(t.id)).reduce((s, t) => s + Number(t.value), 0);
+      const selectedSum = asaasTransactions.filter((t) => txnIds.includes(t.id)).reduce((s, t) => s + Math.abs(Number(t.value)), 0);
       const totalLinked = linkedSumEntry(linkEntry.id) + selectedSum;
       if (totalLinked >= Number(linkEntry.amount)) {
         await onUpdateEntry(linkEntry.id, { status: "paid", date: paymentDate });
@@ -375,18 +375,40 @@ export function DespesasVariaveis({
                                         {formatCurrency(Number(entry.amount))}
                                       </td>
                                       <td>
-                                        <div style={{ display: "flex", flexDirection: "column", gap: "1px" }}>
+                                        <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                                           <span style={{
                                             fontSize: "0.68rem", fontWeight: 700, padding: "2px 7px", borderRadius: "6px",
                                             color: sc, background: `${sc}18`, border: `1px solid ${sc}30`, alignSelf: "flex-start",
                                           }}>
                                             {STATUS_LABEL[effStatus] ?? effStatus}
                                           </span>
-                                          {effStatus === "partial" && (
-                                            <span style={{ fontSize: "0.62rem", color: "var(--text-tertiary)", whiteSpace: "nowrap" }}>
-                                              {formatCurrency(linkedSum)} de {formatCurrency(Number(entry.amount))}
-                                            </span>
-                                          )}
+                                          {(() => {
+                                            const partials = asaasTransactions.filter((t) => t.expense_entry_id === entry.id);
+                                            if (partials.length === 0) return null;
+                                            const remaining = Math.max(0, Number(entry.amount) - linkedSum);
+                                            const isPaid = effStatus === "paid";
+                                            return (
+                                              <div style={{ padding: "6px 8px", borderRadius: "6px", background: isPaid ? "rgba(34,197,94,0.05)" : "rgba(245,158,11,0.05)", border: `1px solid ${isPaid ? "rgba(34,197,94,0.15)" : "rgba(245,158,11,0.15)"}`, display: "flex", flexDirection: "column", gap: "3px" }}>
+                                                {partials.map((t) => (
+                                                  <div key={t.id} style={{ display: "flex", flexDirection: "column", gap: "1px" }}>
+                                                    <div style={{ display: "flex", justifyContent: "space-between", gap: "8px", fontSize: "0.65rem", color: "var(--text-tertiary)", whiteSpace: "nowrap" }}>
+                                                      <span>{isPaid ? "Pgto." : "Adiant."} {new Date(`${t.date.split("T")[0]}T12:00:00`).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}</span>
+                                                      <span style={{ color: isPaid ? "#22C55E" : "#F59E0B", fontWeight: 600 }}>− {formatCurrency(Math.abs(Number(t.value)))}</span>
+                                                    </div>
+                                                    {t.notes && (
+                                                      <p style={{ fontSize: "0.62rem", color: "var(--text-tertiary)", fontStyle: "italic", margin: 0 }}>{t.notes}</p>
+                                                    )}
+                                                  </div>
+                                                ))}
+                                                {remaining > 0 && (
+                                                  <div style={{ display: "flex", justifyContent: "space-between", gap: "8px", fontSize: "0.68rem", fontWeight: 700, borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "3px", marginTop: "1px", whiteSpace: "nowrap" }}>
+                                                    <span style={{ color: "var(--text-secondary)" }}>Em aberto</span>
+                                                    <span style={{ color: "#EF4444" }}>{formatCurrency(remaining)}</span>
+                                                  </div>
+                                                )}
+                                              </div>
+                                            );
+                                          })()}
                                         </div>
                                       </td>
                                       <td>

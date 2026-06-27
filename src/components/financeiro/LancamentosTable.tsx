@@ -75,6 +75,9 @@ export function LancamentosTable({
   const [baixaDate, setBaixaDate] = useState("");
   const [baixaSaving, setBaixaSaving] = useState(false);
 
+  // Detalhe do vínculo
+  const [detailRow, setDetailRow] = useState<ReceivableRow | null>(null);
+
   // Nova cobrança / entrada de receita
   const today = new Date().toISOString().split("T")[0];
   const [newDialog, setNewDialog] = useState(false);
@@ -140,7 +143,7 @@ export function LancamentosTable({
       if (endDate && d > endDate) continue;
       const client = clients.find((c) => c.id === inv.client_id);
       const clientName = client?.nome_fantasia || client?.name || "Cliente";
-      const linkedTxns = asaasTransactions.filter((t) => t.invoice_id === inv.id);
+      const linkedTxns = asaasTransactions.filter((t) => t.invoice_id === inv.id && !t.confirms_asaas_transaction_id);
       const linkedAmount = linkedTxns.reduce((s, t) => s + Number(t.value), 0);
       const contract = inv.contract_id
         ? contracts.find((c) => c.id === inv.contract_id)
@@ -431,10 +434,10 @@ export function LancamentosTable({
                     onMouseEnter={() => setHoveredVinculo(row.id)}
                     onMouseLeave={() => setHoveredVinculo(null)}
                     onClick={() => {
-                      if (row.effectiveStatus === "paid" && row.asaasTransactionId) openAsaasLink(row.asaasTransactionId);
+                      if (row.asaasLinked) setDetailRow(row);
                       else openLinkDialog(row);
                     }}
-                    title={row.effectiveStatus === "paid" ? "Vinculado ao Asaas — clique para abrir" : "Vincular ao Asaas"}
+                    title={row.asaasLinked ? "Vinculado ao Asaas — clique para ver detalhes" : "Vincular ao Asaas"}
                     style={{ background: "none", border: "none", cursor: "pointer", padding: "4px", display: "inline-flex", color: row.asaasLinked ? "#22C55E" : "#F59E0B" }}
                   >
                     {openingAsaas === row.asaasTransactionId
@@ -532,8 +535,8 @@ export function LancamentosTable({
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "8px" }}>
               <span className="badge" style={{ fontSize: "0.7rem", padding: "2px 8px" }}>{row.categoryLabel}</span>
               <div style={{ display: "flex", gap: "4px" }}>
-                {row.effectiveStatus === "paid" && row.asaasTransactionId ? (
-                  <button onClick={() => row.asaasTransactionId && openAsaasLink(row.asaasTransactionId)} style={{ background: "none", border: "none", cursor: "pointer", color: "#22C55E", padding: "4px", display: "flex" }} title="Asaas">
+                {row.asaasLinked ? (
+                  <button onClick={() => setDetailRow(row)} style={{ background: "none", border: "none", cursor: "pointer", color: "#22C55E", padding: "4px", display: "flex" }} title="Ver detalhe do vínculo">
                     <ExternalLink size={13} />
                   </button>
                 ) : (
@@ -557,6 +560,60 @@ export function LancamentosTable({
           </div>
         ))}
       </div>
+
+      {/* Modal de detalhe do vínculo */}
+      {detailRow && (() => {
+        const linkedTxn = asaasTransactions.find((t) => t.invoice_id === detailRow.id)
+          ?? (detailRow.asaasTransactionId ? asaasTransactions.find((t) => t.id === detailRow.asaasTransactionId) : undefined);
+        return (
+          <DialogShell
+            isOpen
+            onClose={() => setDetailRow(null)}
+            title="Detalhe do Vínculo"
+            maxWidth="440px"
+            footer={
+              <div style={{ display: "flex", justifyContent: "space-between", gap: "12px" }}>
+                {linkedTxn && (
+                  <button className="btn btn-secondary" onClick={() => openAsaasLink(linkedTxn.id)}>
+                    Abrir no Asaas
+                  </button>
+                )}
+                <button className="btn btn-accent" onClick={() => setDetailRow(null)}>Fechar</button>
+              </div>
+            }
+          >
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              {/* Fatura Sistema */}
+              <div style={{ padding: "12px 16px", borderRadius: "12px", background: "rgba(34,197,94,0.06)", border: "1px solid rgba(34,197,94,0.2)" }}>
+                <p style={{ fontSize: "0.72rem", color: "var(--text-secondary)", marginBottom: "2px" }}>Fatura · {detailRow.clientName}</p>
+                <p style={{ fontWeight: 700, fontSize: "0.9rem" }}>{detailRow.description}</p>
+                <p style={{ fontWeight: 800, fontSize: "1.05rem", color: "#22C55E", marginTop: "2px" }}>
+                  + {formatCurrency(detailRow.amount)}
+                </p>
+                <p style={{ fontSize: "0.75rem", color: "var(--text-tertiary)", marginTop: "2px" }}>
+                  Vcto {new Date(`${detailRow.dueDate.split("T")[0]}T12:00:00`).toLocaleDateString("pt-BR")}
+                  {detailRow.paidAt && ` · Pago ${new Date(`${detailRow.paidAt.split("T")[0]}T12:00:00`).toLocaleDateString("pt-BR")}`}
+                </p>
+              </div>
+              {/* Transação Asaas vinculada */}
+              {linkedTxn ? (
+                <div style={{ padding: "12px 16px", borderRadius: "12px", background: "rgba(255,255,255,0.02)", border: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <p style={{ fontSize: "0.7rem", color: "var(--text-secondary)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>Transação Asaas</p>
+                  <p style={{ fontWeight: 700 }}>{linkedTxn.description || "Sem descrição"}</p>
+                  <p style={{ fontWeight: 800, color: "#22C55E" }}>+ {formatCurrency(Number(linkedTxn.value))}</p>
+                  <p style={{ fontSize: "0.75rem", color: "var(--text-tertiary)" }}>
+                    {new Date(`${linkedTxn.date.split("T")[0]}T12:00:00`).toLocaleDateString("pt-BR")}
+                  </p>
+                </div>
+              ) : (
+                <p style={{ fontSize: "0.82rem", color: "var(--text-tertiary)", textAlign: "center", padding: "16px" }}>
+                  Transação Asaas não encontrada no histórico local. Sincronize o Banco.
+                </p>
+              )}
+            </div>
+          </DialogShell>
+        );
+      })()}
 
       {/* Nova cobrança dialog */}
       <DialogShell

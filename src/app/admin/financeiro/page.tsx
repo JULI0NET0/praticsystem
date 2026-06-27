@@ -95,12 +95,43 @@ export default function FinanceiroPage() {
 
       if (invRes.data) setInvoices(invRes.data);
       if (expRes.data) setExpenses(expRes.data);
-      if (entRes.data) setExpenseEntries(entRes.data);
       if (txnRes.data) setAsaasTransactions(txnRes.data);
       if (usrRes.data) setUsers(usrRes.data);
       if (ctrRes.data) setContracts(ctrRes.data);
       if (cliRes.data) setClients(cliRes.data);
       if (cliRes.error) console.error("[financeiro] clients fetch error:", cliRes.error);
+
+      // Reconciliação automática: marcar como 'paid' entries pendentes cujo total
+      // vinculado no banco já cobre o valor integral
+      let entries = entRes.data ?? [];
+      if (entries.length > 0 && txnRes.data && txnRes.data.length > 0) {
+        const txns = txnRes.data as { expense_entry_id?: string; value: number; date: string }[];
+        const toUpdate: { id: string; date: string }[] = [];
+        for (const entry of entries as { id: string; status: string; amount: number }[]) {
+          if (entry.status !== "pending") continue;
+          const linked = txns.filter((t) => t.expense_entry_id === entry.id);
+          if (linked.length === 0) continue;
+          const total = linked.reduce((s, t) => s + Math.abs(Number(t.value)), 0);
+          if (total >= Number(entry.amount)) {
+            const lastDate = linked.sort((a, b) => b.date.localeCompare(a.date))[0]?.date.split("T")[0]
+              ?? new Date().toISOString().split("T")[0];
+            toUpdate.push({ id: entry.id, date: lastDate });
+          }
+        }
+        if (toUpdate.length > 0) {
+          await Promise.all(
+            toUpdate.map(({ id, date }) =>
+              supabase.from("expense_entries").update({ status: "paid", date }).eq("id", id)
+            )
+          );
+          const { data: refreshed } = await supabase
+            .from("expense_entries")
+            .select("*, expenses(id, description, category)")
+            .order("date", { ascending: false });
+          entries = refreshed ?? entries;
+        }
+      }
+      setExpenseEntries(entries as ExpenseEntry[]);
     } finally {
       setLoading(false);
     }
@@ -127,7 +158,16 @@ export default function FinanceiroPage() {
     const endMatch = !endDate || d <= endDate;
     return startMatch && endMatch;
   });
-  const faturamentoRealizado = periodInvoices.filter((i) => i.status === "paid").reduce((s, i) => s + Number(i.amount), 0);
+  const faturamentoRealizado = periodInvoices
+    .filter((inv) => {
+      if (inv.status === "paid") return true;
+      const linked = asaasTransactions.filter(
+        (t) => t.invoice_id === inv.id && !t.confirms_asaas_transaction_id
+      );
+      const total = linked.reduce((s, t) => s + Number(t.value), 0);
+      return Number(inv.amount) > 0 && total >= Number(inv.amount);
+    })
+    .reduce((s, i) => s + Number(i.amount), 0);
   const faturamentoPrevisto = periodInvoices.reduce((s, i) => s + Number(i.amount), 0);
 
   const periodEntries = expenseEntries.filter((e) => {
@@ -136,8 +176,22 @@ export default function FinanceiroPage() {
     const endMatch = !endDate || d <= endDate;
     return startMatch && endMatch;
   });
-  const despesas = periodEntries.filter((e) => e.status === "paid").reduce((s, e) => s + Number(e.amount), 0);
-  const despesasPrevistas = periodEntries.filter((e) => e.status === "pending").reduce((s, e) => s + Number(e.amount), 0);
+  function linkedSumForEntry(entryId: string): number {
+    return asaasTransactions
+      .filter((t: AsaasTransaction) => t.expense_entry_id === entryId)
+      .reduce((s: number, t: AsaasTransaction) => s + Math.abs(Number(t.value)), 0);
+  }
+  // Despesas pagas = entries 'paid' (valor cheio) + parcelas já vinculadas de entries 'pending'
+  const despesas = periodEntries.reduce((s, e) => {
+    if (e.status === "paid") return s + Number(e.amount);
+    if (e.status === "pending") return s + Math.min(linkedSumForEntry(e.id), Number(e.amount));
+    return s;
+  }, 0);
+  // Despesas previstas = apenas o saldo em aberto (total - já pago) de entries 'pending'
+  const despesasPrevistas = periodEntries.reduce((s, e) => {
+    if (e.status === "pending") return s + Math.max(0, Number(e.amount) - linkedSumForEntry(e.id));
+    return s;
+  }, 0);
 
   const clientesAtivos = contracts.filter((c) => c.status === "active").length;
 
@@ -215,11 +269,11 @@ export default function FinanceiroPage() {
     }
   }
 
-  async function handleLinkTransaction(asaasId: string, expenseEntryId?: string, invoiceId?: string) {
+  async function handleLinkTransaction(asaasId: string, expenseEntryId?: string, invoiceId?: string, notes?: string) {
     await fetch("/api/financeiro/asaas/link", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ asaas_transaction_id: asaasId, expense_entry_id: expenseEntryId, invoice_id: invoiceId }),
+      body: JSON.stringify({ asaas_transaction_id: asaasId, expense_entry_id: expenseEntryId, invoice_id: invoiceId, notes }),
     });
     const [txnRes, entRes] = await Promise.all([
       supabase.from("asaas_transactions").select("*").order("date", { ascending: false }),
@@ -227,6 +281,43 @@ export default function FinanceiroPage() {
     ]);
     if (txnRes.data) setAsaasTransactions(txnRes.data);
     if (entRes.data) setExpenseEntries(entRes.data);
+
+    // Fallback: se a rota API não marcou como pago, recalcular e forçar status diretamente
+    if (expenseEntryId && txnRes.data && entRes.data) {
+      const allTxns = txnRes.data as { expense_entry_id?: string; value: number; date: string }[];
+      const allEntries = entRes.data as { id: string; status: string; amount: number }[];
+      const entry = allEntries.find((e) => e.id === expenseEntryId);
+      if (entry && entry.status !== "paid") {
+        const totalLinked = allTxns
+          .filter((t) => t.expense_entry_id === expenseEntryId)
+          .reduce((s, t) => s + Math.abs(Number(t.value)), 0);
+        if (totalLinked > 0 && totalLinked >= Number(entry.amount)) {
+          const lastDate = allTxns
+            .filter((t) => t.expense_entry_id === expenseEntryId)
+            .sort((a, b) => b.date.localeCompare(a.date))[0]?.date.split("T")[0]
+            ?? new Date().toISOString().split("T")[0];
+          await supabase
+            .from("expense_entries")
+            .update({ status: "paid", date: lastDate })
+            .eq("id", expenseEntryId);
+          const { data: refreshed } = await supabase
+            .from("expense_entries")
+            .select("*, expenses(id,description,category)")
+            .order("date", { ascending: false });
+          if (refreshed) setExpenseEntries(refreshed);
+        }
+      }
+    }
+  }
+
+  async function handleMarkAsConfirmation(confirmationTxnId: string, paymentTxnId: string) {
+    await fetch("/api/financeiro/asaas/link", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ asaas_transaction_id: confirmationTxnId, confirms_asaas_transaction_id: paymentTxnId }),
+    });
+    const { data } = await supabase.from("asaas_transactions").select("*").order("date", { ascending: false });
+    if (data) setAsaasTransactions(data);
   }
 
   async function handleUnlinkTransaction(asaasId: string) {
@@ -460,6 +551,7 @@ export default function FinanceiroPage() {
           expenseEntries={expenseEntries}
           users={users}
           asaasTransactions={asaasTransactions}
+          selectedMonth={selectedMonthForComponents}
           onSave={handleSaveExpense}
           onDelete={handleDeleteExpense}
           onToggle={handleToggleExpense}
@@ -506,6 +598,7 @@ export default function FinanceiroPage() {
           onSync={handleSync}
           onLink={handleLinkTransaction}
           onUnlink={handleUnlinkTransaction}
+          onMarkAsConfirmation={handleMarkAsConfirmation}
           onUpdateInvoiceStatus={handleUpdateInvoiceStatus}
           onCreateEntry={handleCreateEntry}
           selectedMonth={selectedMonthForComponents}

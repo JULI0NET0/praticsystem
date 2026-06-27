@@ -23,7 +23,8 @@ export interface AsaasTransactionRaw {
   id: string;
   description?: string;
   value: number;
-  type: 'CREDIT' | 'DEBIT';
+  // Asaas returns many type values beyond CREDIT/DEBIT
+  type: string;
   date: string;
   status: string;
   transferType?: string;

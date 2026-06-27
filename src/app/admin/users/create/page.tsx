@@ -30,6 +30,7 @@ export default function CreateUserPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [roles, setRoles] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [resetPasswordOption, setResetPasswordOption] = useState(true);
 
   useEffect(() => {
     const fetchRoles = async () => {
@@ -48,10 +49,19 @@ export default function CreateUserPage() {
         auth: { persistSession: false }
       });
 
+      // Se a opção de reset de senha estiver ativa, gera uma senha temporária aleatória e segura
+      const passwordToUse = resetPasswordOption
+        ? Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
+        : formData.password;
+
+      if (!passwordToUse) {
+        throw new Error("Senha temporária é obrigatória.");
+      }
+
       // 2. Criar o usuário no Supabase Auth
       const { data: authData, error: authError } = await tempSupabase.auth.signUp({
         email: formData.email,
-        password: formData.password,
+        password: passwordToUse,
         options: {
           data: {
             full_name: formData.name,
@@ -76,6 +86,20 @@ export default function CreateUserPage() {
       }]);
 
       if (error) throw error;
+
+      // Dispara o e-mail de redefinição se a opção estiver marcada
+      if (resetPasswordOption) {
+        try {
+          await fetch("/api/auth/reset-password", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: formData.email }),
+          });
+        } catch (resetErr) {
+          console.error("Erro ao enviar e-mail de redefinição:", resetErr);
+        }
+      }
+
       showToast("Membro da equipe cadastrado com sucesso!", "success");
       router.push("/admin/users");
     } catch (err: any) {
@@ -182,7 +206,7 @@ export default function CreateUserPage() {
           </div>
 
           {/* Senha Inicial */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', opacity: resetPasswordOption ? 0.5 : 1, transition: 'opacity 0.2s' }}>
             <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Shield size={14} /> Senha Temporária
             </label>
@@ -190,21 +214,41 @@ export default function CreateUserPage() {
               <input
                 type={showPassword ? "text" : "password"}
                 className="input-dark"
-                placeholder="••••••••"
-                required
-                value={formData.password}
+                placeholder={resetPasswordOption ? "Gerada automaticamente" : "••••••••"}
+                required={!resetPasswordOption}
+                disabled={resetPasswordOption}
+                value={resetPasswordOption ? "" : formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 style={{ paddingRight: '40px' }}
               />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
-              >
-                {showPassword ? "🙈" : "👁️"}
-              </button>
+              {!resetPasswordOption && (
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
+                >
+                  {showPassword ? "🙈" : "👁️"}
+                </button>
+              )}
             </div>
           </div>
+        </div>
+
+        {/* Opção de Resetar Senha */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '-8px' }}>
+          <input
+            type="checkbox"
+            id="resetPasswordOption"
+            checked={resetPasswordOption}
+            onChange={(e) => setResetPasswordOption(e.target.checked)}
+            style={{
+              width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--accent)',
+              borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--bg-secondary)'
+            }}
+          />
+          <label htmlFor="resetPasswordOption" style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', cursor: 'pointer', userSelect: 'none' }}>
+            Enviar e-mail para o usuário redefinir/criar sua própria senha (não exige senha temporária)
+          </label>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>

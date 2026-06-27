@@ -222,6 +222,9 @@ export interface AsaasTransaction {
   status: string;
   expense_entry_id?: string;
   invoice_id?: string;
+  notes?: string;
+  /** Set when this is the bank-statement confirmation of another transaction; excluded from payment sums */
+  confirms_asaas_transaction_id?: string | null;
   synced_at: string;
   expense_entries?: ExpenseEntry;
   invoices?: Invoice;
