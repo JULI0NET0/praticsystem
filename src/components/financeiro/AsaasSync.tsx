@@ -9,6 +9,7 @@ import {
 import { formatCurrency } from "@/lib/format";
 import DialogShell from "@/components/DialogShell";
 import { AsaasLinkDialog } from "@/components/financeiro/AsaasLinkDialog";
+import { buildFaturaGroups, matchClient, type FaturaGroup } from "@/lib/asaasGroups";
 import type { AsaasTransaction, ExpenseEntry, Invoice, Expense } from "@/types/database";
 
 interface AsaasBalance {
@@ -21,13 +22,14 @@ interface AsaasSyncProps {
   expenseEntries: ExpenseEntry[];
   invoices: Invoice[];
   expenses: Expense[];
-  clients: { id: string; name: string; nome_fantasia?: string }[];
+  clients: { id: string; name: string; nome_fantasia?: string; cnpj?: string }[];
   users: { id: string; name: string }[];
   syncing: boolean;
   onSync: (startDate: string, endDate: string) => Promise<{ imported: number; skipped: number } | void>;
   onLink: (asaasId: string, expenseEntryId?: string, invoiceId?: string, notes?: string) => Promise<void>;
   onUnlink: (asaasId: string) => Promise<void>;
   onMarkAsConfirmation?: (confirmationTxnId: string, paymentTxnId: string) => Promise<void>;
+  onReconcile?: () => Promise<{ reconciled: number } | void>;
   onCreateEntry: (data: Partial<ExpenseEntry>) => Promise<ExpenseEntry | null>;
   onUpdateInvoiceStatus?: (id: string, status: string) => Promise<void>;
   selectedMonth: string;
@@ -51,6 +53,7 @@ export function AsaasSync({
   onLink,
   onUnlink,
   onMarkAsConfirmation,
+  onReconcile,
   onCreateEntry,
   onUpdateInvoiceStatus,
   selectedMonth,
@@ -88,6 +91,7 @@ export function AsaasSync({
   const [autoLinking, setAutoLinking] = useState(false);
 
   const [refreshingBalance, setRefreshingBalance] = useState(false);
+  const [reconciling, setReconciling] = useState(false);
   const [hoveredVinculo, setHoveredVinculo] = useState<string | null>(null);
   const [detailTxn, setDetailTxn] = useState<AsaasTransaction | null>(null);
 
@@ -99,6 +103,16 @@ export function AsaasSync({
   async function handleSync() {
     const result = await onSync(startDate, endDate);
     if (result) setLastSyncResult(result as { imported: number; skipped: number });
+  }
+
+  async function handleReconcile() {
+    if (!onReconcile) return;
+    setReconciling(true);
+    try {
+      await onReconcile();
+    } finally {
+      setReconciling(false);
+    }
   }
 
   async function handleSync2025() {
@@ -223,35 +237,6 @@ export function AsaasSync({
     });
   }
 
-  function normalizeStr(s: string) {
-    return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9 ]/g, " ");
-  }
-
-  function suggestClientFromDescription(
-    description: string,
-    clientList: { id: string; name: string; nome_fantasia?: string }[]
-  ): { id: string; name: string; nome_fantasia?: string } | null {
-    const descNorm = normalizeStr(description);
-    let best: { client: (typeof clientList)[0]; score: number } | null = null;
-    for (const client of clientList) {
-      const clientName = normalizeStr(client.nome_fantasia || client.name);
-      const words = clientName.split(/\s+/).filter((w) => w.length >= 4);
-      if (words.length === 0) continue;
-      let matches = 0;
-      for (const word of words) {
-        if (descNorm.includes(word)) { matches++; continue; }
-        // prefix match (5 chars) to tolerate minor spelling variations
-        const prefix = word.slice(0, 5);
-        if (prefix.length >= 4 && descNorm.includes(prefix)) matches++;
-      }
-      const score = matches / words.length;
-      if (matches >= 1 && score >= 0.5 && (!best || score > best.score)) {
-        best = { client, score };
-      }
-    }
-    return best ? best.client : null;
-  }
-
   // Derive responsible for a transaction; suggested=true means name came from description, not a confirmed link
   function resolveResponsible(txn: AsaasTransaction): { kind: "cliente" | "funcionario" | "empresa"; label: string; suggested?: boolean } {
     if (txn.invoice_id) {
@@ -273,8 +258,8 @@ export function AsaasSync({
     }
     // For unlinked CREDIT transactions, try to suggest a client from the description
     if (!txn.invoice_id && !txn.expense_entry_id && txn.type === "CREDIT" && txn.description) {
-      const suggested = suggestClientFromDescription(txn.description, clients);
-      if (suggested) return { kind: "cliente", label: suggested.nome_fantasia || suggested.name, suggested: true };
+      const suggested = matchClient(txn.description, clients);
+      if (suggested) return { kind: "cliente", label: suggested.client.nome_fantasia || suggested.client.name, suggested: true };
     }
     return { kind: "empresa", label: "Empresa" };
   }
@@ -311,95 +296,10 @@ export function AsaasSync({
     return { entrou, saiu, saldo: entrou - saiu };
   }, [asaasTransactions, filterStart, filterEnd]);
 
-  // ─── Grouping utilities ───────────────────────────────────────────────────
-  function extractFaturaNumber(desc: string): string | null {
-    const m = desc.match(/(?:fatura|cobran[cç]a)\s+(?:nr\.?\s*)?(\d{6,})/i);
-    return m ? m[1] : null;
-  }
-
-  function detectFeeCategory(desc: string): string | null {
-    if (/taxa\s+do?\s+pix/i.test(desc)) return "taxa_asaas";
-    if (/taxa\s+de\s+notifica[cç][aã]o/i.test(desc)) return "taxa_mensageria";
-    if (/taxa\s+de\s+mensageria/i.test(desc)) return "taxa_mensageria";
-    if (/taxa\s+(?:de\s+)?boleto/i.test(desc)) return "taxa_boleto";
-    if (/taxa\s+asaas/i.test(desc)) return "taxa_asaas";
-    return null;
-  }
-
-  interface FaturaGroup {
-    faturaNumber: string;
-    clientLabel: string;
-    date: string;
-    amount: number;
-    totalFees: number;
-    bankConfirmationTxn: AsaasTransaction | null;
-    paymentTxn: AsaasTransaction | null;
-    paymentInvoice: Invoice | null;
-    feeTxns: Array<{ txn: AsaasTransaction; category: string | null }>;
-    isAutoReconciled: boolean;
-  }
-
-  const faturaGroups = useMemo<FaturaGroup[]>(() => {
-    const map = new Map<string, FaturaGroup>();
-
-    for (const txn of asaasTransactions) {
-      if (!txn.description) continue;
-      const faturaNum = extractFaturaNumber(txn.description);
-      if (!faturaNum) continue;
-
-      if (!map.has(faturaNum)) {
-        map.set(faturaNum, {
-          faturaNumber: faturaNum, clientLabel: "", date: txn.date,
-          amount: 0, totalFees: 0,
-          bankConfirmationTxn: null, paymentTxn: null, paymentInvoice: null,
-          feeTxns: [], isAutoReconciled: false,
-        });
-      }
-      const g = map.get(faturaNum)!;
-
-      if (txn.type === "CREDIT" && /cobran[cç]a\s+recebida/i.test(txn.description)) {
-        g.bankConfirmationTxn = txn;
-        g.amount = Number(txn.value);
-        g.date = txn.date;
-        const sc = suggestClientFromDescription(txn.description, clients);
-        g.clientLabel = sc?.nome_fantasia || sc?.name || "";
-      } else if (txn.type === "DEBIT") {
-        g.feeTxns.push({ txn, category: detectFeeCategory(txn.description) });
-        g.totalFees += Number(txn.value);
-      }
-    }
-
-    // Match each group to its payment transaction (already linked via sync-clients)
-    for (const g of map.values()) {
-      if (!g.bankConfirmationTxn || g.amount === 0) continue;
-      const bcMonth = g.bankConfirmationTxn.date.slice(0, 7);
-      for (const inv of invoices) {
-        if (Math.abs(Number(inv.amount) - g.amount) >= 0.02) continue;
-        if (inv.due_date.slice(0, 7) !== bcMonth) continue;
-        const client = clients.find((c) => c.id === inv.client_id);
-        if (!client || !g.clientLabel) continue;
-        const cNorm = normalizeStr(client.nome_fantasia || client.name);
-        const lNorm = normalizeStr(g.clientLabel);
-        const overlap = lNorm.split(/\s+/).filter((w) => w.length >= 4 && cNorm.includes(w)).length;
-        if (overlap < 1) continue;
-        const payTxn = asaasTransactions.find(
-          (t) => t.invoice_id === inv.id && t.type === "CREDIT" && t.id !== g.bankConfirmationTxn?.id
-        );
-        if (payTxn) {
-          g.paymentTxn = payTxn;
-          g.paymentInvoice = inv;
-          g.isAutoReconciled = true;
-          g.clientLabel = client.nome_fantasia || client.name;
-          break;
-        }
-      }
-    }
-
-    return Array.from(map.values())
-      .filter((g) => g.bankConfirmationTxn !== null)
-      .sort((a, b) => b.date.localeCompare(a.date));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [asaasTransactions, invoices, clients]);
+  const faturaGroups = useMemo<FaturaGroup[]>(
+    () => buildFaturaGroups(asaasTransactions, invoices, clients),
+    [asaasTransactions, invoices, clients]
+  );
 
   const bankConfirmationIds = useMemo(
     () => new Set(faturaGroups.filter((g) => g.isAutoReconciled).map((g) => g.bankConfirmationTxn!.id)),
@@ -505,6 +405,11 @@ export function AsaasSync({
           <button className="btn btn-secondary" onClick={openAutoLink} style={{ display: "flex", alignItems: "center", gap: "8px", whiteSpace: "nowrap" }}>
             <Sparkles size={16} /> Auto-vincular
           </button>
+          {onReconcile && (
+            <button className="btn btn-secondary" onClick={handleReconcile} disabled={reconciling} style={{ display: "flex", alignItems: "center", gap: "8px", whiteSpace: "nowrap" }}>
+              <CheckCircle2 size={16} className={reconciling ? "animate-spin" : ""} /> {reconciling ? "Reconciliando..." : "Reconciliar"}
+            </button>
+          )}
         </div>
       </div>
 
@@ -617,6 +522,24 @@ export function AsaasSync({
 
                 {/* Rows */}
                 <div style={{ display: "flex", flexDirection: "column" }}>
+                  {/* Emitido no sistema (invoice) */}
+                  {group.paymentInvoice && (
+                    <div style={{ padding: "10px 20px", display: "flex", alignItems: "center", gap: "12px", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                      <Building2 size={13} color="#A78BFA" />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontSize: "0.85rem", fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {group.paymentInvoice.description || "Fatura emitida"}
+                        </p>
+                        <p style={{ fontSize: "0.7rem", color: "var(--text-tertiary)", marginTop: "1px" }}>
+                          Vcto {new Date(`${group.paymentInvoice.due_date.split("T")[0]}T12:00:00`).toLocaleDateString("pt-BR")}
+                          {group.paymentInvoice.paid_at && ` · Pago ${new Date(`${group.paymentInvoice.paid_at.split("T")[0]}T12:00:00`).toLocaleDateString("pt-BR")}`}
+                        </p>
+                      </div>
+                      <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)", fontWeight: 700 }}>{formatCurrency(Number(group.paymentInvoice.amount))}</span>
+                      <span className="badge" style={{ color: "#A78BFA", background: "rgba(167,139,250,0.08)", border: "1px solid rgba(167,139,250,0.2)", fontSize: "0.7rem", whiteSpace: "nowrap" }}>Emitido no sistema</span>
+                    </div>
+                  )}
+
                   {/* Payment txn (from sync-clients, already linked to invoice) */}
                   {group.paymentTxn && (
                     <div style={{ padding: "10px 20px", display: "flex", alignItems: "center", gap: "12px", borderBottom: "1px solid rgba(255,255,255,0.04)", background: "rgba(34,197,94,0.02)" }}>
@@ -983,7 +906,7 @@ export function AsaasSync({
         linking={linking}
         suggestedClientId={
           linkDialogTxn?.description
-            ? suggestClientFromDescription(linkDialogTxn.description, clients)?.id
+            ? matchClient(linkDialogTxn.description, clients)?.client.id
             : undefined
         }
         defaultCategory={linkDialogDefaultCategory}

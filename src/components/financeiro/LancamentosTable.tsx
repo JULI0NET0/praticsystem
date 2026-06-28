@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { RefreshCw, Search, ChevronDown, Link2, Check, ExternalLink, Building2, Plus } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import DialogShell from "@/components/DialogShell";
+import { buildLancamentoStages } from "@/lib/asaasGroups";
 import type { Invoice, AsaasTransaction } from "@/types/database";
 
 function billingCycleLabel(cycle?: string): string {
@@ -561,20 +562,23 @@ export function LancamentosTable({
         ))}
       </div>
 
-      {/* Modal de detalhe do vínculo */}
+      {/* Modal de detalhe do vínculo — 3 etapas */}
       {detailRow && (() => {
-        const linkedTxn = asaasTransactions.find((t) => t.invoice_id === detailRow.id)
+        const stages = buildLancamentoStages(detailRow.invoice, asaasTransactions);
+        const asaasTxnForLink = stages.bankConfirmationTxn ?? stages.paymentTxn
           ?? (detailRow.asaasTransactionId ? asaasTransactions.find((t) => t.id === detailRow.asaasTransactionId) : undefined);
+        const fmtDate = (raw?: string) =>
+          raw ? new Date(`${raw.split("T")[0]}T12:00:00`).toLocaleDateString("pt-BR") : "—";
         return (
           <DialogShell
             isOpen
             onClose={() => setDetailRow(null)}
-            title="Detalhe do Vínculo"
-            maxWidth="440px"
+            title="Detalhe do Lançamento"
+            maxWidth="460px"
             footer={
               <div style={{ display: "flex", justifyContent: "space-between", gap: "12px" }}>
-                {linkedTxn && (
-                  <button className="btn btn-secondary" onClick={() => openAsaasLink(linkedTxn.id)}>
+                {asaasTxnForLink && (
+                  <button className="btn btn-secondary" onClick={() => openAsaasLink(asaasTxnForLink.id)}>
                     Abrir no Asaas
                   </button>
                 )}
@@ -582,34 +586,56 @@ export function LancamentosTable({
               </div>
             }
           >
-            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              {/* Fatura Sistema */}
-              <div style={{ padding: "12px 16px", borderRadius: "12px", background: "rgba(34,197,94,0.06)", border: "1px solid rgba(34,197,94,0.2)" }}>
-                <p style={{ fontSize: "0.72rem", color: "var(--text-secondary)", marginBottom: "2px" }}>Fatura · {detailRow.clientName}</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              {/* Etapa 1 — Emitido no sistema */}
+              <div style={{ padding: "12px 16px", borderRadius: "12px", background: "rgba(167,139,250,0.06)", border: "1px solid rgba(167,139,250,0.2)" }}>
+                <p style={{ fontSize: "0.68rem", color: "#A78BFA", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "3px" }}>1 · Emitido no sistema</p>
                 <p style={{ fontWeight: 700, fontSize: "0.9rem" }}>{detailRow.description}</p>
-                <p style={{ fontWeight: 800, fontSize: "1.05rem", color: "#22C55E", marginTop: "2px" }}>
-                  + {formatCurrency(detailRow.amount)}
+                <p style={{ fontSize: "0.72rem", color: "var(--text-secondary)" }}>{detailRow.clientName}</p>
+                <p style={{ fontWeight: 800, fontSize: "1.05rem", color: "var(--text-primary)", marginTop: "2px" }}>
+                  {formatCurrency(detailRow.amount)}
                 </p>
                 <p style={{ fontSize: "0.75rem", color: "var(--text-tertiary)", marginTop: "2px" }}>
-                  Vcto {new Date(`${detailRow.dueDate.split("T")[0]}T12:00:00`).toLocaleDateString("pt-BR")}
-                  {detailRow.paidAt && ` · Pago ${new Date(`${detailRow.paidAt.split("T")[0]}T12:00:00`).toLocaleDateString("pt-BR")}`}
+                  Vcto {fmtDate(detailRow.dueDate)}{detailRow.paidAt && ` · Pago ${fmtDate(detailRow.paidAt)}`}
                 </p>
               </div>
-              {/* Transação Asaas vinculada */}
-              {linkedTxn ? (
-                <div style={{ padding: "12px 16px", borderRadius: "12px", background: "rgba(255,255,255,0.02)", border: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: "6px" }}>
-                  <p style={{ fontSize: "0.7rem", color: "var(--text-secondary)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>Transação Asaas</p>
-                  <p style={{ fontWeight: 700 }}>{linkedTxn.description || "Sem descrição"}</p>
-                  <p style={{ fontWeight: 800, color: "#22C55E" }}>+ {formatCurrency(Number(linkedTxn.value))}</p>
-                  <p style={{ fontSize: "0.75rem", color: "var(--text-tertiary)" }}>
-                    {new Date(`${linkedTxn.date.split("T")[0]}T12:00:00`).toLocaleDateString("pt-BR")}
-                  </p>
+
+              {/* Etapa 2 — Pagamento Asaas */}
+              {stages.paymentTxn && (
+                <div style={{ padding: "12px 16px", borderRadius: "12px", background: "rgba(34,197,94,0.06)", border: "1px solid rgba(34,197,94,0.2)", display: "flex", flexDirection: "column", gap: "3px" }}>
+                  <p style={{ fontSize: "0.68rem", color: "#22C55E", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>2 · Asaas (pagamento)</p>
+                  <p style={{ fontWeight: 700 }}>{stages.paymentTxn.description || "Pagamento"}</p>
+                  <p style={{ fontWeight: 800, color: "#22C55E" }}>+ {formatCurrency(Number(stages.paymentTxn.value))}</p>
+                  <p style={{ fontSize: "0.75rem", color: "var(--text-tertiary)" }}>{fmtDate(stages.paymentTxn.date)}</p>
                 </div>
-              ) : (
+              )}
+
+              {/* Etapa 3 — Cobrança real (líquido) */}
+              {(stages.bankConfirmationTxn || stages.feeTxns.length > 0) ? (
+                <div style={{ padding: "12px 16px", borderRadius: "12px", background: "rgba(96,165,250,0.06)", border: "1px solid rgba(96,165,250,0.2)", display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <p style={{ fontSize: "0.68rem", color: "#60A5FA", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>3 · Cobrança real (líquido)</p>
+                  {stages.bankConfirmationTxn && (
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px" }}>
+                      <span style={{ fontSize: "0.82rem", color: "var(--text-secondary)" }}>{stages.bankConfirmationTxn.description || "Cobrança recebida"}</span>
+                      <span style={{ fontSize: "0.82rem", color: "#60A5FA", fontWeight: 700, whiteSpace: "nowrap" }}>+ {formatCurrency(Number(stages.bankConfirmationTxn.value))}</span>
+                    </div>
+                  )}
+                  {stages.feeTxns.map((fee) => (
+                    <div key={fee.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px" }}>
+                      <span style={{ fontSize: "0.78rem", color: "var(--text-tertiary)" }}>{fee.description || "Taxa Asaas"}</span>
+                      <span style={{ fontSize: "0.78rem", color: "#EF4444", fontWeight: 700, whiteSpace: "nowrap" }}>− {formatCurrency(Number(fee.value))}</span>
+                    </div>
+                  ))}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px", borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: "6px", marginTop: "2px" }}>
+                    <span style={{ fontSize: "0.8rem", fontWeight: 700 }}>Líquido que entrou</span>
+                    <span style={{ fontSize: "0.95rem", fontWeight: 800, color: stages.net >= 0 ? "#22C55E" : "#EF4444" }}>{formatCurrency(stages.net)}</span>
+                  </div>
+                </div>
+              ) : !stages.paymentTxn ? (
                 <p style={{ fontSize: "0.82rem", color: "var(--text-tertiary)", textAlign: "center", padding: "16px" }}>
                   Transação Asaas não encontrada no histórico local. Sincronize o Banco.
                 </p>
-              )}
+              ) : null}
             </div>
           </DialogShell>
         );

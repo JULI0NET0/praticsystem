@@ -259,10 +259,12 @@ export default function FinanceiroPage() {
         body: JSON.stringify({ startDate: start, endDate: end }),
       });
       const result = await res.json();
-      if (result.imported > 0) {
-        const { data } = await supabase.from("asaas_transactions").select("*").order("date", { ascending: false });
-        if (data) setAsaasTransactions(data);
-      }
+      // Auto-reconcilia cobranças recebidas com o pagamento correspondente
+      await fetch("/api/financeiro/asaas/reconcile", { method: "POST" }).catch(() => {});
+      const { data } = await supabase.from("asaas_transactions").select("*").order("date", { ascending: false });
+      if (data) setAsaasTransactions(data);
+      const { data: invData } = await supabase.from("invoices").select("*");
+      if (invData) setInvoices(invData);
       return result;
     } finally {
       setSyncing(false);
@@ -308,6 +310,26 @@ export default function FinanceiroPage() {
         }
       }
     }
+  }
+
+  async function handleReconcile() {
+    const res = await fetch("/api/financeiro/asaas/reconcile", { method: "POST" });
+    const result = await res.json().catch(() => ({}));
+    const [txnRes, invRes] = await Promise.all([
+      supabase.from("asaas_transactions").select("*").order("date", { ascending: false }),
+      supabase.from("invoices").select("*"),
+    ]);
+    if (txnRes.data) setAsaasTransactions(txnRes.data);
+    if (invRes.data) setInvoices(invRes.data);
+    if (typeof result?.reconciled === "number") {
+      showToast(
+        result.reconciled > 0
+          ? `${result.reconciled} cobrança(s) reconciliada(s).`
+          : "Nenhuma cobrança nova para reconciliar.",
+        "success"
+      );
+    }
+    return result;
   }
 
   async function handleMarkAsConfirmation(confirmationTxnId: string, paymentTxnId: string) {
@@ -599,6 +621,7 @@ export default function FinanceiroPage() {
           onLink={handleLinkTransaction}
           onUnlink={handleUnlinkTransaction}
           onMarkAsConfirmation={handleMarkAsConfirmation}
+          onReconcile={handleReconcile}
           onUpdateInvoiceStatus={handleUpdateInvoiceStatus}
           onCreateEntry={handleCreateEntry}
           selectedMonth={selectedMonthForComponents}
