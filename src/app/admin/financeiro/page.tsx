@@ -203,6 +203,16 @@ export default function FinanceiroPage() {
     paid: e.status === "paid" ? Number(e.amount) : Math.min(linkedSumForEntry(e.id), Number(e.amount)),
     status: e.status,
   }));
+  // Lista detalhada das cobranças do período (para o dialog do card Faturamento)
+  const faturamentoItems = periodInvoices.map((inv) => ({
+    id: inv.id,
+    description: inv.description,
+    client: clients.find((c) => c.id === inv.client_id)?.nome_fantasia
+      || clients.find((c) => c.id === inv.client_id)?.name,
+    date: (inv.paid_at || inv.due_date).split("T")[0],
+    amount: Number(inv.amount),
+    status: inv.status,
+  }));
 
   const clientesAtivos = contracts.filter((c) => c.status === "active").length;
 
@@ -476,6 +486,7 @@ export default function FinanceiroPage() {
       <FinancialKPIs
         faturamentoPrevisto={faturamentoPrevisto}
         faturamentoRealizado={faturamentoRealizado}
+        faturamentoItems={faturamentoItems}
         despesas={despesas}
         despesasPrevistas={despesasPrevistas}
         despesaItems={despesaItems}

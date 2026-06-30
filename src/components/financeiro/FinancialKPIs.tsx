@@ -55,6 +55,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 export function FinancialKPIs({
   faturamentoPrevisto,
   faturamentoRealizado,
+  faturamentoItems,
   despesas,
   despesasPrevistas,
   despesaItems,
@@ -65,6 +66,7 @@ export function FinancialKPIs({
   onRangeChange,
 }: FinancialKPIsProps) {
   const [despesasOpen, setDespesasOpen] = useState(false);
+  const [faturamentoOpen, setFaturamentoOpen] = useState(false);
   const lucro = faturamentoRealizado - despesas;
   const margem = faturamentoRealizado > 0 ? (lucro / faturamentoRealizado) * 100 : 0;
   const ticketMedio = clientesAtivos > 0 ? faturamentoRealizado / clientesAtivos : 0;
@@ -95,6 +97,7 @@ export function FinancialKPIs({
         { label: "Previsto", value: formatCurrency(faturamentoPrevisto), color: "#60A5FA" },
         { label: "Realizado", value: formatCurrency(faturamentoRealizado), color: "#22C55E" },
       ],
+      onClick: () => setFaturamentoOpen(true),
     },
     {
       label: "Despesas",
@@ -339,6 +342,94 @@ export function FinancialKPIs({
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: "12px", flexShrink: 0 }}>
                       <span style={{ fontSize: "1rem", fontWeight: 800, color: statusMeta.label === "Paga" ? "#EF4444" : "var(--text-primary)" }}>
+                        {formatCurrency(item.amount)}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: "0.68rem",
+                          fontWeight: 800,
+                          textTransform: "uppercase",
+                          letterSpacing: "0.04em",
+                          color: statusMeta.color,
+                          background: statusMeta.bg,
+                          padding: "4px 10px",
+                          borderRadius: "999px",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {statusMeta.label}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+        )}
+      </DialogShell>
+
+      <DialogShell
+        isOpen={faturamentoOpen}
+        onClose={() => setFaturamentoOpen(false)}
+        title="Cobranças do Período"
+        maxWidth="720px"
+        footer={
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
+            <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--text-tertiary)" }}>
+              {faturamentoItems.length} cobrança(s)
+            </span>
+            <div style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
+              <span style={{ fontSize: "0.85rem", fontWeight: 700 }}>
+                <span style={{ color: "var(--text-tertiary)" }}>Previsto: </span>
+                <span style={{ color: "#60A5FA" }}>{formatCurrency(faturamentoPrevisto)}</span>
+              </span>
+              <span style={{ fontSize: "0.85rem", fontWeight: 700 }}>
+                <span style={{ color: "var(--text-tertiary)" }}>Realizado: </span>
+                <span style={{ color: "#22C55E" }}>{formatCurrency(faturamentoRealizado)}</span>
+              </span>
+            </div>
+          </div>
+        }
+      >
+        {faturamentoItems.length === 0 ? (
+          <p style={{ color: "var(--text-tertiary)", fontSize: "0.9rem", textAlign: "center", padding: "24px 0" }}>
+            Nenhuma cobrança no período.
+          </p>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            {[...faturamentoItems]
+              .sort((a, b) => b.date.localeCompare(a.date))
+              .map((item) => {
+                const statusMeta =
+                  item.status === "paid"
+                    ? { label: "Recebido", color: "#22C55E", bg: "rgba(34,197,94,0.1)" }
+                    : item.status === "overdue"
+                    ? { label: "Vencido", color: "#EF4444", bg: "rgba(239,68,68,0.1)" }
+                    : { label: "Previsto", color: "#F59E0B", bg: "rgba(245,158,11,0.1)" };
+                return (
+                  <div
+                    key={item.id}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: "12px",
+                      padding: "12px 14px",
+                      background: "rgba(255,255,255,0.02)",
+                      border: "1px solid var(--border)",
+                      borderRadius: "12px",
+                    }}
+                  >
+                    <div style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: "3px" }}>
+                      <span style={{ fontSize: "0.9rem", fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {item.description}
+                      </span>
+                      <span style={{ fontSize: "0.72rem", color: "var(--text-tertiary)", fontWeight: 600 }}>
+                        {item.client && `${item.client} · `}
+                        {new Date(item.date + "T00:00:00").toLocaleDateString("pt-BR")}
+                      </span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px", flexShrink: 0 }}>
+                      <span style={{ fontSize: "1rem", fontWeight: 800, color: statusMeta.label === "Recebido" ? "#22C55E" : "var(--text-primary)" }}>
                         {formatCurrency(item.amount)}
                       </span>
                       <span

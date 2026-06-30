@@ -64,6 +64,7 @@ export function Repasses({ asaasTransactions, clients, startDate, endDate, onSet
           client: clients.find((c) => c.id === t.client_id),
           adiantado: 0,
           reembolsado: 0,
+          reembolsadoExtra: 0,
           saldo: 0,
           txns: [],
         });
@@ -71,7 +72,8 @@ export function Repasses({ asaasTransactions, clients, startDate, endDate, onSet
       const g = map.get(key)!;
       const val = Math.abs(Number(t.value));
       if (t.type === "DEBIT") g.adiantado += val;
-      else g.reembolsado += val;
+      else if (creditOffsets(t)) g.reembolsado += val;
+      else g.reembolsadoExtra += val;
       g.txns.push(t);
     }
     const list = Array.from(map.values());
@@ -90,7 +92,17 @@ export function Repasses({ asaasTransactions, clients, startDate, endDate, onSet
 
   const totalAdiantado = groups.reduce((s, g) => s + g.adiantado, 0);
   const totalReembolsado = groups.reduce((s, g) => s + g.reembolsado, 0);
+  const totalReembolsadoExtra = groups.reduce((s, g) => s + g.reembolsadoExtra, 0);
   const saldoAReceber = totalAdiantado - totalReembolsado;
+
+  async function handleToggleOffsets(txnId: string, nextOffsets: boolean) {
+    setBusy(txnId);
+    try {
+      await onSetPassthrough(txnId, true, undefined, nextOffsets);
+    } finally {
+      setBusy(null);
+    }
+  }
 
   function toggleExpand(key: string) {
     setExpanded((prev) => {
@@ -121,7 +133,15 @@ export function Repasses({ asaasTransactions, clients, startDate, endDate, onSet
 
   const kpis = [
     { label: "Adiantado", value: totalAdiantado, color: "#F59E0B", icon: <ArrowUpRight size={16} />, hint: "Pago em anúncios (saídas)" },
-    { label: "Reembolsado", value: totalReembolsado, color: "#22C55E", icon: <ArrowDownLeft size={16} />, hint: "Devolvido pelos clientes" },
+    {
+      label: "Reembolsado",
+      value: totalReembolsado,
+      color: "#22C55E",
+      icon: <ArrowDownLeft size={16} />,
+      hint: totalReembolsadoExtra > 0.005
+        ? `Abate saldo · + ${formatCurrency(totalReembolsadoExtra)} extra (não abate)`
+        : "Devolvido pelos clientes",
+    },
     { label: "Saldo a Receber", value: saldoAReceber, color: saldoAReceber > 0.005 ? "var(--accent)" : "#22C55E", icon: <Repeat size={16} />, hint: saldoAReceber > 0.005 ? "Ainda a reembolsar" : "Tudo quitado" },
   ];
 
@@ -207,6 +227,7 @@ export function Repasses({ asaasTransactions, clients, startDate, endDate, onSet
                       </p>
                       <p style={{ fontSize: "0.72rem", color: "var(--text-tertiary)", fontWeight: 600, marginTop: "2px" }}>
                         {g.txns.length} lançamento{g.txns.length !== 1 ? "s" : ""} · Adiantado {formatCurrency(g.adiantado)} · Reembolsado {formatCurrency(g.reembolsado)}
+                        {g.reembolsadoExtra > 0.005 && ` · Extra ${formatCurrency(g.reembolsadoExtra)} (não abate)`}
                       </p>
                     </div>
                   </div>
@@ -224,6 +245,8 @@ export function Repasses({ asaasTransactions, clients, startDate, endDate, onSet
                   <div style={{ borderTop: "1px solid var(--border)", padding: "8px 18px 14px" }}>
                     {g.txns.map((t) => {
                       const isDebit = t.type === "DEBIT";
+                      const offsets = creditOffsets(t);
+                      const noOffset = !isDebit && !offsets;
                       return (
                         <div key={t.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", padding: "10px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
@@ -236,6 +259,7 @@ export function Repasses({ asaasTransactions, clients, startDate, endDate, onSet
                               </p>
                               <p style={{ fontSize: "0.7rem", color: "var(--text-tertiary)", fontWeight: 600 }}>
                                 {fmtDate(t.date)} · {isDebit ? "Adiantado" : "Reembolso"}
+                                {noOffset && <span style={{ color: "#60A5FA" }}> · não abate saldo</span>}
                               </p>
                             </div>
                           </div>
@@ -243,6 +267,22 @@ export function Repasses({ asaasTransactions, clients, startDate, endDate, onSet
                             <span style={{ fontSize: "0.9rem", fontWeight: 800, color: isDebit ? "#F59E0B" : "#22C55E" }}>
                               {isDebit ? "−" : "+"}{formatCurrency(Math.abs(Number(t.value)))}
                             </span>
+                            {/* Alternar se o crédito abate o saldo (só para reembolsos) */}
+                            {!isDebit && (
+                              <button
+                                onClick={() => handleToggleOffsets(t.id, !offsets)}
+                                disabled={busy === t.id}
+                                title={offsets ? "Abate o saldo — clique para NÃO abater" : "Não abate o saldo — clique para abater"}
+                                style={{
+                                  display: "flex", alignItems: "center", justifyContent: "center", width: "26px", height: "26px",
+                                  borderRadius: "8px", border: `1px solid ${offsets ? "var(--border)" : "rgba(96,165,250,0.4)"}`,
+                                  background: offsets ? "rgba(255,255,255,0.03)" : "rgba(96,165,250,0.12)",
+                                  color: offsets ? "var(--text-tertiary)" : "#60A5FA", cursor: "pointer",
+                                }}
+                              >
+                                <Repeat size={13} />
+                              </button>
+                            )}
                             {/* Reatribuir cliente */}
                             <select
                               value={t.client_id || ""}
