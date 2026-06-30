@@ -29,11 +29,11 @@ export async function POST(request: Request) {
 
     const { invoice_id, expense_entry_id, confirms_asaas_transaction_id } = txn;
 
-    // 2. Zera os vínculos na transação
+    // 2. Zera os vínculos na transação e em quaisquer transações de confirmação vinculadas
     const { error: clearError } = await supabase
       .from('asaas_transactions')
       .update({ invoice_id: null, expense_entry_id: null, confirms_asaas_transaction_id: null })
-      .eq('id', asaas_transaction_id);
+      .or(`id.eq.${asaas_transaction_id},confirms_asaas_transaction_id.eq.${asaas_transaction_id}`);
 
     if (clearError) return NextResponse.json({ error: clearError.message }, { status: 400 });
 

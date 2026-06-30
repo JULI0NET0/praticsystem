@@ -121,7 +121,7 @@ export function buildFaturaGroups(
       g.clientLabel = sc ? (sc.client.nome_fantasia || sc.client.name) : "";
     } else if (txn.type === "DEBIT") {
       g.feeTxns.push({ txn, category: detectFeeCategory(txn.description) });
-      g.totalFees += Number(txn.value);
+      g.totalFees += Math.abs(Number(txn.value));
     }
   }
 
@@ -227,7 +227,7 @@ export function buildLancamentoStages(
   }
 
   const gross = paymentTxn ? Number(paymentTxn.value) : Number(invoice.amount);
-  const totalFees = feeTxns.reduce((s, t) => s + Number(t.value), 0);
+  const totalFees = feeTxns.reduce((s, t) => s + Math.abs(Number(t.value)), 0);
   return {
     invoice,
     paymentTxn,

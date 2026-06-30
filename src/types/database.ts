@@ -138,6 +138,7 @@ export interface Invoice {
   description: string;
   paid_at?: string;
   asaas_payment_id?: string;
+  created_at?: string;
 }
 
 export interface AgendaEvent {
@@ -222,6 +223,18 @@ export interface AsaasTransaction {
   status: string;
   expense_entry_id?: string;
   invoice_id?: string;
+  /** Vínculo de cliente apenas visual, independente do vínculo financeiro (expense_entry/invoice) */
+  client_id?: string | null;
+  /** Referência da transferência Asaas (Pix/TED) — usado para detalhar o destino */
+  transfer_id?: string | null;
+  /** Referência da cobrança Asaas quando a transação deriva de um payment */
+  payment_id?: string | null;
+  /** Repasse / tráfego pago: só passagem de dinheiro (ex.: Facebook Ads reembolsado pelo cliente).
+   *  Marcada como repasse, fica fora de Faturamento/Despesas/Fluxo. DEBIT = adiantado, CREDIT = reembolso. */
+  is_passthrough?: boolean;
+  /** Para um CRÉDITO de repasse: se abate o Saldo a Receber do cliente (true, padrão) ou se é um
+   *  reembolso extra/avulso que aparece vinculado mas NÃO reduz o saldo (false). */
+  passthrough_offsets?: boolean;
   notes?: string;
   /** Set when this is the bank-statement confirmation of another transaction; excluded from payment sums */
   confirms_asaas_transaction_id?: string | null;

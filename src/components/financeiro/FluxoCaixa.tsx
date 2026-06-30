@@ -49,7 +49,7 @@ export function FluxoCaixa({ invoices, expenseEntries, expenses, selectedMonth }
         .reduce((s, i) => s + Number(i.amount), 0);
 
       const entradasRealizadas = invoices
-        .filter((i) => i.status === "paid" && inRange(i.due_date))
+        .filter((i) => i.status === "paid" && inRange(i.paid_at || i.due_date))
         .reduce((s, i) => s + Number(i.amount), 0);
 
       const saidasRealizadas = expenseEntries

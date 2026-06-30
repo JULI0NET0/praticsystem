@@ -1,16 +1,39 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { TrendingUp, DollarSign, Users, Percent, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { TrendingUp, DollarSign, Users, Percent, ArrowUpRight, ArrowDownRight, Maximize2 } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
+import DialogShell from "@/components/DialogShell";
 
 import { Calendar } from "lucide-react";
+
+export interface DespesaItem {
+  id: string;
+  description: string;
+  category?: string;
+  date: string;
+  amount: number;
+  paid: number;
+  status: 'pending' | 'paid' | 'cancelled';
+}
+
+export interface FaturamentoItem {
+  id: string;
+  description: string;
+  client?: string;
+  date: string;
+  amount: number;
+  status: 'pending' | 'paid' | 'overdue';
+}
 
 interface FinancialKPIsProps {
   faturamentoPrevisto: number;
   faturamentoRealizado: number;
+  faturamentoItems: FaturamentoItem[];
   despesas: number;
   despesasPrevistas: number;
+  despesaItems: DespesaItem[];
   clientesAtivos: number;
   dateRange: { start: string; end: string };
   datePreset: 'all' | 'this_month' | 'prev_month' | 'next_month' | 'custom';
@@ -18,17 +41,30 @@ interface FinancialKPIsProps {
   onRangeChange: (range: { start: string; end: string }) => void;
 }
 
+const CATEGORY_LABELS: Record<string, string> = {
+  pro_labore: "Pro-labore",
+  funcionario_pj: "Func. PJ",
+  sistema: "Sistemas",
+  internet: "Internet",
+  taxa_asaas: "Taxas Asaas",
+  taxa_boleto: "Tx. Boleto",
+  taxa_mensageria: "Tx. Mensageria",
+  outros: "Outros",
+};
+
 export function FinancialKPIs({
   faturamentoPrevisto,
   faturamentoRealizado,
   despesas,
   despesasPrevistas,
+  despesaItems,
   clientesAtivos,
   dateRange,
   datePreset,
   onPresetChange,
   onRangeChange,
 }: FinancialKPIsProps) {
+  const [despesasOpen, setDespesasOpen] = useState(false);
   const lucro = faturamentoRealizado - despesas;
   const margem = faturamentoRealizado > 0 ? (lucro / faturamentoRealizado) * 100 : 0;
   const ticketMedio = clientesAtivos > 0 ? faturamentoRealizado / clientesAtivos : 0;
@@ -43,26 +79,22 @@ export function FinancialKPIs({
     bg: string;
     border: string;
     splitValues?: { label: string; value: string; color: string }[];
+    onClick?: () => void;
   };
 
   const cards: KpiCard[] = [
     {
-      label: "Faturamento Previsto",
-      value: formatCurrency(faturamentoPrevisto),
-      sub: "Total emitido no período",
-      icon: <TrendingUp size={20} />,
-      color: "#60A5FA",
-      bg: "rgba(96,165,250,0.06)",
-      border: "rgba(96,165,250,0.15)",
-    },
-    {
-      label: "Faturamento Realizado",
-      value: formatCurrency(faturamentoRealizado),
+      label: "Faturamento",
+      value: null,
       sub: `${taxaConversao.toFixed(0)}% do previsto recebido`,
-      icon: <ArrowUpRight size={20} />,
-      color: "#22C55E",
-      bg: "rgba(34,197,94,0.06)",
-      border: "rgba(34,197,94,0.15)",
+      icon: <TrendingUp size={20} />,
+      color: "#3B82F6",
+      bg: "rgba(59,130,246,0.06)",
+      border: "rgba(59,130,246,0.15)",
+      splitValues: [
+        { label: "Previsto", value: formatCurrency(faturamentoPrevisto), color: "#60A5FA" },
+        { label: "Realizado", value: formatCurrency(faturamentoRealizado), color: "#22C55E" },
+      ],
     },
     {
       label: "Despesas",
@@ -76,6 +108,7 @@ export function FinancialKPIs({
         { label: "Pagas", value: formatCurrency(despesas), color: "#EF4444" },
         { label: "Previstas", value: formatCurrency(despesasPrevistas), color: "#F59E0B" },
       ],
+      onClick: () => setDespesasOpen(true),
     },
     {
       label: "Ticket Médio",
@@ -188,6 +221,11 @@ export function FinancialKPIs({
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: i * 0.05 }}
             className="glass-card"
+            onClick={card.onClick}
+            role={card.onClick ? "button" : undefined}
+            tabIndex={card.onClick ? 0 : undefined}
+            onKeyDown={card.onClick ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); card.onClick!(); } } : undefined}
+            whileHover={card.onClick ? { y: -3 } : undefined}
             style={{
               padding: "24px",
               background: card.bg,
@@ -195,13 +233,17 @@ export function FinancialKPIs({
               display: "flex",
               flexDirection: "column",
               gap: "12px",
+              cursor: card.onClick ? "pointer" : undefined,
             }}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
                 {card.label}
               </span>
-              <span style={{ color: card.color, opacity: 0.8 }}>{card.icon}</span>
+              <span style={{ display: "flex", alignItems: "center", gap: "8px", color: card.color, opacity: 0.8 }}>
+                {card.onClick && <Maximize2 size={14} style={{ opacity: 0.7 }} />}
+                {card.icon}
+              </span>
             </div>
             {card.splitValues ? (
               <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
@@ -229,6 +271,98 @@ export function FinancialKPIs({
           </motion.div>
         ))}
       </div>
+
+      <DialogShell
+        isOpen={despesasOpen}
+        onClose={() => setDespesasOpen(false)}
+        title="Contas Lançadas"
+        maxWidth="720px"
+        footer={
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
+            <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--text-tertiary)" }}>
+              {despesaItems.length} conta(s)
+            </span>
+            <div style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
+              <span style={{ fontSize: "0.85rem", fontWeight: 700 }}>
+                <span style={{ color: "var(--text-tertiary)" }}>Pagas: </span>
+                <span style={{ color: "#EF4444" }}>{formatCurrency(despesas)}</span>
+              </span>
+              <span style={{ fontSize: "0.85rem", fontWeight: 700 }}>
+                <span style={{ color: "var(--text-tertiary)" }}>Previstas: </span>
+                <span style={{ color: "#F59E0B" }}>{formatCurrency(despesasPrevistas)}</span>
+              </span>
+            </div>
+          </div>
+        }
+      >
+        {despesaItems.length === 0 ? (
+          <p style={{ color: "var(--text-tertiary)", fontSize: "0.9rem", textAlign: "center", padding: "24px 0" }}>
+            Nenhuma conta lançada no período.
+          </p>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            {[...despesaItems]
+              .sort((a, b) => b.date.localeCompare(a.date))
+              .map((item) => {
+                const open = Math.max(0, item.amount - item.paid);
+                const statusMeta =
+                  item.status === "cancelled"
+                    ? { label: "Cancelada", color: "var(--text-tertiary)", bg: "rgba(255,255,255,0.04)" }
+                    : item.status === "paid" || open <= 0
+                    ? { label: "Paga", color: "#22C55E", bg: "rgba(34,197,94,0.1)" }
+                    : item.paid > 0
+                    ? { label: "Parcial", color: "#F59E0B", bg: "rgba(245,158,11,0.1)" }
+                    : { label: "Prevista", color: "#F59E0B", bg: "rgba(245,158,11,0.1)" };
+                return (
+                  <div
+                    key={item.id}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: "12px",
+                      padding: "12px 14px",
+                      background: "rgba(255,255,255,0.02)",
+                      border: "1px solid var(--border)",
+                      borderRadius: "12px",
+                    }}
+                  >
+                    <div style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: "3px" }}>
+                      <span style={{ fontSize: "0.9rem", fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {item.description}
+                      </span>
+                      <span style={{ fontSize: "0.72rem", color: "var(--text-tertiary)", fontWeight: 600 }}>
+                        {new Date(item.date + "T00:00:00").toLocaleDateString("pt-BR")}
+                        {item.category && ` · ${CATEGORY_LABELS[item.category] || item.category}`}
+                        {statusMeta.label === "Parcial" && ` · Pago ${formatCurrency(item.paid)} de ${formatCurrency(item.amount)}`}
+                      </span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px", flexShrink: 0 }}>
+                      <span style={{ fontSize: "1rem", fontWeight: 800, color: statusMeta.label === "Paga" ? "#EF4444" : "var(--text-primary)" }}>
+                        {formatCurrency(item.amount)}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: "0.68rem",
+                          fontWeight: 800,
+                          textTransform: "uppercase",
+                          letterSpacing: "0.04em",
+                          color: statusMeta.color,
+                          background: statusMeta.bg,
+                          padding: "4px 10px",
+                          borderRadius: "999px",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {statusMeta.label}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+        )}
+      </DialogShell>
     </div>
   );
 }

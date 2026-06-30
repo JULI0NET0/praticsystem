@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Search, Building2, FileText, Layers, Plus, Check } from "lucide-react";
+import { Search, Building2, FileText, Layers, Plus, Check, Repeat } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import DialogShell from "@/components/DialogShell";
 import type { Invoice, ExpenseEntry, Expense } from "@/types/database";
@@ -9,7 +9,9 @@ import type { Invoice, ExpenseEntry, Expense } from "@/types/database";
 type LinkTarget =
   | { kind: "invoice"; id: string; label: string }
   | { kind: "expense_entry"; id: string; label: string }
-  | { kind: "variable_group"; groupId: string; label: string };
+  | { kind: "variable_group"; groupId: string; label: string }
+  | { kind: "create_invoice"; clientId: string; type: "avulso" | "reembolso"; description: string; amount: number; label: string }
+  | { kind: "passthrough"; clientId: string; offsets: boolean; label: string };
 
 type ActiveTab = "fatura" | "fixa" | "variavel";
 
@@ -29,8 +31,12 @@ interface AsaasLinkDialogProps {
   linking: boolean;
   suggestedClientId?: string;
   defaultCategory?: string;
+  /** Pre-fills "Valor do lançamento" — for batch links this is the summed total. */
+  defaultEntryAmount?: number;
+  /** When linking a batch, the number of grouped transactions (for UI hints). */
+  groupedCount?: number;
   onClose: () => void;
-  onConfirm: (target: LinkTarget, notes?: string) => Promise<void>;
+  onConfirm: (target: LinkTarget, notes?: string, clientId?: string | null) => Promise<void>;
   onCreateVariableEntry: (groupId: string, amount: number, date: string) => Promise<ExpenseEntry | null>;
 }
 
@@ -44,6 +50,8 @@ export function AsaasLinkDialog({
   linking,
   suggestedClientId,
   defaultCategory,
+  defaultEntryAmount,
+  groupedCount,
   onClose,
   onConfirm,
   onCreateVariableEntry,
@@ -67,6 +75,18 @@ export function AsaasLinkDialog({
   const [newEntryAmount, setNewEntryAmount] = useState("");
   const [notes, setNotes] = useState("");
 
+  const [createInvoiceClientId, setCreateInvoiceClientId] = useState("");
+  const [createInvoiceType, setCreateInvoiceType] = useState<"avulso" | "reembolso">("avulso");
+  const [createInvoiceDescription, setCreateInvoiceDescription] = useState("");
+
+  // Cliente do reembolso de repasse (perna de entrada do tráfego pago)
+  const [passthroughClientId, setPassthroughClientId] = useState("");
+  // Se este crédito abate o saldo a receber do cliente (padrão sim)
+  const [passthroughOffsets, setPassthroughOffsets] = useState(true);
+
+  // Cliente de origem (apenas visual) — gravado junto ao vínculo financeiro de despesa
+  const [clientOrigin, setClientOrigin] = useState("");
+
   const suggestedClient = suggestedClientId ? clients.find((c) => c.id === suggestedClientId) : undefined;
 
   // Reset when transaction changes
@@ -76,11 +96,23 @@ export function AsaasLinkDialog({
     setSearch(suggestedClient && !defaultCategory ? (suggestedClient.nome_fantasia || suggestedClient.name) : "");
     setSelected(null);
     setCreatingForGroup(null);
-    setNewEntryAmount(transaction ? String(transaction.value) : "");
+    setNewEntryAmount(
+      defaultEntryAmount != null
+        ? String(defaultEntryAmount)
+        : transaction
+          ? String(Math.abs(transaction.value))
+          : ""
+    );
     setNotes("");
+    setCreateInvoiceClientId(suggestedClientId || "");
+    setCreateInvoiceType("avulso");
+    setCreateInvoiceDescription(transaction?.description || "");
+    setPassthroughClientId(suggestedClientId || "");
+    setPassthroughOffsets(true);
+    setClientOrigin(suggestedClientId || "");
     if (transaction) setMonthFilter(transaction.date.slice(0, 7));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [transaction?.id]);
+  }, [transaction?.id, defaultEntryAmount, suggestedClientId]);
 
   const pendingInvoices = useMemo(() => {
     return invoices.filter((inv) => {
@@ -114,15 +146,23 @@ export function AsaasLinkDialog({
 
   async function handleConfirm() {
     if (!selected) return;
+    // Cliente de origem só faz sentido para despesas (fixa/variável); faturas já têm cliente próprio
+    const origin = (selected.kind === "expense_entry" || selected.kind === "variable_group")
+      ? (clientOrigin || null)
+      : undefined;
     if (selected.kind === "variable_group") {
-      const amount = Number(newEntryAmount) || transaction?.value || 0;
+      const amount = Number(newEntryAmount) || defaultEntryAmount || Math.abs(transaction?.value ?? 0);
       const entry = await onCreateVariableEntry(selected.groupId, amount, transaction?.date ?? new Date().toISOString().split("T")[0]);
       if (entry) {
-        await onConfirm({ kind: "expense_entry", id: entry.id, label: selected.label }, notes || undefined);
+        await onConfirm({ kind: "expense_entry", id: entry.id, label: selected.label }, notes || undefined, origin);
       }
     } else {
-      await onConfirm(selected, notes || undefined);
+      await onConfirm(selected, notes || undefined, origin);
     }
+  }
+
+  function selectPassthrough(clientId: string, offsets: boolean = passthroughOffsets) {
+    setSelected({ kind: "passthrough", clientId, offsets, label: "Reembolso de repasse" });
   }
 
   // Cobrança recebida (CREDIT) só vincula a Fatura (receita); saída (DEBIT) só a Despesa.
@@ -178,11 +218,16 @@ export function AsaasLinkDialog({
             </p>
             <p style={{ fontWeight: 700, fontSize: "0.9rem" }}>{transaction.description || "Sem descrição"}</p>
             <p style={{ fontWeight: 800, fontSize: "1.05rem", color: transaction.type === "CREDIT" ? "#22C55E" : "#EF4444", marginTop: "2px" }}>
-              {transaction.type === "CREDIT" ? "+" : "−"} {formatCurrency(transaction.value)}
+              {transaction.type === "CREDIT" ? "+" : "−"} {formatCurrency(Math.abs(transaction.value))}
               <span style={{ fontSize: "0.75rem", fontWeight: 400, color: "var(--text-tertiary)", marginLeft: "8px" }}>
                 {new Date(`${transaction.date}T12:00:00`).toLocaleDateString("pt-BR")}
               </span>
             </p>
+            {groupedCount != null && groupedCount > 1 && (
+              <p style={{ fontSize: "0.72rem", color: "var(--text-secondary)", marginTop: "4px" }}>
+                Soma de {groupedCount} transações — será lançada como uma única conta agrupada.
+              </p>
+            )}
           </div>
         )}
 
@@ -241,43 +286,267 @@ export function AsaasLinkDialog({
           ))}
         </div>
 
+        {/* Cliente de origem (apenas para despesas) */}
+        {(tab === "fixa" || tab === "variavel") && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "5px", padding: "10px 14px", borderRadius: "10px", background: "rgba(96,165,250,0.05)", border: "1px solid rgba(96,165,250,0.2)" }}>
+            <span style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.72rem", fontWeight: 700, color: "#60A5FA", textTransform: "uppercase", letterSpacing: "0.03em" }}>
+              <Building2 size={12} /> Cliente de origem (opcional)
+            </span>
+            <select
+              className="input-dark"
+              style={{ width: "100%", fontSize: "0.85rem" }}
+              value={clientOrigin}
+              onChange={(e) => setClientOrigin(e.target.value)}
+            >
+              <option value="">— Nenhum (despesa da empresa) —</option>
+              {clients.map((c) => (
+                <option key={c.id} value={c.id}>{c.nome_fantasia || c.name}</option>
+              ))}
+            </select>
+            <span style={{ fontSize: "0.7rem", color: "var(--text-tertiary)" }}>
+              Lança como despesa (ex.: TAXA BANCARIA) e marca o cliente de origem, sem alterar o vínculo financeiro.
+            </span>
+          </div>
+        )}
+
         {/* Tab content */}
         <div style={{ maxHeight: "280px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "6px" }}>
           {/* Fatura Cliente */}
           {tab === "fatura" && (
-            pendingInvoices.length === 0 ? (
-              <p style={{ fontSize: "0.82rem", color: "var(--text-tertiary)", textAlign: "center", padding: "24px" }}>
-                Nenhuma fatura pendente no período.
-              </p>
-            ) : pendingInvoices.map((inv) => {
-              const client = clients.find((c) => c.id === inv.client_id);
-              const clientName = client?.nome_fantasia || client?.name || "Cliente";
-              const targetId = `inv-${inv.id}`;
-              const isSelected = selected?.kind === "invoice" && selected.id === inv.id;
-              return (
-                <button
-                  key={inv.id}
-                  onClick={() => setSelected({ kind: "invoice", id: inv.id, label: clientName })}
-                  style={{
-                    display: "flex", justifyContent: "space-between", alignItems: "center",
-                    padding: "10px 14px", borderRadius: "10px", border: `1px solid ${isSelected ? "var(--accent)" : "var(--border)"}`,
-                    background: isSelected ? "rgba(217,72,15,0.08)" : "rgba(255,255,255,0.02)",
-                    cursor: "pointer", textAlign: "left", color: "var(--text-primary)", transition: "all 0.15s",
-                  }}
-                >
-                  <div>
-                    <p style={{ fontWeight: 600, fontSize: "0.875rem" }}>{clientName}</p>
-                    <p style={{ fontSize: "0.72rem", color: "var(--text-tertiary)", marginTop: "1px" }}>
-                      vcto {new Date(`${inv.due_date}T12:00:00`).toLocaleDateString("pt-BR")} · {inv.description}
-                    </p>
+            <>
+              {/* Reembolso de repasse — não é faturamento */}
+              {transaction?.type === "CREDIT" && (
+                <div style={{
+                  padding: "14px", borderRadius: "12px", marginBottom: "12px", width: "100%",
+                  border: `1px solid ${selected?.kind === "passthrough" ? "var(--accent)" : "var(--border)"}`,
+                  background: selected?.kind === "passthrough" ? "rgba(217,72,15,0.06)" : "rgba(255,255,255,0.01)",
+                  display: "flex", flexDirection: "column", gap: "10px",
+                }}>
+                  <button
+                    onClick={() => selected?.kind === "passthrough" ? setSelected(null) : selectPassthrough(passthroughClientId)}
+                    style={{
+                      display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px",
+                      background: "none", border: "none", cursor: "pointer", padding: 0, textAlign: "left", color: "var(--text-primary)",
+                    }}
+                  >
+                    <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <Repeat size={15} color="var(--accent)" />
+                      <span style={{ display: "flex", flexDirection: "column" }}>
+                        <span style={{ fontWeight: 700, fontSize: "0.85rem" }}>É reembolso de repasse</span>
+                        <span style={{ fontSize: "0.72rem", color: "var(--text-tertiary)" }}>Devolução de tráfego pago — não conta como faturamento</span>
+                      </span>
+                    </span>
+                    <span style={{
+                      width: "18px", height: "18px", borderRadius: "6px", flexShrink: 0,
+                      border: `1px solid ${selected?.kind === "passthrough" ? "var(--accent)" : "var(--border)"}`,
+                      background: selected?.kind === "passthrough" ? "var(--accent)" : "transparent",
+                      display: "flex", alignItems: "center", justifyContent: "center", color: "#fff",
+                    }}>
+                      {selected?.kind === "passthrough" && <Check size={12} />}
+                    </span>
+                  </button>
+                  {selected?.kind === "passthrough" && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                        <span style={{ fontSize: "0.68rem", color: "var(--text-secondary)", fontWeight: 700 }}>Cliente que reembolsou</span>
+                        <select
+                          className="input-dark"
+                          style={{ width: "100%", fontSize: "0.85rem" }}
+                          value={passthroughClientId}
+                          onChange={(e) => { setPassthroughClientId(e.target.value); selectPassthrough(e.target.value); }}
+                        >
+                          <option value="">— Sem cliente (atribuir depois) —</option>
+                          {clients.map((c) => (
+                            <option key={c.id} value={c.id}>{c.nome_fantasia || c.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <label style={{ display: "flex", alignItems: "flex-start", gap: "8px", cursor: "pointer" }}>
+                        <input
+                          type="checkbox"
+                          checked={passthroughOffsets}
+                          onChange={(e) => { setPassthroughOffsets(e.target.checked); selectPassthrough(passthroughClientId, e.target.checked); }}
+                          style={{ marginTop: "2px", cursor: "pointer", accentColor: "var(--accent)", width: "15px", height: "15px", flexShrink: 0 }}
+                        />
+                        <span style={{ display: "flex", flexDirection: "column" }}>
+                          <span style={{ fontSize: "0.8rem", fontWeight: 600 }}>Abater do saldo a receber</span>
+                          <span style={{ fontSize: "0.7rem", color: "var(--text-tertiary)" }}>
+                            Desmarque se for um reembolso extra/avulso que não deve reduzir o saldo do cliente.
+                          </span>
+                        </span>
+                      </label>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {pendingInvoices.length > 0 && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: "12px", width: "100%" }}>
+                  <span style={{ fontSize: "0.7rem", fontWeight: 700, color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "4px" }}>
+                    Faturas Pendentes do Período
+                  </span>
+                  {pendingInvoices.map((inv) => {
+                    const client = clients.find((c) => c.id === inv.client_id);
+                    const clientName = client?.nome_fantasia || client?.name || "Cliente";
+                    const isSelected = selected?.kind === "invoice" && selected.id === inv.id;
+                    return (
+                      <button
+                        key={inv.id}
+                        onClick={() => setSelected({ kind: "invoice", id: inv.id, label: clientName })}
+                        style={{
+                          display: "flex", justifyContent: "space-between", alignItems: "center",
+                          padding: "10px 14px", borderRadius: "10px", border: `1px solid ${isSelected ? "var(--accent)" : "var(--border)"}`,
+                          background: isSelected ? "rgba(217,72,15,0.08)" : "rgba(255,255,255,0.02)",
+                          cursor: "pointer", textAlign: "left", color: "var(--text-primary)", transition: "all 0.15s",
+                          width: "100%"
+                        }}
+                      >
+                        <div>
+                          <p style={{ fontWeight: 600, fontSize: "0.875rem" }}>{clientName}</p>
+                          <p style={{ fontSize: "0.72rem", color: "var(--text-tertiary)", marginTop: "1px" }}>
+                            vcto {new Date(`${inv.due_date}T12:00:00`).toLocaleDateString("pt-BR")} · {inv.description}
+                          </p>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
+                          <span style={{ fontWeight: 700, color: "#22C55E" }}>{formatCurrency(Number(inv.amount))}</span>
+                          {isSelected && <Check size={14} color="var(--accent)" />}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Seção Novo Lançamento Avulso / Reembolso */}
+              <div style={{
+                padding: "14px",
+                borderRadius: "12px",
+                border: `1px solid ${selected?.kind === "create_invoice" ? "var(--accent)" : "var(--border)"}`,
+                background: selected?.kind === "create_invoice" ? "rgba(217,72,15,0.04)" : "rgba(255,255,255,0.01)",
+                display: "flex",
+                flexDirection: "column",
+                gap: "10px",
+                width: "100%"
+              }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>
+                    Lançar Serviço Avulso / Reembolso
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={selected?.kind === "create_invoice"}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelected({
+                          kind: "create_invoice",
+                          clientId: createInvoiceClientId,
+                          type: createInvoiceType,
+                          description: createInvoiceDescription,
+                          amount: transaction ? Math.abs(transaction.value) : 0,
+                          label: "Novo Serviço Avulso/Reembolso"
+                        });
+                      } else {
+                        setSelected(null);
+                      }
+                    }}
+                    style={{ cursor: "pointer", accentColor: "var(--accent)", width: "16px", height: "16px" }}
+                  />
+                </div>
+
+                {(selected?.kind === "create_invoice" || pendingInvoices.length === 0) && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "4px" }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+                      <span style={{ fontSize: "0.68rem", color: "var(--text-secondary)", fontWeight: 700 }}>Cliente</span>
+                      <select
+                        style={{
+                          fontSize: "0.82rem",
+                          padding: "8px",
+                          background: "rgba(0,0,0,0.2)",
+                          border: "1px solid var(--border)",
+                          borderRadius: "8px",
+                          color: "var(--text-primary)",
+                          width: "100%"
+                        }}
+                        value={createInvoiceClientId}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setCreateInvoiceClientId(val);
+                          setSelected({
+                            kind: "create_invoice",
+                            clientId: val,
+                            type: createInvoiceType,
+                            description: createInvoiceDescription,
+                            amount: transaction ? Math.abs(transaction.value) : 0,
+                            label: "Novo Serviço Avulso/Reembolso"
+                          });
+                        }}
+                      >
+                        <option value="">Selecione um cliente...</option>
+                        {clients.map(c => (
+                          <option key={c.id} value={c.id}>{c.nome_fantasia || c.name}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div style={{ display: "flex", gap: "8px" }}>
+                      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "3px" }}>
+                        <span style={{ fontSize: "0.68rem", color: "var(--text-secondary)", fontWeight: 700 }}>Tipo</span>
+                        <select
+                          style={{
+                            fontSize: "0.82rem",
+                            padding: "8px",
+                            background: "rgba(0,0,0,0.2)",
+                            border: "1px solid var(--border)",
+                            borderRadius: "8px",
+                            color: "var(--text-primary)",
+                            width: "100%"
+                          }}
+                          value={createInvoiceType}
+                          onChange={(e) => {
+                            const val = e.target.value as "avulso" | "reembolso";
+                            setCreateInvoiceType(val);
+                            setSelected({
+                              kind: "create_invoice",
+                              clientId: createInvoiceClientId,
+                              type: val,
+                              description: createInvoiceDescription,
+                              amount: transaction ? Math.abs(transaction.value) : 0,
+                              label: "Novo Serviço Avulso/Reembolso"
+                            });
+                          }}
+                        >
+                          <option value="avulso">Serviço Avulso</option>
+                          <option value="reembolso">Reembolso</option>
+                        </select>
+                      </div>
+
+                      <div style={{ flex: 2, display: "flex", flexDirection: "column", gap: "3px" }}>
+                        <span style={{ fontSize: "0.68rem", color: "var(--text-secondary)", fontWeight: 700 }}>Descrição</span>
+                        <input
+                          type="text"
+                          className="input-dark"
+                          style={{ fontSize: "0.82rem", padding: "8px" }}
+                          placeholder="Descrição do serviço/reembolso..."
+                          value={createInvoiceDescription}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setCreateInvoiceDescription(val);
+                            setSelected({
+                              kind: "create_invoice",
+                              clientId: createInvoiceClientId,
+                              type: createInvoiceType,
+                              description: val,
+                              amount: transaction ? Math.abs(transaction.value) : 0,
+                              label: "Novo Serviço Avulso/Reembolso"
+                            });
+                          }}
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
-                    <span style={{ fontWeight: 700, color: "#22C55E" }}>{formatCurrency(Number(inv.amount))}</span>
-                    {isSelected && <Check size={14} color="var(--accent)" />}
-                  </div>
-                </button>
-              );
-            })
+                )}
+              </div>
+            </>
           )}
 
           {/* Despesa Fixa */}

@@ -155,12 +155,19 @@ export function LancamentosTable({
         if (linkedAmount >= amount && amount > 0) effectiveStatus = "paid";
         else if (linkedAmount > 0) effectiveStatus = "partial";
       }
+      let categoryLabel = billingCycleLabel(contract?.billing_cycle);
+      if (inv.description?.toLowerCase().includes("reembolso")) {
+        categoryLabel = "Reembolso";
+      } else if (inv.description?.toLowerCase().includes("serviço avulso") || inv.description?.toLowerCase().includes("avulso")) {
+        categoryLabel = "Avulso";
+      }
+
       result.push({
         id: inv.id,
         invoice: inv,
         clientName,
         description: inv.description,
-        categoryLabel: billingCycleLabel(contract?.billing_cycle),
+        categoryLabel,
         dueDate: d,
         paidAt: inv.paid_at,
         amount,
@@ -623,7 +630,7 @@ export function LancamentosTable({
                   {stages.feeTxns.map((fee) => (
                     <div key={fee.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px" }}>
                       <span style={{ fontSize: "0.78rem", color: "var(--text-tertiary)" }}>{fee.description || "Taxa Asaas"}</span>
-                      <span style={{ fontSize: "0.78rem", color: "#EF4444", fontWeight: 700, whiteSpace: "nowrap" }}>− {formatCurrency(Number(fee.value))}</span>
+                      <span style={{ fontSize: "0.78rem", color: "#EF4444", fontWeight: 700, whiteSpace: "nowrap" }}>− {formatCurrency(Math.abs(Number(fee.value)))}</span>
                     </div>
                   ))}
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px", borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: "6px", marginTop: "2px" }}>

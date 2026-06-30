@@ -1,15 +1,16 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 import {
   RefreshCw, Link2, CheckCircle2, AlertCircle, Wallet,
-  Sparkles, User, Building2, X, Search, Unlink, HelpCircle,
+  Sparkles, User, Building2, X, Search, Unlink, HelpCircle, Repeat,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import DialogShell from "@/components/DialogShell";
 import { AsaasLinkDialog } from "@/components/financeiro/AsaasLinkDialog";
-import { buildFaturaGroups, matchClient, type FaturaGroup } from "@/lib/asaasGroups";
+import { buildFaturaGroups, matchClient, extractFaturaNumber, detectFeeCategory, type FaturaGroup } from "@/lib/asaasGroups";
 import type { AsaasTransaction, ExpenseEntry, Invoice, Expense } from "@/types/database";
 
 interface AsaasBalance {
@@ -28,9 +29,14 @@ interface AsaasSyncProps {
   onSync: (startDate: string, endDate: string) => Promise<{ imported: number; skipped: number } | void>;
   onLink: (asaasId: string, expenseEntryId?: string, invoiceId?: string, notes?: string) => Promise<void>;
   onUnlink: (asaasId: string) => Promise<void>;
+  onSetClient: (asaasId: string, clientId: string | null) => Promise<void>;
+  /** Marca/desmarca a transação como repasse (tráfego pago reembolsável).
+   *  offsets define se um crédito abate o saldo a receber do cliente (padrão true). */
+  onSetPassthrough?: (asaasId: string, isPassthrough: boolean, clientId?: string | null, offsets?: boolean) => Promise<void>;
   onMarkAsConfirmation?: (confirmationTxnId: string, paymentTxnId: string) => Promise<void>;
   onReconcile?: () => Promise<{ reconciled: number } | void>;
   onCreateEntry: (data: Partial<ExpenseEntry>) => Promise<ExpenseEntry | null>;
+  onCreateInvoice?: (data: Partial<Invoice>, skipTransaction?: boolean) => Promise<Invoice | null>;
   onUpdateInvoiceStatus?: (id: string, status: string) => Promise<void>;
   selectedMonth: string;
   startDate?: string;
@@ -52,9 +58,12 @@ export function AsaasSync({
   onSync,
   onLink,
   onUnlink,
+  onSetClient,
+  onSetPassthrough,
   onMarkAsConfirmation,
   onReconcile,
   onCreateEntry,
+  onCreateInvoice,
   onUpdateInvoiceStatus,
   selectedMonth,
   startDate: filterStart,
@@ -93,7 +102,73 @@ export function AsaasSync({
   const [refreshingBalance, setRefreshingBalance] = useState(false);
   const [reconciling, setReconciling] = useState(false);
   const [hoveredVinculo, setHoveredVinculo] = useState<string | null>(null);
+  const [descTip, setDescTip] = useState<{ text: string; x: number; y: number } | null>(null);
   const [detailTxn, setDetailTxn] = useState<AsaasTransaction | null>(null);
+
+  function showDescTip(e: React.MouseEvent<HTMLElement>, text?: string) {
+    if (!text) return;
+    const r = e.currentTarget.getBoundingClientRect();
+    const width = 320;
+    const x = Math.max(8, Math.min(r.left, window.innerWidth - width - 16));
+    setDescTip({ text, x, y: r.bottom + 6 });
+  }
+
+  // Dialog de descrição completa + atribuição de cliente (vínculo visual)
+  const [descTxn, setDescTxn] = useState<AsaasTransaction | null>(null);
+  const [descClientId, setDescClientId] = useState<string>("");
+  const [savingClient, setSavingClient] = useState(false);
+
+  // Destino da transferência (Pix/TED) buscado sob demanda
+  const [transferDetail, setTransferDetail] = useState<any | null>(null);
+  const [loadingTransfer, setLoadingTransfer] = useState(false);
+  const [transferError, setTransferError] = useState<string | null>(null);
+
+  function openDescDialog(txn: AsaasTransaction) {
+    setDescTxn(txn);
+    setDescClientId(txn.client_id || "");
+    setTransferDetail(null);
+    setTransferError(null);
+  }
+
+  async function handleLoadTransfer(transferId: string) {
+    setLoadingTransfer(true);
+    setTransferError(null);
+    try {
+      const res = await fetch(`/api/financeiro/asaas/transfer/${transferId}`);
+      const data = await res.json();
+      if (!res.ok || data?.error) {
+        setTransferError(data?.error || "Não foi possível carregar o destino.");
+      } else {
+        setTransferDetail(data);
+      }
+    } catch {
+      setTransferError("Falha ao consultar o Asaas.");
+    } finally {
+      setLoadingTransfer(false);
+    }
+  }
+
+  async function openAsaasLink(asaasId: string) {
+    try {
+      const res = await fetch(`/api/financeiro/asaas/payment/${asaasId}`);
+      const payment = await res.json();
+      const url = payment?.invoiceUrl || payment?.bankSlipUrl || payment?.transactionReceiptUrl;
+      if (url) window.open(url, "_blank", "noopener");
+    } catch {
+      // URL indisponível — silencioso
+    }
+  }
+
+  async function handleSaveDescClient() {
+    if (!descTxn) return;
+    setSavingClient(true);
+    try {
+      await onSetClient(descTxn.id, descClientId || null);
+      setDescTxn(null);
+    } finally {
+      setSavingClient(false);
+    }
+  }
 
   const [year, month] = selectedMonth.split("-");
   const startDate = `${year}-${month}-01`;
@@ -166,14 +241,47 @@ export function AsaasSync({
   }
 
   // Handle single link from AsaasLinkDialog
-  async function handleLinkConfirm(target: { kind: string; id?: string; groupId?: string; label: string }, notes?: string) {
+  async function handleLinkConfirm(
+    target: {
+      kind: string;
+      id?: string;
+      groupId?: string;
+      label: string;
+      clientId?: string;
+      type?: "avulso" | "reembolso";
+      description?: string;
+      amount?: number;
+      offsets?: boolean;
+    },
+    notes?: string,
+    clientId?: string | null
+  ) {
     if (!linkDialogTxn) return;
     setLinking(true);
     try {
-      if (target.kind === "invoice") {
+      if (target.kind === "passthrough") {
+        // Reembolso de repasse: marca como passthrough (fora do faturamento), atribui o cliente
+        // e define se abate o saldo a receber (offsets)
+        await onSetPassthrough?.(linkDialogTxn.id, true, target.clientId || null, target.offsets ?? true);
+      } else if (target.kind === "invoice") {
         await onLink(linkDialogTxn.id, undefined, target.id, notes);
       } else if (target.kind === "expense_entry") {
         await onLink(linkDialogTxn.id, target.id, undefined, notes);
+        // Grava o cliente de origem (vínculo visual) junto da despesa
+        if (clientId !== undefined) await onSetClient(linkDialogTxn.id, clientId);
+      } else if (target.kind === "create_invoice" && target.clientId && onCreateInvoice) {
+        const inv = await onCreateInvoice({
+          client_id: target.clientId,
+          amount: target.amount || Math.abs(Number(linkDialogTxn.value)),
+          due_date: linkDialogTxn.date,
+          status: "paid",
+          paid_at: linkDialogTxn.date,
+          description: `${target.type === "reembolso" ? "Reembolso" : "Serviço Avulso"}: ${target.description || linkDialogTxn.description || ""}`.trim(),
+          created_at: new Date().toISOString(),
+        }, true);
+        if (inv) {
+          await onLink(linkDialogTxn.id, undefined, inv.id, notes);
+        }
       }
       setLinkDialogTxn(null);
     } finally {
@@ -196,7 +304,7 @@ export function AsaasSync({
   }
 
   // Batch link
-  async function handleBatchLink(target: { kind: string; id?: string; groupId?: string; label: string }) {
+  async function handleBatchLink(target: { kind: string; id?: string; groupId?: string; label: string }, clientId?: string | null) {
     setLinking(true);
     try {
       for (const txnId of selectedBatch) {
@@ -214,8 +322,10 @@ export function AsaasSync({
             status: "pending",
           });
           if (entry) await onLink(txnId, entry.id, undefined);
+          if (clientId !== undefined) await onSetClient(txnId, clientId);
         } else if (target.kind === "expense_entry" && target.id) {
           await onLink(txnId, target.id, undefined);
+          if (clientId !== undefined) await onSetClient(txnId, clientId);
         } else if (target.kind === "invoice" && target.id) {
           await onLink(txnId, undefined, target.id);
         }
@@ -228,6 +338,22 @@ export function AsaasSync({
   }
 
   const [batchLinkOpen, setBatchLinkOpen] = useState(false);
+  const [markingPassthrough, setMarkingPassthrough] = useState(false);
+
+  // Marca as transações selecionadas como repasse (tráfego pago reembolsável).
+  // Ficam fora de Faturamento/Despesas/Fluxo e passam a aparecer na aba Repasses.
+  async function handleBatchPassthrough() {
+    if (!onSetPassthrough) return;
+    setMarkingPassthrough(true);
+    try {
+      for (const txnId of selectedBatch) {
+        await onSetPassthrough(txnId, true);
+      }
+      setSelectedBatch(new Set());
+    } finally {
+      setMarkingPassthrough(false);
+    }
+  }
 
   function toggleBatch(id: string) {
     setSelectedBatch((prev) => {
@@ -239,6 +365,11 @@ export function AsaasSync({
 
   // Derive responsible for a transaction; suggested=true means name came from description, not a confirmed link
   function resolveResponsible(txn: AsaasTransaction): { kind: "cliente" | "funcionario" | "empresa"; label: string; suggested?: boolean } {
+    // Vínculo de cliente manual (apenas visual) tem prioridade — confirmado, não sugerido
+    if (txn.client_id) {
+      const client = clients.find((c) => c.id === txn.client_id);
+      if (client) return { kind: "cliente", label: client.nome_fantasia || client.name };
+    }
     if (txn.invoice_id) {
       const inv = invoices.find((i) => i.id === txn.invoice_id);
       if (inv) {
@@ -256,8 +387,8 @@ export function AsaasSync({
         }
       }
     }
-    // For unlinked CREDIT transactions, try to suggest a client from the description
-    if (!txn.invoice_id && !txn.expense_entry_id && txn.type === "CREDIT" && txn.description) {
+    // For unlinked transactions (receita ou taxa), try to suggest a client from the description
+    if (!txn.invoice_id && !txn.expense_entry_id && txn.description) {
       const suggested = matchClient(txn.description, clients);
       if (suggested) return { kind: "cliente", label: suggested.client.nome_fantasia || suggested.client.name, suggested: true };
     }
@@ -271,8 +402,10 @@ export function AsaasSync({
         const d = t.date.split("T")[0];
         if (filterStart && d < filterStart) return false;
         if (filterEnd && d > filterEnd) return false;
-        if (filterStatus === "linked" && !(t.expense_entry_id || t.invoice_id)) return false;
-        if (filterStatus === "unlinked" && (t.expense_entry_id || t.invoice_id)) return false;
+        // Repasse conta como "resolvido": entra em Vinculadas e sai de Sem vínculo
+        const resolved = t.expense_entry_id || t.invoice_id || t.is_passthrough;
+        if (filterStatus === "linked" && !resolved) return false;
+        if (filterStatus === "unlinked" && resolved) return false;
         if (q) {
           const label = resolveResponsible(t).label.toLowerCase();
           if (!(t.description || "").toLowerCase().includes(q) && !label.includes(q)) return false;
@@ -290,8 +423,8 @@ export function AsaasSync({
       const d = t.date.split("T")[0];
       if (filterStart && d < filterStart) continue;
       if (filterEnd && d > filterEnd) continue;
-      if (t.type === "CREDIT") entrou += Number(t.value);
-      else saiu += Number(t.value);
+      if (t.type === "CREDIT") entrou += Math.abs(Number(t.value));
+      else saiu += Math.abs(Number(t.value));
     }
     return { entrou, saiu, saldo: entrou - saiu };
   }, [asaasTransactions, filterStart, filterEnd]);
@@ -307,7 +440,7 @@ export function AsaasSync({
   );
 
   const unlinkedCount = asaasTransactions.filter(
-    (t) => !t.expense_entry_id && !t.invoice_id && !t.confirms_asaas_transaction_id && !bankConfirmationIds.has(t.id)
+    (t) => !t.expense_entry_id && !t.invoice_id && !t.is_passthrough && !t.confirms_asaas_transaction_id && !bankConfirmationIds.has(t.id)
   ).length;
   const batchTotal = useMemo(() => {
     return asaasTransactions.filter((t) => selectedBatch.has(t.id)).reduce((s, t) => s + Number(t.value), 0);
@@ -470,13 +603,26 @@ export function AsaasSync({
           <span style={{ fontWeight: 700, fontSize: "0.9rem" }}>
             {selectedBatch.size} selecionada{selectedBatch.size !== 1 ? "s" : ""} · {formatCurrency(batchTotal)}
           </span>
-          <button
-            className="btn btn-accent"
-            onClick={() => setBatchLinkOpen(true)}
-            style={{ display: "flex", alignItems: "center", gap: "6px" }}
-          >
-            <Link2 size={14} /> Vincular em lote
-          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            {onSetPassthrough && (
+              <button
+                className="btn btn-secondary"
+                onClick={handleBatchPassthrough}
+                disabled={markingPassthrough}
+                title="Marcar como repasse (tráfego pago reembolsável) — sai dos KPIs e vai para a aba Repasses"
+                style={{ display: "flex", alignItems: "center", gap: "6px" }}
+              >
+                <Repeat size={14} /> {markingPassthrough ? "Marcando…" : "Marcar repasse"}
+              </button>
+            )}
+            <button
+              className="btn btn-accent"
+              onClick={() => setBatchLinkOpen(true)}
+              style={{ display: "flex", alignItems: "center", gap: "6px" }}
+            >
+              <Link2 size={14} /> Vincular em lote
+            </button>
+          </div>
         </div>
       )}
 
@@ -595,7 +741,7 @@ export function AsaasSync({
                         : <AlertCircle size={13} color="#F59E0B" />
                       }
                       <p style={{ flex: 1, fontSize: "0.82rem", color: "var(--text-secondary)" }}>{txn.description || "Taxa Asaas"}</p>
-                      <span style={{ fontSize: "0.8rem", color: "#EF4444", fontWeight: 700 }}>− {formatCurrency(Number(txn.value))}</span>
+                      <span style={{ fontSize: "0.8rem", color: "#EF4444", fontWeight: 700 }}>− {formatCurrency(Math.abs(Number(txn.value)))}</span>
                       {txn.expense_entry_id ? (
                         <span className="badge" style={{ color: "#22C55E", background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)", fontSize: "0.7rem" }}>Vinculado</span>
                       ) : (
@@ -651,15 +797,26 @@ export function AsaasSync({
                               {new Date(`${txn.date}T12:00:00`).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit" })}
                             </td>
                             <td>
-                              <span style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "0.82rem", color: responsible.suggested ? "#F59E0B" : responsible.kind === "empresa" ? "var(--text-tertiary)" : "var(--text-secondary)", fontWeight: 600 }}>
+                              <button
+                                onClick={() => openDescDialog(txn)}
+                                title={responsible.suggested ? `Sugestão: ${responsible.label} — clique para confirmar` : "Clique para atribuir cliente"}
+                                style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "0.82rem", color: responsible.suggested ? "#F59E0B" : responsible.kind === "empresa" ? "var(--text-tertiary)" : "var(--text-secondary)", fontWeight: 600, background: "none", border: "none", cursor: "pointer", padding: 0, textAlign: "left" }}
+                              >
                                 {responsible.suggested && <HelpCircle size={11} />}
                                 {responsible.kind === "funcionario" && <User size={11} />}
                                 {responsible.kind === "cliente" && !responsible.suggested && <Building2 size={11} />}
                                 {responsible.kind === "empresa" ? "—" : responsible.label}
-                              </span>
+                              </button>
                             </td>
                             <td style={{ maxWidth: "240px" }}>
-                              <p style={{ fontWeight: 600, fontSize: "0.875rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{txn.description || "—"}</p>
+                              <button
+                                onClick={() => openDescDialog(txn)}
+                                onMouseEnter={(e) => showDescTip(e, txn.description)}
+                                onMouseLeave={() => setDescTip(null)}
+                                style={{ fontWeight: 600, fontSize: "0.875rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", background: "none", border: "none", cursor: "pointer", padding: 0, textAlign: "left", color: "inherit", width: "100%", display: "block" }}
+                              >
+                                {txn.description || "—"}
+                              </button>
                             </td>
                             <td>
                               <span className="badge" style={{ color: txn.type === "CREDIT" ? "#22C55E" : "#EF4444", background: txn.type === "CREDIT" ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)", border: `1px solid ${txn.type === "CREDIT" ? "rgba(34,197,94,0.25)" : "rgba(239,68,68,0.25)"}`, fontSize: "0.75rem" }}>
@@ -667,7 +824,7 @@ export function AsaasSync({
                               </span>
                             </td>
                             <td style={{ textAlign: "right", fontWeight: 700, fontSize: "0.9rem", color: txn.type === "CREDIT" ? "#22C55E" : "#EF4444" }}>
-                              {txn.type === "DEBIT" ? "−" : "+"} {formatCurrency(Number(txn.value))}
+                              {txn.type === "DEBIT" ? "−" : "+"} {formatCurrency(Math.abs(Number(txn.value)))}
                             </td>
                             <td>
                               <span style={{ fontSize: "0.82rem", color: isLinked ? "#22C55E" : "#F59E0B", fontWeight: 600 }}>
@@ -720,6 +877,7 @@ export function AsaasSync({
             )}
             {filtered.filter((t) => !t.confirms_asaas_transaction_id).map((txn, i) => {
               const isLinked = !!(txn.expense_entry_id || txn.invoice_id);
+              const isPassthrough = !!txn.is_passthrough;
               const linkedEntry = txn.expense_entry_id ? expenseEntries.find((e) => e.id === txn.expense_entry_id) : null;
               const linkedInvoice = txn.invoice_id ? invoices.find((inv) => inv.id === txn.invoice_id) : null;
               const linkedLabel = linkedEntry?.description || linkedInvoice?.description || null;
@@ -736,7 +894,7 @@ export function AsaasSync({
                 >
                   {/* Checkbox */}
                   <td>
-                    {!isLinked && (
+                    {!isLinked && !isPassthrough && (
                       <input
                         type="checkbox"
                         checked={isBatchSelected}
@@ -751,24 +909,38 @@ export function AsaasSync({
                     {new Date(`${txn.date}T12:00:00`).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit" })}
                   </td>
 
-                  {/* Cliente */}
+                  {/* Cliente — vínculo visual (clique para atribuir) */}
                   <td>
-                    <span style={{
-                      display: "flex", alignItems: "center", gap: "5px", fontSize: "0.82rem", fontWeight: 600,
-                      color: responsible.suggested ? "#F59E0B" : responsible.kind === "empresa" ? "var(--text-tertiary)" : "var(--text-secondary)",
-                    }}>
+                    <button
+                      onClick={() => openDescDialog(txn)}
+                      title={responsible.suggested ? `Sugestão: ${responsible.label} — clique para confirmar` : "Clique para atribuir cliente"}
+                      style={{
+                        display: "flex", alignItems: "center", gap: "5px", fontSize: "0.82rem", fontWeight: 600,
+                        background: "none", border: "none", cursor: "pointer", padding: 0, textAlign: "left",
+                        color: responsible.suggested ? "#F59E0B" : responsible.kind === "empresa" ? "var(--text-tertiary)" : "var(--text-secondary)",
+                      }}
+                    >
                       {responsible.kind === "funcionario" && <User size={11} />}
                       {responsible.kind === "cliente" && !responsible.suggested && <Building2 size={11} />}
                       {responsible.suggested && <HelpCircle size={11} />}
                       {responsible.kind === "empresa" ? "—" : responsible.label}
-                    </span>
+                    </button>
                   </td>
 
-                  {/* Descrição */}
+                  {/* Descrição — hover mostra completo (tooltip via portal), clique abre detalhe */}
                   <td style={{ maxWidth: "240px" }}>
-                    <p style={{ fontWeight: 600, fontSize: "0.875rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <button
+                      onClick={() => openDescDialog(txn)}
+                      onMouseEnter={(e) => showDescTip(e, txn.description)}
+                      onMouseLeave={() => setDescTip(null)}
+                      style={{
+                        fontWeight: 600, fontSize: "0.875rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                        background: "none", border: "none", cursor: "pointer", padding: 0, textAlign: "left", color: "inherit",
+                        maxWidth: "100%", display: "block", width: "100%",
+                      }}
+                    >
                       {txn.description || "—"}
-                    </p>
+                    </button>
                   </td>
 
                   {/* Tipo */}
@@ -785,7 +957,7 @@ export function AsaasSync({
 
                   {/* Valor */}
                   <td style={{ textAlign: "right", fontWeight: 700, fontSize: "0.9rem", color: txn.type === "CREDIT" ? "#22C55E" : "#EF4444", whiteSpace: "nowrap" }}>
-                    {txn.type === "DEBIT" ? "−" : "+"} {formatCurrency(Number(txn.value))}
+                    {txn.type === "DEBIT" ? "−" : "+"} {formatCurrency(Math.abs(Number(txn.value)))}
                   </td>
 
                   {/* Vínculo com hover + clique para detalhes */}
@@ -797,18 +969,35 @@ export function AsaasSync({
                     >
                       <button
                         onClick={() => isLinked ? setDetailTxn(txn) : setLinkDialogTxn(txn)}
-                        style={{ background: "none", border: "none", cursor: "pointer", display: "inline-flex", padding: "2px" }}
+                        style={{ background: "none", border: "none", cursor: isPassthrough ? "default" : "pointer", display: "inline-flex", padding: "2px" }}
                       >
-                        {isLinked ? (
-                          <span style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "0.82rem", color: "#22C55E", fontWeight: 600 }}>
-                            <CheckCircle2 size={11} />
-                            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100px" }}>
-                              {linkedLabel || "Vinculado"}
-                            </span>
+                        {isPassthrough ? (
+                          <span style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "0.82rem", color: "var(--accent)", fontWeight: 700 }}>
+                            <Repeat size={11} /> Repasse
                           </span>
-                        ) : (
-                          <span style={{ fontSize: "0.82rem", color: "#F59E0B", fontWeight: 600 }}>Sem vínculo</span>
-                        )}
+                        ) : isLinked ? (
+                          <span style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "1px" }}>
+                            <span style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "0.82rem", color: "#22C55E", fontWeight: 600 }}>
+                              <CheckCircle2 size={11} />
+                              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100px" }}>
+                                {linkedLabel || "Vinculado"}
+                              </span>
+                            </span>
+                            {txn.confirms_asaas_transaction_id && (
+                              <span style={{ fontSize: "0.68rem", color: "#60A5FA", fontWeight: 600 }}>confirmação bancária</span>
+                            )}
+                          </span>
+                        ) : (() => {
+                          const fatura = txn.description ? extractFaturaNumber(txn.description) : null;
+                          return (
+                            <span style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "1px" }}>
+                              <span style={{ fontSize: "0.82rem", color: "#F59E0B", fontWeight: 600 }}>Sem vínculo</span>
+                              {fatura && (
+                                <span style={{ fontSize: "0.68rem", color: "var(--text-tertiary)", fontWeight: 600 }}>Fatura {fatura}</span>
+                              )}
+                            </span>
+                          );
+                        })()}
                       </button>
                     </div>
                     {hoveredVinculo === txn.id && (
@@ -861,7 +1050,15 @@ export function AsaasSync({
 
                   {/* Ação */}
                   <td style={{ textAlign: "right" }}>
-                    {!isLinked ? (
+                    {isPassthrough ? (
+                      <button
+                        onClick={() => onSetPassthrough?.(txn.id, false)}
+                        style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-tertiary)", padding: "4px", display: "inline-flex" }}
+                        title="Desfazer repasse"
+                      >
+                        <X size={15} />
+                      </button>
+                    ) : !isLinked ? (
                       <button
                         onClick={() => setLinkDialogTxn(txn)}
                         style={{ background: "none", border: "none", cursor: "pointer", color: "#F59E0B", padding: "4px", display: "inline-flex" }}
@@ -910,6 +1107,7 @@ export function AsaasSync({
             : undefined
         }
         defaultCategory={linkDialogDefaultCategory}
+        defaultEntryAmount={linkDialogTxn ? Math.abs(Number(linkDialogTxn.value)) : undefined}
         onClose={() => { setLinkDialogTxn(null); setLinkDialogDefaultCategory(undefined); }}
         onConfirm={handleLinkConfirm as any}
         onCreateVariableEntry={handleCreateVariableEntry}
@@ -924,10 +1122,12 @@ export function AsaasSync({
         expenses={expenses}
         clients={clients}
         linking={linking}
+        defaultEntryAmount={Math.abs(batchTotal)}
+        groupedCount={selectedBatch.size}
         onClose={() => setBatchLinkOpen(false)}
-        onConfirm={async (target) => {
+        onConfirm={async (target, _notes, clientId) => {
           setBatchLinkOpen(false);
-          await handleBatchLink(target as any);
+          await handleBatchLink(target as any, clientId);
         }}
         onCreateVariableEntry={handleCreateVariableEntry}
       />
@@ -1040,6 +1240,212 @@ export function AsaasSync({
         );
       })()}
 
+      {/* Dialog: descrição completa + atribuição de cliente (vínculo visual) */}
+      {descTxn && (() => {
+        const fin = descTxn.expense_entry_id
+          ? { label: expenseEntries.find((e) => e.id === descTxn.expense_entry_id)?.description || "Despesa vinculada", color: "#EF4444" }
+          : descTxn.invoice_id
+          ? { label: invoices.find((i) => i.id === descTxn.invoice_id)?.description || "Fatura vinculada", color: "#22C55E" }
+          : null;
+
+        const faturaNumber = descTxn.description ? extractFaturaNumber(descTxn.description) : null;
+        const feeCategory = descTxn.description ? detectFeeCategory(descTxn.description) : null;
+        const FEE_LABELS: Record<string, string> = { taxa_asaas: "Taxa Asaas", taxa_boleto: "Taxa de Boleto", taxa_mensageria: "Taxa de Mensageria", taxa_pix: "Taxa Pix" };
+        const STATUS_META: Record<string, { label: string; color: string }> = {
+          RECEIVED: { label: "Recebida", color: "#22C55E" },
+          CONFIRMED: { label: "Confirmada", color: "#22C55E" },
+          RECEIVED_IN_CASH: { label: "Recebida em dinheiro", color: "#22C55E" },
+          PENDING: { label: "Pendente", color: "#F59E0B" },
+          OVERDUE: { label: "Vencida", color: "#EF4444" },
+          REFUNDED: { label: "Estornada", color: "#EF4444" },
+          DEBIT: { label: "Débito", color: "#EF4444" },
+          CREDIT: { label: "Crédito", color: "#22C55E" },
+        };
+        const statusMeta = descTxn.status ? (STATUS_META[descTxn.status] || { label: descTxn.status, color: "var(--text-secondary)" }) : null;
+        const suggested = descTxn.description && !descClientId ? matchClient(descTxn.description, clients)?.client : undefined;
+        const meta: { label: string; value: React.ReactNode }[] = [
+          { label: "Tipo", value: descTxn.type === "CREDIT" ? "Receita (entrada)" : "Despesa (saída)" },
+          ...(statusMeta ? [{ label: "Status Asaas", value: <span style={{ color: statusMeta.color, fontWeight: 700 }}>{statusMeta.label}</span> }] : []),
+          ...(faturaNumber ? [{ label: "Nº da fatura", value: faturaNumber }] : []),
+          ...(feeCategory ? [{ label: "Categoria detectada", value: FEE_LABELS[feeCategory] || feeCategory }] : []),
+          ...(descTxn.confirms_asaas_transaction_id ? [{ label: "Tipo de registro", value: <span style={{ color: "#60A5FA", fontWeight: 700 }}>Confirmação bancária</span> }] : []),
+          { label: "Data", value: new Date(`${descTxn.date.split("T")[0]}T12:00:00`).toLocaleDateString("pt-BR") },
+          ...(descTxn.synced_at ? [{ label: "Sincronizado em", value: new Date(descTxn.synced_at).toLocaleString("pt-BR") }] : []),
+          { label: "ID Asaas", value: <span style={{ fontFamily: "monospace", fontSize: "0.74rem", wordBreak: "break-all" }}>{descTxn.id}</span> },
+        ];
+
+        return (
+          <DialogShell
+            isOpen
+            onClose={() => setDescTxn(null)}
+            title="Detalhe da Transação"
+            maxWidth="480px"
+            footer={
+              <div style={{ display: "flex", justifyContent: "space-between", gap: "12px" }}>
+                <button className="btn btn-secondary" onClick={() => openAsaasLink(descTxn.id)}>
+                  Abrir no Asaas
+                </button>
+                <button className="btn btn-accent" onClick={handleSaveDescClient} disabled={savingClient}>
+                  {savingClient ? "Salvando..." : "Salvar cliente"}
+                </button>
+              </div>
+            }
+          >
+            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              {/* Descrição completa */}
+              <div style={{ padding: "12px 16px", borderRadius: "12px", background: descTxn.type === "CREDIT" ? "rgba(34,197,94,0.06)" : "rgba(239,68,68,0.06)", border: `1px solid ${descTxn.type === "CREDIT" ? "rgba(34,197,94,0.2)" : "rgba(239,68,68,0.2)"}` }}>
+                <p style={{ fontSize: "0.7rem", color: "var(--text-secondary)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "4px" }}>
+                  Descrição · {descTxn.type === "CREDIT" ? "Receita" : "Despesa"}
+                </p>
+                <p style={{ fontSize: "0.9rem", fontWeight: 600, lineHeight: 1.45, wordBreak: "break-word" }}>
+                  {descTxn.description || "Sem descrição"}
+                </p>
+                <p style={{ fontWeight: 800, fontSize: "1.05rem", color: descTxn.type === "CREDIT" ? "#22C55E" : "#EF4444", marginTop: "6px" }}>
+                  {descTxn.type === "CREDIT" ? "+" : "−"} {formatCurrency(Math.abs(Number(descTxn.value)))}
+                  <span style={{ fontSize: "0.75rem", fontWeight: 400, color: "var(--text-tertiary)", marginLeft: "8px" }}>
+                    {new Date(`${descTxn.date.split("T")[0]}T12:00:00`).toLocaleDateString("pt-BR")}
+                  </span>
+                </p>
+              </div>
+
+              {/* Metadados do Asaas */}
+              <div style={{ padding: "4px 16px", borderRadius: "12px", background: "rgba(255,255,255,0.02)", border: "1px solid var(--border)" }}>
+                {meta.map((row, idx) => (
+                  <div
+                    key={row.label}
+                    style={{
+                      display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px",
+                      padding: "9px 0",
+                      borderTop: idx === 0 ? "none" : "1px solid rgba(255,255,255,0.05)",
+                    }}
+                  >
+                    <span style={{ fontSize: "0.76rem", color: "var(--text-tertiary)", fontWeight: 600, flexShrink: 0 }}>{row.label}</span>
+                    <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)", fontWeight: 600, textAlign: "right", minWidth: 0 }}>{row.value}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Vínculo financeiro (saída/entrada) — somente leitura aqui */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px", padding: "10px 14px", borderRadius: "10px", background: "rgba(255,255,255,0.02)", border: "1px solid var(--border)" }}>
+                <span style={{ fontSize: "0.78rem", color: "var(--text-secondary)", fontWeight: 600 }}>Vínculo financeiro</span>
+                {fin ? (
+                  <span style={{ fontSize: "0.82rem", fontWeight: 700, color: fin.color, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "240px" }}>
+                    {fin.label}
+                  </span>
+                ) : (
+                  <span style={{ fontSize: "0.82rem", fontWeight: 600, color: "#F59E0B" }}>Sem vínculo</span>
+                )}
+              </div>
+
+              {/* Destino da transferência (Pix/TED) — busca sob demanda */}
+              {descTxn.type === "DEBIT" && (/pix|transfer|ted/i.test(descTxn.description || "") || descTxn.transfer_id) && (
+                <div style={{ padding: "12px 14px", borderRadius: "10px", background: "rgba(96,165,250,0.05)", border: "1px solid rgba(96,165,250,0.2)" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px" }}>
+                    <span style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.76rem", fontWeight: 700, color: "#60A5FA", textTransform: "uppercase", letterSpacing: "0.03em" }}>
+                      <Building2 size={12} /> Destino da transferência
+                    </span>
+                    {descTxn.transfer_id && !transferDetail && (
+                      <button
+                        className="btn btn-secondary"
+                        style={{ fontSize: "0.74rem", padding: "4px 12px", whiteSpace: "nowrap" }}
+                        onClick={() => handleLoadTransfer(descTxn.transfer_id!)}
+                        disabled={loadingTransfer}
+                      >
+                        {loadingTransfer ? "Carregando..." : "Ver destino"}
+                      </button>
+                    )}
+                  </div>
+
+                  {!descTxn.transfer_id && (
+                    <p style={{ fontSize: "0.76rem", color: "var(--text-tertiary)", marginTop: "6px" }}>
+                      Destinatário (pela descrição): <strong style={{ color: "var(--text-secondary)" }}>{descTxn.description || "—"}</strong>.
+                      Re-sincronize o extrato (botão Sincronizar) para carregar o destino completo do Asaas.
+                    </p>
+                  )}
+
+                  {transferError && (
+                    <p style={{ fontSize: "0.76rem", color: "#EF4444", marginTop: "6px" }}>{transferError}</p>
+                  )}
+
+                  {transferDetail && (() => {
+                    const ba = transferDetail.bankAccount || {};
+                    const rows: { label: string; value?: string }[] = [
+                      { label: "Destinatário", value: ba.ownerName || transferDetail.recipientName },
+                      { label: "CPF/CNPJ", value: ba.cpfCnpj || transferDetail.recipientCpfCnpj },
+                      { label: "Tipo", value: transferDetail.operationType },
+                      { label: "Chave Pix", value: transferDetail.pixAddressKey },
+                      { label: "Tipo da chave", value: transferDetail.pixAddressKeyType },
+                      { label: "Banco", value: ba.bank?.name || ba.bank?.code },
+                      { label: "Agência", value: ba.agency },
+                      { label: "Conta", value: ba.account ? `${ba.account}${ba.accountDigit ? "-" + ba.accountDigit : ""}` : undefined },
+                      { label: "Status", value: transferDetail.status },
+                    ].filter((r) => r.value);
+                    if (rows.length === 0) {
+                      return <p style={{ fontSize: "0.76rem", color: "var(--text-tertiary)", marginTop: "6px" }}>O Asaas não retornou dados de destino para esta transferência.</p>;
+                    }
+                    return (
+                      <div style={{ marginTop: "8px" }}>
+                        {rows.map((r, idx) => (
+                          <div key={r.label} style={{ display: "flex", justifyContent: "space-between", gap: "16px", padding: "7px 0", borderTop: idx === 0 ? "none" : "1px solid rgba(255,255,255,0.05)" }}>
+                            <span style={{ fontSize: "0.76rem", color: "var(--text-tertiary)", fontWeight: 600, flexShrink: 0 }}>{r.label}</span>
+                            <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)", fontWeight: 600, textAlign: "right", wordBreak: "break-word" }}>{r.value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+
+              {/* Observação interna, se houver */}
+              {descTxn.notes && (
+                <div style={{ padding: "10px 14px", borderRadius: "10px", background: "rgba(245,158,11,0.05)", border: "1px solid rgba(245,158,11,0.18)" }}>
+                  <span style={{ fontSize: "0.72rem", color: "var(--text-tertiary)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>Observação</span>
+                  <p style={{ fontSize: "0.82rem", color: "var(--text-secondary)", fontStyle: "italic", marginTop: "3px" }}>{descTxn.notes}</p>
+                </div>
+              )}
+
+              {/* Sugestão de cliente pela descrição */}
+              {suggested && (
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px", padding: "10px 14px", borderRadius: "10px", background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.2)" }}>
+                  <span style={{ fontSize: "0.8rem", color: "#F59E0B", fontWeight: 600 }}>
+                    Possível cliente: <strong>{suggested.nome_fantasia || suggested.name}</strong>
+                  </span>
+                  <button
+                    className="btn btn-secondary"
+                    style={{ fontSize: "0.74rem", padding: "4px 12px", whiteSpace: "nowrap" }}
+                    onClick={() => setDescClientId(suggested.id)}
+                  >
+                    Usar
+                  </button>
+                </div>
+              )}
+
+              {/* Vínculo de cliente — apenas visual, editável */}
+              <div>
+                <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: "var(--text-secondary)", marginBottom: "6px" }}>
+                  Cliente (apenas visual)
+                </label>
+                <select
+                  className="input-dark"
+                  style={{ width: "100%" }}
+                  value={descClientId}
+                  onChange={(e) => setDescClientId(e.target.value)}
+                >
+                  <option value="">— Nenhum —</option>
+                  {clients.map((c) => (
+                    <option key={c.id} value={c.id}>{c.nome_fantasia || c.name}</option>
+                  ))}
+                </select>
+                <p style={{ fontSize: "0.72rem", color: "var(--text-tertiary)", marginTop: "6px" }}>
+                  Atribui esta transação a um cliente sem alterar o vínculo financeiro. Útil para taxas (notificação, boleto) referentes a um cliente específico.
+                </p>
+              </div>
+            </div>
+          </DialogShell>
+        );
+      })()}
+
       {/* Auto-link review dialog */}
       <DialogShell
         isOpen={showAutoLinkPanel}
@@ -1105,7 +1511,7 @@ export function AsaasSync({
                         {txn.description || txn.id.slice(0, 20)}
                       </p>
                       <p style={{ fontSize: "0.72rem", color: "var(--text-tertiary)" }}>
-                        {new Date(`${txn.date}T12:00:00`).toLocaleDateString("pt-BR")} · {formatCurrency(Number(txn.value))}
+                        {new Date(`${txn.date}T12:00:00`).toLocaleDateString("pt-BR")} · {formatCurrency(Math.abs(Number(txn.value)))}
                       </p>
                     </div>
                     <div style={{ fontSize: "1rem", color: "var(--text-secondary)" }}>→</div>
@@ -1127,6 +1533,38 @@ export function AsaasSync({
           )}
         </div>
       </DialogShell>
+
+      {/* Tooltip de descrição (portal — não sofre clipping da tabela) */}
+      {descTip && typeof document !== "undefined" && createPortal(
+        <div
+          style={{
+            position: "fixed",
+            left: descTip.x,
+            top: descTip.y,
+            zIndex: 1000,
+            width: "320px",
+            background: "rgba(20,20,22,0.98)",
+            border: "1px solid var(--border)",
+            borderRadius: "12px",
+            padding: "12px 14px",
+            boxShadow: "0 12px 36px rgba(0,0,0,0.55)",
+            pointerEvents: "none",
+            backdropFilter: "blur(8px)",
+            WebkitBackdropFilter: "blur(8px)",
+          }}
+        >
+          <p style={{ fontSize: "0.7rem", fontWeight: 700, color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "5px" }}>
+            Descrição completa
+          </p>
+          <p style={{ fontSize: "0.83rem", fontWeight: 500, color: "var(--text-primary)", lineHeight: 1.45, wordBreak: "break-word" }}>
+            {descTip.text}
+          </p>
+          <p style={{ fontSize: "0.7rem", color: "var(--text-tertiary)", marginTop: "8px" }}>
+            Clique para ver detalhes e atribuir cliente
+          </p>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

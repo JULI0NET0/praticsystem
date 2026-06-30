@@ -12,22 +12,31 @@ function getSupabase() {
 export async function POST(request: Request) {
   try {
     const supabase = getSupabase();
-    const { asaas_transaction_id, expense_entry_id, invoice_id, notes, confirms_asaas_transaction_id } = await request.json();
+    const { asaas_transaction_id, expense_entry_id, invoice_id, client_id, notes, confirms_asaas_transaction_id, is_passthrough, passthrough_offsets } = await request.json();
 
     if (!asaas_transaction_id) {
       return NextResponse.json({ error: 'asaas_transaction_id é obrigatório' }, { status: 400 });
     }
 
-    if (!expense_entry_id && !invoice_id && !confirms_asaas_transaction_id) {
+    // client_id pode vir sozinho (vínculo de cliente apenas visual) e null limpa o vínculo
+    const hasClientUpdate = client_id !== undefined;
+    // is_passthrough marca/desmarca a transação como repasse (tráfego pago reembolsável)
+    const hasPassthroughUpdate = is_passthrough !== undefined;
+    // passthrough_offsets: se o crédito de repasse abate o saldo a receber do cliente
+    const hasOffsetsUpdate = passthrough_offsets !== undefined;
+    if (!expense_entry_id && !invoice_id && !confirms_asaas_transaction_id && !hasClientUpdate && !hasPassthroughUpdate && !hasOffsetsUpdate) {
       return NextResponse.json(
-        { error: 'Informe expense_entry_id, invoice_id ou confirms_asaas_transaction_id' },
+        { error: 'Informe expense_entry_id, invoice_id, client_id, is_passthrough ou confirms_asaas_transaction_id' },
         { status: 400 }
       );
     }
 
-    const update: Record<string, string> = {};
+    const update: Record<string, string | boolean | null> = {};
     if (expense_entry_id) update.expense_entry_id = expense_entry_id;
     if (invoice_id) update.invoice_id = invoice_id;
+    if (hasClientUpdate) update.client_id = client_id || null;
+    if (hasPassthroughUpdate) update.is_passthrough = !!is_passthrough;
+    if (hasOffsetsUpdate) update.passthrough_offsets = !!passthrough_offsets;
     if (notes) update.notes = notes;
     // Bank statement confirmation: links to the invoice for display but excluded from payment sum
     if (confirms_asaas_transaction_id) {

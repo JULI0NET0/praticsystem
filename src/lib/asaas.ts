@@ -29,6 +29,11 @@ export interface AsaasTransactionRaw {
   status: string;
   transferType?: string;
   category?: string;
+  // Referências para detalhar origem/destino (Pix, TED, cobrança)
+  transfer?: string | null;
+  transferId?: string | null;
+  payment?: string | null;
+  paymentId?: string | null;
 }
 
 export interface AsaasTransactionsResponse {
@@ -117,6 +122,37 @@ export interface AsaasPayment {
 
 export async function getAsaasPaymentById(id: string): Promise<AsaasPayment> {
   return asaasFetch(`/payments/${id}`);
+}
+
+// Detalhe de uma transferência (Pix/TED) — inclui destinatário, chave Pix e banco
+export interface AsaasTransferBankAccount {
+  bank?: { code?: string; name?: string };
+  ownerName?: string;
+  cpfCnpj?: string;
+  agency?: string;
+  account?: string;
+  accountDigit?: string;
+}
+
+export interface AsaasTransfer {
+  id: string;
+  value: number;
+  netValue?: number;
+  status?: string;
+  transferFee?: number;
+  dateCreated?: string;
+  effectiveDate?: string;
+  operationType?: string; // PIX, TED, INTERNAL...
+  pixAddressKey?: string;
+  pixAddressKeyType?: string;
+  description?: string;
+  bankAccount?: AsaasTransferBankAccount;
+  recipientName?: string;
+  recipientCpfCnpj?: string;
+}
+
+export async function getAsaasTransferById(id: string): Promise<AsaasTransfer> {
+  return asaasFetch(`/transfers/${id}`);
 }
 
 export async function createAsaasPayment(data: {

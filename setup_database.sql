@@ -172,6 +172,9 @@ CREATE TABLE IF NOT EXISTS public.asaas_transactions (
     status           TEXT,
     expense_entry_id UUID REFERENCES public.expense_entries(id),
     invoice_id       UUID REFERENCES public.invoices(id),
+    client_id        UUID REFERENCES public.clients(id),
+    transfer_id      TEXT,
+    payment_id       TEXT,
     synced_at        TIMESTAMPTZ DEFAULT NOW()
 );
 

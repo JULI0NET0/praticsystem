@@ -60,6 +60,9 @@ export async function POST(request: Request) {
       type: ASAAS_CREDIT_TYPES.has(t.type) ? 'CREDIT' : 'DEBIT',
       date: t.date,
       status: t.status,
+      // Referências para detalhar origem/destino (ex.: destino do Pix em /transfers/{id})
+      transfer_id: t.transfer ?? t.transferId ?? null,
+      payment_id: t.payment ?? t.paymentId ?? null,
       synced_at: new Date().toISOString(),
     }));
 

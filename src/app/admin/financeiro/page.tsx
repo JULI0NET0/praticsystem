@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/components/CustomToast";
-import { Loader2, LayoutDashboard, AlertTriangle, ListOrdered, Wallet, RefreshCw, Layers } from "lucide-react";
+import { Loader2, LayoutDashboard, AlertTriangle, ListOrdered, Wallet, RefreshCw, Layers, Repeat } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { FinancialKPIs } from "@/components/financeiro/FinancialKPIs";
 import { DespesasList } from "@/components/financeiro/DespesasList";
@@ -10,9 +10,10 @@ import { LancamentosTable } from "@/components/financeiro/LancamentosTable";
 import { FluxoCaixa } from "@/components/financeiro/FluxoCaixa";
 import { AsaasSync } from "@/components/financeiro/AsaasSync";
 import { DespesasVariaveis } from "@/components/financeiro/DespesasVariaveis";
+import { Repasses } from "@/components/financeiro/Repasses";
 import type { Expense, ExpenseEntry, AsaasTransaction, Invoice } from "@/types/database";
 
-type Tab = "dashboard" | "despesas" | "lancamentos" | "fluxo" | "asaas" | "variaveis";
+type Tab = "dashboard" | "despesas" | "lancamentos" | "fluxo" | "asaas" | "variaveis" | "repasses";
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "dashboard", label: "Dashboard", icon: <LayoutDashboard size={16} /> },
@@ -21,6 +22,7 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "lancamentos", label: "Sistema", icon: <ListOrdered size={16} /> },
   { id: "asaas", label: "Banco", icon: <RefreshCw size={16} /> },
   { id: "fluxo", label: "Fluxo de Caixa", icon: <Wallet size={16} /> },
+  { id: "repasses", label: "Repasses", icon: <Repeat size={16} /> },
 ];
 
 export default function FinanceiroPage() {
@@ -158,14 +160,13 @@ export default function FinanceiroPage() {
     const endMatch = !endDate || d <= endDate;
     return startMatch && endMatch;
   });
-  const faturamentoRealizado = periodInvoices
+  const faturamentoRealizado = invoices
     .filter((inv) => {
-      if (inv.status === "paid") return true;
-      const linked = asaasTransactions.filter(
-        (t) => t.invoice_id === inv.id && !t.confirms_asaas_transaction_id
-      );
-      const total = linked.reduce((s, t) => s + Number(t.value), 0);
-      return Number(inv.amount) > 0 && total >= Number(inv.amount);
+      if (inv.status !== "paid") return false;
+      const d = inv.paid_at ? inv.paid_at.split("T")[0] : inv.due_date.split("T")[0];
+      const startMatch = !startDate || d >= startDate;
+      const endMatch = !endDate || d <= endDate;
+      return startMatch && endMatch;
     })
     .reduce((s, i) => s + Number(i.amount), 0);
   const faturamentoPrevisto = periodInvoices.reduce((s, i) => s + Number(i.amount), 0);
@@ -187,11 +188,21 @@ export default function FinanceiroPage() {
     if (e.status === "pending") return s + Math.min(linkedSumForEntry(e.id), Number(e.amount));
     return s;
   }, 0);
-  // Despesas previstas = apenas o saldo em aberto (total - já pago) de entries 'pending'
+  // Despesas previstas = valor total lançado no período (pagas + a pagar), exceto canceladas
   const despesasPrevistas = periodEntries.reduce((s, e) => {
-    if (e.status === "pending") return s + Math.max(0, Number(e.amount) - linkedSumForEntry(e.id));
-    return s;
+    if (e.status === "cancelled") return s;
+    return s + Number(e.amount);
   }, 0);
+  // Lista detalhada de todas as contas lançadas no período (para o dialog do card)
+  const despesaItems = periodEntries.map((e) => ({
+    id: e.id,
+    description: e.description,
+    category: e.category as string | undefined,
+    date: e.date.split("T")[0],
+    amount: Number(e.amount),
+    paid: e.status === "paid" ? Number(e.amount) : Math.min(linkedSumForEntry(e.id), Number(e.amount)),
+    status: e.status,
+  }));
 
   const clientesAtivos = contracts.filter((c) => c.status === "active").length;
 
@@ -312,6 +323,33 @@ export default function FinanceiroPage() {
     }
   }
 
+  async function handleSetTransactionClient(asaasId: string, clientId: string | null) {
+    await fetch("/api/financeiro/asaas/link", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ asaas_transaction_id: asaasId, client_id: clientId }),
+    });
+    const { data } = await supabase.from("asaas_transactions").select("*").order("date", { ascending: false });
+    if (data) setAsaasTransactions(data);
+  }
+
+  // Marca/desmarca uma transação como repasse (tráfego pago reembolsável), fora dos KPIs/Fluxo.
+  // Opcionalmente atribui o cliente e define se o crédito abate o saldo (offsets) na mesma chamada.
+  async function handleSetPassthrough(asaasId: string, isPassthrough: boolean, clientId?: string | null, offsets?: boolean) {
+    await fetch("/api/financeiro/asaas/link", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        asaas_transaction_id: asaasId,
+        is_passthrough: isPassthrough,
+        ...(clientId !== undefined ? { client_id: clientId } : {}),
+        ...(offsets !== undefined ? { passthrough_offsets: offsets } : {}),
+      }),
+    });
+    const { data } = await supabase.from("asaas_transactions").select("*").order("date", { ascending: false });
+    if (data) setAsaasTransactions(data);
+  }
+
   async function handleReconcile() {
     const res = await fetch("/api/financeiro/asaas/reconcile", { method: "POST" });
     const result = await res.json().catch(() => ({}));
@@ -358,7 +396,7 @@ export default function FinanceiroPage() {
     if (entRes.data) setExpenseEntries(entRes.data);
   }
 
-  async function handleCreateInvoice(data: Partial<Invoice>) {
+  async function handleCreateInvoice(data: Partial<Invoice>, skipTransaction = false) {
     const { data: created, error } = await supabase.from("invoices").insert([data]).select("*").single();
     if (error) {
       showToast(`Erro ao registrar cobrança: ${error.message}`, "error");
@@ -367,7 +405,7 @@ export default function FinanceiroPage() {
     if (created) {
       setInvoices((prev) => [created, ...prev]);
 
-      if (data.status === "paid") {
+      if (data.status === "paid" && !skipTransaction) {
         const txnDate = (data.paid_at || data.due_date || new Date().toISOString().split("T")[0]) as string;
         const { data: txn } = await supabase
           .from("asaas_transactions")
@@ -386,6 +424,7 @@ export default function FinanceiroPage() {
       }
     }
     showToast("Cobrança registrada com sucesso!", "success");
+    return created;
   }
 
   async function handleUpdateInvoiceStatus(id: string, status: string, paidAt?: string) {
@@ -439,6 +478,7 @@ export default function FinanceiroPage() {
         faturamentoRealizado={faturamentoRealizado}
         despesas={despesas}
         despesasPrevistas={despesasPrevistas}
+        despesaItems={despesaItems}
         clientesAtivos={clientesAtivos}
         dateRange={dateRange}
         datePreset={datePreset}
@@ -620,10 +660,13 @@ export default function FinanceiroPage() {
           onSync={handleSync}
           onLink={handleLinkTransaction}
           onUnlink={handleUnlinkTransaction}
+          onSetClient={handleSetTransactionClient}
+          onSetPassthrough={handleSetPassthrough}
           onMarkAsConfirmation={handleMarkAsConfirmation}
           onReconcile={handleReconcile}
           onUpdateInvoiceStatus={handleUpdateInvoiceStatus}
           onCreateEntry={handleCreateEntry}
+          onCreateInvoice={handleCreateInvoice}
           selectedMonth={selectedMonthForComponents}
           startDate={startDate}
           endDate={endDate}
@@ -647,6 +690,17 @@ export default function FinanceiroPage() {
           onUpdateEntry={handleUpdateEntry}
           onDeleteEntry={handleDeleteEntry}
           onLinkTransaction={handleLinkTransaction}
+        />
+      )}
+
+      {tab === "repasses" && (
+        <Repasses
+          asaasTransactions={asaasTransactions}
+          clients={clients}
+          startDate={startDate}
+          endDate={endDate}
+          onSetPassthrough={handleSetPassthrough}
+          onSetClient={handleSetTransactionClient}
         />
       )}
     </div>
