@@ -439,9 +439,12 @@ export function AsaasSync({
     [faturaGroups]
   );
 
-  const unlinkedCount = asaasTransactions.filter(
-    (t) => !t.expense_entry_id && !t.invoice_id && !t.is_passthrough && !t.confirms_asaas_transaction_id && !bankConfirmationIds.has(t.id)
-  ).length;
+  const unlinkedCount = asaasTransactions.filter((t) => {
+    const d = t.date.split("T")[0];
+    if (filterStart && d < filterStart) return false;
+    if (filterEnd && d > filterEnd) return false;
+    return !t.expense_entry_id && !t.invoice_id && !t.is_passthrough && !t.confirms_asaas_transaction_id && !bankConfirmationIds.has(t.id);
+  }).length;
   const batchTotal = useMemo(() => {
     return asaasTransactions.filter((t) => selectedBatch.has(t.id)).reduce((s, t) => s + Number(t.value), 0);
   }, [asaasTransactions, selectedBatch]);

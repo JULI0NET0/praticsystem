@@ -231,6 +231,82 @@ export function AsaasLinkDialog({
           </div>
         )}
 
+        {/* Repasse / tráfego pago — vale para débito (pagamento) e crédito (reembolso) */}
+        {transaction && (
+          <div style={{
+            padding: "14px", borderRadius: "12px", width: "100%",
+            border: `1px solid ${selected?.kind === "passthrough" ? "var(--accent)" : "var(--border)"}`,
+            background: selected?.kind === "passthrough" ? "rgba(217,72,15,0.06)" : "rgba(255,255,255,0.01)",
+            display: "flex", flexDirection: "column", gap: "10px",
+          }}>
+            <button
+              onClick={() => selected?.kind === "passthrough" ? setSelected(null) : selectPassthrough(passthroughClientId)}
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px",
+                background: "none", border: "none", cursor: "pointer", padding: 0, textAlign: "left", color: "var(--text-primary)",
+              }}
+            >
+              <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Repeat size={15} color="var(--accent)" />
+                <span style={{ display: "flex", flexDirection: "column" }}>
+                  <span style={{ fontWeight: 700, fontSize: "0.85rem" }}>
+                    {transaction.type === "DEBIT" ? "É pagamento de repasse" : "É reembolso de repasse"}
+                  </span>
+                  <span style={{ fontSize: "0.72rem", color: "var(--text-tertiary)" }}>
+                    {transaction.type === "DEBIT"
+                      ? "Tráfego pago a reembolsar — não conta como despesa"
+                      : "Devolução de tráfego pago — não conta como faturamento"}
+                  </span>
+                </span>
+              </span>
+              <span style={{
+                width: "18px", height: "18px", borderRadius: "6px", flexShrink: 0,
+                border: `1px solid ${selected?.kind === "passthrough" ? "var(--accent)" : "var(--border)"}`,
+                background: selected?.kind === "passthrough" ? "var(--accent)" : "transparent",
+                display: "flex", alignItems: "center", justifyContent: "center", color: "#fff",
+              }}>
+                {selected?.kind === "passthrough" && <Check size={12} />}
+              </span>
+            </button>
+            {selected?.kind === "passthrough" && (
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <span style={{ fontSize: "0.68rem", color: "var(--text-secondary)", fontWeight: 700 }}>
+                    {transaction.type === "DEBIT" ? "Cliente do repasse" : "Cliente que reembolsou"}
+                  </span>
+                  <select
+                    className="input-dark"
+                    style={{ width: "100%", fontSize: "0.85rem" }}
+                    value={passthroughClientId}
+                    onChange={(e) => { setPassthroughClientId(e.target.value); selectPassthrough(e.target.value); }}
+                  >
+                    <option value="">— Sem cliente (atribuir depois) —</option>
+                    {clients.map((c) => (
+                      <option key={c.id} value={c.id}>{c.nome_fantasia || c.name}</option>
+                    ))}
+                  </select>
+                </div>
+                {transaction.type === "CREDIT" && (
+                  <label style={{ display: "flex", alignItems: "flex-start", gap: "8px", cursor: "pointer" }}>
+                    <input
+                      type="checkbox"
+                      checked={passthroughOffsets}
+                      onChange={(e) => { setPassthroughOffsets(e.target.checked); selectPassthrough(passthroughClientId, e.target.checked); }}
+                      style={{ marginTop: "2px", cursor: "pointer", accentColor: "var(--accent)", width: "15px", height: "15px", flexShrink: 0 }}
+                    />
+                    <span style={{ display: "flex", flexDirection: "column" }}>
+                      <span style={{ fontSize: "0.8rem", fontWeight: 600 }}>Abater do saldo a receber</span>
+                      <span style={{ fontSize: "0.7rem", color: "var(--text-tertiary)" }}>
+                        Desmarque se for um reembolso extra/avulso que não deve reduzir o saldo do cliente.
+                      </span>
+                    </span>
+                  </label>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Suggested client banner */}
         {suggestedClient && tab === "fatura" && (
           <div style={{
@@ -314,72 +390,6 @@ export function AsaasLinkDialog({
           {/* Fatura Cliente */}
           {tab === "fatura" && (
             <>
-              {/* Reembolso de repasse — não é faturamento */}
-              {transaction?.type === "CREDIT" && (
-                <div style={{
-                  padding: "14px", borderRadius: "12px", marginBottom: "12px", width: "100%",
-                  border: `1px solid ${selected?.kind === "passthrough" ? "var(--accent)" : "var(--border)"}`,
-                  background: selected?.kind === "passthrough" ? "rgba(217,72,15,0.06)" : "rgba(255,255,255,0.01)",
-                  display: "flex", flexDirection: "column", gap: "10px",
-                }}>
-                  <button
-                    onClick={() => selected?.kind === "passthrough" ? setSelected(null) : selectPassthrough(passthroughClientId)}
-                    style={{
-                      display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px",
-                      background: "none", border: "none", cursor: "pointer", padding: 0, textAlign: "left", color: "var(--text-primary)",
-                    }}
-                  >
-                    <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <Repeat size={15} color="var(--accent)" />
-                      <span style={{ display: "flex", flexDirection: "column" }}>
-                        <span style={{ fontWeight: 700, fontSize: "0.85rem" }}>É reembolso de repasse</span>
-                        <span style={{ fontSize: "0.72rem", color: "var(--text-tertiary)" }}>Devolução de tráfego pago — não conta como faturamento</span>
-                      </span>
-                    </span>
-                    <span style={{
-                      width: "18px", height: "18px", borderRadius: "6px", flexShrink: 0,
-                      border: `1px solid ${selected?.kind === "passthrough" ? "var(--accent)" : "var(--border)"}`,
-                      background: selected?.kind === "passthrough" ? "var(--accent)" : "transparent",
-                      display: "flex", alignItems: "center", justifyContent: "center", color: "#fff",
-                    }}>
-                      {selected?.kind === "passthrough" && <Check size={12} />}
-                    </span>
-                  </button>
-                  {selected?.kind === "passthrough" && (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                      <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                        <span style={{ fontSize: "0.68rem", color: "var(--text-secondary)", fontWeight: 700 }}>Cliente que reembolsou</span>
-                        <select
-                          className="input-dark"
-                          style={{ width: "100%", fontSize: "0.85rem" }}
-                          value={passthroughClientId}
-                          onChange={(e) => { setPassthroughClientId(e.target.value); selectPassthrough(e.target.value); }}
-                        >
-                          <option value="">— Sem cliente (atribuir depois) —</option>
-                          {clients.map((c) => (
-                            <option key={c.id} value={c.id}>{c.nome_fantasia || c.name}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <label style={{ display: "flex", alignItems: "flex-start", gap: "8px", cursor: "pointer" }}>
-                        <input
-                          type="checkbox"
-                          checked={passthroughOffsets}
-                          onChange={(e) => { setPassthroughOffsets(e.target.checked); selectPassthrough(passthroughClientId, e.target.checked); }}
-                          style={{ marginTop: "2px", cursor: "pointer", accentColor: "var(--accent)", width: "15px", height: "15px", flexShrink: 0 }}
-                        />
-                        <span style={{ display: "flex", flexDirection: "column" }}>
-                          <span style={{ fontSize: "0.8rem", fontWeight: 600 }}>Abater do saldo a receber</span>
-                          <span style={{ fontSize: "0.7rem", color: "var(--text-tertiary)" }}>
-                            Desmarque se for um reembolso extra/avulso que não deve reduzir o saldo do cliente.
-                          </span>
-                        </span>
-                      </label>
-                    </div>
-                  )}
-                </div>
-              )}
-
               {pendingInvoices.length > 0 && (
                 <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: "12px", width: "100%" }}>
                   <span style={{ fontSize: "0.7rem", fontWeight: 700, color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "4px" }}>
