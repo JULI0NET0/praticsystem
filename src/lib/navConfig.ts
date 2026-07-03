@@ -9,6 +9,7 @@ import {
   Activity,
   MessageSquare,
   NotebookPen,
+  KanbanSquare,
   type LucideIcon
 } from "lucide-react";
 
@@ -53,6 +54,13 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: "/admin/clients", label: "Clientes", icon: Users, roles: ['admin', 'board', 'social_media'] },
       { href: "/admin/services", label: "Serviços", icon: Briefcase, roles: ['admin', 'board'] },
       { href: "/admin/contracts", label: "Contratos", icon: FileText, roles: ['admin', 'board', 'social_media'] },
+    ]
+  },
+  {
+    title: "Operação",
+    roles: ['admin', 'board', 'social_media', 'filmmaker'],
+    items: [
+      { href: "/admin/operacao", label: "Operação", icon: KanbanSquare, roles: ['admin', 'board', 'social_media', 'filmmaker'] },
     ]
   }
 ];
