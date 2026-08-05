@@ -36,3 +36,16 @@ ALTER TABLE asaas_transactions ADD COLUMN IF NOT EXISTS is_passthrough BOOLEAN N
 -- true (padrão) = reembolso normal, reduz o saldo. false = reembolso extra/avulso que aparece
 -- vinculado ao cliente mas NÃO abate o saldo (ex.: devolução sem adiantamento correspondente).
 ALTER TABLE asaas_transactions ADD COLUMN IF NOT EXISTS passthrough_offsets BOOLEAN NOT NULL DEFAULT true;
+
+-- Sincronização da Agenda com duas contas do Google Calendar (agenciapratic@gmail.com para
+-- agendas/captações gerais, praticlabs@gmail.com para pagamento e reuniões de liderança).
+-- Nova subcategoria "Reunião de Liderança", separada da "Reunião" comum, para poder rotear
+-- cada uma para uma conta diferente.
+ALTER TABLE agenda_events DROP CONSTRAINT IF EXISTS agenda_events_type_check;
+ALTER TABLE agenda_events ADD CONSTRAINT agenda_events_type_check
+  CHECK (type IN ('meeting','prospecting','task','social_media','ads','launch','payment','leadership_meeting'));
+
+-- Guarda o evento correspondente no Google Calendar e em qual das duas contas ele foi criado,
+-- para permitir atualizar/apagar depois (inclusive mover de conta se a categoria mudar).
+ALTER TABLE agenda_events ADD COLUMN IF NOT EXISTS google_event_id TEXT;
+ALTER TABLE agenda_events ADD COLUMN IF NOT EXISTS google_account TEXT CHECK (google_account IN ('agenciapratic','praticlabs'));

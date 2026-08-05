@@ -241,3 +241,75 @@ _________________________________________
 
 _________________________________________
 Agência Pratic`;
+
+// 4. TEMPLATE: PACOTE DE ARTES / PEÇAS GRÁFICAS AVULSAS (SERVIÇO AVULSO)
+export const CONTRACT_TEMPLATE_ARTES = `Contrato de Prestação de Serviços de Criação de Peças Gráficas (Pacote Avulso)
+
+1. IDENTIFICAÇÃO DAS PARTES
+CONTRATANTE: {{NOME_CLIENTE}}, pessoa jurídica de direito privado, inscrita no CNPJ sob o nº {{CNPJ}}, com sede à {{ENDERECO}}, na cidade de {{CIDADE}}, Estado de {{UF}}, neste ato representada por {{CONTATO_NOME}}, doravante denominada “CONTRATANTE”, com e-mail de contato {{EMAIL}} e WhatsApp {{TELEFONE}}.
+
+CONTRATADA: Agência Pratic, pessoa jurídica inscrita no CNPJ sob o nº 57.200.006/0001-20, com sede online, neste ato representada por Isabela Brito Macedo Mendonça, publicitária independente, inscrita no CPF sob o nº 120.894.339-14, doravante denominada “CONTRATADA”.
+
+CLÁUSULA PRIMEIRA – DO OBJETO
+Constitui objeto do presente contrato a prestação de serviços de criação e produção de peças gráficas digitais personalizadas, em regime de pacote avulso e sem recorrência ({{SERVICO_NOME}}), pela CONTRATADA à CONTRATANTE, destinadas à divulgação de eventos e ações da CONTRATANTE.
+Parágrafo único: O pacote contempla um conjunto de 10 (dez) artes digitais pré-definidas, cuja composição é escolhida pela CONTRATANTE dentro das seguintes categorias, mediante alinhamento prévio: banners de divulgação, artes de ingresso, flyers impressos, posts de feed, stories, artes para WhatsApp e painéis para fotos. Não há modelo fixo — o mix de peças é personalizado conforme a necessidade do evento, respeitada a quantidade total contratada.
+
+CLÁUSULA SEGUNDA – DAS OBRIGAÇÕES DA CONTRATADA
+São obrigações da CONTRATADA:
+a) Desenvolver as peças gráficas conforme o briefing e a seleção de categorias alinhada com a CONTRATANTE;
+b) Entregar os arquivos finais em PNG de alta resolução (mínimo de 300 dpi para peças impressas e 72 dpi/RGB para peças digitais);
+c) Fornecer, quando solicitado para peças destinadas à impressão gráfica, o arquivo também em PDF com sangria;
+d) Disponibilizar os arquivos finais por meio de link de pasta compartilhada (Google Drive ou similar);
+e) Respeitar os prazos de entrega acordados na Cláusula Quarta.
+
+CLÁUSULA TERCEIRA – DAS OBRIGAÇÕES DA CONTRATANTE
+São obrigações da CONTRATANTE:
+a) Fornecer o briefing, referências, textos e materiais necessários à criação das peças de forma clara e tempestiva;
+b) Definir, em alinhamento com a CONTRATADA, a composição das peças dentro das categorias previstas;
+c) Responder às solicitações de aprovação dentro do prazo acordado, para não comprometer o cronograma de entrega;
+d) Efetuar o pagamento na forma e data previstas na Cláusula Quinta;
+e) Responsabilizar-se pela contratação e custeio da impressão gráfica das peças, quando aplicável, conforme Cláusula Sétima.
+
+CLÁUSULA QUARTA – DOS PRAZOS E ENTREGAS
+4.1. O presente contrato compreende a entrega de 10 (dez) artes digitais, conforme composição definida no alinhamento previsto na Cláusula Terceira.
+4.2. O contrato inicia sua vigência em {{DATA_INICIO}} e se encerra com a entrega final das artes aprovadas, prevista para até {{DATA_TERMINO}}.
+4.3. A entrega das artes ocorre com antecedência ao período de divulgação do evento, permitindo o início oportuno da comunicação pela CONTRATANTE.
+4.4. Está incluso no escopo o direito a até 2 (duas) rodadas de revisão por arte. Alterações de briefing solicitadas após o início da produção, bem como revisões que excedam esse limite, poderão gerar cobrança adicional proporcional, mediante aprovação prévia da CONTRATANTE.
+4.5. A aprovação final por escrito (WhatsApp ou e-mail) libera a entrega dos arquivos finais.
+
+CLÁUSULA QUINTA – DO PAGAMENTO
+5.1. Pela prestação dos serviços descritos neste contrato, a CONTRATANTE pagará à CONTRATADA o valor total de R$ {{VALOR}} ({{VALOR_EXTENSO}}), em parcela única, à vista, na entrega das artes finais.
+5.2. A cobrança será gerada e enviada por meio da plataforma ASAAS, via boleto ou link de pagamento (PIX), para o e-mail e/ou WhatsApp da CONTRATANTE.
+5.3. Eventuais peças ou demandas extras não inclusas neste pacote serão orçadas separadamente e cobradas mediante aprovação da CONTRATANTE.
+
+CLÁUSULA SEXTA – DO FORMATO E DIREITOS DE USO
+6.1. Os arquivos finais serão entregues em PNG de alta resolução e, quando solicitado para impressão, também em PDF com sangria.
+6.2. A CONTRATADA cede à CONTRATANTE os direitos de uso das peças entregues para os fins de divulgação a que se destinam, permitindo sua veiculação nos canais digitais e impressos da CONTRATANTE.
+6.3. Fica reservado à CONTRATADA o direito de exibir as peças a título de portfólio em seus canais oficiais.
+
+CLÁUSULA SÉTIMA – DA EXCLUSÃO DA IMPRESSÃO GRÁFICA
+7.1. A impressão gráfica das peças NÃO está inclusa neste contrato. A CONTRATADA entrega exclusivamente as artes finalizadas em arquivo digital; a contratação e o custeio da gráfica são de responsabilidade exclusiva da CONTRATANTE.
+7.2. O presente pacote cobre exclusivamente as peças destinadas ao evento ora contratado. Novos eventos ou demandas futuras deverão ser objeto de nova contratação.
+
+CLÁUSULA OITAVA – DA ISENÇÃO DE RESPONSABILIDADE
+A CONTRATADA ficará isenta de qualquer responsabilidade:
+I. Caso a demora na execução decorrer de omissão de informação, atraso em aprovações ou erro exclusivo do CONTRATANTE, incluindo erro ortográfico e/ou gramatical aprovado pela CONTRATANTE;
+II. Em caso fortuito ou de força maior;
+III. Pela qualidade final da impressão gráfica realizada por terceiros contratados pela CONTRATANTE.
+
+CLÁUSULA NONA – DO USO DE PORTFÓLIO
+A CONTRATADA se reserva o direito de expor ou não as peças desenvolvidas, a título de modelo, em seu portfólio. Os critérios de decisão são de inteira responsabilidade da CONTRATADA.
+
+DO FORO
+CLÁUSULA DÉCIMA – DO FORO
+Para dirimir quaisquer controvérsias oriundas do presente instrumento, as partes adotam o foro da plataforma autentique realizando as coletas das assinaturas digitais da CONTRATANTE e CONTRATADA.
+
+Por estarem assim justas e contratadas, firmam o presente instrumento.
+
+(Londrina, {{DATA_ATUAL}})
+
+_________________________________________
+{{NOME_CLIENTE}}
+
+_________________________________________
+Agência Pratic`;

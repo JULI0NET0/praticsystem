@@ -13,7 +13,7 @@ import { useToast } from "@/components/CustomToast";
 
 export default function ClientsPage() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("active");
+  const [statusFilter, setStatusFilter] = useState("active_prospect");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newClient, setNewClient] = useState({
     name: "",
@@ -92,7 +92,11 @@ export default function ClientsPage() {
     const matchesSearch = client.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (client.cnpj ?? "").includes(searchTerm) ||
       client.email?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "all" || client.status === statusFilter;
+    const matchesStatus =
+      statusFilter === "all" ||
+      (statusFilter === "active_prospect"
+        ? client.status === "active" || client.status === "prospect"
+        : client.status === statusFilter);
     return matchesSearch && matchesStatus;
   });
 
@@ -146,6 +150,7 @@ export default function ClientsPage() {
   };
 
   const statusOptions: SortOption[] = [
+    { label: "Ativos + Prospects", value: "active_prospect" },
     { label: "Todos os status", value: "all" },
     { label: "Ativos", value: "active" },
     { label: "Prospects", value: "prospect" },

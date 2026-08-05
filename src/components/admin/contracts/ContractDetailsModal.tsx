@@ -7,7 +7,7 @@ import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/components/CustomToast";
-import { CONTRACT_TEMPLATE, CONTRACT_TEMPLATE_DEVELOPMENT, CONTRACT_TEMPLATE_IA } from "@/lib/contractTemplate";
+import { CONTRACT_TEMPLATE, CONTRACT_TEMPLATE_DEVELOPMENT, CONTRACT_TEMPLATE_IA, CONTRACT_TEMPLATE_ARTES } from "@/lib/contractTemplate";
 
 interface ContractDetailsModalProps {
   isOpen: boolean;
@@ -123,6 +123,8 @@ export default function ContractDetailsModal({ isOpen, onClose, onRenew, contrac
       template = CONTRACT_TEMPLATE_DEVELOPMENT;
     } else if (serviceName.includes("imagem") || serviceName.includes("ia") || serviceName.includes("inteligência artificial")) {
       template = CONTRACT_TEMPLATE_IA;
+    } else if (serviceName.includes("arte") || serviceName.includes("peça") || serviceName.includes("peca") || serviceName.includes("pack") || serviceName.includes("evento") || serviceName.includes("flyer") || serviceName.includes("banner")) {
+      template = CONTRACT_TEMPLATE_ARTES;
     }
 
     return template

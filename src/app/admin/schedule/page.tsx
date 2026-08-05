@@ -20,6 +20,7 @@ import SearchInput from "@/components/ui/SearchInput";
 
 const CATEGORIES = [
   { id: 'meeting', label: 'Reunião', color: '#3B82F6', icon: Users },
+  { id: 'leadership_meeting', label: 'Reunião de Liderança', color: '#14B8A6', icon: Users },
   { id: 'prospecting', label: 'Captação', color: '#EAB308', icon: MapPin },
   { id: 'task', label: 'Tarefa Interna', color: '#A8A8A8', icon: CheckCircle2 },
   { id: 'social_media', label: 'Social Media', color: '#EC4899', icon: ExternalLink },
@@ -245,9 +246,25 @@ export default function SchedulePage() {
     }
   };
 
-  const syncToGoogleCalendar = async (event: any, action: 'insert' | 'update' | 'delete') => {
-    console.log(`[Google Sync] ${action.toUpperCase()}:`, event.title);
-    return new Promise(resolve => setTimeout(resolve, 1000));
+  const syncToGoogleCalendar = async (
+    eventId: string,
+    action: 'insert' | 'update' | 'delete',
+    data?: { title: string; type: string; date: string; description?: string }
+  ) => {
+    try {
+      const res = await fetch('/api/agenda/google-sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eventId, action, ...data }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || `Erro ${res.status}`);
+      }
+    } catch (err) {
+      console.error('Erro ao sincronizar com Google Agenda:', err);
+      showToast('Compromisso salvo, mas falhou a sincronização com o Google Agenda', 'info');
+    }
   };
 
   const handleSaveEvent = async () => {
@@ -270,6 +287,7 @@ export default function SchedulePage() {
       };
 
       let error;
+      let savedEventId = selectedEvent && !selectedEvent.id.startsWith('inv-') ? selectedEvent.id : undefined;
       if (selectedEvent && !selectedEvent.id.startsWith('inv-')) {
         const { error: updateError } = await supabase
           .from('agenda_events')
@@ -278,17 +296,25 @@ export default function SchedulePage() {
         error = updateError;
         if (!error) showToast("Compromisso atualizado!", "success");
       } else {
-        const { error: insertError } = await supabase
+        const { data: inserted, error: insertError } = await supabase
           .from('agenda_events')
-          .insert([eventData]);
+          .insert([eventData])
+          .select('id')
+          .single();
         error = insertError;
+        savedEventId = inserted?.id;
         if (!error) showToast("Compromisso criado!", "success");
       }
 
       if (error) throw error;
 
-      if (formData.visibility === 'public') {
-        await syncToGoogleCalendar(eventData, selectedEvent ? 'update' : 'insert');
+      if (formData.visibility === 'public' && savedEventId) {
+        await syncToGoogleCalendar(savedEventId, selectedEvent ? 'update' : 'insert', {
+          title: eventData.title,
+          type: eventData.type,
+          date: eventData.date,
+          description: eventData.description,
+        });
       }
 
       setPopover(prev => ({ ...prev, isOpen: false }));
@@ -305,6 +331,7 @@ export default function SchedulePage() {
   const handleDeleteEvent = async () => {
     if (!selectedEvent || selectedEvent.id.startsWith('inv-')) return;
     try {
+      await syncToGoogleCalendar(selectedEvent.id, 'delete');
       const { error } = await supabase
         .from('agenda_events')
         .delete()
@@ -466,131 +493,137 @@ export default function SchedulePage() {
 
   return (
     <div id="agenda-page-container" ref={pageRef} style={{ display: 'flex', flexDirection: 'column', gap: '20px', position: 'relative' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-        <h1 style={{ fontSize: '2rem', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)', flexShrink: 0 }}>Agenda</h1>
+      <div className="glass-card" style={{ padding: isMobile ? '8px 0' : '16px 0', backgroundColor: 'var(--bg-secondary)' }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '16px',
+          flexWrap: 'wrap',
+          padding: isMobile ? '0 8px 12px' : '0 16px 16px',
+          borderBottom: 'var(--glass-border)',
+          marginBottom: isMobile ? '8px' : '16px',
+        }}>
+          <h1 style={{ fontSize: '2rem', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)', flexShrink: 0 }}>Agenda</h1>
 
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', flex: 1 }}>
-          {CATEGORIES.map(cat => {
-            const count = eventCountByType[cat.id] ?? 0;
-            const isActive = activeFilters.includes(cat.id);
-            return (
-              <button
-                key={cat.id}
-                onClick={() => toggleFilter(cat.id)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '5px 10px',
-                  borderRadius: '20px',
-                  background: isActive ? `${cat.color}20` : 'transparent',
-                  border: `1px solid ${isActive ? cat.color : 'rgba(255,255,255,0.1)'}`,
-                  transition: 'all 0.2s',
-                  cursor: 'pointer'
-                }}
-              >
-                <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: cat.color }} />
-                <span style={{ fontSize: '0.72rem', color: isActive ? 'white' : 'var(--text-secondary)', fontWeight: 600 }}>{cat.label}</span>
-                {count > 0 && (
-                  <span style={{
-                    fontSize: '0.62rem',
-                    fontWeight: 700,
-                    lineHeight: 1,
-                    padding: '2px 5px',
-                    borderRadius: '10px',
-                    backgroundColor: isActive ? cat.color : 'rgba(255,255,255,0.1)',
-                    color: isActive ? 'white' : 'var(--text-secondary)',
-                  }}>
-                    {count}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', flex: 1 }}>
+            {CATEGORIES.map(cat => {
+              const count = eventCountByType[cat.id] ?? 0;
+              const isActive = activeFilters.includes(cat.id);
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => toggleFilter(cat.id)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '5px 10px',
+                    borderRadius: '20px',
+                    background: isActive ? `${cat.color}20` : 'transparent',
+                    border: `1px solid ${isActive ? cat.color : 'rgba(255,255,255,0.1)'}`,
+                    transition: 'all 0.2s',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: cat.color }} />
+                  <span style={{ fontSize: '0.72rem', color: isActive ? 'white' : 'var(--text-secondary)', fontWeight: 600 }}>{cat.label}</span>
+                  {count > 0 && (
+                    <span style={{
+                      fontSize: '0.62rem',
+                      fontWeight: 700,
+                      lineHeight: 1,
+                      padding: '2px 5px',
+                      borderRadius: '10px',
+                      backgroundColor: isActive ? cat.color : 'rgba(255,255,255,0.1)',
+                      color: isActive ? 'white' : 'var(--text-secondary)',
+                    }}>
+                      {count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
 
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexShrink: 0 }}>
-          <SearchInput
-            value={searchQuery}
-            onChange={setSearchQuery}
-            placeholder="Pesquisar..."
-          />
-          <Spotlight as="button" className="btn btn-accent" onClick={(e?: any) => {
-            let x = window.innerWidth / 2;
-            let y = window.innerHeight / 2;
-            if (e && e.clientX && pageRef.current) {
-              const rect = pageRef.current.getBoundingClientRect();
-              x = e.clientX - rect.left;
-              y = e.clientY - rect.top;
-            }
-            setSelectedEvent(null);
-            setFormData({
-              title: '',
-              type: 'meeting',
-              date: toLocalISOString(new Date()),
-              client_id: '',
-              visibility: 'public',
-              status: 'scheduled',
-              description: ''
-            });
-            setPopover({
-              isOpen: true,
-              type: 'form',
-              x,
-              y
-            });
-          }} style={{ height: '36px' }}>
-            <Plus size={16} /> Novo
-          </Spotlight>
-        </div>
-      </div>
-
-      <div style={{ width: '100%' }}>
-        <div className="glass-card" style={{ padding: isMobile ? '8px 0' : '16px 0', backgroundColor: 'var(--bg-secondary)' }}>
-          <FullCalendar
-            ref={calendarRef}
-            plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin]}
-            initialView={isMobile ? "listDay" : "dayGridMonth"}
-            headerToolbar={{
-              left: 'prev,today,next',
-              center: 'title',
-              right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
-            }}
-            views={{
-              timeGridWeek: {
-                dayHeaderFormat: { weekday: 'short', day: 'numeric', omitCommas: true }
-              },
-              dayGridMonth: {
-                dayHeaderFormat: { weekday: 'short', omitCommas: true }
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexShrink: 0 }}>
+            <SearchInput
+              value={searchQuery}
+              onChange={setSearchQuery}
+              placeholder="Pesquisar..."
+            />
+            <Spotlight as="button" className="btn btn-accent" onClick={(e?: any) => {
+              let x = window.innerWidth / 2;
+              let y = window.innerHeight / 2;
+              if (e && e.clientX && pageRef.current) {
+                const rect = pageRef.current.getBoundingClientRect();
+                x = e.clientX - rect.left;
+                y = e.clientY - rect.top;
               }
-            }}
-            dayHeaderFormat={{ weekday: 'short', day: 'numeric', omitCommas: true }}
-            buttonText={{
-              today: 'Hoje',
-              month: 'Mês',
-              week: 'Semana',
-              day: 'Dia',
-              list: 'Lista'
-            }}
-            locale={ptBrLocale}
-            events={filteredEvents}
-            editable={true}
-            selectable={true}
-            selectMirror={true}
-            dayMaxEvents={2}
-            weekends={true}
-            fixedWeekCount={false}
-            height="auto"
-            dateClick={handleDateClick}
-            eventClick={handleEventClick}
-            eventDrop={handleEventDrop}
-            eventContent={renderEventContent}
-            nowIndicator={true}
-            allDaySlot={true}
-            slotMinTime="07:00"
-            slotMaxTime="22:00"
-          />
+              setSelectedEvent(null);
+              setFormData({
+                title: '',
+                type: 'meeting',
+                date: toLocalISOString(new Date()),
+                client_id: '',
+                visibility: 'public',
+                status: 'scheduled',
+                description: ''
+              });
+              setPopover({
+                isOpen: true,
+                type: 'form',
+                x,
+                y
+              });
+            }} style={{ height: '36px' }}>
+              <Plus size={16} /> Novo
+            </Spotlight>
+          </div>
         </div>
+
+        <FullCalendar
+          ref={calendarRef}
+          plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin]}
+          initialView={isMobile ? "listDay" : "dayGridMonth"}
+          headerToolbar={{
+            left: 'prev,today,next',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
+          }}
+          views={{
+            timeGridWeek: {
+              dayHeaderFormat: { weekday: 'short', day: 'numeric', omitCommas: true }
+            },
+            dayGridMonth: {
+              dayHeaderFormat: { weekday: 'short', omitCommas: true }
+            }
+          }}
+          dayHeaderFormat={{ weekday: 'short', day: 'numeric', omitCommas: true }}
+          buttonText={{
+            today: 'Hoje',
+            month: 'Mês',
+            week: 'Semana',
+            day: 'Dia',
+            list: 'Lista'
+          }}
+          locale={ptBrLocale}
+          events={filteredEvents}
+          editable={true}
+          selectable={true}
+          selectMirror={true}
+          dayMaxEvents={2}
+          weekends={true}
+          fixedWeekCount={false}
+          height="auto"
+          dateClick={handleDateClick}
+          eventClick={handleEventClick}
+          eventDrop={handleEventDrop}
+          eventContent={renderEventContent}
+          nowIndicator={true}
+          allDaySlot={true}
+          slotMinTime="07:00"
+          slotMaxTime="22:00"
+        />
       </div>
 
       <AnimatePresence>
