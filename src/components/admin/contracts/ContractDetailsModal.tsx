@@ -7,7 +7,7 @@ import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/components/CustomToast";
-import { CONTRACT_TEMPLATE, CONTRACT_TEMPLATE_DEVELOPMENT, CONTRACT_TEMPLATE_IA, CONTRACT_TEMPLATE_ARTES } from "@/lib/contractTemplate";
+import { generateContractDocument } from "@/lib/contractTemplate";
 
 interface ContractDetailsModalProps {
   isOpen: boolean;
@@ -17,52 +17,6 @@ interface ContractDetailsModalProps {
   client: Client | undefined;
   service: Service | undefined;
   invoices: Invoice[];
-}
-
-function escreverValorPorExtenso(valor: number): string {
-  const unidades = ["", "um", "dois", "três", "quatro", "cinco", "seis", "sete", "oito", "nove"];
-  const dezenas = ["", "dez", "vinte", "trinta", "quarenta", "cinquenta", "sessenta", "setenta", "oitenta", "noventa"];
-  const especiais = ["dez", "onze", "doze", "treze", "quatorze", "quinze", "dezesseis", "dezessete", "dezoito", "dezenove"];
-  const centenas = ["", "cem", "duzentos", "trezentos", "quatrocentos", "quinhentos", "seiscentos", "setecentos", "oitocentos", "novecentos"];
-
-  if (valor === 0) return "zero reais";
-
-  const centavos = Math.round((valor % 1) * 100);
-  const valorInteiro = Math.floor(valor);
-
-  const obterParteInteira = (num: number): string => {
-    if (num === 100) return "cem";
-    if (num < 10) return unidades[num];
-    if (num >= 10 && num < 20) return especiais[num - 10];
-    if (num >= 20 && num < 100) {
-      const u = num % 10;
-      const d = Math.floor(num / 10);
-      return dezenas[d] + (u > 0 ? " e " + unidades[u] : "");
-    }
-    if (num >= 100 && num < 1000) {
-      const rest = num % 100;
-      const c = Math.floor(num / 100);
-      let cent = centenas[c];
-      if (c === 1 && rest > 0) cent = "cento";
-      return cent + (rest > 0 ? " e " + obterParteInteira(rest) : "");
-    }
-    if (num >= 1000 && num < 1000000) {
-      const rest = num % 1000;
-      const mil = Math.floor(num / 1000);
-      const milStr = mil === 1 ? "mil" : obterParteInteira(mil) + " mil";
-      return milStr + (rest > 0 ? " e " + obterParteInteira(rest) : "");
-    }
-    return String(num);
-  };
-
-  let resultado = obterParteInteira(valorInteiro);
-  resultado += valorInteiro === 1 ? " real" : " reais";
-
-  if (centavos > 0) {
-    resultado += " e " + obterParteInteira(centavos) + (centavos === 1 ? " centavo" : " centavos");
-  }
-
-  return resultado;
 }
 
 export default function ContractDetailsModal({ isOpen, onClose, onRenew, contract, client, service, invoices }: ContractDetailsModalProps) {
@@ -102,50 +56,20 @@ export default function ContractDetailsModal({ isOpen, onClose, onRenew, contrac
   const generateInitialContent = () => {
     if (!client || !service || !contract) return "";
 
-    const postsSemana = contract.posts_per_week || 0;
-    const postsTotal = postsSemana * 4;
-
-    let vigenciaMeses = 12;
-    if (contract.start_date && contract.end_date) {
-      const d1 = new Date(contract.start_date + 'T12:00:00');
-      const d2 = new Date(contract.end_date + 'T12:00:00');
-      const diffMonths = (d2.getFullYear() - d1.getFullYear()) * 12 + d2.getMonth() - d1.getMonth();
-      if (diffMonths > 0) vigenciaMeses = diffMonths;
-    }
-
-    const valorExtenso = escreverValorPorExtenso(contract.value);
-
-    // Seleção dinâmica de template baseado no serviço
-    let template = CONTRACT_TEMPLATE;
-    const serviceName = (service.name || "").toLowerCase();
-
-    if (serviceName.includes("site") || serviceName.includes("sistema") || serviceName.includes("landing")) {
-      template = CONTRACT_TEMPLATE_DEVELOPMENT;
-    } else if (serviceName.includes("imagem") || serviceName.includes("ia") || serviceName.includes("inteligência artificial")) {
-      template = CONTRACT_TEMPLATE_IA;
-    } else if (serviceName.includes("arte") || serviceName.includes("peça") || serviceName.includes("peca") || serviceName.includes("pack") || serviceName.includes("evento") || serviceName.includes("flyer") || serviceName.includes("banner")) {
-      template = CONTRACT_TEMPLATE_ARTES;
-    }
-
-    return template
-      .replace(/{{NOME_CLIENTE}}/g, client.name || "")
-      .replace(/{{CNPJ}}/g, client.cnpj || "")
-      .replace(/{{ENDERECO}}/g, client.address ? `${client.address.logradouro}, ${client.address.numero}` : "Endereço não informado")
-      .replace(/{{CIDADE}}/g, client.address?.cidade || "Cidade")
-      .replace(/{{UF}}/g, client.address?.uf || "UF")
-      .replace(/{{CONTATO_NOME}}/g, client.contact_name || "")
-      .replace(/{{EMAIL}}/g, client.email || "")
-      .replace(/{{TELEFONE}}/g, client.phone || "")
-      .replace(/{{SERVICO_NOME}}/g, service.name || "")
-      .replace(/{{POSTS_SEMANA}}/g, String(postsSemana))
-      .replace(/{{POSTS_TOTAL}}/g, String(postsTotal))
-      .replace(/{{CAPTACAO}}/g, contract.capture_frequency || "Não aplicável")
-      .replace(/{{VALOR}}/g, contract.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 }))
-      .replace(/{{VALOR_EXTENSO}}/g, valorExtenso)
-      .replace(/{{VIGENCIA}}/g, String(vigenciaMeses))
-      .replace(/{{DATA_INICIO}}/g, new Date(contract.start_date + 'T12:00:00').toLocaleDateString('pt-BR'))
-      .replace(/{{DATA_TERMINO}}/g, contract.end_date ? new Date(contract.end_date + 'T12:00:00').toLocaleDateString('pt-BR') : 'Indeterminado')
-      .replace(/{{DATA_ATUAL}}/g, new Date().toLocaleDateString('pt-BR'));
+    return generateContractDocument({
+      clientName: client.name,
+      cnpj: client.cnpj,
+      address: client.address,
+      contactName: client.contact_name,
+      email: client.email,
+      phone: client.phone,
+      serviceName: service.name,
+      postsPerWeek: contract.posts_per_week,
+      captureFrequency: contract.capture_frequency,
+      value: contract.value,
+      startDate: contract.start_date,
+      endDate: contract.end_date,
+    });
   };
 
   const handleSaveDocument = async () => {

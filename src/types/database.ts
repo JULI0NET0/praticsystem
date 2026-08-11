@@ -110,6 +110,27 @@ export interface Contract {
   contract_number?: number;
 }
 
+export interface HermesContractDraft {
+  id: string;
+  client_id: string;
+  service_id: string;
+  value: number;
+  duration_months: number;
+  start_date: string;
+  end_date: string;
+  posts_per_week?: number;
+  capture_frequency?: string;
+  custom_clauses?: string;
+  document_content: string;
+  notes?: string;
+  status: 'pending_review' | 'approved' | 'rejected';
+  resulting_contract_id?: string;
+  created_at: string;
+  reviewed_at?: string;
+  clients?: Pick<Client, 'id' | 'name' | 'nome_fantasia' | 'cnpj'>;
+  services?: Pick<Service, 'id' | 'name'>;
+}
+
 export interface Notification {
   id: string;
   user_id: string;

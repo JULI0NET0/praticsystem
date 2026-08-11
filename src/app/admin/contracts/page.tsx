@@ -200,6 +200,11 @@ export default function ContractsPage() {
                 {preset.label}
               </button>
             ))}
+            <Link href="/admin/contracts/drafts" style={{ textDecoration: 'none' }}>
+              <div className="btn" style={{ whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 16px', minHeight: 'unset', height: 'auto', borderRadius: '10px', fontSize: '0.75rem', fontWeight: 600, border: '1px solid var(--border)' }}>
+                <FileText size={14} /> Rascunhos do Hermes
+              </div>
+            </Link>
             <Link href="/admin/contracts/create" style={{ textDecoration: 'none' }}>
               <Spotlight as="div" className="btn btn-accent" style={{ whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 16px', minHeight: 'unset', height: 'auto', borderRadius: '10px', fontSize: '0.75rem', fontWeight: 600 }}>
                 <Plus size={14} /> Novo Contrato

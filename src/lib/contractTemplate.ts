@@ -313,3 +313,122 @@ _________________________________________
 
 _________________________________________
 Agência Pratic`;
+
+export function escreverValorPorExtenso(valor: number): string {
+  const unidades = ["", "um", "dois", "três", "quatro", "cinco", "seis", "sete", "oito", "nove"];
+  const dezenas = ["", "dez", "vinte", "trinta", "quarenta", "cinquenta", "sessenta", "setenta", "oitenta", "noventa"];
+  const especiais = ["dez", "onze", "doze", "treze", "quatorze", "quinze", "dezesseis", "dezessete", "dezoito", "dezenove"];
+  const centenas = ["", "cem", "duzentos", "trezentos", "quatrocentos", "quinhentos", "seiscentos", "setecentos", "oitocentos", "novecentos"];
+
+  if (valor === 0) return "zero reais";
+
+  const centavos = Math.round((valor % 1) * 100);
+  const valorInteiro = Math.floor(valor);
+
+  const obterParteInteira = (num: number): string => {
+    if (num === 100) return "cem";
+    if (num < 10) return unidades[num];
+    if (num >= 10 && num < 20) return especiais[num - 10];
+    if (num >= 20 && num < 100) {
+      const u = num % 10;
+      const d = Math.floor(num / 10);
+      return dezenas[d] + (u > 0 ? " e " + unidades[u] : "");
+    }
+    if (num >= 100 && num < 1000) {
+      const rest = num % 100;
+      const c = Math.floor(num / 100);
+      let cent = centenas[c];
+      if (c === 1 && rest > 0) cent = "cento";
+      return cent + (rest > 0 ? " e " + obterParteInteira(rest) : "");
+    }
+    if (num >= 1000 && num < 1000000) {
+      const rest = num % 1000;
+      const mil = Math.floor(num / 1000);
+      const milStr = mil === 1 ? "mil" : obterParteInteira(mil) + " mil";
+      return milStr + (rest > 0 ? " e " + obterParteInteira(rest) : "");
+    }
+    return String(num);
+  };
+
+  let resultado = obterParteInteira(valorInteiro);
+  resultado += valorInteiro === 1 ? " real" : " reais";
+
+  if (centavos > 0) {
+    resultado += " e " + obterParteInteira(centavos) + (centavos === 1 ? " centavo" : " centavos");
+  }
+
+  return resultado;
+}
+
+/** Escolhe o template de contrato pelo nome do serviço (mesma heurística usada no painel). */
+export function selectContractTemplate(serviceName: string): string {
+  const name = (serviceName || "").toLowerCase();
+  if (name.includes("site") || name.includes("sistema") || name.includes("landing")) return CONTRACT_TEMPLATE_DEVELOPMENT;
+  if (name.includes("imagem") || name.includes("ia") || name.includes("inteligência artificial")) return CONTRACT_TEMPLATE_IA;
+  if (name.includes("arte") || name.includes("peça") || name.includes("peca") || name.includes("pack") || name.includes("evento") || name.includes("flyer") || name.includes("banner")) return CONTRACT_TEMPLATE_ARTES;
+  return CONTRACT_TEMPLATE;
+}
+
+export interface ContractMergeFields {
+  clientName: string;
+  cnpj: string;
+  address?: { logradouro: string; numero: string; cidade?: string; uf?: string };
+  contactName: string;
+  email: string;
+  phone: string;
+  serviceName: string;
+  postsPerWeek?: number;
+  captureFrequency?: string;
+  value: number;
+  startDate: string;
+  endDate?: string;
+  /** Cláusulas extras negociadas (ex.: por um serviço fora do catálogo padrão) — entram antes da assinatura. */
+  customClauses?: string;
+}
+
+/** Gera o texto completo do contrato a partir do template + dados do cliente/serviço/contrato. */
+export function generateContractDocument(fields: ContractMergeFields): string {
+  const postsSemana = fields.postsPerWeek || 0;
+  const postsTotal = postsSemana * 4;
+
+  let vigenciaMeses = 12;
+  if (fields.startDate && fields.endDate) {
+    const d1 = new Date(fields.startDate + 'T12:00:00');
+    const d2 = new Date(fields.endDate + 'T12:00:00');
+    const diffMonths = (d2.getFullYear() - d1.getFullYear()) * 12 + d2.getMonth() - d1.getMonth();
+    if (diffMonths > 0) vigenciaMeses = diffMonths;
+  }
+
+  const valorExtenso = escreverValorPorExtenso(fields.value);
+  const template = selectContractTemplate(fields.serviceName);
+
+  let document = template
+    .replace(/{{NOME_CLIENTE}}/g, fields.clientName || "")
+    .replace(/{{CNPJ}}/g, fields.cnpj || "")
+    .replace(/{{ENDERECO}}/g, fields.address ? `${fields.address.logradouro}, ${fields.address.numero}` : "Endereço não informado")
+    .replace(/{{CIDADE}}/g, fields.address?.cidade || "Cidade")
+    .replace(/{{UF}}/g, fields.address?.uf || "UF")
+    .replace(/{{CONTATO_NOME}}/g, fields.contactName || "")
+    .replace(/{{EMAIL}}/g, fields.email || "")
+    .replace(/{{TELEFONE}}/g, fields.phone || "")
+    .replace(/{{SERVICO_NOME}}/g, fields.serviceName || "")
+    .replace(/{{POSTS_SEMANA}}/g, String(postsSemana))
+    .replace(/{{POSTS_TOTAL}}/g, String(postsTotal))
+    .replace(/{{CAPTACAO}}/g, fields.captureFrequency || "Não aplicável")
+    .replace(/{{VALOR}}/g, fields.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 }))
+    .replace(/{{VALOR_EXTENSO}}/g, valorExtenso)
+    .replace(/{{VIGENCIA}}/g, String(vigenciaMeses))
+    .replace(/{{DATA_INICIO}}/g, new Date(fields.startDate + 'T12:00:00').toLocaleDateString('pt-BR'))
+    .replace(/{{DATA_TERMINO}}/g, fields.endDate ? new Date(fields.endDate + 'T12:00:00').toLocaleDateString('pt-BR') : 'Indeterminado')
+    .replace(/{{DATA_ATUAL}}/g, new Date().toLocaleDateString('pt-BR'));
+
+  if (fields.customClauses?.trim()) {
+    const marker = 'Por estarem assim justas e contratadas, firmam o presente instrumento.';
+    const clausesBlock = `CLÁUSULA ADICIONAL – CONDIÇÕES ESPECÍFICAS NEGOCIADAS\n${fields.customClauses.trim()}\n\n`;
+    document = document.includes(marker)
+      ? document.replace(marker, `${clausesBlock}${marker}`)
+      : `${document}\n\n${clausesBlock}`;
+  }
+
+  return document;
+}
