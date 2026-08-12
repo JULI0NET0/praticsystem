@@ -869,8 +869,13 @@ export default function BlockEditor({
         .block-editor-content h1 { font-size: 1.9rem; font-weight: 700; margin: 20px 0 6px; }
         .block-editor-content h2 { font-size: 1.4rem; font-weight: 600; margin: 16px 0 4px; }
         .block-editor-content h3 { font-size: 1.15rem; font-weight: 600; margin: 12px 0 4px; }
-        .block-editor-content ul, .block-editor-content ol { padding-left: 22px; margin: 6px 0; }
+        .block-editor-content ul { list-style-type: disc; }
+        .block-editor-content ol { list-style-type: decimal; }
+        .block-editor-content ul ul, .block-editor-content ol ul { list-style-type: circle; }
+        .block-editor-content ul ul ul, .block-editor-content ol ul ul { list-style-type: square; }
+        .block-editor-content ul, .block-editor-content ol { padding-left: 24px; margin: 4px 0; }
         .block-editor-content li { margin: 3px 0; }
+        .block-editor-content li > p { margin: 0; }
         .block-editor-content blockquote { border-left: 3px solid #d9480f; margin: 10px 0; padding: 8px 16px; background: rgba(217,72,15,0.06); border-radius: 0 8px 8px 0; color: rgba(255,255,255,0.65); }
         .block-editor-content pre { background: rgba(0,0,0,0.45); border-radius: 8px; padding: 14px 16px; margin: 10px 0; overflow-x: auto; }
         .block-editor-content pre code { color: #e2e8f0; font-family: monospace; font-size: 0.875rem; background: none; padding: 0; }
@@ -1062,6 +1067,28 @@ export default function BlockEditor({
   );
 }
 
+interface RawListItem {
+  type: 'ul' | 'ol' | 'taskList';
+  indent: number;
+  text: string;
+  checked?: boolean;
+}
+
+interface ListItemNode {
+  type: 'ul' | 'ol' | 'taskList';
+  indent: number;
+  text: string;
+  checked?: boolean;
+  children: ListGroupNode[];
+}
+
+interface ListGroupNode {
+  type: 'list';
+  listType: 'ul' | 'ol' | 'taskList';
+  indent: number;
+  items: ListItemNode[];
+}
+
 function parseMarkdownToHTML(markdown: string): string {
   const lines = markdown.split(/\r?\n/);
   const htmlLines: string[] = [];
@@ -1073,27 +1100,8 @@ function parseMarkdownToHTML(markdown: string): string {
   let inBlockquote = false;
   let blockquoteLines: string[] = [];
   
-  let listType: 'ul' | 'ol' | 'taskList' | null = null;
-  
-  const closeList = () => {
-    if (listType === 'ul') {
-      htmlLines.push('</ul>');
-    } else if (listType === 'ol') {
-      htmlLines.push('</ol>');
-    } else if (listType === 'taskList') {
-      htmlLines.push('</ul>');
-    }
-    listType = null;
-  };
-  
-  const closeBlockquote = () => {
-    if (inBlockquote) {
-      htmlLines.push(`<blockquote>${blockquoteLines.map(line => parseInline(line)).join('<br />')}</blockquote>`);
-      inBlockquote = false;
-      blockquoteLines = [];
-    }
-  };
-  
+  let pendingListItems: RawListItem[] = [];
+
   const parseInline = (text: string): string => {
     let escaped = text
       .replace(/&/g, '&amp;')
@@ -1127,6 +1135,157 @@ function parseMarkdownToHTML(markdown: string): string {
     return escaped;
   };
 
+  const buildListTree = (rawItems: RawListItem[]): ListGroupNode[] => {
+    const rootGroups: ListGroupNode[] = [];
+    
+    interface StackEntry {
+      group: ListGroupNode;
+      lastItem: ListItemNode;
+    }
+    
+    const stack: StackEntry[] = [];
+
+    for (const raw of rawItems) {
+      const itemNode: ListItemNode = {
+        type: raw.type,
+        indent: raw.indent,
+        text: raw.text,
+        checked: raw.checked,
+        children: [],
+      };
+
+      while (stack.length > 0) {
+        const top = stack[stack.length - 1];
+
+        if (raw.indent < top.group.indent) {
+          stack.pop();
+          continue;
+        }
+
+        if (raw.indent === top.group.indent) {
+          if (raw.type === top.group.listType) {
+            stack.pop();
+            continue;
+          } else {
+            const matchingAncestorIndex = stack.findIndex(
+              s => s.group.listType === raw.type && s.group.indent === raw.indent
+            );
+            if (matchingAncestorIndex !== -1) {
+              while (stack.length > matchingAncestorIndex) {
+                stack.pop();
+              }
+              continue;
+            } else {
+              break;
+            }
+          }
+        }
+
+        break;
+      }
+
+      if (stack.length === 0) {
+        let lastRootGroup = rootGroups[rootGroups.length - 1];
+        if (!lastRootGroup || lastRootGroup.listType !== raw.type) {
+          lastRootGroup = {
+            type: 'list',
+            listType: raw.type,
+            indent: raw.indent,
+            items: [],
+          };
+          rootGroups.push(lastRootGroup);
+        }
+        lastRootGroup.items.push(itemNode);
+        stack.push({ group: lastRootGroup, lastItem: itemNode });
+      } else {
+        const parentEntry = stack[stack.length - 1];
+        const childrenGroups = parentEntry.lastItem.children;
+        let lastChildGroup = childrenGroups[childrenGroups.length - 1];
+
+        if (!lastChildGroup || lastChildGroup.listType !== raw.type || lastChildGroup.indent !== raw.indent) {
+          lastChildGroup = {
+            type: 'list',
+            listType: raw.type,
+            indent: raw.indent,
+            items: [],
+          };
+          childrenGroups.push(lastChildGroup);
+        }
+        lastChildGroup.items.push(itemNode);
+        stack.push({ group: lastChildGroup, lastItem: itemNode });
+      }
+    }
+
+    return rootGroups;
+  };
+
+  const renderListGroupToHTML = (group: ListGroupNode): string => {
+    const tag = group.listType === 'ol' ? 'ol' : 'ul';
+    const attr = group.listType === 'taskList' ? ' data-type="taskList"' : '';
+    
+    const itemsHTML = group.items.map(item => {
+      let itemContent = parseInline(item.text);
+      const subHTML = renderChildrenHTML(item.children);
+      
+      if (group.listType === 'taskList') {
+        const checkedAttr = item.checked ? ' checked' : '';
+        const checkedData = item.checked ? 'true' : 'false';
+        itemContent = `<label><input type="checkbox"${checkedAttr} /></label><div>${itemContent}</div>`;
+        return `<li data-checked="${checkedData}">${itemContent}${subHTML}</li>`;
+      }
+      
+      return `<li><p>${itemContent}</p>${subHTML}</li>`;
+    }).join('');
+    
+    return `<${tag}${attr}>${itemsHTML}</${tag}>`;
+  };
+
+  const renderChildrenHTML = (children: ListGroupNode[]): string => {
+    if (!children || children.length === 0) return '';
+    return children.map(childGroup => renderListGroupToHTML(childGroup)).join('');
+  };
+
+  const flushList = () => {
+    if (pendingListItems.length === 0) return;
+    const tree = buildListTree(pendingListItems);
+    for (const group of tree) {
+      htmlLines.push(renderListGroupToHTML(group));
+    }
+    pendingListItems = [];
+  };
+
+  const closeBlockquote = () => {
+    if (inBlockquote) {
+      htmlLines.push(`<blockquote>${blockquoteLines.map(line => parseInline(line)).join('<br />')}</blockquote>`);
+      inBlockquote = false;
+      blockquoteLines = [];
+    }
+  };
+
+  const matchListItem = (line: string): RawListItem | null => {
+    const rawIndent = line.match(/^[\t ]*/)?.[0] || '';
+    const indent = rawIndent.replace(/\t/g, '    ').length;
+    const trimmed = line.trim();
+    if (!trimmed) return null;
+
+    const taskMatch = trimmed.match(/^[-*+]\s+\[([ xX])\]\s+(.*)$/);
+    if (taskMatch) {
+      return { type: 'taskList', indent, text: taskMatch[2], checked: taskMatch[1].toLowerCase() === 'x' };
+    }
+
+    const ulMatch = trimmed.match(/^[-*+]\s+(.*)$/);
+    if (ulMatch) {
+      return { type: 'ul', indent, text: ulMatch[1] };
+    }
+
+    const olMatch = trimmed.match(/^(\d+)[\.\)]\s+(.*)$/);
+    if (olMatch) {
+      return { type: 'ol', indent, text: olMatch[2] };
+    }
+
+    return null;
+  };
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     
@@ -1147,7 +1306,7 @@ function parseMarkdownToHTML(markdown: string): string {
     }
     
     if (line.trim().startsWith('```')) {
-      closeList();
+      flushList();
       closeBlockquote();
       inCodeBlock = true;
       codeBlockLang = line.trim().slice(3).trim();
@@ -1155,7 +1314,7 @@ function parseMarkdownToHTML(markdown: string): string {
     }
     
     if (line.startsWith('>')) {
-      closeList();
+      flushList();
       inBlockquote = true;
       const content = line.slice(1).trim();
       blockquoteLines.push(content);
@@ -1165,67 +1324,36 @@ function parseMarkdownToHTML(markdown: string): string {
     }
     
     if (/^(?:---|===|\*\*\*|___)$/.test(line.trim())) {
-      closeList();
+      flushList();
       htmlLines.push('<hr />');
       continue;
     }
     
     const headingMatch = line.match(/^(#{1,3})\s+(.*)$/);
     if (headingMatch) {
-      closeList();
+      flushList();
       const level = headingMatch[1].length;
       const content = headingMatch[2];
       htmlLines.push(`<h${level}>${parseInline(content)}</h${level}>`);
       continue;
     }
-    
-    const taskMatch = line.match(/^[-*]\s+\[([ xX])\]\s+(.*)$/);
-    if (taskMatch) {
-      if (listType !== 'taskList') {
-        closeList();
-        listType = 'taskList';
-        htmlLines.push('<ul data-type="taskList">');
-      }
-      const checked = taskMatch[1].toLowerCase() === 'x';
-      const content = taskMatch[2];
-      htmlLines.push(`<li data-checked="${checked}"><label><input type="checkbox" ${checked ? 'checked' : ''} /></label><div>${parseInline(content)}</div></li>`);
+
+    const listItem = matchListItem(line);
+    if (listItem) {
+      pendingListItems.push(listItem);
       continue;
     }
-    
-    const ulMatch = line.match(/^[-*]\s+(.*)$/);
-    if (ulMatch) {
-      if (listType !== 'ul') {
-        closeList();
-        listType = 'ul';
-        htmlLines.push('<ul>');
-      }
-      const content = ulMatch[1];
-      htmlLines.push(`<li>${parseInline(content)}</li>`);
-      continue;
-    }
-    
-    const olMatch = line.match(/^(\d+)\.\s+(.*)$/);
-    if (olMatch) {
-      if (listType !== 'ol') {
-        closeList();
-        listType = 'ol';
-        htmlLines.push('<ol>');
-      }
-      const content = olMatch[2];
-      htmlLines.push(`<li>${parseInline(content)}</li>`);
-      continue;
-    }
-    
+
     if (line.trim() === '') {
-      closeList();
+      flushList();
       continue;
     }
-    
-    closeList();
+
+    flushList();
     htmlLines.push(`<p>${parseInline(line)}</p>`);
   }
   
-  closeList();
+  flushList();
   closeBlockquote();
   
   return htmlLines.join('\n');
