@@ -7,7 +7,7 @@ import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/components/CustomToast";
-import { CONTRACT_TEMPLATE, CONTRACT_TEMPLATE_DEVELOPMENT, CONTRACT_TEMPLATE_IA, CONTRACT_TEMPLATE_ARTES } from "@/lib/contractTemplate";
+import { CONTRACT_TEMPLATE, CONTRACT_TEMPLATE_DEVELOPMENT, CONTRACT_TEMPLATE_IA, CONTRACT_TEMPLATE_ARTES, CONTRACT_TEMPLATE_AUDIOVISUAL } from "@/lib/contractTemplate";
 
 interface ContractDetailsModalProps {
   isOpen: boolean;
@@ -119,7 +119,9 @@ export default function ContractDetailsModal({ isOpen, onClose, onRenew, contrac
     let template = CONTRACT_TEMPLATE;
     const serviceName = (service.name || "").toLowerCase();
 
-    if (serviceName.includes("site") || serviceName.includes("sistema") || serviceName.includes("landing")) {
+    if (serviceName.includes("audiovisual") || serviceName.includes("captação") || serviceName.includes("captacao") || serviceName.includes("curso") || (serviceName.includes("foto") && serviceName.includes("vídeo"))) {
+      template = CONTRACT_TEMPLATE_AUDIOVISUAL;
+    } else if (serviceName.includes("site") || serviceName.includes("sistema") || serviceName.includes("landing")) {
       template = CONTRACT_TEMPLATE_DEVELOPMENT;
     } else if (serviceName.includes("imagem") || serviceName.includes("ia") || serviceName.includes("inteligência artificial")) {
       template = CONTRACT_TEMPLATE_IA;
@@ -127,13 +129,22 @@ export default function ContractDetailsModal({ isOpen, onClose, onRenew, contrac
       template = CONTRACT_TEMPLATE_ARTES;
     }
 
-    return template
+    const qualicacao = client.tipo_pessoa === 'PF'
+      ? `pessoa física, inscrita no CPF sob o nº ${client.cnpj || 'não informado'}`
+      : `pessoa jurídica de direito privado, inscrita no CNPJ sob o nº ${client.cnpj || 'não informado'}`;
+
+    const enderecoFormatado = client.address 
+      ? `${client.address.logradouro || ''}, ${client.address.numero || 'S/N'}${client.address.complemento ? ' - ' + client.address.complemento : ''}${client.address.bairro ? ', ' + client.address.bairro : ''}`
+      : "Endereço não informado";
+
+    let content = template
       .replace(/{{NOME_CLIENTE}}/g, client.name || "")
+      .replace(/{{QUALIFICACAO_CONTRATANTE}}/g, qualicacao)
       .replace(/{{CNPJ}}/g, client.cnpj || "")
-      .replace(/{{ENDERECO}}/g, client.address ? `${client.address.logradouro}, ${client.address.numero}` : "Endereço não informado")
+      .replace(/{{ENDERECO}}/g, enderecoFormatado)
       .replace(/{{CIDADE}}/g, client.address?.cidade || "Cidade")
       .replace(/{{UF}}/g, client.address?.uf || "UF")
-      .replace(/{{CONTATO_NOME}}/g, client.contact_name || "")
+      .replace(/{{CONTATO_NOME}}/g, client.contact_name || client.name || "")
       .replace(/{{EMAIL}}/g, client.email || "")
       .replace(/{{TELEFONE}}/g, client.phone || "")
       .replace(/{{SERVICO_NOME}}/g, service.name || "")
@@ -146,6 +157,12 @@ export default function ContractDetailsModal({ isOpen, onClose, onRenew, contrac
       .replace(/{{DATA_INICIO}}/g, new Date(contract.start_date + 'T12:00:00').toLocaleDateString('pt-BR'))
       .replace(/{{DATA_TERMINO}}/g, contract.end_date ? new Date(contract.end_date + 'T12:00:00').toLocaleDateString('pt-BR') : 'Indeterminado')
       .replace(/{{DATA_ATUAL}}/g, new Date().toLocaleDateString('pt-BR'));
+
+    if (client.tipo_pessoa === 'PF' && !template.includes("{{QUALIFICACAO_CONTRATANTE}}")) {
+      content = content.replace("pessoa jurídica de direito privado, inscrita no CNPJ sob o nº", "pessoa física, inscrita no CPF sob o nº");
+    }
+
+    return content;
   };
 
   const handleSaveDocument = async () => {

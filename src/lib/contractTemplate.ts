@@ -313,3 +313,91 @@ _________________________________________
 
 _________________________________________
 Agência Pratic`;
+
+// 5. TEMPLATE: PRODUÇÃO E CAPTAÇÃO AUDIOVISUAL (SESSÃO DE FOTOS, VÍDEOS E GRAVAÇÃO DE CURSO)
+export const CONTRACT_TEMPLATE_AUDIOVISUAL = `Contrato de Prestação de Serviços de Produção e Captação Audiovisual
+
+1. IDENTIFICAÇÃO DAS PARTES
+CONTRATANTE: {{NOME_CLIENTE}}, {{QUALIFICACAO_CONTRATANTE}}, residente/sediada à {{ENDERECO}}, na cidade de {{CIDADE}}, Estado de {{UF}}, neste ato representada por {{CONTATO_NOME}}, doravante denominada “CONTRATANTE”, com e-mail de contato {{EMAIL}} e WhatsApp {{TELEFONE}}.
+
+CONTRATADA: Agência Pratic, pessoa jurídica inscrita no CNPJ sob o nº 57.200.006/0001-20, com sede online, neste ato representada por Isabela Brito Macedo Mendonça, publicitária independente, inscrita no CPF sob o nº 120.894.339-14, doravante denominada “CONTRATADA”.
+
+CLÁUSULA PRIMEIRA – DO OBJETO
+Constitui objeto do presente contrato a prestação de serviços de produção audiovisual, captação de imagem e áudio, direção, tratamento e edição de materiais digitais e curso em vídeo ({{SERVICO_NOME}}) pela CONTRATADA à CONTRATANTE.
+
+Parágrafo Primeiro – O escopo dos serviços compreende duas frentes integradas de entrega:
+
+1. Sessão de fotos e vídeos para redes sociais:
+a) Direção de roteiro — definição dos temas e do que cada peça precisa comunicar;
+b) Ambientação e iluminação — preparação do espaço, luz e enquadramento;
+c) Captação de fotos — retratos profissionais e imagens de apoio para posts e perfis;
+d) Captação de vídeos curtos — cortes verticais para Reels e stories;
+e) Seleção e tratamento — curadoria do melhor material e ajuste de cor;
+f) Entrega organizada — arquivos separados por finalidade, prontos para publicar.
+*Captação realizada em 1 (uma) meia diária de gravação, previamente alinhada entre as partes.*
+
+2. Captação e edição do curso em vídeo:
+a) Apoio de roteiro — organização dos módulos e do encadeamento das aulas;
+b) Ambientação e iluminação — cenário fixo e luz controlada para todos os módulos;
+c) Estrutura de captação — câmera em alta resolução, captação de áudio profissional e suporte a teleprompter quando necessário;
+d) Gravação dos módulos — 1 (uma) diária completa ou 2 (duas) meias-diárias, conforme a agenda da CONTRATANTE;
+e) Edição dos vídeos — cortes, correção de cor e tratamento de áudio;
+f) Janelas de entrega — módulos entregues em lotes, para revisão sem esperar o fim.
+
+Parágrafo Segundo – O projeto de desenvolvimento de sistema próprio (Sistema L9 Joias) permanece expressamente em stand-by, não integrando a presente contratação e podendo ser objeto de aditivo ou contratação futura autônoma.
+
+CLÁUSULA SEGUNDA – DAS OBRIGAÇÕES DA CONTRATADA
+São obrigações da CONTRATADA:
+a) Disponibilizar toda a equipe técnica e equipamentos profissionais (câmeras, lentes, iluminação, microfones e teleprompter) necessários para a execução das diárias acordadas;
+b) Conduzir a direção de cena, posicionamento, postura e ritmo durante as gravações para garantir naturalidade e excelência técnica;
+c) Realizar a pós-produção, edição, masterização de áudio e correção de cor dos vídeos e fotos nos padrões profissionais de mercado;
+d) Cumprir o cronograma de janelas de entrega dos módulos do curso e materiais de redes sociais acordado entre as partes;
+e) Disponibilizar os arquivos digitais em alta resolução por meio de link de compartilhamento em nuvem (Google Drive ou equivalente).
+
+CLÁUSULA TERCEIRA – DAS OBRIGAÇÕES DA CONTRATANTE
+São obrigações da CONTRATANTE:
+a) Comparecer pontualmente nas diárias ou meias-diárias de gravação previamente agendadas, com figurinos, produtos e materiais de apoio organizados;
+b) Disponibilizar ou validar previamente os roteiros e tópicos de cada aula do curso e das peças de redes sociais;
+c) Responder às janelas de revisão dos vídeos entregues em até 5 (cinco) dias úteis por lote, concentrando apontamentos em rodadas objetivas de feedback;
+d) Efetuar os pagamentos nas datas e condições previstas na Cláusula Quinta deste contrato;
+e) Respeitar a política de reagendamento: avisos de alteração de datas de diária devem ser comunicados com no mínimo 48 (quarenta e oito) horas de antecedência.
+
+CLÁUSULA QUARTA – DOS PRAZOS E ENTREGAS
+4.1. O contrato inicia sua vigência em {{DATA_INICIO}} e se estenderá até a entrega e homologação final de todos os módulos do curso e acervo de fotos e vídeos, prevista para até {{DATA_TERMINO}}.
+4.2. As diárias de gravação serão alinhadas de comum acordo logo após a formalização do presente contrato.
+4.3. Estão inclusas até 2 (duas) rodadas de ajustes pontuais por vídeo/módulo entregue nas janelas de revisão.
+4.4. A aprovação final de cada lote libera o arquivo mestre em alta definição para publicação ou upload na plataforma de membros/cursos da CONTRATANTE.
+
+CLÁUSULA QUINTA – DO VALOR E CONDIÇÕES DE PAGAMENTO
+5.1. Pela prestação de todos os serviços audiovisuais descritos neste contrato (sessão de fotos/vídeos e gravação/edição integral do curso), a CONTRATANTE pagará à CONTRATADA o valor total fechado de R$ {{VALOR}} ({{VALOR_EXTENSO}}).
+5.2. O faturamento será processado e gerado pela plataforma ASAAS, mediante envio de fatura / cobrança via PIX ou boleto bancário para os canais de contato da CONTRATANTE.
+5.3. Eventuais diárias extras de gravação não contempladas no escopo inicial ou deslocamentos fora da comarca serão orçados e cobrados à parte mediante aprovação prévia.
+
+CLÁUSULA SEXTA – DOS DIREITOS AUTORAIS E USO DE IMAGEM
+6.1. A CONTRATANTE autoriza a captação de sua imagem e voz exclusivamente para a produção do curso e conteúdos objeto deste contrato.
+6.2. Após a quitação integral dos valores acordados, todos os direitos de exploração comercial, venda do curso e veiculação dos materiais passam a pertencer exclusivamente à CONTRATANTE.
+6.3. Fica reservado à CONTRATADA o direito de utilizar trechos dos bastidores e imagens finais como portfólio profissional em seus canais oficiais e redes sociais.
+
+CLÁUSULA SÉTIMA – DA RESCISÃO E CANCELAMENTO
+7.1. Em caso de cancelamento imotivado por parte da CONTRATANTE antes da realização das diárias de captação, haverá retenção de 20% (vinte por cento) do valor total a título de taxa de reserva de agenda e pré-produção.
+7.2. Caso as diárias já tenham sido captadas e a rescisão ocorra durante a etapa de edição, a CONTRATADA fará jus ao valor proporcional correspondente aos serviços já executados até a data.
+
+CLÁUSULA OITAVA – DA ISENÇÃO DE RESPONSABILIDADE
+A CONTRATADA não se responsabiliza por atrasos decorrentes de caso fortuito ou força maior (como condições climáticas adversas em gravações externas, falta de energia no local ou problemas de saúde comprovados), hipóteses em que nova data será imediatamente reagendada sem custos adicionais.
+
+CLÁUSULA NONA – DO USO DE PORTFÓLIO
+A CONTRATADA se reserva o direito de expor o projeto desenvolvido, a título de modelo, em seu portfólio profissional.
+
+CLÁUSULA DÉCIMA – DO FORO
+Para dirimir quaisquer controvérsias oriundas do presente instrumento, as partes elegem o foro da plataforma Autentique / meio eletrônico para a coleta das assinaturas digitais, ou a Comarca de Londrina/PR.
+
+Por estarem assim justas e contratadas, firmam o presente instrumento.
+
+(Londrina, {{DATA_ATUAL}})
+
+_________________________________________
+{{NOME_CLIENTE}}
+
+_________________________________________
+Agência Pratic`;
+
