@@ -4,7 +4,8 @@ import { supabase } from "@/lib/supabase";
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Plus, Shield, ShieldOff, Trash2, X, CheckCircle2, Clock,
-  Calendar as CalendarIcon, Info, Users, MapPin, ExternalLink, Edit2
+  Calendar as CalendarIcon, Info, Users, MapPin, ExternalLink, Edit2,
+  RefreshCw, Check, AlertCircle, Sparkles
 } from "lucide-react";
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
@@ -17,6 +18,7 @@ import { useToast } from "@/components/CustomToast";
 import { motion, AnimatePresence } from "framer-motion";
 import Spotlight from "@/components/Spotlight";
 import SearchInput from "@/components/ui/SearchInput";
+import { GoogleIcon } from "@/components/SocialIcons";
 
 const CATEGORIES = [
   { id: 'meeting', label: 'Reunião', color: '#3B82F6', icon: Users },
@@ -51,6 +53,15 @@ export default function SchedulePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilters, setActiveFilters] = useState<string[]>(CATEGORIES.map(c => c.id));
   const [isMobile, setIsMobile] = useState(false);
+  const [isSyncingGoogle, setIsSyncingGoogle] = useState(false);
+  const [showGoogleModal, setShowGoogleModal] = useState(false);
+  const [googleStatus, setGoogleStatus] = useState<{
+    oauthReady: boolean;
+    accounts: {
+      agenciapratic: { configured: boolean; email: string };
+      praticlabs: { configured: boolean; email: string };
+    };
+  } | null>(null);
   const [popover, setPopover] = useState<{
     isOpen: boolean;
     type: 'details' | 'form';
@@ -63,13 +74,6 @@ export default function SchedulePage() {
     y: 0,
   });
 
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 768);
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
   const [formData, setFormData] = useState({
     title: '',
     type: 'meeting',
@@ -79,6 +83,13 @@ export default function SchedulePage() {
     status: 'scheduled',
     description: ''
   });
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const fetchClients = useCallback(async () => {
     const { data } = await supabase.from('clients').select('id, name, nome_fantasia').order('name');
@@ -156,10 +167,71 @@ export default function SchedulePage() {
     }
   }, [currentUser, showToast]);
 
+  const fetchGoogleStatus = useCallback(async () => {
+    try {
+      const res = await fetch('/api/agenda/google-sync');
+      if (res.ok) {
+        const data = await res.json();
+        setGoogleStatus(data);
+      }
+    } catch (err) {
+      console.error('Erro ao verificar status do Google Agenda:', err);
+    }
+  }, []);
+
+  const handlePullFromGoogle = useCallback(async (silentOption: boolean | unknown = false) => {
+    const silent = typeof silentOption === 'boolean' ? silentOption : false;
+    try {
+      if (!silent) setIsSyncingGoogle(true);
+      const res = await fetch('/api/agenda/google-sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'pull', account: 'agenciapratic' }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        if (!silent && (data.accountNotConfigured || data.error?.includes('não configurada'))) {
+          setShowGoogleModal(true);
+        }
+        if (!silent) throw new Error(data.error || 'Erro ao sincronizar com o Google Agenda');
+        return;
+      }
+
+      const totalChanges = (data.inserted || 0) + (data.updated || 0) + (data.deleted || 0);
+      if (totalChanges > 0) {
+        showToast(
+          `Sincronizado com Google! ${data.inserted} novos, ${data.updated} atualizados.`,
+          'success'
+        );
+        await fetchEvents();
+      } else if (!silent) {
+        showToast('Agenda já sincronizada com agenciapratic@gmail.com!', 'success');
+      }
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : 'Falha na sincronização';
+      console.error('Erro na sincronização:', err);
+      if (!silent) {
+        showToast(errorMsg, 'error');
+      }
+    } finally {
+      if (!silent) setIsSyncingGoogle(false);
+    }
+  }, [fetchEvents, showToast]);
+
   useEffect(() => {
     fetchEvents();
     fetchClients();
-  }, [fetchEvents, fetchClients]);
+    fetchGoogleStatus();
+    handlePullFromGoogle(true);
+
+    const handleFocus = () => {
+      handlePullFromGoogle(true);
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [fetchEvents, fetchClients, fetchGoogleStatus, handlePullFromGoogle]);
 
 
   const handleDateClick = (arg: any) => {
@@ -460,6 +532,20 @@ export default function SchedulePage() {
             {eventInfo.timeText}
           </span>
         )}
+        {eventInfo.event.extendedProps?.google_event_id && (
+          <span
+            title="Sincronizado com Google Agenda"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+              opacity: 0.85,
+            }}
+          >
+            <GoogleIcon size={11} />
+          </span>
+        )}
         <span style={{
           fontSize: '0.72rem',
           fontWeight: 500,
@@ -545,12 +631,60 @@ export default function SchedulePage() {
             })}
           </div>
 
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexShrink: 0 }}>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0, flexWrap: 'wrap' }}>
             <SearchInput
               value={searchQuery}
               onChange={setSearchQuery}
               placeholder="Pesquisar..."
             />
+            <button
+              onClick={handlePullFromGoogle}
+              disabled={isSyncingGoogle}
+              className="btn btn-secondary"
+              style={{
+                height: '36px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontSize: '0.8rem',
+                padding: '0 12px',
+                cursor: isSyncingGoogle ? 'not-allowed' : 'pointer',
+              }}
+              title="Sincronizar compromissos com agenciapratic@gmail.com"
+            >
+              <RefreshCw
+                size={14}
+                style={{
+                  animation: isSyncingGoogle ? 'spin 1s linear infinite' : 'none',
+                }}
+              />
+              <span>{isSyncingGoogle ? 'Sincronizando...' : isMobile ? 'Google' : 'Sincronizar'}</span>
+            </button>
+            <button
+              onClick={() => setShowGoogleModal(true)}
+              style={{
+                height: '36px',
+                padding: '0 10px',
+                borderRadius: '8px',
+                border: '1px solid rgba(255,255,255,0.1)',
+                background: 'rgba(255,255,255,0.03)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                cursor: 'pointer',
+              }}
+              title="Status da Integração com Google Agenda"
+            >
+              <GoogleIcon size={15} />
+              <span
+                style={{
+                  width: '7px',
+                  height: '7px',
+                  borderRadius: '50%',
+                  backgroundColor: googleStatus?.accounts?.agenciapratic?.configured ? '#22C55E' : '#EAB308',
+                }}
+              />
+            </button>
             <Spotlight as="button" className="btn btn-accent" onClick={(e?: any) => {
               let x = window.innerWidth / 2;
               let y = window.innerHeight / 2;
@@ -631,7 +765,7 @@ export default function SchedulePage() {
           const popoverWidth = 380;
           const isMobilePopover = isMobile;
           
-          let popStyle: React.CSSProperties = isMobilePopover ? {
+          const popStyle: React.CSSProperties = isMobilePopover ? {
             position: 'fixed',
             top: '50%',
             left: '50%',
@@ -640,29 +774,22 @@ export default function SchedulePage() {
             maxWidth: '400px',
             zIndex: 1000,
           } : (() => {
-            const containerWidth = pageRef.current ? pageRef.current.clientWidth : window.innerWidth;
-            const containerHeight = pageRef.current ? pageRef.current.clientHeight : window.innerHeight;
-            
             const popoverHeight = popover.type === 'form' ? 480 : 380; 
 
             let left = popover.x + 15;
             let top = popover.y + 15;
             
-            // Se o popover for cortar na direita, abre para a esquerda do clique
-            if (left + popoverWidth > containerWidth) {
-              left = popover.x - popoverWidth - 15;
+            if (typeof window !== 'undefined') {
+              if (left + popoverWidth > window.innerWidth) {
+                left = Math.max(12, popover.x - popoverWidth - 15);
+              }
+              if (top + popoverHeight > window.innerHeight) {
+                top = Math.max(12, popover.y - popoverHeight - 15);
+              }
             }
-            
-            // Se o popover for cortar embaixo, abre para cima do clique
-            if (top + popoverHeight > containerHeight) {
-              top = popover.y - popoverHeight - 15;
-            }
-            
-            if (left < 12) left = 12;
-            if (top < 12) top = 12;
             
             return {
-              position: 'absolute',
+              position: 'fixed',
               left: `${left}px`,
               top: `${top}px`,
               width: `${popoverWidth}px`,
@@ -760,6 +887,23 @@ export default function SchedulePage() {
                         {selectedEvent.extendedProps.status === 'completed' ? <CheckCircle2 size={16} color="#22C55E" /> : <Clock size={16} color="#EAB308" />}
                         <span style={{ fontSize: '0.85rem' }}>{selectedEvent.extendedProps.status === 'completed' ? 'Concluído' : 'Agendado'}</span>
                       </div>
+                      {selectedEvent.extendedProps?.google_event_id && (
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          padding: '6px 10px',
+                          background: 'rgba(66, 133, 244, 0.08)',
+                          borderRadius: '8px',
+                          border: '1px solid rgba(66, 133, 244, 0.2)',
+                          marginTop: '4px'
+                        }}>
+                          <GoogleIcon size={14} />
+                          <span style={{ fontSize: '0.75rem', color: '#60a5fa', fontWeight: 500 }}>
+                            Sincronizado com Google ({selectedEvent.extendedProps.google_account || 'agenciapratic'})
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     {selectedEvent.extendedProps.description && (
@@ -865,6 +1009,163 @@ export default function SchedulePage() {
             </>
           );
         })()}
+      </AnimatePresence>
+
+      {/* Modal de Status e Conexão com Google Agenda */}
+      <AnimatePresence>
+        {showGoogleModal && (
+          <>
+            <div
+              onClick={() => setShowGoogleModal(false)}
+              style={{
+                position: 'fixed',
+                inset: 0,
+                backgroundColor: 'rgba(0,0,0,0.65)',
+                backdropFilter: 'blur(4px)',
+                zIndex: 1100,
+              }}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="glass-card"
+              style={{
+                position: 'fixed',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                width: '92%',
+                maxWidth: '500px',
+                padding: '24px',
+                zIndex: 1101,
+                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ padding: '8px', background: 'rgba(66, 133, 244, 0.1)', borderRadius: '10px' }}>
+                    <GoogleIcon size={22} />
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>Google Agenda</h3>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: 0 }}>Sincronização Bidirecional</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowGoogleModal(false)}
+                  style={{ color: 'var(--text-tertiary)', padding: '4px', cursor: 'pointer', background: 'none', border: 'none' }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '24px' }}>
+                {/* Conta agenciapratic@gmail.com */}
+                <div
+                  style={{
+                    padding: '14px',
+                    borderRadius: '10px',
+                    background: 'var(--card-inner-bg)',
+                    border: '1px solid var(--border)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '10px',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>agenciapratic@gmail.com</span>
+                      <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', margin: '2px 0 0' }}>
+                        Reuniões, Captação, Tarefas, Social Media, Tráfego, Lançamentos
+                      </p>
+                    </div>
+                    <span
+                      style={{
+                        fontSize: '0.7rem',
+                        fontWeight: 600,
+                        padding: '3px 8px',
+                        borderRadius: '12px',
+                        backgroundColor: googleStatus?.accounts?.agenciapratic?.configured
+                          ? 'rgba(34, 197, 94, 0.15)'
+                          : 'rgba(234, 179, 8, 0.15)',
+                        color: googleStatus?.accounts?.agenciapratic?.configured ? '#22C55E' : '#EAB308',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: '6px',
+                          height: '6px',
+                          borderRadius: '50%',
+                          backgroundColor: googleStatus?.accounts?.agenciapratic?.configured ? '#22C55E' : '#EAB308',
+                        }}
+                      />
+                      {googleStatus?.accounts?.agenciapratic?.configured ? 'Conectado' : 'Pendente'}
+                    </span>
+                  </div>
+
+                  {!googleStatus?.accounts?.agenciapratic?.configured && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                        Para conectar o Google Agenda desta conta, clique no botão abaixo para autorizar no Google:
+                      </p>
+                      <a
+                        href="/api/agenda/google-auth?account=agenciapratic"
+                        className="btn btn-accent"
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px',
+                          height: '36px',
+                          fontSize: '0.8rem',
+                          textDecoration: 'none',
+                        }}
+                      >
+                        <GoogleIcon size={14} /> Conectar agenciapratic@gmail.com
+                      </a>
+                    </div>
+                  )}
+                </div>
+
+                {/* Info sobre sincronização */}
+                <div style={{ padding: '12px', borderRadius: '8px', background: 'rgba(59, 130, 246, 0.05)', border: '1px solid rgba(59, 130, 246, 0.15)' }}>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                    <Info size={16} color="#3B82F6" style={{ flexShrink: 0, marginTop: '2px' }} />
+                    <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.4, margin: 0 }}>
+                      <strong>Sincronização Bidirecional Ativa:</strong> Compromissos criados aqui são enviados para o Google Calendar. Compromissos criados no Google podem ser importados com o botão <strong>Sincronizar</strong>.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  className="btn btn-secondary"
+                  style={{ flex: 1, height: '38px', fontSize: '0.82rem' }}
+                  onClick={() => setShowGoogleModal(false)}
+                >
+                  Fechar
+                </button>
+                <button
+                  className="btn btn-accent"
+                  style={{ flex: 1, height: '38px', fontSize: '0.82rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                  onClick={() => {
+                    setShowGoogleModal(false);
+                    handlePullFromGoogle();
+                  }}
+                  disabled={isSyncingGoogle}
+                >
+                  <RefreshCw size={14} className={isSyncingGoogle ? 'animate-spin' : ''} />
+                  Sincronizar Agora
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
       </AnimatePresence>
 
       <style jsx global>{`
