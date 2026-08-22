@@ -110,8 +110,6 @@ export default function MobileMenuDrawer({ isOpen, onClose }: MobileMenuDrawerPr
               position: 'fixed',
               inset: 0,
               background: 'rgba(0, 0, 0, 0.6)',
-              backdropFilter: 'blur(8px)',
-              WebkitBackdropFilter: 'blur(8px)',
               zIndex: 9998
             }}
           />
@@ -136,8 +134,6 @@ export default function MobileMenuDrawer({ isOpen, onClose }: MobileMenuDrawerPr
               inset: 0,
               zIndex: 9999,
               background: 'var(--glass-bg)',
-              backdropFilter: 'blur(40px)',
-              WebkitBackdropFilter: 'blur(40px)',
               display: 'flex',
               flexDirection: 'column',
               overflowY: 'auto',

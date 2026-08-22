@@ -52,7 +52,6 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                 boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
                 border: toast.type === 'error' ? '1px solid var(--color-danger-wash)' : '1px solid var(--border)',
                 background: toast.type === 'error' ? 'var(--color-danger-wash)' : 'var(--glass-bg)',
-                backdropFilter: 'blur(20px)'
               }}
             >
               {toast.type === 'success' && <CheckCircle2 size={20} color="var(--color-success)" />}

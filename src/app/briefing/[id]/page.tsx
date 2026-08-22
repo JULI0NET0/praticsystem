@@ -709,8 +709,7 @@ DADOS DO BRIEFING:
       <style jsx global>{`
         .glass-card {
           background: rgba(18, 18, 20, 0.7);
-          backdrop-filter: blur(20px);
-          -webkit-backdrop-filter: blur(20px);
+          -webkit-
           border-radius: 24px;
           box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
         }

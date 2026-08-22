@@ -584,7 +584,7 @@ export default function ContractsPage() {
           <div style={{
             position: 'fixed', inset: 0, zIndex: 110,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: '24px', backgroundColor: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)'
+            padding: '24px', backgroundColor: 'var(--color-scrim)'
           }}>
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}

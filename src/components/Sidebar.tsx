@@ -339,8 +339,7 @@ export default function Sidebar() {
                   exit={{ opacity: 0, y: 10, scale: 0.95 }}
                   style={{
                     position: 'absolute', bottom: '100%', left: 0, marginBottom: '20px',
-                    width: '200px', background: 'rgba(15, 15, 15, 0.98)', backdropFilter: 'blur(32px)',
-                    borderRadius: '20px', border: '1px solid var(--border)', padding: '12px',
+                    width: '200px', background: 'var(--color-surface-raised)', borderRadius: '20px', border: '1px solid var(--border)', padding: '12px',
                     boxShadow: '0 20px 50px rgba(0,0,0,0.6)', zIndex: 1000
                   }}
                   onClick={(e) => e.stopPropagation()}
@@ -416,8 +415,7 @@ export default function Sidebar() {
                     exit={{ opacity: 0, y: 10, scale: 0.95 }}
                     style={{
                       position: 'absolute', bottom: '100%', left: 0, marginBottom: '20px',
-                      width: '320px', background: 'rgba(15, 15, 15, 0.98)', backdropFilter: 'blur(32px)',
-                      borderRadius: '24px', border: '1px solid var(--border)', padding: '20px',
+                      width: '320px', background: 'var(--color-surface-raised)', borderRadius: '24px', border: '1px solid var(--border)', padding: '20px',
                       boxShadow: '0 20px 50px rgba(0,0,0,0.6)', zIndex: 1000
                     }}
                     onClick={(e) => e.stopPropagation()}

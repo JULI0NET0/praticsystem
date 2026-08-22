@@ -73,6 +73,9 @@
   --color-surface-sunken: var(--color-container-low);
   --color-surface-inset: var(--color-container);
   --color-surface-inverse: var(--color-ink);
+  /* Véu atrás de modais. Substitui os rgba(0,0,0,0.85) soltos —
+     opaco demais para o pergaminho, e sem blur agora. */
+  --color-scrim: color-mix(in oklab, var(--color-ink) 45%, transparent);
 
   --color-border-subtle: var(--color-container-highest);
   --color-border-default: var(--color-outline-variant);

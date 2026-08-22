@@ -316,8 +316,6 @@ export default function OnboardingPage() {
               alignItems: 'center',
               justifyContent: 'center',
               backgroundColor: 'rgba(10, 10, 10, 0.4)',
-              backdropFilter: 'blur(24px)',
-              WebkitBackdropFilter: 'blur(24px)',
               zIndex: 100,
               overflow: 'hidden'
             }}
@@ -338,7 +336,7 @@ export default function OnboardingPage() {
             <div style={{
               position: 'absolute',
               inset: 0,
-              background: 'radial-gradient(circle, transparent 0%, rgba(10,10,10,0.85) 80%)',
+              background: 'radial-gradient(circle, transparent 0%, var(--color-surface-raised) 80%)',
               pointerEvents: 'none'
             }} />
 

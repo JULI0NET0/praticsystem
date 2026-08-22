@@ -282,8 +282,7 @@ export default function LiveChat() {
             style={{
               width: 'min(640px, calc(100vw - 32px))',
               height: 'min(520px, calc(100vh - 100px))',
-              background: 'rgba(12, 12, 12, 0.96)',
-              backdropFilter: 'blur(30px)',
+              background: 'var(--color-surface-raised)',
               borderRadius: '20px',
               border: '1px solid var(--border)',
               display: 'flex',
@@ -375,7 +374,7 @@ export default function LiveChat() {
                           <div style={{
                             position: 'absolute', bottom: -1, right: -1, width: '8px', height: '8px',
                             background: online ? 'var(--color-success)' : 'var(--color-text-tertiary)', borderRadius: '50%',
-                            border: '2px solid rgba(12,12,12,0.96)',
+                            border: '2px solid var(--color-surface-raised)',
                           }} />
                         </div>
                         <span style={{ fontWeight: userUnread > 0 ? 700 : 500, fontSize: '0.8rem', textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, color: userUnread > 0 ? 'var(--text-primary)' : undefined }}>
@@ -414,7 +413,7 @@ export default function LiveChat() {
                             ? <img src={activeMember.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
                             : activeMember.name.substring(0, 2).toUpperCase()}
                         </div>
-                        <div style={{ position: 'absolute', bottom: -1, right: -1, width: '7px', height: '7px', background: isUserOnline(activeMember.id) ? 'var(--color-success)' : 'var(--color-text-tertiary)', borderRadius: '50%', border: '2px solid rgba(12,12,12,0.96)' }} />
+                        <div style={{ position: 'absolute', bottom: -1, right: -1, width: '7px', height: '7px', background: isUserOnline(activeMember.id) ? 'var(--color-success)' : 'var(--color-text-tertiary)', borderRadius: '50%', border: '2px solid var(--color-surface-raised)' }} />
                       </div>
                     )}
                   <div>
@@ -472,7 +471,7 @@ export default function LiveChat() {
                       initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}
                       style={{
                         position: 'absolute', bottom: '100%', left: '12px', right: '64px',
-                        background: 'rgba(18,18,18,0.98)', border: '1px solid var(--border)',
+                        background: 'var(--color-surface-raised)', border: '1px solid var(--border)',
                         borderRadius: '10px', padding: '6px', maxHeight: '130px', overflowY: 'auto',
                         boxShadow: '0 -8px 24px rgba(0,0,0,0.3)',
                       }}

@@ -270,7 +270,6 @@ export default function WorkspacePage() {
         padding: '12px 20px',
         borderRadius: '24px',
         border: '1px solid var(--border)',
-        backdropFilter: 'blur(10px)'
       }}>
         {/* Emoji e Saudação */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -573,7 +572,7 @@ export default function WorkspacePage() {
                 {isEditing && (
                   <div style={{ position: 'absolute', bottom: '10px', right: '10px', display: 'flex', gap: '6px', zIndex: 20 }}>
                     {[{ label: 'L', dim: 'colSpan' as const }, { label: 'A', dim: 'rowSpan' as const }].map(({ label, dim }) => (
-                      <div key={dim} style={{ display: 'flex', alignItems: 'center', gap: '2px', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', borderRadius: '8px', padding: '3px 5px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                      <div key={dim} style={{ display: 'flex', alignItems: 'center', gap: '2px', background: 'rgba(0,0,0,0.6)', borderRadius: '8px', padding: '3px 5px', border: '1px solid rgba(255,255,255,0.1)' }}>
                         <span style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.5)', fontWeight: 700, minWidth: '10px' }}>{label}</span>
                         <button onClick={() => updateWidgetSize(w.id, dim, -1)} style={{ width: '18px', height: '18px', color: 'rgba(255,255,255,0.8)', fontSize: '0.9rem', lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.1)', borderRadius: '4px', border: 'none', cursor: 'pointer' }}>−</button>
                         <span style={{ fontSize: '0.7rem', color: 'white', fontWeight: 700, minWidth: '14px', textAlign: 'center' }}>{dim === 'colSpan' ? w.colSpan : (w.rowSpan || 1)}</span>
@@ -591,14 +590,14 @@ export default function WorkspacePage() {
       {/* Modal de Adicionar Widget */}
       <AnimatePresence>
         {isAddModalOpen && (
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(12px)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ position: 'fixed', inset: 0, background: 'var(--color-scrim)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
             <motion.div
               initial={{ scale: 0.92, opacity: 0, y: 16 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.92, opacity: 0, y: 16 }}
               transition={{ type: 'spring', stiffness: 300, damping: 28 }}
               className="glass-card"
-              style={{ width: '100%', maxWidth: '560px', padding: '36px', position: 'relative', background: 'rgba(12,12,12,0.98)', boxShadow: '0 32px 80px rgba(0,0,0,0.6)' }}
+              style={{ width: '100%', maxWidth: '560px', padding: '36px', position: 'relative', background: 'var(--color-surface-raised)', boxShadow: '0 32px 80px rgba(0,0,0,0.6)' }}
             >
               <button onClick={() => setIsAddModalOpen(false)} style={{ position: 'absolute', top: '24px', right: '24px', background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border)', borderRadius: '10px', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', cursor: 'pointer' }}>
                 <X size={16} />
@@ -1448,8 +1447,7 @@ function TeamWidget({ isUserOnline, onlineUsers }: { isUserOnline: (id: string) 
                     exit={{ opacity: 0, scale: 0.95, y: -10 }}
                     style={{
                       position: 'absolute', top: '100%', left: '0', right: '0', zIndex: 50, marginTop: '8px',
-                      background: 'rgba(18,18,18,0.95)', backdropFilter: 'blur(10px)',
-                      border: '1px solid var(--border)',
+                      background: 'var(--color-surface-raised)', border: '1px solid var(--border)',
                       borderRadius: '16px', padding: '8px',
                       boxShadow: '0 10px 40px rgba(0,0,0,0.5)'
                     }}

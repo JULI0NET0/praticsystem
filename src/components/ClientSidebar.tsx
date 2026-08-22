@@ -62,9 +62,7 @@ export default function ClientSidebar() {
               left: '90px', // 80px da barra + 10px
               top: activeTooltip.top,
               transform: 'translateY(-50%)',
-              background: 'rgba(15, 15, 15, 0.85)',
-              backdropFilter: 'blur(16px) saturate(180%)',
-              WebkitBackdropFilter: 'blur(16px) saturate(180%)',
+              background: 'var(--color-surface-raised)',
               border: '1px solid rgba(255, 255, 255, 0.15)',
               boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
               padding: '8px 16px',

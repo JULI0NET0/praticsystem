@@ -70,9 +70,8 @@ export default function DialogShell({
             alignItems: isMobile ? "flex-end" : "center",
             justifyContent: "center",
             padding: isMobile ? 0 : "24px",
-            backgroundColor: "rgba(0,0,0,0.82)",
-            backdropFilter: "blur(20px)",
-            WebkitBackdropFilter: "blur(20px)",
+            backgroundColor: "var(--color-scrim)",
+            // sem blur: o sistema é plano, e o véu já separa o modal
           }}
           onClick={(e) => {
             if (e.target === e.currentTarget) onClose();

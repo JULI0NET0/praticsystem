@@ -463,7 +463,7 @@ export function LancamentosTable({
                         transform: "translateX(-50%)",
                         zIndex: 50,
                         width: "220px",
-                        background: "rgba(18,18,18,0.98)",
+                        background: "var(--color-surface-raised)",
                         border: "1px solid var(--border)",
                         borderRadius: "12px",
                         padding: "12px",

@@ -163,7 +163,6 @@ export default function FloatingSearch() {
           style={{
             position: 'fixed', inset: 0,
             background: 'rgba(0,0,0,0.5)',
-            backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)',
             zIndex: 200,
             display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
             paddingTop: '15vh', paddingLeft: '16px', paddingRight: '16px',
@@ -178,7 +177,6 @@ export default function FloatingSearch() {
             style={{
               width: '100%', maxWidth: '540px',
               background: 'var(--glass-bg)',
-              backdropFilter: 'blur(32px)', WebkitBackdropFilter: 'blur(32px)',
               borderRadius: '20px',
               border: '1px solid var(--border)',
               boxShadow: '0 24px 64px rgba(0,0,0,0.6), inset 0 1px 1px rgba(255,255,255,0.08)',

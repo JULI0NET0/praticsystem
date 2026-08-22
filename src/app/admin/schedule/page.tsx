@@ -807,7 +807,6 @@ export default function SchedulePage() {
                   inset: 0,
                   zIndex: 999,
                   backgroundColor: isMobilePopover ? 'rgba(0,0,0,0.6)' : 'transparent',
-                  backdropFilter: isMobilePopover ? 'blur(4px)' : 'none',
                 }} 
               />
               
@@ -1022,7 +1021,6 @@ export default function SchedulePage() {
                 position: 'fixed',
                 inset: 0,
                 backgroundColor: 'rgba(0,0,0,0.65)',
-                backdropFilter: 'blur(4px)',
                 zIndex: 1100,
               }}
             />
@@ -1306,8 +1304,7 @@ export default function SchedulePage() {
           }
         }
         .agenda-popover {
-          background: rgba(20, 20, 20, 0.97) !important;
-          backdrop-filter: blur(20px);
+          background: var(--color-surface-raised) !important;
           border: 1px solid rgba(255, 255, 255, 0.15) !important;
         }
         [data-theme='light'] .agenda-popover {

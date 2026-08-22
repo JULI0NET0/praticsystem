@@ -40,7 +40,7 @@ export default function TaskDrawer({ list, taskId, onClose }: Props) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(6px)" }}
+            style={{ position: "absolute", inset: 0, background: "var(--color-scrim)" }}
           />
           <motion.div
             initial={{ x: "100%" }}

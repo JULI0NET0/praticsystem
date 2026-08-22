@@ -431,7 +431,7 @@ export default function ChatPage() {
             {showMentions && filteredMentionUsers.length > 0 && (
               <motion.div
                 initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}
-                style={{ position: 'absolute', bottom: '100%', left: isMobile ? '16px' : '24px', right: isMobile ? '16px' : '24px', background: 'rgba(18,18,18,0.98)', border: '1px solid var(--border)', borderRadius: '12px', padding: '8px', maxHeight: '160px', overflowY: 'auto', boxShadow: '0 -10px 30px rgba(0,0,0,0.3)' }}
+                style={{ position: 'absolute', bottom: '100%', left: isMobile ? '16px' : '24px', right: isMobile ? '16px' : '24px', background: 'var(--color-surface-raised)', border: '1px solid var(--border)', borderRadius: '12px', padding: '8px', maxHeight: '160px', overflowY: 'auto', boxShadow: '0 -10px 30px rgba(0,0,0,0.3)' }}
               >
                 {filteredMentionUsers.map(u => (
                   <button

@@ -435,8 +435,6 @@ export default function NotaDetailPage() {
             alignItems: 'center',
             gap: '12px',
             background: 'var(--glass-bg)',
-            backdropFilter: 'blur(24px)',
-            WebkitBackdropFilter: 'blur(24px)',
             padding: isMobile ? '12px 20px' : '16px 36px',
             margin: isMobile ? '0 -20px 10px -20px' : '0 -36px 10px -36px',
             borderBottom: '1px solid var(--border)',
@@ -519,8 +517,6 @@ export default function NotaDetailPage() {
           <style>{`
             .sticky-title-container {
               background: var(--glass-bg) !important;
-              backdrop-filter: blur(24px) !important;
-              -webkit-backdrop-filter: blur(24px) !important;
               border-bottom: 1px solid rgba(255, 255, 255, 0.08);
             }
           `}</style>

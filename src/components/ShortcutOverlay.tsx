@@ -44,7 +44,6 @@ export default function ShortcutOverlay() {
               position: "fixed",
               inset: 0,
               backgroundColor: "rgba(0, 0, 0, 0.4)",
-              backdropFilter: "blur(4px)",
               zIndex: 9999,
             }}
           />

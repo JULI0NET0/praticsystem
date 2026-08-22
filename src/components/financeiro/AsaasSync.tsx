@@ -1011,7 +1011,7 @@ export function AsaasSync({
                           left: 0,
                           zIndex: 50,
                           width: "240px",
-                          background: "rgba(18,18,18,0.98)",
+                          background: "var(--color-surface-raised)",
                           border: "1px solid var(--border)",
                           borderRadius: "12px",
                           padding: "12px",
@@ -1546,14 +1546,12 @@ export function AsaasSync({
             top: descTip.y,
             zIndex: 1000,
             width: "320px",
-            background: "rgba(20,20,22,0.98)",
+            background: "var(--color-surface-raised)",
             border: "1px solid var(--border)",
             borderRadius: "12px",
             padding: "12px 14px",
             boxShadow: "0 12px 36px rgba(0,0,0,0.55)",
             pointerEvents: "none",
-            backdropFilter: "blur(8px)",
-            WebkitBackdropFilter: "blur(8px)",
           }}
         >
           <p style={{ fontSize: "0.7rem", fontWeight: 700, color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "5px" }}>

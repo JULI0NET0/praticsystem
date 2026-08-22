@@ -431,7 +431,6 @@ export default function ContractDetailsModal({ isOpen, onClose, onRenew, contrac
               position: 'fixed',
               inset: 0,
               backgroundColor: 'rgba(0, 0, 0, 0.8)',
-              backdropFilter: 'blur(8px)',
               zIndex: 100,
               cursor: 'pointer'
             }}
