@@ -311,11 +311,11 @@ export function AsaasLinkDialog({
         {suggestedClient && tab === "fatura" && (
           <div style={{
             padding: "10px 14px", borderRadius: "10px",
-            background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.2)",
+            background: "var(--color-warning-wash)", border: "1px solid var(--color-warning-wash)",
             display: "flex", alignItems: "center", gap: "8px",
           }}>
-            <span style={{ fontSize: "0.78rem", color: "#F59E0B" }}>?</span>
-            <p style={{ fontSize: "0.82rem", color: "#F59E0B", fontWeight: 600, margin: 0 }}>
+            <span style={{ fontSize: "0.78rem", color: "var(--color-warning)" }}>?</span>
+            <p style={{ fontSize: "0.82rem", color: "var(--color-warning)", fontWeight: 600, margin: 0 }}>
               Possível cliente:{" "}
               <span style={{ fontWeight: 800 }}>{suggestedClient.nome_fantasia || suggestedClient.name}</span>
             </p>
@@ -365,7 +365,7 @@ export function AsaasLinkDialog({
         {/* Cliente de origem (apenas para despesas) */}
         {(tab === "fixa" || tab === "variavel") && (
           <div style={{ display: "flex", flexDirection: "column", gap: "5px", padding: "10px 14px", borderRadius: "10px", background: "rgba(96,165,250,0.05)", border: "1px solid rgba(96,165,250,0.2)" }}>
-            <span style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.72rem", fontWeight: 700, color: "#60A5FA", textTransform: "uppercase", letterSpacing: "0.03em" }}>
+            <span style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.72rem", fontWeight: 700, color: "var(--color-info)", textTransform: "uppercase", letterSpacing: "0.03em" }}>
               <Building2 size={12} /> Cliente de origem (opcional)
             </span>
             <select

@@ -132,7 +132,7 @@ export function Repasses({ asaasTransactions, clients, startDate, endDate, onSet
   }
 
   const kpis = [
-    { label: "Adiantado", value: totalAdiantado, color: "#F59E0B", icon: <ArrowUpRight size={16} />, hint: "Pago em anúncios (saídas)" },
+    { label: "Adiantado", value: totalAdiantado, color: "var(--color-warning)", icon: <ArrowUpRight size={16} />, hint: "Pago em anúncios (saídas)" },
     {
       label: "Reembolsado",
       value: totalReembolsado,
@@ -198,12 +198,12 @@ export function Repasses({ asaasTransactions, clients, startDate, endDate, onSet
             const isOpen = expanded.has(key);
             const quitado = Math.abs(g.saldo) < 0.005;
             const statusMeta = g.clientId === null
-              ? { label: "Sem cliente", color: "#F59E0B", bg: "rgba(245,158,11,0.12)" }
+              ? { label: "Sem cliente", color: "var(--color-warning)", bg: "var(--color-warning-wash)" }
               : quitado
               ? { label: "Quitado", color: "var(--color-success)", bg: "var(--color-success-wash)" }
               : g.saldo > 0
               ? { label: "A receber", color: "var(--accent)", bg: "rgba(217,72,15,0.12)" }
-              : { label: "Crédito", color: "#60A5FA", bg: "rgba(96,165,250,0.12)" };
+              : { label: "Crédito", color: "var(--color-info)", bg: "rgba(96,165,250,0.12)" };
             return (
               <motion.div
                 key={key}
@@ -250,7 +250,7 @@ export function Repasses({ asaasTransactions, clients, startDate, endDate, onSet
                       return (
                         <div key={t.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", padding: "10px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
-                            <span style={{ color: isDebit ? "#F59E0B" : "var(--color-success)", flexShrink: 0 }}>
+                            <span style={{ color: isDebit ? "var(--color-warning)" : "var(--color-success)", flexShrink: 0 }}>
                               {isDebit ? <ArrowUpRight size={16} /> : <ArrowDownLeft size={16} />}
                             </span>
                             <div style={{ minWidth: 0 }}>
@@ -259,12 +259,12 @@ export function Repasses({ asaasTransactions, clients, startDate, endDate, onSet
                               </p>
                               <p style={{ fontSize: "0.7rem", color: "var(--text-tertiary)", fontWeight: 600 }}>
                                 {fmtDate(t.date)} · {isDebit ? "Adiantado" : "Reembolso"}
-                                {noOffset && <span style={{ color: "#60A5FA" }}> · não abate saldo</span>}
+                                {noOffset && <span style={{ color: "var(--color-info)" }}> · não abate saldo</span>}
                               </p>
                             </div>
                           </div>
                           <div style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 }}>
-                            <span style={{ fontSize: "0.9rem", fontWeight: 800, color: isDebit ? "#F59E0B" : "var(--color-success)" }}>
+                            <span style={{ fontSize: "0.9rem", fontWeight: 800, color: isDebit ? "var(--color-warning)" : "var(--color-success)" }}>
                               {isDebit ? "−" : "+"}{formatCurrency(Math.abs(Number(t.value)))}
                             </span>
                             {/* Alternar se o crédito abate o saldo (só para reembolsos) */}
@@ -277,7 +277,7 @@ export function Repasses({ asaasTransactions, clients, startDate, endDate, onSet
                                   display: "flex", alignItems: "center", justifyContent: "center", width: "26px", height: "26px",
                                   borderRadius: "8px", border: `1px solid ${offsets ? "var(--border)" : "rgba(96,165,250,0.4)"}`,
                                   background: offsets ? "rgba(255,255,255,0.03)" : "rgba(96,165,250,0.12)",
-                                  color: offsets ? "var(--text-tertiary)" : "#60A5FA", cursor: "pointer",
+                                  color: offsets ? "var(--text-tertiary)" : "var(--color-info)", cursor: "pointer",
                                 }}
                               >
                                 <Repeat size={13} />
@@ -467,7 +467,7 @@ function PickerDialog({ isOpen, onClose, transactions, clients, startDate, endDa
                   >
                     {isSel && <Check size={13} />}
                   </button>
-                  <span style={{ color: isDebit ? "#F59E0B" : "var(--color-success)", flexShrink: 0 }}>
+                  <span style={{ color: isDebit ? "var(--color-warning)" : "var(--color-success)", flexShrink: 0 }}>
                     {isDebit ? <ArrowUpRight size={15} /> : <ArrowDownLeft size={15} />}
                   </span>
                   <div style={{ minWidth: 0, flex: 1, cursor: "pointer" }} onClick={() => toggle(t.id)}>
@@ -478,7 +478,7 @@ function PickerDialog({ isOpen, onClose, transactions, clients, startDate, endDa
                       {fmtDate(t.date)} · {isDebit ? "Saída" : "Entrada"}
                     </p>
                   </div>
-                  <span style={{ fontSize: "0.85rem", fontWeight: 800, color: isDebit ? "#F59E0B" : "var(--color-success)", flexShrink: 0 }}>
+                  <span style={{ fontSize: "0.85rem", fontWeight: 800, color: isDebit ? "var(--color-warning)" : "var(--color-success)", flexShrink: 0 }}>
                     {isDebit ? "−" : "+"}{formatCurrency(Math.abs(Number(t.value)))}
                   </span>
                   {isSel && (

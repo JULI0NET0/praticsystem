@@ -535,7 +535,7 @@ export default function FinanceiroPage() {
                 Receita × Despesa — {datePreset === "all" ? "Todos os Períodos" : datePreset === "this_month" ? "Este Mês" : datePreset === "prev_month" ? "Mês Anterior" : datePreset === "next_month" ? "Próximo Mês" : `${startDate} a ${endDate}`}
               </h4>
               {[
-                { label: "Previsto", value: faturamentoPrevisto, color: "#60A5FA", max: Math.max(faturamentoPrevisto, despesas, 1) },
+                { label: "Previsto", value: faturamentoPrevisto, color: "var(--color-info)", max: Math.max(faturamentoPrevisto, despesas, 1) },
                 { label: "Realizado", value: faturamentoRealizado, color: "var(--color-success)", max: Math.max(faturamentoPrevisto, despesas, 1) },
                 { label: "Despesas", value: despesas, color: "var(--color-danger)", max: Math.max(faturamentoPrevisto, despesas, 1) },
                 { label: "Lucro", value: Math.max(faturamentoRealizado - despesas, 0), color: "var(--accent)", max: Math.max(faturamentoPrevisto, despesas, 1) },
@@ -571,7 +571,7 @@ export default function FinanceiroPage() {
                   cats[cat] = (cats[cat] || 0) + Number(e.amount);
                 });
                 const catLabels: Record<string, string> = { pro_labore: "Pro-labore", funcionario_pj: "Func. PJ", sistema: "Sistemas", internet: "Internet", taxa_asaas: "Taxas Asaas", taxa_boleto: "Tx. Boleto", taxa_mensageria: "Tx. Mensageria", outros: "Outros" };
-                const catColors: Record<string, string> = { pro_labore: "#A78BFA", funcionario_pj: "#60A5FA", sistema: "var(--color-success)", internet: "#F59E0B", taxa_asaas: "#FB923C", taxa_boleto: "#F472B6", taxa_mensageria: "#38BDF8", outros: "var(--text-secondary)" };
+                const catColors: Record<string, string> = { pro_labore: "#A78BFA", funcionario_pj: "var(--color-info)", sistema: "var(--color-success)", internet: "var(--color-warning)", taxa_asaas: "#FB923C", taxa_boleto: "#F472B6", taxa_mensageria: "var(--color-info)", outros: "var(--text-secondary)" };
                 const total = Object.values(cats).reduce((s, v) => s + v, 0) || 1;
                 const entries = Object.entries(cats).sort((a, b) => b[1] - a[1]);
 

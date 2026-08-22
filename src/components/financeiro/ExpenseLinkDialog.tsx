@@ -136,7 +136,7 @@ export function ExpenseLinkDialog({
               <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)", fontWeight: 600 }}>
                 {selection.size} selecionada(s)
               </span>
-              <span style={{ fontSize: "0.82rem", fontWeight: 700, color: selectedTotal >= entry.amount ? "var(--color-success)" : "#F59E0B" }}>
+              <span style={{ fontSize: "0.82rem", fontWeight: 700, color: selectedTotal >= entry.amount ? "var(--color-success)" : "var(--color-warning)" }}>
                 {formatCurrency(selectedTotal)}{selectedTotal >= entry.amount ? " ✓" : ""}
               </span>
             </div>

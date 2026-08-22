@@ -62,6 +62,6 @@
     "> 0.5%",
     "last 2 versions",
     "not dead",
-    "safari >= 15"
+    "safari >= 16.4"
   ]
 }

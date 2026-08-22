@@ -471,10 +471,10 @@ export function AsaasSync({
       {/* Balance cards */}
       <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", alignItems: "stretch" }}>
         {[
-          { label: "Saldo Total", value: balance?.balance ?? null, color: "#60A5FA", bg: "rgba(96,165,250,0.06)", border: "rgba(96,165,250,0.15)" },
+          { label: "Saldo Total", value: balance?.balance ?? null, color: "var(--color-info)", bg: "rgba(96,165,250,0.06)", border: "rgba(96,165,250,0.15)" },
           {
             label: "Saldo Disponível", value: balance?.availableBalance ?? null,
-            color: balance?.availableBalance != null ? (balance.availableBalance >= 0 ? "var(--color-success)" : "var(--color-danger)") : "#60A5FA",
+            color: balance?.availableBalance != null ? (balance.availableBalance >= 0 ? "var(--color-success)" : "var(--color-danger)") : "var(--color-info)",
             bg: balance?.availableBalance != null ? (balance.availableBalance >= 0 ? "var(--color-success-wash)" : "var(--color-danger-wash)") : "rgba(255,255,255,0.02)",
             border: balance?.availableBalance != null ? (balance.availableBalance >= 0 ? "var(--color-success-wash)" : "var(--color-danger-wash)") : "var(--border)",
           },
@@ -551,9 +551,9 @@ export function AsaasSync({
 
       {/* Alert */}
       {unlinkedCount > 0 && (
-        <div className="glass-card" style={{ padding: "14px 20px", background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.2)", display: "flex", alignItems: "center", gap: "12px" }}>
-          <AlertCircle size={18} color="#F59E0B" />
-          <p style={{ fontSize: "0.875rem", color: "#F59E0B", fontWeight: 600 }}>
+        <div className="glass-card" style={{ padding: "14px 20px", background: "var(--color-warning-wash)", border: "1px solid var(--color-warning-wash)", display: "flex", alignItems: "center", gap: "12px" }}>
+          <AlertCircle size={18} color="var(--color-warning)" />
+          <p style={{ fontSize: "0.875rem", color: "var(--color-warning)", fontWeight: 600 }}>
             {unlinkedCount} transação(ões) sem vínculo.
           </p>
         </div>
@@ -643,12 +643,12 @@ export function AsaasSync({
                 {/* Group header */}
                 <div style={{
                   padding: "14px 20px",
-                  background: group.isAutoReconciled ? "var(--color-success-wash)" : "rgba(245,158,11,0.04)",
+                  background: group.isAutoReconciled ? "var(--color-success-wash)" : "var(--color-warning-wash)",
                   borderBottom: "1px solid var(--border)",
                   display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px",
                 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                    <Building2 size={14} color={group.isAutoReconciled ? "var(--color-success)" : "#F59E0B"} />
+                    <Building2 size={14} color={group.isAutoReconciled ? "var(--color-success)" : "var(--color-warning)"} />
                     <div>
                       <p style={{ fontWeight: 700, fontSize: "0.9rem" }}>
                         {group.clientLabel || "Cliente não identificado"}
@@ -706,29 +706,29 @@ export function AsaasSync({
                     return (
                       <div style={{ padding: "10px 20px", display: "flex", alignItems: "center", gap: "12px", borderBottom: "1px solid rgba(255,255,255,0.04)", opacity: isConfirmedInDb ? 0.6 : 1 }}>
                         {isConfirmedInDb
-                          ? <CheckCircle2 size={13} color="#60A5FA" />
+                          ? <CheckCircle2 size={13} color="var(--color-info)" />
                           : <button style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "inline-flex" }} onClick={() => { setLinkDialogDefaultCategory(undefined); setLinkDialogTxn(group.bankConfirmationTxn); }}>
-                              <Link2 size={13} color="#F59E0B" />
+                              <Link2 size={13} color="var(--color-warning)" />
                             </button>
                         }
                         <p style={{ flex: 1, fontSize: "0.85rem", fontWeight: 600, color: "var(--text-secondary)" }}>
                           {group.bankConfirmationTxn.description || "Cobrança recebida"}
                         </p>
-                        <span style={{ fontSize: "0.8rem", color: "#60A5FA", fontWeight: 700 }}>+ {formatCurrency(Number(group.bankConfirmationTxn.value))}</span>
+                        <span style={{ fontSize: "0.8rem", color: "var(--color-info)", fontWeight: 700 }}>+ {formatCurrency(Number(group.bankConfirmationTxn.value))}</span>
                         {isConfirmedInDb ? (
-                          <span className="badge" style={{ color: "#60A5FA", background: "rgba(96,165,250,0.08)", border: "1px solid rgba(96,165,250,0.2)", fontSize: "0.7rem", whiteSpace: "nowrap" }}>
+                          <span className="badge" style={{ color: "var(--color-info)", background: "rgba(96,165,250,0.08)", border: "1px solid rgba(96,165,250,0.2)", fontSize: "0.7rem", whiteSpace: "nowrap" }}>
                             Confirmação bancária ✓
                           </span>
                         ) : canMarkConfirmation ? (
                           <button
                             onClick={() => onMarkAsConfirmation?.(group.bankConfirmationTxn!.id, group.paymentTxn!.id)}
                             className="btn btn-secondary"
-                            style={{ fontSize: "0.72rem", padding: "4px 10px", display: "flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap", color: "#60A5FA", borderColor: "rgba(96,165,250,0.3)" }}
+                            style={{ fontSize: "0.72rem", padding: "4px 10px", display: "flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap", color: "var(--color-info)", borderColor: "rgba(96,165,250,0.3)" }}
                           >
                             <CheckCircle2 size={10} /> Marcar como confirmação
                           </button>
                         ) : (
-                          <span className="badge" style={{ color: "#F59E0B", background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)", fontSize: "0.7rem", whiteSpace: "nowrap" }}>
+                          <span className="badge" style={{ color: "var(--color-warning)", background: "var(--color-warning-wash)", border: "1px solid var(--color-warning-wash)", fontSize: "0.7rem", whiteSpace: "nowrap" }}>
                             Sem vínculo
                           </span>
                         )}
@@ -741,7 +741,7 @@ export function AsaasSync({
                     <div key={txn.id} style={{ padding: "10px 20px", display: "flex", alignItems: "center", gap: "12px", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
                       {txn.expense_entry_id
                         ? <CheckCircle2 size={13} color="var(--color-success)" />
-                        : <AlertCircle size={13} color="#F59E0B" />
+                        : <AlertCircle size={13} color="var(--color-warning)" />
                       }
                       <p style={{ flex: 1, fontSize: "0.82rem", color: "var(--text-secondary)" }}>{txn.description || "Taxa Asaas"}</p>
                       <span style={{ fontSize: "0.8rem", color: "var(--color-danger)", fontWeight: 700 }}>− {formatCurrency(Math.abs(Number(txn.value)))}</span>
@@ -803,7 +803,7 @@ export function AsaasSync({
                               <button
                                 onClick={() => openDescDialog(txn)}
                                 title={responsible.suggested ? `Sugestão: ${responsible.label} — clique para confirmar` : "Clique para atribuir cliente"}
-                                style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "0.82rem", color: responsible.suggested ? "#F59E0B" : responsible.kind === "empresa" ? "var(--text-tertiary)" : "var(--text-secondary)", fontWeight: 600, background: "none", border: "none", cursor: "pointer", padding: 0, textAlign: "left" }}
+                                style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "0.82rem", color: responsible.suggested ? "var(--color-warning)" : responsible.kind === "empresa" ? "var(--text-tertiary)" : "var(--text-secondary)", fontWeight: 600, background: "none", border: "none", cursor: "pointer", padding: 0, textAlign: "left" }}
                               >
                                 {responsible.suggested && <HelpCircle size={11} />}
                                 {responsible.kind === "funcionario" && <User size={11} />}
@@ -830,13 +830,13 @@ export function AsaasSync({
                               {txn.type === "DEBIT" ? "−" : "+"} {formatCurrency(Math.abs(Number(txn.value)))}
                             </td>
                             <td>
-                              <span style={{ fontSize: "0.82rem", color: isLinked ? "var(--color-success)" : "#F59E0B", fontWeight: 600 }}>
+                              <span style={{ fontSize: "0.82rem", color: isLinked ? "var(--color-success)" : "var(--color-warning)", fontWeight: 600 }}>
                                 {isLinked ? "Vinculado" : "Sem vínculo"}
                               </span>
                             </td>
                             <td style={{ textAlign: "right" }}>
                               {!isLinked ? (
-                                <button onClick={() => { setLinkDialogDefaultCategory(undefined); setLinkDialogTxn(txn); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#F59E0B", padding: "4px", display: "inline-flex" }}><Link2 size={15} /></button>
+                                <button onClick={() => { setLinkDialogDefaultCategory(undefined); setLinkDialogTxn(txn); }} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-warning)", padding: "4px", display: "inline-flex" }}><Link2 size={15} /></button>
                               ) : (
                                 <button onClick={() => handleUnlink(txn.id)} disabled={unlinkingId === txn.id} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-tertiary)", padding: "4px", display: "inline-flex" }}>
                                   {unlinkingId === txn.id ? <RefreshCw size={15} className="animate-spin" /> : <Unlink size={15} />}
@@ -920,7 +920,7 @@ export function AsaasSync({
                       style={{
                         display: "flex", alignItems: "center", gap: "5px", fontSize: "0.82rem", fontWeight: 600,
                         background: "none", border: "none", cursor: "pointer", padding: 0, textAlign: "left",
-                        color: responsible.suggested ? "#F59E0B" : responsible.kind === "empresa" ? "var(--text-tertiary)" : "var(--text-secondary)",
+                        color: responsible.suggested ? "var(--color-warning)" : responsible.kind === "empresa" ? "var(--text-tertiary)" : "var(--text-secondary)",
                       }}
                     >
                       {responsible.kind === "funcionario" && <User size={11} />}
@@ -987,14 +987,14 @@ export function AsaasSync({
                               </span>
                             </span>
                             {txn.confirms_asaas_transaction_id && (
-                              <span style={{ fontSize: "0.68rem", color: "#60A5FA", fontWeight: 600 }}>confirmação bancária</span>
+                              <span style={{ fontSize: "0.68rem", color: "var(--color-info)", fontWeight: 600 }}>confirmação bancária</span>
                             )}
                           </span>
                         ) : (() => {
                           const fatura = txn.description ? extractFaturaNumber(txn.description) : null;
                           return (
                             <span style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "1px" }}>
-                              <span style={{ fontSize: "0.82rem", color: "#F59E0B", fontWeight: 600 }}>Sem vínculo</span>
+                              <span style={{ fontSize: "0.82rem", color: "var(--color-warning)", fontWeight: 600 }}>Sem vínculo</span>
                               {fatura && (
                                 <span style={{ fontSize: "0.68rem", color: "var(--text-tertiary)", fontWeight: 600 }}>Fatura {fatura}</span>
                               )}
@@ -1043,7 +1043,7 @@ export function AsaasSync({
                             <span style={{ fontSize: "0.72rem", color: "var(--color-success)", fontWeight: 600 }}>Asaas ✓</span>
                           </div>
                         ) : (
-                          <p style={{ fontSize: "0.82rem", color: "#F59E0B", fontWeight: 600, margin: 0 }}>
+                          <p style={{ fontSize: "0.82rem", color: "var(--color-warning)", fontWeight: 600, margin: 0 }}>
                             Sem vínculo — clique em <Link2 size={11} style={{ display: "inline", verticalAlign: "middle" }} /> para vincular.
                           </p>
                         )}
@@ -1064,7 +1064,7 @@ export function AsaasSync({
                     ) : !isLinked ? (
                       <button
                         onClick={() => setLinkDialogTxn(txn)}
-                        style={{ background: "none", border: "none", cursor: "pointer", color: "#F59E0B", padding: "4px", display: "inline-flex" }}
+                        style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-warning)", padding: "4px", display: "inline-flex" }}
                         title="Vincular"
                       >
                         <Link2 size={15} />
@@ -1190,14 +1190,14 @@ export function AsaasSync({
                     Vcto {new Date(`${dEntry.date.split("T")[0]}T12:00:00`).toLocaleDateString("pt-BR")} · Total {formatCurrency(Number(dEntry.amount))}
                   </p>
                   {entryPayments.length > 0 && (
-                    <div style={{ padding: "8px", borderRadius: "8px", background: "rgba(245,158,11,0.04)", border: "1px solid rgba(245,158,11,0.12)", display: "flex", flexDirection: "column", gap: "4px" }}>
+                    <div style={{ padding: "8px", borderRadius: "8px", background: "var(--color-warning-wash)", border: "1px solid var(--color-warning-wash)", display: "flex", flexDirection: "column", gap: "4px" }}>
                       {entryPayments.map((p) => (
                         <div key={p.id} style={{ display: "flex", flexDirection: "column", gap: "1px" }}>
                           <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem" }}>
                             <span style={{ color: p.id === detailTxn.id ? "var(--color-success)" : "var(--text-tertiary)", fontWeight: p.id === detailTxn.id ? 700 : 400 }}>
                               {p.id === detailTxn.id ? "▶ " : ""}{new Date(`${p.date.split("T")[0]}T12:00:00`).toLocaleDateString("pt-BR")}
                             </span>
-                            <span style={{ fontWeight: 600, color: p.id === detailTxn.id ? "var(--color-success)" : "#F59E0B" }}>
+                            <span style={{ fontWeight: 600, color: p.id === detailTxn.id ? "var(--color-success)" : "var(--color-warning)" }}>
                               − {formatCurrency(Math.abs(Number(p.value)))}
                             </span>
                           </div>
@@ -1210,7 +1210,7 @@ export function AsaasSync({
                       ))}
                       <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", fontWeight: 700, borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "4px", marginTop: "2px" }}>
                         <span>Total pago</span>
-                        <span style={{ color: totalPaid >= Number(dEntry.amount) ? "var(--color-success)" : "#F59E0B" }}>
+                        <span style={{ color: totalPaid >= Number(dEntry.amount) ? "var(--color-success)" : "var(--color-warning)" }}>
                           {formatCurrency(totalPaid)} / {formatCurrency(Number(dEntry.amount))}
                         </span>
                       </div>
@@ -1258,7 +1258,7 @@ export function AsaasSync({
           RECEIVED: { label: "Recebida", color: "var(--color-success)" },
           CONFIRMED: { label: "Confirmada", color: "var(--color-success)" },
           RECEIVED_IN_CASH: { label: "Recebida em dinheiro", color: "var(--color-success)" },
-          PENDING: { label: "Pendente", color: "#F59E0B" },
+          PENDING: { label: "Pendente", color: "var(--color-warning)" },
           OVERDUE: { label: "Vencida", color: "var(--color-danger)" },
           REFUNDED: { label: "Estornada", color: "var(--color-danger)" },
           DEBIT: { label: "Débito", color: "var(--color-danger)" },
@@ -1271,7 +1271,7 @@ export function AsaasSync({
           ...(statusMeta ? [{ label: "Status Asaas", value: <span style={{ color: statusMeta.color, fontWeight: 700 }}>{statusMeta.label}</span> }] : []),
           ...(faturaNumber ? [{ label: "Nº da fatura", value: faturaNumber }] : []),
           ...(feeCategory ? [{ label: "Categoria detectada", value: FEE_LABELS[feeCategory] || feeCategory }] : []),
-          ...(descTxn.confirms_asaas_transaction_id ? [{ label: "Tipo de registro", value: <span style={{ color: "#60A5FA", fontWeight: 700 }}>Confirmação bancária</span> }] : []),
+          ...(descTxn.confirms_asaas_transaction_id ? [{ label: "Tipo de registro", value: <span style={{ color: "var(--color-info)", fontWeight: 700 }}>Confirmação bancária</span> }] : []),
           { label: "Data", value: new Date(`${descTxn.date.split("T")[0]}T12:00:00`).toLocaleDateString("pt-BR") },
           ...(descTxn.synced_at ? [{ label: "Sincronizado em", value: new Date(descTxn.synced_at).toLocaleString("pt-BR") }] : []),
           { label: "ID Asaas", value: <span style={{ fontFamily: "monospace", fontSize: "0.74rem", wordBreak: "break-all" }}>{descTxn.id}</span> },
@@ -1336,7 +1336,7 @@ export function AsaasSync({
                     {fin.label}
                   </span>
                 ) : (
-                  <span style={{ fontSize: "0.82rem", fontWeight: 600, color: "#F59E0B" }}>Sem vínculo</span>
+                  <span style={{ fontSize: "0.82rem", fontWeight: 600, color: "var(--color-warning)" }}>Sem vínculo</span>
                 )}
               </div>
 
@@ -1344,7 +1344,7 @@ export function AsaasSync({
               {descTxn.type === "DEBIT" && (/pix|transfer|ted/i.test(descTxn.description || "") || descTxn.transfer_id) && (
                 <div style={{ padding: "12px 14px", borderRadius: "10px", background: "rgba(96,165,250,0.05)", border: "1px solid rgba(96,165,250,0.2)" }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px" }}>
-                    <span style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.76rem", fontWeight: 700, color: "#60A5FA", textTransform: "uppercase", letterSpacing: "0.03em" }}>
+                    <span style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.76rem", fontWeight: 700, color: "var(--color-info)", textTransform: "uppercase", letterSpacing: "0.03em" }}>
                       <Building2 size={12} /> Destino da transferência
                     </span>
                     {descTxn.transfer_id && !transferDetail && (
@@ -1402,7 +1402,7 @@ export function AsaasSync({
 
               {/* Observação interna, se houver */}
               {descTxn.notes && (
-                <div style={{ padding: "10px 14px", borderRadius: "10px", background: "rgba(245,158,11,0.05)", border: "1px solid rgba(245,158,11,0.18)" }}>
+                <div style={{ padding: "10px 14px", borderRadius: "10px", background: "var(--color-warning-wash)", border: "1px solid var(--color-warning-wash)" }}>
                   <span style={{ fontSize: "0.72rem", color: "var(--text-tertiary)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>Observação</span>
                   <p style={{ fontSize: "0.82rem", color: "var(--text-secondary)", fontStyle: "italic", marginTop: "3px" }}>{descTxn.notes}</p>
                 </div>
@@ -1410,8 +1410,8 @@ export function AsaasSync({
 
               {/* Sugestão de cliente pela descrição */}
               {suggested && (
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px", padding: "10px 14px", borderRadius: "10px", background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.2)" }}>
-                  <span style={{ fontSize: "0.8rem", color: "#F59E0B", fontWeight: 600 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px", padding: "10px 14px", borderRadius: "10px", background: "var(--color-warning-wash)", border: "1px solid var(--color-warning-wash)" }}>
+                  <span style={{ fontSize: "0.8rem", color: "var(--color-warning)", fontWeight: 600 }}>
                     Possível cliente: <strong>{suggested.nome_fantasia || suggested.name}</strong>
                   </span>
                   <button

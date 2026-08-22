@@ -10,6 +10,7 @@ import { formatCurrency } from "@/lib/format";
 import DialogShell from "@/components/DialogShell";
 import { ExpenseLinkDialog } from "@/components/financeiro/ExpenseLinkDialog";
 import type { Expense, ExpenseEntry, ExpenseCategory, AsaasTransaction } from "@/types/database";
+import { tint } from "@/lib/tint";
 
 const CATEGORIES: Record<string, string> = {
   taxa_asaas: "Taxas Asaas",
@@ -219,7 +220,7 @@ export function DespesasVariaveis({
   }
 
   const STATUS_COLOR: Record<string, string> = {
-    paid: "var(--color-success)", partial: "#F59E0B", pending: "#F59E0B", cancelled: "var(--text-tertiary)",
+    paid: "var(--color-success)", partial: "var(--color-warning)", pending: "var(--color-warning)", cancelled: "var(--text-tertiary)",
   };
   const STATUS_LABEL: Record<string, string> = {
     paid: "Pago", partial: "Parcial", pending: "Pendente", cancelled: "Cancelado",
@@ -279,7 +280,7 @@ export function DespesasVariaveis({
                       <div style={{ display: "flex", gap: "14px", fontSize: "0.72rem", color: "var(--text-tertiary)", marginTop: "3px", flexWrap: "wrap" }}>
                         <span>{entries.length} lançamento{entries.length !== 1 ? "s" : ""}</span>
                         {paid > 0 && <span style={{ color: "var(--color-success)" }}>Pago: {formatCurrency(paid)}</span>}
-                        {pending > 0 && <span style={{ color: "#F59E0B" }}>Pendente: {formatCurrency(pending)}</span>}
+                        {pending > 0 && <span style={{ color: "var(--color-warning)" }}>Pendente: {formatCurrency(pending)}</span>}
                       </div>
                     )}
                   </div>
@@ -378,7 +379,7 @@ export function DespesasVariaveis({
                                         <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                                           <span style={{
                                             fontSize: "0.68rem", fontWeight: 700, padding: "2px 7px", borderRadius: "6px",
-                                            color: sc, background: `${sc}18`, border: `1px solid ${sc}30`, alignSelf: "flex-start",
+                                            color: sc, background: `${tint(sc, 9)}`, border: `1px solid ${tint(sc, 19)}`, alignSelf: "flex-start",
                                           }}>
                                             {STATUS_LABEL[effStatus] ?? effStatus}
                                           </span>
@@ -388,12 +389,12 @@ export function DespesasVariaveis({
                                             const remaining = Math.max(0, Number(entry.amount) - linkedSum);
                                             const isPaid = effStatus === "paid";
                                             return (
-                                              <div style={{ padding: "6px 8px", borderRadius: "6px", background: isPaid ? "var(--color-success-wash)" : "rgba(245,158,11,0.05)", border: `1px solid ${isPaid ? "var(--color-success-wash)" : "rgba(245,158,11,0.15)"}`, display: "flex", flexDirection: "column", gap: "3px" }}>
+                                              <div style={{ padding: "6px 8px", borderRadius: "6px", background: isPaid ? "var(--color-success-wash)" : "var(--color-warning-wash)", border: `1px solid ${isPaid ? "var(--color-success-wash)" : "var(--color-warning-wash)"}`, display: "flex", flexDirection: "column", gap: "3px" }}>
                                                 {partials.map((t) => (
                                                   <div key={t.id} style={{ display: "flex", flexDirection: "column", gap: "1px" }}>
                                                     <div style={{ display: "flex", justifyContent: "space-between", gap: "8px", fontSize: "0.65rem", color: "var(--text-tertiary)", whiteSpace: "nowrap" }}>
                                                       <span>{isPaid ? "Pgto." : "Adiant."} {new Date(`${t.date.split("T")[0]}T12:00:00`).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}</span>
-                                                      <span style={{ color: isPaid ? "var(--color-success)" : "#F59E0B", fontWeight: 600 }}>− {formatCurrency(Math.abs(Number(t.value)))}</span>
+                                                      <span style={{ color: isPaid ? "var(--color-success)" : "var(--color-warning)", fontWeight: 600 }}>− {formatCurrency(Math.abs(Number(t.value)))}</span>
                                                     </div>
                                                     {t.notes && (
                                                       <p style={{ fontSize: "0.62rem", color: "var(--text-tertiary)", fontStyle: "italic", margin: 0 }}>{t.notes}</p>
@@ -417,7 +418,7 @@ export function DespesasVariaveis({
                                             <CheckCircle2 size={11} /> Banco
                                           </span>
                                         ) : (
-                                          <span style={{ fontSize: "0.72rem", color: "#F59E0B", fontWeight: 600 }}>Sem vínculo</span>
+                                          <span style={{ fontSize: "0.72rem", color: "var(--color-warning)", fontWeight: 600 }}>Sem vínculo</span>
                                         )}
                                       </td>
                                       <td>
@@ -432,7 +433,7 @@ export function DespesasVariaveis({
                                           {effStatus !== "paid" && effStatus !== "cancelled" && (
                                             <button
                                               onClick={() => setLinkEntry(entry)}
-                                              style={{ background: "none", border: "none", cursor: "pointer", color: "#F59E0B", padding: "4px", display: "flex" }}
+                                              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-warning)", padding: "4px", display: "flex" }}
                                               title="Vincular ao banco"
                                             >
                                               <Link2 size={13} />

@@ -1,6 +1,7 @@
 "use client";
 
 import { CustomValue, FieldDef } from "@/types/operacao";
+import { tint } from "@/lib/tint";
 
 /** Renderiza o valor de um campo personalizado como chip/badge (Mídia, Funil, ...). */
 export default function FieldChip({ field, value }: { field: FieldDef; value: CustomValue }) {
@@ -19,8 +20,8 @@ export default function FieldChip({ field, value }: { field: FieldDef; value: Cu
           fontSize: "0.66rem",
           fontWeight: 700,
           color,
-          background: `${color}1A`,
-          border: `1px solid ${color}33`,
+          background: `${tint(color, 10)}`,
+          border: `1px solid ${tint(color, 20)}`,
           whiteSpace: "nowrap",
         }}
       >

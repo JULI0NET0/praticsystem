@@ -94,7 +94,7 @@ export function FinancialKPIs({
       bg: "rgba(59,130,246,0.06)",
       border: "rgba(59,130,246,0.15)",
       splitValues: [
-        { label: "Previsto", value: formatCurrency(faturamentoPrevisto), color: "#60A5FA" },
+        { label: "Previsto", value: formatCurrency(faturamentoPrevisto), color: "var(--color-info)" },
         { label: "Realizado", value: formatCurrency(faturamentoRealizado), color: "var(--color-success)" },
       ],
       onClick: () => setFaturamentoOpen(true),
@@ -109,7 +109,7 @@ export function FinancialKPIs({
       border: "var(--color-danger-wash)",
       splitValues: [
         { label: "Pagas", value: formatCurrency(despesas), color: "var(--color-danger)" },
-        { label: "Previstas", value: formatCurrency(despesasPrevistas), color: "#F59E0B" },
+        { label: "Previstas", value: formatCurrency(despesasPrevistas), color: "var(--color-warning)" },
       ],
       onClick: () => setDespesasOpen(true),
     },
@@ -127,7 +127,7 @@ export function FinancialKPIs({
       value: `${margem.toFixed(1)}%`,
       sub: `Lucro: ${formatCurrency(lucro)}`,
       icon: <Percent size={20} />,
-      color: margem >= 20 ? "var(--color-success)" : margem >= 0 ? "#F59E0B" : "var(--color-danger)",
+      color: margem >= 20 ? "var(--color-success)" : margem >= 0 ? "var(--color-warning)" : "var(--color-danger)",
       bg: "rgba(255,255,255,0.02)",
       border: "var(--border)",
     },
@@ -136,7 +136,7 @@ export function FinancialKPIs({
       value: String(clientesAtivos),
       sub: null,
       icon: <Users size={20} />,
-      color: "#60A5FA",
+      color: "var(--color-info)",
       bg: "rgba(96,165,250,0.06)",
       border: "rgba(96,165,250,0.15)",
     },
@@ -292,7 +292,7 @@ export function FinancialKPIs({
               </span>
               <span style={{ fontSize: "0.85rem", fontWeight: 700 }}>
                 <span style={{ color: "var(--text-tertiary)" }}>Previstas: </span>
-                <span style={{ color: "#F59E0B" }}>{formatCurrency(despesasPrevistas)}</span>
+                <span style={{ color: "var(--color-warning)" }}>{formatCurrency(despesasPrevistas)}</span>
               </span>
             </div>
           </div>
@@ -314,8 +314,8 @@ export function FinancialKPIs({
                     : item.status === "paid" || open <= 0
                     ? { label: "Paga", color: "var(--color-success)", bg: "var(--color-success-wash)" }
                     : item.paid > 0
-                    ? { label: "Parcial", color: "#F59E0B", bg: "rgba(245,158,11,0.1)" }
-                    : { label: "Prevista", color: "#F59E0B", bg: "rgba(245,158,11,0.1)" };
+                    ? { label: "Parcial", color: "var(--color-warning)", bg: "var(--color-warning-wash)" }
+                    : { label: "Prevista", color: "var(--color-warning)", bg: "var(--color-warning-wash)" };
                 return (
                   <div
                     key={item.id}
@@ -380,7 +380,7 @@ export function FinancialKPIs({
             <div style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
               <span style={{ fontSize: "0.85rem", fontWeight: 700 }}>
                 <span style={{ color: "var(--text-tertiary)" }}>Previsto: </span>
-                <span style={{ color: "#60A5FA" }}>{formatCurrency(faturamentoPrevisto)}</span>
+                <span style={{ color: "var(--color-info)" }}>{formatCurrency(faturamentoPrevisto)}</span>
               </span>
               <span style={{ fontSize: "0.85rem", fontWeight: 700 }}>
                 <span style={{ color: "var(--text-tertiary)" }}>Realizado: </span>
@@ -404,7 +404,7 @@ export function FinancialKPIs({
                     ? { label: "Recebido", color: "var(--color-success)", bg: "var(--color-success-wash)" }
                     : item.status === "overdue"
                     ? { label: "Vencido", color: "var(--color-danger)", bg: "var(--color-danger-wash)" }
-                    : { label: "Previsto", color: "#F59E0B", bg: "rgba(245,158,11,0.1)" };
+                    : { label: "Previsto", color: "var(--color-warning)", bg: "var(--color-warning-wash)" };
                 return (
                   <div
                     key={item.id}

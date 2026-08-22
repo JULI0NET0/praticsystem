@@ -44,7 +44,7 @@ const REGISTRATION_CARDS = [
     icon: FileText,
     href: "/admin/contracts",
     stats: "15 Contratos vigentes",
-    color: "#F59E0B"
+    color: "var(--color-warning)"
   }
 ];
 

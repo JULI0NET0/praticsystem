@@ -3,6 +3,7 @@
 import { supabase } from "@/lib/supabase";
 import { useState, useEffect } from "react";
 import { Package, Users, TrendingUp, DollarSign, Loader2 } from "lucide-react";
+import { tint } from "@/lib/tint";
 
 export function ServiceStats() {
   const [data, setData] = useState<any>(null);
@@ -74,7 +75,7 @@ export function ServiceStats() {
       label: "Receita Mensal (MRR)",
       value: new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(data?.totalMRR || 0),
       icon: DollarSign,
-      color: "#f59e0b",
+      color: "var(--color-warning)",
       description: "Previsão de faturamento"
     },
     {
@@ -118,7 +119,7 @@ export function ServiceStats() {
               width: '32px', 
               height: '32px', 
               borderRadius: '8px', 
-              backgroundColor: `${stat.color}15`,
+              backgroundColor: `${tint(stat.color, 8)}`,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',

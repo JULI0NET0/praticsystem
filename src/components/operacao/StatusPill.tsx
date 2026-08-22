@@ -1,6 +1,7 @@
 "use client";
 
 import { StatusDef } from "@/types/operacao";
+import { tint } from "@/lib/tint";
 
 export default function StatusPill({ status, size = "md" }: { status?: StatusDef; size?: "sm" | "md" }) {
   if (!status) return null;
@@ -19,8 +20,8 @@ export default function StatusPill({ status, size = "md" }: { status?: StatusDef
         textTransform: "uppercase",
         letterSpacing: "0.03em",
         color: status.color,
-        background: `${status.color}1A`,
-        border: `1px solid ${status.color}33`,
+        background: `${tint(status.color, 10)}`,
+        border: `1px solid ${tint(status.color, 20)}`,
         whiteSpace: "nowrap",
       }}
     >

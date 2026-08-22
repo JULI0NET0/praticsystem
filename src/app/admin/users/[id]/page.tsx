@@ -22,6 +22,7 @@ import Spotlight from "@/components/Spotlight";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/components/CustomToast";
 import { formatCurrency } from "@/lib/format";
+import { tint } from "@/lib/tint";
 
 const DEMAND_STATUS_LABEL: Record<string, string> = {
   pending: "Pendente",
@@ -34,8 +35,8 @@ const DEMAND_STATUS_LABEL: Record<string, string> = {
 };
 
 const DEMAND_STATUS_COLOR: Record<string, string> = {
-  pending: "#F59E0B",
-  in_progress: "#60A5FA",
+  pending: "var(--color-warning)",
+  in_progress: "var(--color-info)",
   in_production: "#3B82F6",
   in_review: "#A78BFA",
   done: "var(--color-success)",
@@ -334,7 +335,7 @@ export default function UserDetailPage() {
               <p style={{ color: "var(--text-secondary)", fontSize: "0.78rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "8px" }}>
                 Em Andamento
               </p>
-              <h4 style={{ fontSize: "1.8rem", fontWeight: 800, color: "#60A5FA" }}>{activeDemands.length}</h4>
+              <h4 style={{ fontSize: "1.8rem", fontWeight: 800, color: "var(--color-info)" }}>{activeDemands.length}</h4>
               {userDemands.length > 0 && (
                 <p style={{ fontSize: "0.72rem", color: "var(--text-tertiary)", marginTop: "4px" }}>
                   {Math.round((doneDemands.length / userDemands.length) * 100)}% taxa de conclusão
@@ -398,7 +399,7 @@ export default function UserDetailPage() {
                       </div>
                       <span style={{
                         fontSize: "0.68rem", fontWeight: 700, padding: "3px 8px", borderRadius: "6px", flexShrink: 0,
-                        color, background: `${color}18`, border: `1px solid ${color}30`,
+                        color, background: `${tint(color, 9)}`, border: `1px solid ${tint(color, 19)}`,
                       }}>
                         {label}
                       </span>
@@ -433,7 +434,7 @@ export default function UserDetailPage() {
                   {[
                     { label: "Custo mensal", value: formatCurrency(custoMensal), color: "var(--color-danger)" },
                     { label: "Total pago", value: formatCurrency(totalPago), color: "var(--color-success)" },
-                    { label: "Total pendente", value: formatCurrency(totalPendente), color: "#F59E0B" },
+                    { label: "Total pendente", value: formatCurrency(totalPendente), color: "var(--color-warning)" },
                   ].map((item) => (
                     <div key={item.label} style={{ padding: "12px 14px", background: "var(--card-inner-bg)", border: "1px solid var(--border)", borderRadius: "12px" }}>
                       <p style={{ fontSize: "0.68rem", color: "var(--text-secondary)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "4px" }}>{item.label}</p>
@@ -473,7 +474,7 @@ export default function UserDetailPage() {
                             <span style={{ fontSize: "0.68rem", color: "var(--text-tertiary)", flexShrink: 0, minWidth: "60px", textAlign: "right" }}>
                               {entries.length} fat.
                               {paid > 0 && <span style={{ color: "var(--color-success)" }}> {paid}✓</span>}
-                              {pending > 0 && <span style={{ color: "#F59E0B" }}> {pending}⏳</span>}
+                              {pending > 0 && <span style={{ color: "var(--color-warning)" }}> {pending}⏳</span>}
                             </span>
                           )}
                         </button>
@@ -488,7 +489,7 @@ export default function UserDetailPage() {
                                 .sort((a: any, b: any) => a.date.localeCompare(b.date))
                                 .map((entry: any) => {
                                   const d = new Date(`${entry.date}T12:00:00`);
-                                  const sc = entry.status === "paid" ? "var(--color-success)" : entry.status === "cancelled" ? "var(--text-tertiary)" : "#F59E0B";
+                                  const sc = entry.status === "paid" ? "var(--color-success)" : entry.status === "cancelled" ? "var(--text-tertiary)" : "var(--color-warning)";
                                   const sl = entry.status === "paid" ? "Pago" : entry.status === "cancelled" ? "Cancelado" : "Pendente";
                                   return (
                                     <div key={entry.id} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "7px 10px", borderRadius: "8px", background: "rgba(255,255,255,0.02)", marginTop: "6px" }}>
@@ -499,7 +500,7 @@ export default function UserDetailPage() {
                                         vcto {d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}
                                       </span>
                                       <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--color-danger)" }}>{formatCurrency(Number(entry.amount))}</span>
-                                      <span style={{ fontSize: "0.68rem", fontWeight: 700, padding: "2px 7px", borderRadius: "5px", color: sc, background: `${sc}18`, border: `1px solid ${sc}30` }}>{sl}</span>
+                                      <span style={{ fontSize: "0.68rem", fontWeight: 700, padding: "2px 7px", borderRadius: "5px", color: sc, background: `${tint(sc, 9)}`, border: `1px solid ${tint(sc, 19)}` }}>{sl}</span>
                                     </div>
                                   );
                                 })

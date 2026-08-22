@@ -37,6 +37,7 @@ import { useToast } from "@/components/CustomToast";
 import { usePresence } from "@/hooks/usePresence";
 import { useTimeTracker } from "@/hooks/useTimeTracker";
 import { usePomodoro, WORK_MS, BREAK_MS } from "@/hooks/usePomodoro";
+import { tint } from "@/lib/tint";
 
 // Definição dos Widgets Disponíveis
 const AVAILABLE_WIDGETS = [
@@ -903,11 +904,11 @@ function PomodoroWidget() {
         <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
           <div style={{
             display: 'flex', alignItems: 'center', gap: '4px',
-            background: 'rgba(234,179,8,0.1)', border: '1px solid rgba(234,179,8,0.2)',
+            background: 'var(--color-warning-wash)', border: '1px solid var(--color-warning-wash)',
             padding: '3px 9px', borderRadius: '10px'
           }}>
             <span style={{ fontSize: '0.8rem' }}>⭐</span>
-            <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#EAB308' }}>{totalPoints} pts</span>
+            <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--color-warning)' }}>{totalPoints} pts</span>
           </div>
           <div style={{
             display: 'flex', alignItems: 'center', gap: '4px',
@@ -937,7 +938,7 @@ function PomodoroWidget() {
           <motion.div
             animate={{ width: `${progressToNext}%` }}
             transition={{ duration: 0.6, ease: 'easeOut' }}
-            style={{ height: '100%', background: '#EAB308', borderRadius: '4px' }}
+            style={{ height: '100%', background: 'var(--color-warning)', borderRadius: '4px' }}
           />
         </div>
       </div>
@@ -970,7 +971,7 @@ function PomodoroWidget() {
             <circle
               cx="74" cy="74" r={radius}
               fill="none"
-              stroke={justCompleted ? '#EAB308' : modeColor}
+              stroke={justCompleted ? 'var(--color-warning)' : modeColor}
               strokeWidth="8"
               strokeLinecap="round"
               strokeDasharray={circumference}
@@ -990,7 +991,7 @@ function PomodoroWidget() {
                   style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}
                 >
                   <span style={{ fontSize: '2.2rem' }}>{mode === 'work' ? '🎉' : '💪'}</span>
-                  <span style={{ fontSize: '0.6rem', fontWeight: 800, color: '#EAB308', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  <span style={{ fontSize: '0.6rem', fontWeight: 800, color: 'var(--color-warning)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                     {mode === 'work' ? '+10 pts!' : 'Boa!'}
                   </span>
                 </motion.div>
@@ -1041,7 +1042,7 @@ function PomodoroWidget() {
               background: modeColor, border: 'none',
               color: 'white', display: 'flex', alignItems: 'center',
               justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s',
-              boxShadow: `0 0 24px ${modeColor}50`
+              boxShadow: `0 0 24px ${tint(modeColor, 31)}`
             }}
           >
             {isRunning ? <Square size={22} fill="currentColor" /> : <Play size={22} fill="currentColor" />}
@@ -1128,8 +1129,8 @@ function DemandsWidget({ demands, loading }: { demands: any[], loading: boolean 
                 fontWeight: 800,
                 padding: '3px 8px',
                 borderRadius: '6px',
-                background: d.status === 'in_production' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(234, 179, 8, 0.15)',
-                color: d.status === 'in_production' ? '#3B82F6' : '#EAB308',
+                background: d.status === 'in_production' ? 'rgba(59, 130, 246, 0.15)' : 'var(--color-warning-wash)',
+                color: d.status === 'in_production' ? '#3B82F6' : 'var(--color-warning)',
                 textTransform: 'uppercase'
               }}>
                 {d.status === 'in_production' ? 'Em Produção' : 'Pendente'}
@@ -1324,7 +1325,7 @@ function LinksWidget() {
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <h3 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <Star size={18} color="#F59E0B" /> Links Úteis
+        <Star size={18} color="var(--color-warning)" /> Links Úteis
       </h3>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px' }}>
         {links.length > 0 ? links.map(link => (

@@ -19,11 +19,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import Spotlight from "@/components/Spotlight";
 import SearchInput from "@/components/ui/SearchInput";
 import { GoogleIcon } from "@/components/SocialIcons";
+import { tint } from "@/lib/tint";
 
 const CATEGORIES = [
   { id: 'meeting', label: 'Reunião', color: '#3B82F6', icon: Users },
   { id: 'leadership_meeting', label: 'Reunião de Liderança', color: '#14B8A6', icon: Users },
-  { id: 'prospecting', label: 'Captação', color: '#EAB308', icon: MapPin },
+  { id: 'prospecting', label: 'Captação', color: 'var(--color-warning)', icon: MapPin },
   { id: 'task', label: 'Tarefa Interna', color: '#A8A8A8', icon: CheckCircle2 },
   { id: 'social_media', label: 'Social Media', color: '#EC4899', icon: ExternalLink },
   { id: 'ads', label: 'Tráfego Pago', color: '#8B5CF6', icon: ExternalLink },
@@ -605,7 +606,7 @@ export default function SchedulePage() {
                     gap: '6px',
                     padding: '5px 10px',
                     borderRadius: '20px',
-                    background: isActive ? `${cat.color}20` : 'transparent',
+                    background: isActive ? `${tint(cat.color, 13)}` : 'transparent',
                     border: `1px solid ${isActive ? cat.color : 'rgba(255,255,255,0.1)'}`,
                     transition: 'all 0.2s',
                     cursor: 'pointer'
@@ -681,7 +682,7 @@ export default function SchedulePage() {
                   width: '7px',
                   height: '7px',
                   borderRadius: '50%',
-                  backgroundColor: googleStatus?.accounts?.agenciapratic?.configured ? 'var(--color-success)' : '#EAB308',
+                  backgroundColor: googleStatus?.accounts?.agenciapratic?.configured ? 'var(--color-success)' : 'var(--color-warning)',
                 }}
               />
             </button>
@@ -828,7 +829,7 @@ export default function SchedulePage() {
                       <div style={{
                         padding: '10px',
                         borderRadius: '12px',
-                        backgroundColor: `${CATEGORIES.find(c => c.id === selectedEvent.extendedProps.type)?.color}15`,
+                        backgroundColor: `${tint(CATEGORIES.find(c => c.id === selectedEvent.extendedProps.type)?.color, 8)}`,
                         color: CATEGORIES.find(c => c.id === selectedEvent.extendedProps.type)?.color,
                       }}>
                         {(() => {
@@ -884,7 +885,7 @@ export default function SchedulePage() {
                         <span style={{ fontSize: '0.85rem' }}>{selectedEvent.extendedProps.visibility === 'public' ? 'Visível para todos' : 'Apenas para mim'}</span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-secondary)' }}>
-                        {selectedEvent.extendedProps.status === 'completed' ? <CheckCircle2 size={16} color="var(--color-success)" /> : <Clock size={16} color="#EAB308" />}
+                        {selectedEvent.extendedProps.status === 'completed' ? <CheckCircle2 size={16} color="var(--color-success)" /> : <Clock size={16} color="var(--color-warning)" />}
                         <span style={{ fontSize: '0.85rem' }}>{selectedEvent.extendedProps.status === 'completed' ? 'Concluído' : 'Agendado'}</span>
                       </div>
                       {selectedEvent.extendedProps?.google_event_id && (
@@ -899,7 +900,7 @@ export default function SchedulePage() {
                           marginTop: '4px'
                         }}>
                           <GoogleIcon size={14} />
-                          <span style={{ fontSize: '0.75rem', color: '#60a5fa', fontWeight: 500 }}>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--color-info)', fontWeight: 500 }}>
                             Sincronizado com Google ({selectedEvent.extendedProps.google_account || 'agenciapratic'})
                           </span>
                         </div>
@@ -1088,8 +1089,8 @@ export default function SchedulePage() {
                         borderRadius: '12px',
                         backgroundColor: googleStatus?.accounts?.agenciapratic?.configured
                           ? 'var(--color-success-wash)'
-                          : 'rgba(234, 179, 8, 0.15)',
-                        color: googleStatus?.accounts?.agenciapratic?.configured ? 'var(--color-success)' : '#EAB308',
+                          : 'var(--color-warning-wash)',
+                        color: googleStatus?.accounts?.agenciapratic?.configured ? 'var(--color-success)' : 'var(--color-warning)',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '4px',
@@ -1100,7 +1101,7 @@ export default function SchedulePage() {
                           width: '6px',
                           height: '6px',
                           borderRadius: '50%',
-                          backgroundColor: googleStatus?.accounts?.agenciapratic?.configured ? 'var(--color-success)' : '#EAB308',
+                          backgroundColor: googleStatus?.accounts?.agenciapratic?.configured ? 'var(--color-success)' : 'var(--color-warning)',
                         }}
                       />
                       {googleStatus?.accounts?.agenciapratic?.configured ? 'Conectado' : 'Pendente'}

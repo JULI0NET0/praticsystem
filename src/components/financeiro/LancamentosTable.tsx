@@ -7,6 +7,7 @@ import { formatCurrency } from "@/lib/format";
 import DialogShell from "@/components/DialogShell";
 import { buildLancamentoStages } from "@/lib/asaasGroups";
 import type { Invoice, AsaasTransaction } from "@/types/database";
+import { tint } from "@/lib/tint";
 
 function billingCycleLabel(cycle?: string): string {
   if (cycle === "monthly") return "Mensalidade";
@@ -269,8 +270,8 @@ export function LancamentosTable({
 
   const statusColor: Record<string, string> = {
     paid: "var(--color-success)",
-    partial: "#F59E0B",
-    pending: "#F59E0B",
+    partial: "var(--color-warning)",
+    pending: "var(--color-warning)",
     overdue: "var(--color-danger)",
     cancelled: "var(--text-tertiary)",
   };
@@ -291,7 +292,7 @@ export function LancamentosTable({
       {/* Totals bar */}
       <div className="responsive-grid-3" style={{ gap: "12px" }}>
         {[
-          { label: "A receber (pendente)", value: totalAReceber, color: "#F59E0B" },
+          { label: "A receber (pendente)", value: totalAReceber, color: "var(--color-warning)" },
           { label: "Recebido (pago)", value: totalRecebido, color: "var(--color-success)" },
           { label: "Total do período", value: totalAReceber + totalRecebido, color: "var(--accent)" },
         ].map((item) => (
@@ -422,8 +423,8 @@ export function LancamentosTable({
                         fontSize: "0.75rem",
                         padding: "2px 8px",
                         color: statusColor[row.effectiveStatus] || "var(--text-secondary)",
-                        background: `${statusColor[row.effectiveStatus] || "var(--text-secondary)"}18`,
-                        border: `1px solid ${statusColor[row.effectiveStatus] || "var(--text-secondary)"}30`,
+                        background: `${tint(statusColor[row.effectiveStatus] || "var(--text-secondary)", 9)}`,
+                        border: `1px solid ${tint(statusColor[row.effectiveStatus] || "var(--text-secondary)", 19)}`,
                       }}
                     >
                       {statusLabel[row.effectiveStatus] || row.effectiveStatus}
@@ -446,7 +447,7 @@ export function LancamentosTable({
                       else openLinkDialog(row);
                     }}
                     title={row.asaasLinked ? "Vinculado ao Asaas — clique para ver detalhes" : "Vincular ao Asaas"}
-                    style={{ background: "none", border: "none", cursor: "pointer", padding: "4px", display: "inline-flex", color: row.asaasLinked ? "var(--color-success)" : "#F59E0B" }}
+                    style={{ background: "none", border: "none", cursor: "pointer", padding: "4px", display: "inline-flex", color: row.asaasLinked ? "var(--color-success)" : "var(--color-warning)" }}
                   >
                     {openingAsaas === row.asaasTransactionId
                       ? <RefreshCw size={14} style={{ animation: "spin 1s linear infinite" }} />
@@ -476,7 +477,7 @@ export function LancamentosTable({
                         {row.invoice.contract_id && (
                           <span className="badge" style={{ fontSize: "0.72rem", alignSelf: "flex-start" }}>Contrato</span>
                         )}
-                        <span style={{ fontSize: "0.72rem", fontWeight: 600, color: row.asaasLinked ? "var(--color-success)" : "#F59E0B" }}>
+                        <span style={{ fontSize: "0.72rem", fontWeight: 600, color: row.asaasLinked ? "var(--color-success)" : "var(--color-warning)" }}>
                           {row.asaasLinked ? "Asaas ✓" : "Sem vínculo Asaas"}
                         </span>
                       </div>
@@ -533,7 +534,7 @@ export function LancamentosTable({
                 <span style={{ fontWeight: 700, fontSize: "0.9rem", color: "var(--color-success)" }}>
                   + {formatCurrency(row.amount)}
                 </span>
-                <span className="badge" style={{ fontSize: "0.65rem", padding: "1px 6px", color: statusColor[row.effectiveStatus] || "var(--text-secondary)", background: `${statusColor[row.effectiveStatus] || "var(--text-secondary)"}18`, border: `1px solid ${statusColor[row.effectiveStatus] || "var(--text-secondary)"}30` }}>
+                <span className="badge" style={{ fontSize: "0.65rem", padding: "1px 6px", color: statusColor[row.effectiveStatus] || "var(--text-secondary)", background: `${tint(statusColor[row.effectiveStatus] || "var(--text-secondary)", 9)}`, border: `1px solid ${tint(statusColor[row.effectiveStatus] || "var(--text-secondary)", 19)}` }}>
                   {statusLabel[row.effectiveStatus] || row.effectiveStatus}
                   {row.effectiveStatus === "partial" ? ` (${formatCurrency(row.linkedAmount)}/${formatCurrency(row.amount)})` : ""}
                 </span>
@@ -550,7 +551,7 @@ export function LancamentosTable({
                 ) : (
                   <button
                     onClick={() => openLinkDialog(row)}
-                    style={{ background: "none", border: "none", cursor: "pointer", color: "#F59E0B", padding: "4px", display: "flex" }} title="Vincular Asaas"
+                    style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-warning)", padding: "4px", display: "flex" }} title="Vincular Asaas"
                   >
                     <Link2 size={13} />
                   </button>
@@ -620,11 +621,11 @@ export function LancamentosTable({
               {/* Etapa 3 — Cobrança real (líquido) */}
               {(stages.bankConfirmationTxn || stages.feeTxns.length > 0) ? (
                 <div style={{ padding: "12px 16px", borderRadius: "12px", background: "rgba(96,165,250,0.06)", border: "1px solid rgba(96,165,250,0.2)", display: "flex", flexDirection: "column", gap: "6px" }}>
-                  <p style={{ fontSize: "0.68rem", color: "#60A5FA", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>3 · Cobrança real (líquido)</p>
+                  <p style={{ fontSize: "0.68rem", color: "var(--color-info)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>3 · Cobrança real (líquido)</p>
                   {stages.bankConfirmationTxn && (
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px" }}>
                       <span style={{ fontSize: "0.82rem", color: "var(--text-secondary)" }}>{stages.bankConfirmationTxn.description || "Cobrança recebida"}</span>
-                      <span style={{ fontSize: "0.82rem", color: "#60A5FA", fontWeight: 700, whiteSpace: "nowrap" }}>+ {formatCurrency(Number(stages.bankConfirmationTxn.value))}</span>
+                      <span style={{ fontSize: "0.82rem", color: "var(--color-info)", fontWeight: 700, whiteSpace: "nowrap" }}>+ {formatCurrency(Number(stages.bankConfirmationTxn.value))}</span>
                     </div>
                   )}
                   {stages.feeTxns.map((fee) => (
@@ -736,9 +737,9 @@ export function LancamentosTable({
                   onClick={() => setNewForm({ ...newForm, status: s })}
                   style={{
                     flex: 1, padding: "10px", borderRadius: "10px", cursor: "pointer", fontWeight: 700, fontSize: "0.85rem",
-                    border: `1px solid ${newForm.status === s ? (s === "paid" ? "var(--color-success)" : "#F59E0B") : "var(--border)"}`,
-                    background: newForm.status === s ? (s === "paid" ? "var(--color-success-wash)" : "rgba(245,158,11,0.1)") : "rgba(255,255,255,0.02)",
-                    color: newForm.status === s ? (s === "paid" ? "var(--color-success)" : "#F59E0B") : "var(--text-secondary)",
+                    border: `1px solid ${newForm.status === s ? (s === "paid" ? "var(--color-success)" : "var(--color-warning)") : "var(--border)"}`,
+                    background: newForm.status === s ? (s === "paid" ? "var(--color-success-wash)" : "var(--color-warning-wash)") : "rgba(255,255,255,0.02)",
+                    color: newForm.status === s ? (s === "paid" ? "var(--color-success)" : "var(--color-warning)") : "var(--text-secondary)",
                     transition: "all 0.15s",
                   }}
                 >
@@ -867,7 +868,7 @@ export function LancamentosTable({
                 <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)", fontWeight: 600 }}>
                   {linkSelection.size} selecionada(s)
                 </span>
-                <span style={{ fontSize: "0.82rem", fontWeight: 700, color: linkSelectedTotal >= linkDialog.amount ? "var(--color-success)" : "#F59E0B" }}>
+                <span style={{ fontSize: "0.82rem", fontWeight: 700, color: linkSelectedTotal >= linkDialog.amount ? "var(--color-success)" : "var(--color-warning)" }}>
                   {formatCurrency(linkSelectedTotal)}{linkSelectedTotal >= linkDialog.amount ? " ✓" : ""}
                 </span>
               </div>

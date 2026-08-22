@@ -283,7 +283,7 @@ export default function ClientsPage() {
                             <span style={{
                               display: 'inline-block',
                               padding: '3px 8px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 600,
-                              background: 'rgba(59, 130, 246, 0.12)', color: '#60A5FA',
+                              background: 'rgba(59, 130, 246, 0.12)', color: 'var(--color-info)',
                               border: '1px solid rgba(59, 130, 246, 0.2)', whiteSpace: 'nowrap'
                             }}>
                               {activeServices[client.id].replace('Gestão de Redes Sociais', 'G. Redes')}
@@ -372,7 +372,7 @@ export default function ClientsPage() {
                         {activeServices[client.id] && (
                           <span style={{
                             padding: '2px 7px', borderRadius: '5px', fontSize: '0.68rem', fontWeight: 600,
-                            background: 'rgba(59, 130, 246, 0.12)', color: '#60A5FA',
+                            background: 'rgba(59, 130, 246, 0.12)', color: 'var(--color-info)',
                             border: '1px solid rgba(59, 130, 246, 0.2)'
                           }}>
                             {activeServices[client.id].replace('Gestão de Redes Sociais', 'G. Redes')}
@@ -483,8 +483,8 @@ export default function ClientsPage() {
                                 <span style={{ fontWeight: 500 }}>R$ {p.value?.toFixed(2)}</span>
                                 <span style={{
                                   padding: '2px 8px', borderRadius: '999px', fontSize: '0.7rem', fontWeight: 600,
-                                  background: isPaid ? 'var(--color-success-wash)' : isOverdue ? 'var(--color-danger-wash)' : 'rgba(234,179,8,0.15)',
-                                  color: isPaid ? 'var(--color-success)' : isOverdue ? 'var(--color-danger)' : '#facc15',
+                                  background: isPaid ? 'var(--color-success-wash)' : isOverdue ? 'var(--color-danger-wash)' : 'var(--color-warning-wash)',
+                                  color: isPaid ? 'var(--color-success)' : isOverdue ? 'var(--color-danger)' : 'var(--color-warning)',
                                 }}>
                                   {isPaid ? 'Pago' : isOverdue ? 'Vencido' : 'Pendente'}
                                 </span>

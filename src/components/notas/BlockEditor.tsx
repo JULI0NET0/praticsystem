@@ -948,7 +948,7 @@ export default function BlockEditor({
           align-items: flex-start;
         }
         .callout-orange { background: rgba(217, 72, 15, 0.08); border-left: 4px solid #d9480f; }
-        .callout-blue { background: rgba(30, 144, 255, 0.08); border-left: 4px solid #1e90ff; }
+        .callout-blue { background: rgba(30, 144, 255, 0.08); border-left: 4px solid var(--color-info); }
         .callout-green { background: var(--color-success-wash); border-left: 4px solid var(--color-success); }
         .callout-red { background: var(--color-danger-wash); border-left: 4px solid var(--color-danger); }
         .callout-icon { font-size: 1.15rem; user-select: none; line-height: 1.4; }

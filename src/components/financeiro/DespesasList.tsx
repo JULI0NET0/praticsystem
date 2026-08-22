@@ -7,6 +7,7 @@ import { formatCurrency } from "@/lib/format";
 import DialogShell from "@/components/DialogShell";
 import { ExpenseLinkDialog } from "@/components/financeiro/ExpenseLinkDialog";
 import type { Expense, ExpenseCategory, ExpenseRecurrence, ExpenseEntry, AsaasTransaction } from "@/types/database";
+import { tint } from "@/lib/tint";
 
 const CATEGORIES: Record<ExpenseCategory, string> = {
   pro_labore: "Pro-labore",
@@ -28,12 +29,12 @@ const RECURRENCES: Record<ExpenseRecurrence, string> = {
 
 const CATEGORY_COLORS: Record<ExpenseCategory, string> = {
   pro_labore: "#A78BFA",
-  funcionario_pj: "#60A5FA",
+  funcionario_pj: "var(--color-info)",
   sistema: "var(--color-success)",
-  internet: "#F59E0B",
+  internet: "var(--color-warning)",
   taxa_asaas: "#FB923C",
   taxa_boleto: "#F472B6",
-  taxa_mensageria: "#38BDF8",
+  taxa_mensageria: "var(--color-info)",
   outros: "var(--text-secondary)",
 };
 
@@ -269,7 +270,7 @@ export function DespesasList({ expenses, expenseEntries, users, asaasTransaction
                   <td>
                     <span
                       className="badge"
-                      style={{ color: CATEGORY_COLORS[expense.category], background: `${CATEGORY_COLORS[expense.category]}18`, border: `1px solid ${CATEGORY_COLORS[expense.category]}30` }}
+                      style={{ color: CATEGORY_COLORS[expense.category], background: `${tint(CATEGORY_COLORS[expense.category], 9)}`, border: `1px solid ${tint(CATEGORY_COLORS[expense.category], 19)}` }}
                     >
                       {CATEGORIES[expense.category]}
                     </span>
@@ -295,7 +296,7 @@ export function DespesasList({ expenses, expenseEntries, users, asaasTransaction
                       if (effStatus === "partial") {
                         return (
                           <div style={{ display: "flex", flexDirection: "column", gap: "1px" }}>
-                            <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "#F59E0B" }}>Parcial</span>
+                            <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--color-warning)" }}>Parcial</span>
                             <span style={{ fontSize: "0.7rem", color: "var(--color-danger)" }}>{formatCurrency(remaining)} em aberto</span>
                           </div>
                         );
@@ -318,7 +319,7 @@ export function DespesasList({ expenses, expenseEntries, users, asaasTransaction
                         <span style={{ fontSize: "0.7rem", color: "var(--text-tertiary)" }}>
                           {entries.length} fatura{entries.length !== 1 ? "s" : ""}
                           {paidCount > 0 && <span style={{ color: "var(--color-success)" }}> · {paidCount}✓</span>}
-                          {pendingCount > 0 && <span style={{ color: "#F59E0B" }}> · {pendingCount}⏳</span>}
+                          {pendingCount > 0 && <span style={{ color: "var(--color-warning)" }}> · {pendingCount}⏳</span>}
                         </span>
                       )}
                     </div>
@@ -384,8 +385,8 @@ export function DespesasList({ expenses, expenseEntries, users, asaasTransaction
                 className="badge"
                 style={{
                   color: CATEGORY_COLORS[expense.category],
-                  background: `${CATEGORY_COLORS[expense.category]}18`,
-                  border: `1px solid ${CATEGORY_COLORS[expense.category]}30`,
+                  background: `${tint(CATEGORY_COLORS[expense.category], 9)}`,
+                  border: `1px solid ${tint(CATEGORY_COLORS[expense.category], 19)}`,
                   fontSize: "0.72rem",
                   flexShrink: 0,
                 }}
@@ -513,7 +514,7 @@ export function DespesasList({ expenses, expenseEntries, users, asaasTransaction
                   {[
                     { label: "Total gerado", value: entries.length, suffix: ` fatura${entries.length !== 1 ? "s" : ""}`, color: "var(--text-primary)" },
                     { label: "Pago", value: formatCurrency(totalPago), suffix: ` (${paidCount})`, color: "var(--color-success)" },
-                    { label: "Pendente", value: formatCurrency(totalPendente), suffix: ` (${pendingCount})`, color: "#F59E0B" },
+                    { label: "Pendente", value: formatCurrency(totalPendente), suffix: ` (${pendingCount})`, color: "var(--color-warning)" },
                   ].map((item) => (
                     <div key={item.label} style={{ padding: "10px 12px", background: "rgba(255,255,255,0.02)", border: "1px solid var(--border)", borderRadius: "10px", textAlign: "center" }}>
                       <p style={{ fontSize: "0.7rem", color: "var(--text-secondary)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "4px" }}>{item.label}</p>
@@ -540,7 +541,7 @@ export function DespesasList({ expenses, expenseEntries, users, asaasTransaction
                       const diaLabel = dateObj.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit" });
                       const effStatus = effectiveEntryStatus(entry);
                       const linkedSum = linkedSumEntry(entry.id);
-                      const sc = effStatus === "paid" ? "var(--color-success)" : effStatus === "cancelled" ? "var(--text-tertiary)" : "#F59E0B";
+                      const sc = effStatus === "paid" ? "var(--color-success)" : effStatus === "cancelled" ? "var(--text-tertiary)" : "var(--color-warning)";
                       const sl = effStatus === "paid" ? "Pago" : effStatus === "cancelled" ? "Cancelado" : effStatus === "partial" ? "Parcial" : "Pendente";
                       return (
                         <div
@@ -554,7 +555,7 @@ export function DespesasList({ expenses, expenseEntries, users, asaasTransaction
                           </div>
                           <span style={{ fontWeight: 700, color: "var(--color-danger)", fontSize: "0.9rem" }}>{formatCurrency(Number(entry.amount))}</span>
                           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "1px", flexShrink: 0 }}>
-                            <span style={{ fontSize: "0.72rem", fontWeight: 700, padding: "3px 8px", borderRadius: "6px", color: sc, background: `${sc}18`, border: `1px solid ${sc}30` }}>{sl}</span>
+                            <span style={{ fontSize: "0.72rem", fontWeight: 700, padding: "3px 8px", borderRadius: "6px", color: sc, background: `${tint(sc, 9)}`, border: `1px solid ${tint(sc, 19)}` }}>{sl}</span>
                             {effStatus === "partial" && (
                               <span style={{ fontSize: "0.62rem", color: "var(--text-tertiary)", whiteSpace: "nowrap" }}>
                                 {formatCurrency(linkedSum)} de {formatCurrency(Number(entry.amount))}
@@ -568,7 +569,7 @@ export function DespesasList({ expenses, expenseEntries, users, asaasTransaction
                           ) : effStatus !== "cancelled" && (
                             <button
                               onClick={() => setLinkEntry(entry)}
-                              style={{ background: "none", border: "none", cursor: "pointer", color: "#F59E0B", padding: "2px", display: "flex", flexShrink: 0 }}
+                              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-warning)", padding: "2px", display: "flex", flexShrink: 0 }}
                               title="Vincular ao banco"
                             >
                               <Link2 size={15} />
@@ -593,12 +594,12 @@ export function DespesasList({ expenses, expenseEntries, users, asaasTransaction
                             const remaining = Math.max(0, Number(entry.amount) - linkedSum);
                             const isPaid = effStatus === "paid";
                             return (
-                              <div style={{ flexBasis: "100%", padding: "8px 10px", borderRadius: "8px", background: isPaid ? "var(--color-success-wash)" : "rgba(245,158,11,0.05)", border: `1px solid ${isPaid ? "var(--color-success-wash)" : "rgba(245,158,11,0.15)"}`, display: "flex", flexDirection: "column", gap: "4px" }}>
+                              <div style={{ flexBasis: "100%", padding: "8px 10px", borderRadius: "8px", background: isPaid ? "var(--color-success-wash)" : "var(--color-warning-wash)", border: `1px solid ${isPaid ? "var(--color-success-wash)" : "var(--color-warning-wash)"}`, display: "flex", flexDirection: "column", gap: "4px" }}>
                                 {partials.map((t) => (
                                   <div key={t.id} style={{ display: "flex", flexDirection: "column", gap: "1px" }}>
                                     <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.68rem", color: "var(--text-tertiary)" }}>
                                       <span>{isPaid ? "Pgto." : "Adiant."} {new Date(`${t.date.split("T")[0]}T12:00:00`).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}</span>
-                                      <span style={{ color: isPaid ? "var(--color-success)" : "#F59E0B", fontWeight: 600 }}>− {formatCurrency(Math.abs(Number(t.value)))}</span>
+                                      <span style={{ color: isPaid ? "var(--color-success)" : "var(--color-warning)", fontWeight: 600 }}>− {formatCurrency(Math.abs(Number(t.value)))}</span>
                                     </div>
                                     {t.notes && (
                                       <p style={{ fontSize: "0.65rem", color: "var(--text-tertiary)", fontStyle: "italic", margin: 0 }}>{t.notes}</p>

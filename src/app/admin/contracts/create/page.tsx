@@ -295,7 +295,7 @@ export default function CreateContractPage() {
                     <span style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', fontWeight: 600, textTransform: 'uppercase' }}>
                       Parcela {parcel.parcelNumber}
                     </span>
-                    <span style={{ fontSize: '0.8rem', color: '#EAB308', background: 'rgba(234, 179, 8, 0.1)', padding: '2px 8px', borderRadius: '100px' }}>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--color-warning)', background: 'var(--color-warning-wash)', padding: '2px 8px', borderRadius: '100px' }}>
                       Pendente
                     </span>
                   </div>

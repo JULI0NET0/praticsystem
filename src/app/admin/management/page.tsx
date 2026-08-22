@@ -9,6 +9,7 @@ import {
   Activity, Clock, Users, Calendar, ChevronDown,
   Circle, Timer, BarChart3, TrendingUp
 } from "lucide-react";
+import { tint } from "@/lib/tint";
 
 interface TimeLogEntry {
   id: string;
@@ -125,7 +126,7 @@ export default function ManagementPage() {
     { label: 'Online Agora', value: totalOnline.toString(), icon: Users, color: 'var(--color-success)', sub: `de ${teamUsers.length} membros` },
     { label: 'Horas Hoje (Equipe)', value: formatMinutes(totalHoursToday), icon: Clock, color: 'var(--accent)', sub: 'total acumulado' },
     { label: 'Média/Pessoa Hoje', value: formatMinutes(avgDaily), icon: TrendingUp, color: '#8B5CF6', sub: 'por membro ativo' },
-    { label: 'Sessões Hoje', value: timeLogs.filter(l => l.start_time >= getDateRange('today')).length.toString(), icon: Activity, color: '#F59E0B', sub: 'registros de trabalho' },
+    { label: 'Sessões Hoje', value: timeLogs.filter(l => l.start_time >= getDateRange('today')).length.toString(), icon: Activity, color: 'var(--color-warning)', sub: 'registros de trabalho' },
   ];
 
   if (!currentUser || !['admin', 'board'].includes(currentUser.role)) {
@@ -169,7 +170,7 @@ export default function ManagementPage() {
               <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>{kpi.label}</span>
               <div style={{
                 width: '36px', height: '36px', borderRadius: '12px',
-                background: `${kpi.color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center'
+                background: `${tint(kpi.color, 8)}`, display: 'flex', alignItems: 'center', justifyContent: 'center'
               }}>
                 <kpi.icon size={18} color={kpi.color} />
               </div>
