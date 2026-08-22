@@ -1,0 +1,242 @@
+/* ============================================================
+   PRATIC · Design tokens
+   ------------------------------------------------------------
+   CLARO é :root. Escuro é o override. (Invertido vs. pré-2026.)
+   Superfícies/acento: mockup Stitch "Claude warm parchment".
+   Famílias semânticas + escalas: design-system.md v1.1.
+
+   ⚠️ O bloco "ALIASES LEGADOS" no fim reaponta os nomes antigos
+   (--accent, --glass-bg, --shadow-glow, …) para os valores novos.
+   É o que re-skina 1.688 call sites em 85 arquivos com diff zero.
+   Os nomes mentem de propósito até a Fase 10. Não os remova antes
+   de `grep -c 'var(--glass-bg)' src` retornar 0.
+   ============================================================ */
+
+@theme {
+  /* ---------- Paleta bruta (base Stitch) ---------- */
+  --color-parchment: #faf9f5;
+  --color-paper: #ffffff;
+  --color-container-low: #f4f4f0;
+  --color-container: #efeeea;
+  --color-container-high: #e9e8e4;
+  --color-container-highest: #e3e2df;
+  --color-cream-border: #f0eee6;
+  --color-outline-variant: #c7c7bf;
+  --color-outline: #777871;
+  --color-ink: #1b1c1a;
+  --color-olive-gray: #5e5d59;
+  --color-stone-gray: #87867f;
+  --color-inverse-surface: #2f312e;
+
+  /* ---------- Acento de marca (coral + terracota Stitch) ---------- */
+  --color-terracotta: #d97757; /* CTA primário */
+  --color-terracotta-700: #c96442; /* hover / ativo */
+  --color-terracotta-800: #b84627; /* pressionado */
+  --color-terracotta-100: #fff1ed; /* wash */
+  --color-terracotta-200: #f3dfd3; /* wash forte / borda */
+
+  /* ---------- Famílias semânticas (design-system.md) ----------
+     Cada acento tem UM papel fixo. Terracota nunca é erro.
+     Azul é informação e foco de campo — nunca ação primária. */
+  --color-success: #788c5d; /* oliva */
+  --color-success-ink: #5e6f48;
+  --color-success-wash: #e6eadd;
+
+  --color-info: #6a9bcc; /* azul */
+  --color-info-ink: #4c7eae;
+  --color-info-wash: #e3ecf6;
+
+  --color-warning: #d37f49;
+  --color-warning-ink: #b84627;
+  --color-warning-wash: #f3dfd3;
+
+  --color-danger: #b23b2e;
+  --color-danger-ink: #8f2e23;
+  --color-danger-wash: #f5e1dc;
+
+  /* ---------- Papéis de superfície / texto (CLARO) ---------- */
+  --color-surface-canvas: var(--color-parchment);
+  --color-surface-raised: var(--color-paper);
+  --color-surface-sunken: var(--color-container-low);
+  --color-surface-inset: var(--color-container);
+  --color-surface-inverse: var(--color-ink);
+
+  --color-border-subtle: var(--color-container-highest);
+  --color-border-default: var(--color-outline-variant);
+  --color-border-strong: var(--color-outline);
+
+  --color-text-primary: var(--color-ink);
+  --color-text-secondary: var(--color-olive-gray);
+  /* ⚠️ #6E6D66, NÃO o #87867F do mockup: aquele dá ≈3.4:1 no branco e
+     reprova em AA para corpo de texto. O tom do mockup vira --text-muted,
+     restrito a ícones e divisores. */
+  --color-text-tertiary: #6e6d66;
+  --color-text-muted: var(--color-stone-gray);
+  --color-text-on-accent: #ffffff;
+
+  /* ---------- Escala de raio ---------- */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 999px;
+
+  /* ---------- Escala de espaçamento (4px) ---------- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+  --space-9: 96px;
+
+  /* ---------- Tipografia ---------- */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-newsreader), ui-serif, Georgia, serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
+
+  /* Hierarquia por PESO, não por tamanho: em vistas de dados
+     tudo fica entre 11–15px e o peso diferencia. */
+  --text-micro: 11px;
+  --text-caption: 12px;
+  --text-data: 13px;
+  --text-ui: 13.5px;
+  --text-body: 15px;
+  --text-h4: 15px;
+  --text-h3: 17px;
+  --text-h2: 20px;
+  --text-h1: 26px;
+
+  /* ---------- Densidade ---------- */
+  --row-h: 40px;
+  --row-h-compact: 32px;
+  --card-pad: 16px;
+  --card-pad-compact: 12px;
+  --card-head-h: 40px;
+
+  /* ---------- Sombras (planas — quase nunca usadas) ---------- */
+  --shadow-sm: 0 1px 2px rgba(27, 28, 26, 0.05);
+  --shadow-md: 0 4px 12px rgba(27, 28, 26, 0.08);
+  --shadow-lg: 0 12px 32px rgba(27, 28, 26, 0.12);
+
+  /* ---------- Movimento ---------- */
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+}
+
+/* ============================================================
+   ESCURO — carvão plano.
+   ⚠️ Sem blur nem sombra, a separação de superfícies TEM que vir
+   da borda. #22211E sobre #141413 é ~1.08:1 de delta de
+   preenchimento — invisível. A borda é que carrega a hierarquia.
+   ============================================================ */
+[data-theme='dark'] {
+  --color-surface-canvas: #141413;
+  --color-surface-raised: #22211e;
+  --color-surface-sunken: #1a1917;
+  --color-surface-inset: #2a2825;
+  --color-surface-inverse: var(--color-parchment);
+
+  --color-border-subtle: #3a3833;
+  --color-border-default: #4a4740;
+  --color-border-strong: #6e6b62;
+
+  --color-text-primary: #f5f4ef;
+  --color-text-secondary: #b5b2a8;
+  --color-text-tertiary: #96948b;
+  --color-text-muted: #7a786f;
+
+  /* Washes escurecem, inks clareiam — a identidade do acento não
+     muda, só a luminosidade, para manter AA nos dois modos. */
+  --color-terracotta-100: #3a2419;
+  --color-terracotta-200: #4a2e20;
+
+  --color-success-wash: #232a1c;
+  --color-success-ink: #9cb381;
+
+  --color-info-wash: #1d2733;
+  --color-info-ink: #8fb6de;
+
+  --color-warning-wash: #34241a;
+  --color-warning-ink: #e0a276;
+
+  --color-danger-wash: #331d19;
+  --color-danger-ink: #e0897a;
+
+  --shadow-sm: none;
+  --shadow-md: none;
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.4);
+}
+
+/* ============================================================
+   ALIASES LEGADOS
+   Nomes antigos, valores novos. Temporário até a Fase 10.
+   ============================================================ */
+:root {
+  --accent: var(--color-terracotta);
+  --accent-hover: var(--color-terracotta-700);
+  --accent-wash: var(--color-terracotta-100);
+  --accent-wash-strong: var(--color-terracotta-200);
+  --accent-border: var(--color-terracotta-200);
+
+  --text-primary: var(--color-text-primary);
+  --text-secondary: var(--color-text-secondary);
+  --text-tertiary: var(--color-text-tertiary);
+  --text-dark: var(--color-ink);
+
+  --border: var(--color-border-subtle);
+
+  --bg-primary: var(--color-surface-canvas);
+  --bg-secondary: var(--color-surface-sunken);
+  --bg-light: var(--color-surface-canvas);
+  --card-inner-bg: var(--color-surface-inset);
+
+  /* Nomes de vidro mantidos, semântica trocada para opaco. */
+  --glass-bg: var(--color-surface-raised);
+  --glass-border: 1px solid var(--color-border-subtle);
+
+  /* As 4 linhas que matam a estética antiga inteira. */
+  --shadow-glow: none;
+  --shadow-glow-hover: none;
+  --bg-overlay: transparent;
+  --blur-overlay: none;
+
+  --radius-card: 12px;
+  --radius-input: 8px;
+  --radius-badge: 6px;
+
+  --sidebar-active-text: var(--color-terracotta-700);
+  --sidebar-active-bg: var(--color-terracotta-100);
+
+  /* Layout / densidade */
+  --sidebar-width: 240px;
+  --sidebar-collapsed-width: 64px;
+  --header-height: 56px;
+  --mobile-nav-height: 64px;
+  --content-padding: 24px;
+  --page-gap: 12px;
+}
+
+[data-theme='dark'] {
+  --sidebar-active-text: #e8a98d;
+}
+
+/* Re-declaração responsiva — o padrão original (globals.css:167/175)
+   é legítimo e .admin-content-area depende dele. */
+@media (max-width: 1024px) {
+  :root {
+    --content-padding: 20px;
+    --page-gap: 10px;
+  }
+}
+
+@media (max-width: 768px) {
+  :root {
+    --content-padding: 16px;
+    --page-gap: 10px;
+    --header-height: 52px;
+  }
+}

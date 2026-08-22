@@ -1,0 +1,517 @@
+
+/* Animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* ============================================================
+   SUPERFÍCIES
+   `.glass-card` (138 usos) foi REDEFINIDA no lugar, não renomeada:
+   agora é plana e opaca. Renomear custaria 138 edições e quebraria
+   FinancialKPIs.test.tsx sem ganho visual nenhum. `.surface` é o
+   nome correto para código novo; o alias sai na Fase 10.
+   ============================================================ */
+.glass-card,
+.surface {
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-card);
+  box-shadow: none;
+  transition: border-color var(--duration-base) var(--ease-standard),
+    background-color var(--duration-base) var(--ease-standard);
+}
+
+.surface-sunken {
+  background: var(--color-surface-sunken);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-card);
+}
+
+.hover-accent:hover {
+  border-color: var(--accent) !important;
+  color: var(--accent) !important;
+  background-color: var(--color-terracotta-100) !important;
+}
+
+.hover-text-accent {
+  transition: all 0.2s ease;
+}
+
+.hover-text-accent:hover {
+  color: var(--accent);
+  cursor: default;
+}
+
+/* Containers */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.page-wrapper {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Responsive Utilities
+   (as re-declarações de :root migraram para theme.css) */
+@media (max-width: 768px) {
+  .container {
+    padding: 0 16px;
+  }
+}
+
+/* ============================================================
+   SHELL
+   O gutter de 24px + gap de 24px que faziam o "cartão flutuante"
+   viraram 0: a borda da sidebar separa as áreas agora. Isso
+   devolve 48px de largura útil por tela.
+   ============================================================ */
+.admin-layout-container {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  background-color: var(--color-surface-canvas);
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
+}
+
+.admin-main-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  border-radius: 0;
+  position: relative;
+  min-height: 0;
+  background: var(--color-surface-canvas);
+  border: none;
+  overflow: hidden;
+}
+
+.admin-content-area {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  padding: var(--content-padding) var(--content-padding) calc(var(--content-padding) + 80px);
+  scroll-behavior: smooth;
+  font-size: var(--text-ui);
+}
+
+/* Mobile (≤768px) */
+@media (max-width: 768px) {
+  .admin-layout-container {
+    position: fixed;
+    inset: 0;
+    padding: 0;
+    gap: 0;
+    flex-direction: column;
+  }
+
+  .admin-main-card {
+    border-radius: 0;
+    flex: 1;
+    min-height: 0;
+    border: none;
+  }
+
+  .admin-content-area {
+    padding: 16px 16px calc(var(--mobile-nav-height) + 40px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* Sidebar Responsive */
+.sidebar-desktop {
+  display: flex !important;
+}
+
+/* Tablet: sidebar colapsada */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .sidebar-desktop {
+    width: var(--sidebar-collapsed-width) !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .sidebar-desktop {
+    display: none !important;
+  }
+}
+
+/* Mobile Navigation Components */
+.mobile-header {
+  display: none;
+  position: sticky;
+  top: 0;
+  left: 0;
+  right: 0;
+  /* height cresce para incluir safe-area-inset-top (notch/dynamic island) */
+  height: calc(var(--header-height) + env(safe-area-inset-top, 0px));
+  padding: 0 16px;
+  padding-top: env(safe-area-inset-top, 0px);
+  align-items: center;
+  justify-content: space-between;
+  z-index: 100;
+  border-radius: 0;
+  border-bottom: 1px solid var(--color-border-subtle);
+  background: var(--color-surface-raised);
+}
+
+.mobile-nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom, 0px));
+  padding: 0 8px;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  align-items: center;
+  justify-content: space-around;
+  z-index: 100;
+  border-radius: 0;
+  border-top: 1px solid var(--color-border-subtle);
+  background: var(--color-surface-raised);
+  box-shadow: none;
+}
+
+@media (max-width: 768px) {
+  .mobile-header {
+    display: flex;
+  }
+
+  .mobile-nav {
+    display: flex;
+  }
+
+  .hide-mobile {
+    display: none !important;
+  }
+
+  /* FloatingSearch: esconder no mobile */
+  .floating-search-container {
+    display: none !important;
+  }
+}
+
+/* Visibility Utilities */
+.show-mobile-only {
+  display: none !important;
+}
+
+.hide-tablet {
+  display: initial;
+}
+
+@media (max-width: 768px) {
+  .show-mobile-only {
+    display: flex !important;
+  }
+
+  .hide-desktop {
+    display: initial;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .hide-tablet {
+    display: none !important;
+  }
+}
+
+@media (min-width: 1025px) {
+  .hide-desktop {
+    display: none !important;
+  }
+}
+
+/* Mobile-specific responsive helpers */
+@media (max-width: 768px) {
+  .mobile-stack {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  /* Header de detalhe do cliente: info acima, botões abaixo em linha */
+  .client-page-header {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+  }
+  .client-page-actions {
+    flex-direction: row !important;
+    justify-content: flex-end;
+    margin-left: 0 !important;
+    width: 100%;
+  }
+
+  .mobile-full-width {
+    width: 100% !important;
+  }
+
+  .mobile-grid-1 {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Workspace: widgets em coluna única */
+  .workspace-widget-grid {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+
+  .workspace-widget-grid>* {
+    grid-column: span 1 !important;
+    grid-row: span 1 !important;
+  }
+}
+
+/* Tablet: workspace grid 2 colunas */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .workspace-widget-grid {
+    grid-template-columns: repeat(6, 1fr) !important;
+    gap: 16px !important;
+  }
+}
+
+/* Hide scrollbar for tabs */
+.client-tabs-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* Onboarding responsive */
+@media (max-width: 768px) {
+  .onboarding-form-grid {
+    grid-template-columns: 1fr !important;
+  }
+  
+  .br-mobile {
+    display: block !important;
+  }
+}
+
+.br-mobile {
+  display: none;
+}
+
+/* Agenda Redesign Styles */
+.agenda-layout {
+  display: grid;
+  grid-template-columns: 1fr 350px;
+  gap: 24px;
+  min-height: calc(100vh - 250px);
+}
+
+.agenda-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.fc-event-premium {
+  overflow: hidden;
+  position: relative;
+}
+
+/* Altura fixa e uniforme para todas as células do mês */
+.fc-daygrid-body > table > tbody > tr {
+  height: 96px !important;
+}
+.fc-daygrid-day-frame {
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+.fc-daygrid-day.fc-day-today {
+  background: var(--color-terracotta-100) !important;
+}
+
+.fc-daygrid-day-number {
+  font-weight: 600 !important;
+  padding: 6px !important;
+  font-size: var(--text-caption);
+}
+
+.fc-day-today .fc-daygrid-day-number {
+  background: var(--accent) !important;
+  color: var(--color-text-on-accent) !important;
+  border-radius: var(--radius-sm) !important;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  /* era `alignItems`/`justifyContent` em camelCase — CSS inválido,
+     as regras nunca aplicaram */
+  align-items: center;
+  justify-content: center;
+  margin: 4px;
+}
+
+@media (max-width: 1100px) {
+  .agenda-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* =============================================
+   WORKSPACE MOBILE
+   ============================================= */
+
+/* Header: quebra em 2 linhas no mobile */
+.workspace-header {
+  flex-wrap: nowrap;
+}
+.workspace-header-divider {
+  display: block;
+}
+
+@media (max-width: 768px) {
+  .workspace-header {
+    flex-wrap: wrap !important;
+    gap: 10px !important;
+    padding: 12px 14px !important;
+  }
+  .workspace-header-divider {
+    display: none !important;
+  }
+  /* Status bar sobe para segunda linha e ocupa largura total */
+  .workspace-status-bar {
+    order: 3;
+    width: 100%;
+    min-width: 0 !important;
+    padding: 8px 12px;
+    background: var(--color-surface-sunken);
+    border-radius: 14px;
+    border: 1px solid var(--border);
+  }
+  /* Botões ficam à direita na primeira linha */
+  .workspace-actions {
+    margin-left: auto !important;
+  }
+  /* Emoji picker não extravasa a tela */
+  .workspace-emoji-picker {
+    max-width: min(320px, calc(100vw - 48px)) !important;
+  }
+
+  /* Grid de widgets: 1 coluna, altura automática */
+  .workspace-widget-grid {
+    grid-template-columns: 1fr !important;
+    grid-auto-rows: auto !important;
+    gap: 16px !important;
+  }
+  .workspace-widget-grid > * {
+    grid-column: 1 !important;
+    grid-row: auto !important;
+  }
+  /* Mínimo de altura confortável por widget */
+  .workspace-widget-grid .glass-card {
+    min-height: 160px;
+  }
+  /* Pomodoro precisa de mais espaço vertical no mobile */
+  .workspace-widget-grid [data-widget="pomodoro"] .glass-card {
+    min-height: 420px;
+  }
+}
+
+/* =============================================
+   RESPONSIVE GRID UTILITIES
+   ============================================= */
+.responsive-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+.responsive-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+}
+.responsive-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+}
+.responsive-grid-sidebar {
+  display: grid;
+  grid-template-columns: 1fr 350px;
+}
+
+@media (max-width: 1024px) {
+  .responsive-grid-sidebar { grid-template-columns: 1fr; }
+}
+@media (max-width: 768px) {
+  .responsive-grid-2 { grid-template-columns: 1fr; }
+  .responsive-grid-3 { grid-template-columns: repeat(2, 1fr); }
+  .responsive-grid-4 { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 480px) {
+  .responsive-grid-3 { grid-template-columns: 1fr; }
+  .responsive-grid-4 { grid-template-columns: 1fr; }
+}
+
+/* =============================================
+   MOBILE TABLE → CARDS
+   ============================================= */
+
+/* Esconde a tabela no mobile */
+@media (max-width: 768px) {
+  .table-container { display: none; }
+}
+
+/* Cards: ocultos no desktop, visíveis no mobile */
+.mobile-table-cards {
+  display: none;
+  flex-direction: column;
+  gap: 12px;
+}
+@media (max-width: 768px) {
+  .mobile-table-cards { display: flex; }
+}
+
+.mobile-data-card {
+  background: var(--color-surface-sunken);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.mobile-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+.mobile-card-title {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mobile-card-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.82rem;
+  gap: 8px;
+}
+.mobile-card-row > span:first-child {
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}

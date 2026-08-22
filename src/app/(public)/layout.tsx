@@ -10,9 +10,8 @@ export default function PublicLayout({
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-light)', color: 'var(--text-dark)' }}>
       <header style={{ 
         padding: '24px 0', 
-        borderBottom: '1px solid rgba(0,0,0,0.05)',
-        backgroundColor: 'rgba(241, 239, 237, 0.8)',
-        backdropFilter: 'blur(10px)',
+        borderBottom: '1px solid var(--color-border-subtle)',
+        backgroundColor: 'var(--color-surface-canvas)',
         position: 'sticky',
         top: 0,
         zIndex: 100

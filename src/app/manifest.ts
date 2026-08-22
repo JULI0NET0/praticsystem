@@ -8,17 +8,19 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: '/admin/dashboard',
     display: 'standalone',
     orientation: 'portrait',
-    background_color: '#0A0A0A',
-    theme_color: '#0A0A0A',
+    background_color: '#FAF9F5',
+    theme_color: '#FAF9F5',
     icons: [
+      // Símbolo preto: o branco ficaria invisível sobre o splash
+      // pergaminho agora que o fundo não é mais #0A0A0A.
       {
-        src: '/SIMBOLO-BRANCO.png',
+        src: '/SIMBOLO-PRETO.png',
         sizes: '192x192',
         type: 'image/png',
         purpose: 'any',
       },
       {
-        src: '/SIMBOLO-BRANCO.png',
+        src: '/SIMBOLO-PRETO.png',
         sizes: '512x512',
         type: 'image/png',
         purpose: 'maskable',

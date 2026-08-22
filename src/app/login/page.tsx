@@ -83,8 +83,12 @@ export default function LoginPage() {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: 'var(--bg-primary)',
-      backgroundImage: 'radial-gradient(circle at 50% -20%, rgba(217, 72, 15, 0.15), transparent 60%)',
+      backgroundColor: 'var(--color-surface-canvas)',
+      // Halo único no topo — o único gesto de cor suave que o
+      // sistema permite (design-system §8). Antes usava o acento
+      // aposentado #D9480F direto.
+      backgroundImage:
+        'radial-gradient(circle at 50% -20%, var(--color-terracotta-200), transparent 60%)',
       padding: '24px'
     }}>
       <motion.div
