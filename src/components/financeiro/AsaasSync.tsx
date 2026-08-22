@@ -474,9 +474,9 @@ export function AsaasSync({
           { label: "Saldo Total", value: balance?.balance ?? null, color: "#60A5FA", bg: "rgba(96,165,250,0.06)", border: "rgba(96,165,250,0.15)" },
           {
             label: "Saldo Disponível", value: balance?.availableBalance ?? null,
-            color: balance?.availableBalance != null ? (balance.availableBalance >= 0 ? "#22C55E" : "#EF4444") : "#60A5FA",
-            bg: balance?.availableBalance != null ? (balance.availableBalance >= 0 ? "rgba(34,197,94,0.06)" : "rgba(239,68,68,0.06)") : "rgba(255,255,255,0.02)",
-            border: balance?.availableBalance != null ? (balance.availableBalance >= 0 ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.15)") : "var(--border)",
+            color: balance?.availableBalance != null ? (balance.availableBalance >= 0 ? "var(--color-success)" : "#EF4444") : "#60A5FA",
+            bg: balance?.availableBalance != null ? (balance.availableBalance >= 0 ? "var(--color-success-wash)" : "rgba(239,68,68,0.06)") : "rgba(255,255,255,0.02)",
+            border: balance?.availableBalance != null ? (balance.availableBalance >= 0 ? "var(--color-success-wash)" : "rgba(239,68,68,0.15)") : "var(--border)",
           },
         ].map((card) => (
           <div key={card.label} className="glass-card" style={{ padding: "20px 24px", flex: "1 1 200px", background: card.bg, border: `1px solid ${card.border}` }}>
@@ -498,13 +498,13 @@ export function AsaasSync({
       {/* Totalizadores do período */}
       <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", alignItems: "stretch" }}>
         {[
-          { label: "Entrou", value: periodTotals.entrou, color: "#22C55E", bg: "rgba(34,197,94,0.06)", border: "rgba(34,197,94,0.15)" },
+          { label: "Entrou", value: periodTotals.entrou, color: "var(--color-success)", bg: "var(--color-success-wash)", border: "var(--color-success-wash)" },
           { label: "Saiu", value: periodTotals.saiu, color: "#EF4444", bg: "rgba(239,68,68,0.06)", border: "rgba(239,68,68,0.15)" },
           {
             label: "Saldo do período", value: periodTotals.saldo,
-            color: periodTotals.saldo >= 0 ? "#22C55E" : "#EF4444",
-            bg: periodTotals.saldo >= 0 ? "rgba(34,197,94,0.06)" : "rgba(239,68,68,0.06)",
-            border: periodTotals.saldo >= 0 ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.15)",
+            color: periodTotals.saldo >= 0 ? "var(--color-success)" : "#EF4444",
+            bg: periodTotals.saldo >= 0 ? "var(--color-success-wash)" : "rgba(239,68,68,0.06)",
+            border: periodTotals.saldo >= 0 ? "var(--color-success-wash)" : "rgba(239,68,68,0.15)",
           },
         ].map((card) => (
           <div key={card.label} className="glass-card" style={{ padding: "16px 22px", flex: "1 1 180px", background: card.bg, border: `1px solid ${card.border}` }}>
@@ -525,7 +525,7 @@ export function AsaasSync({
           </p>
           {lastSyncResult && (
             <div style={{ marginTop: "10px", display: "flex", gap: "16px" }}>
-              <span style={{ fontSize: "0.8rem", color: "#22C55E", fontWeight: 700 }}>✓ {lastSyncResult.imported} importadas</span>
+              <span style={{ fontSize: "0.8rem", color: "var(--color-success)", fontWeight: 700 }}>✓ {lastSyncResult.imported} importadas</span>
               <span style={{ fontSize: "0.8rem", color: "var(--text-tertiary)", fontWeight: 600 }}>{lastSyncResult.skipped} já existiam</span>
             </div>
           )}
@@ -643,12 +643,12 @@ export function AsaasSync({
                 {/* Group header */}
                 <div style={{
                   padding: "14px 20px",
-                  background: group.isAutoReconciled ? "rgba(34,197,94,0.04)" : "rgba(245,158,11,0.04)",
+                  background: group.isAutoReconciled ? "var(--color-success-wash)" : "rgba(245,158,11,0.04)",
                   borderBottom: "1px solid var(--border)",
                   display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px",
                 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                    <Building2 size={14} color={group.isAutoReconciled ? "#22C55E" : "#F59E0B"} />
+                    <Building2 size={14} color={group.isAutoReconciled ? "var(--color-success)" : "#F59E0B"} />
                     <div>
                       <p style={{ fontWeight: 700, fontSize: "0.9rem" }}>
                         {group.clientLabel || "Cliente não identificado"}
@@ -659,11 +659,11 @@ export function AsaasSync({
                     </div>
                   </div>
                   <div style={{ display: "flex", gap: "14px", alignItems: "center" }}>
-                    <span style={{ fontSize: "0.82rem", color: "#22C55E", fontWeight: 700 }}>+ {formatCurrency(group.amount)}</span>
+                    <span style={{ fontSize: "0.82rem", color: "var(--color-success)", fontWeight: 700 }}>+ {formatCurrency(group.amount)}</span>
                     {group.totalFees > 0 && (
                       <span style={{ fontSize: "0.82rem", color: "#EF4444", fontWeight: 700 }}>− {formatCurrency(group.totalFees)}</span>
                     )}
-                    <span style={{ fontSize: "0.95rem", fontWeight: 800, color: net >= 0 ? "#22C55E" : "#EF4444" }}>
+                    <span style={{ fontSize: "0.95rem", fontWeight: 800, color: net >= 0 ? "var(--color-success)" : "#EF4444" }}>
                       = {formatCurrency(Math.abs(net))}
                     </span>
                   </div>
@@ -691,11 +691,11 @@ export function AsaasSync({
 
                   {/* Payment txn (from sync-clients, already linked to invoice) */}
                   {group.paymentTxn && (
-                    <div style={{ padding: "10px 20px", display: "flex", alignItems: "center", gap: "12px", borderBottom: "1px solid rgba(255,255,255,0.04)", background: "rgba(34,197,94,0.02)" }}>
-                      <CheckCircle2 size={13} color="#22C55E" />
+                    <div style={{ padding: "10px 20px", display: "flex", alignItems: "center", gap: "12px", borderBottom: "1px solid rgba(255,255,255,0.04)", background: "var(--color-success-wash)" }}>
+                      <CheckCircle2 size={13} color="var(--color-success)" />
                       <p style={{ flex: 1, fontSize: "0.85rem", fontWeight: 600 }}>{group.paymentTxn.description || "Pagamento"}</p>
-                      <span style={{ fontSize: "0.8rem", color: "#22C55E", fontWeight: 700 }}>+ {formatCurrency(Number(group.paymentTxn.value))}</span>
-                      <span className="badge" style={{ color: "#22C55E", background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)", fontSize: "0.7rem", whiteSpace: "nowrap" }}>Sistema ✓</span>
+                      <span style={{ fontSize: "0.8rem", color: "var(--color-success)", fontWeight: 700 }}>+ {formatCurrency(Number(group.paymentTxn.value))}</span>
+                      <span className="badge" style={{ color: "var(--color-success)", background: "var(--color-success-wash)", border: "1px solid var(--color-success-wash)", fontSize: "0.7rem", whiteSpace: "nowrap" }}>Sistema ✓</span>
                     </div>
                   )}
 
@@ -740,13 +740,13 @@ export function AsaasSync({
                   {group.feeTxns.map(({ txn, category }) => (
                     <div key={txn.id} style={{ padding: "10px 20px", display: "flex", alignItems: "center", gap: "12px", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
                       {txn.expense_entry_id
-                        ? <CheckCircle2 size={13} color="#22C55E" />
+                        ? <CheckCircle2 size={13} color="var(--color-success)" />
                         : <AlertCircle size={13} color="#F59E0B" />
                       }
                       <p style={{ flex: 1, fontSize: "0.82rem", color: "var(--text-secondary)" }}>{txn.description || "Taxa Asaas"}</p>
                       <span style={{ fontSize: "0.8rem", color: "#EF4444", fontWeight: 700 }}>− {formatCurrency(Math.abs(Number(txn.value)))}</span>
                       {txn.expense_entry_id ? (
-                        <span className="badge" style={{ color: "#22C55E", background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)", fontSize: "0.7rem" }}>Vinculado</span>
+                        <span className="badge" style={{ color: "var(--color-success)", background: "var(--color-success-wash)", border: "1px solid var(--color-success-wash)", fontSize: "0.7rem" }}>Vinculado</span>
                       ) : (
                         <button
                           onClick={() => { setLinkDialogDefaultCategory(category || undefined); setLinkDialogTxn(txn); }}
@@ -822,15 +822,15 @@ export function AsaasSync({
                               </button>
                             </td>
                             <td>
-                              <span className="badge" style={{ color: txn.type === "CREDIT" ? "#22C55E" : "#EF4444", background: txn.type === "CREDIT" ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)", border: `1px solid ${txn.type === "CREDIT" ? "rgba(34,197,94,0.25)" : "rgba(239,68,68,0.25)"}`, fontSize: "0.75rem" }}>
+                              <span className="badge" style={{ color: txn.type === "CREDIT" ? "var(--color-success)" : "#EF4444", background: txn.type === "CREDIT" ? "var(--color-success-wash)" : "rgba(239,68,68,0.1)", border: `1px solid ${txn.type === "CREDIT" ? "var(--color-success-wash)" : "rgba(239,68,68,0.25)"}`, fontSize: "0.75rem" }}>
                                 {txn.type === "CREDIT" ? "Receita" : "Despesa"}
                               </span>
                             </td>
-                            <td style={{ textAlign: "right", fontWeight: 700, fontSize: "0.9rem", color: txn.type === "CREDIT" ? "#22C55E" : "#EF4444" }}>
+                            <td style={{ textAlign: "right", fontWeight: 700, fontSize: "0.9rem", color: txn.type === "CREDIT" ? "var(--color-success)" : "#EF4444" }}>
                               {txn.type === "DEBIT" ? "−" : "+"} {formatCurrency(Math.abs(Number(txn.value)))}
                             </td>
                             <td>
-                              <span style={{ fontSize: "0.82rem", color: isLinked ? "#22C55E" : "#F59E0B", fontWeight: 600 }}>
+                              <span style={{ fontSize: "0.82rem", color: isLinked ? "var(--color-success)" : "#F59E0B", fontWeight: 600 }}>
                                 {isLinked ? "Vinculado" : "Sem vínculo"}
                               </span>
                             </td>
@@ -949,9 +949,9 @@ export function AsaasSync({
                   {/* Tipo */}
                   <td>
                     <span className="badge" style={{
-                      color: txn.type === "CREDIT" ? "#22C55E" : "#EF4444",
-                      background: txn.type === "CREDIT" ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)",
-                      border: `1px solid ${txn.type === "CREDIT" ? "rgba(34,197,94,0.25)" : "rgba(239,68,68,0.25)"}`,
+                      color: txn.type === "CREDIT" ? "var(--color-success)" : "#EF4444",
+                      background: txn.type === "CREDIT" ? "var(--color-success-wash)" : "rgba(239,68,68,0.1)",
+                      border: `1px solid ${txn.type === "CREDIT" ? "var(--color-success-wash)" : "rgba(239,68,68,0.25)"}`,
                       fontSize: "0.75rem",
                     }}>
                       {txn.type === "CREDIT" ? "Receita" : "Despesa"}
@@ -959,7 +959,7 @@ export function AsaasSync({
                   </td>
 
                   {/* Valor */}
-                  <td style={{ textAlign: "right", fontWeight: 700, fontSize: "0.9rem", color: txn.type === "CREDIT" ? "#22C55E" : "#EF4444", whiteSpace: "nowrap" }}>
+                  <td style={{ textAlign: "right", fontWeight: 700, fontSize: "0.9rem", color: txn.type === "CREDIT" ? "var(--color-success)" : "#EF4444", whiteSpace: "nowrap" }}>
                     {txn.type === "DEBIT" ? "−" : "+"} {formatCurrency(Math.abs(Number(txn.value)))}
                   </td>
 
@@ -980,7 +980,7 @@ export function AsaasSync({
                           </span>
                         ) : isLinked ? (
                           <span style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "1px" }}>
-                            <span style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "0.82rem", color: "#22C55E", fontWeight: 600 }}>
+                            <span style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "0.82rem", color: "var(--color-success)", fontWeight: 600 }}>
                               <CheckCircle2 size={11} />
                               <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100px" }}>
                                 {linkedLabel || "Vinculado"}
@@ -1040,7 +1040,7 @@ export function AsaasSync({
                             <p style={{ fontSize: "0.82rem", color: "var(--text-secondary)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                               {linkedLabel || "Vinculado"}
                             </p>
-                            <span style={{ fontSize: "0.72rem", color: "#22C55E", fontWeight: 600 }}>Asaas ✓</span>
+                            <span style={{ fontSize: "0.72rem", color: "var(--color-success)", fontWeight: 600 }}>Asaas ✓</span>
                           </div>
                         ) : (
                           <p style={{ fontSize: "0.82rem", color: "#F59E0B", fontWeight: 600, margin: 0 }}>
@@ -1164,10 +1164,10 @@ export function AsaasSync({
           >
             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
               {/* Transação */}
-              <div style={{ padding: "12px 16px", borderRadius: "12px", background: detailTxn.type === "CREDIT" ? "rgba(34,197,94,0.06)" : "rgba(239,68,68,0.06)", border: `1px solid ${detailTxn.type === "CREDIT" ? "rgba(34,197,94,0.2)" : "rgba(239,68,68,0.2)"}` }}>
+              <div style={{ padding: "12px 16px", borderRadius: "12px", background: detailTxn.type === "CREDIT" ? "var(--color-success-wash)" : "rgba(239,68,68,0.06)", border: `1px solid ${detailTxn.type === "CREDIT" ? "var(--color-success-wash)" : "rgba(239,68,68,0.2)"}` }}>
                 <p style={{ fontSize: "0.72rem", color: "var(--text-secondary)", marginBottom: "2px" }}>Transação Asaas · {detailTxn.type === "CREDIT" ? "Receita" : "Despesa"}</p>
                 <p style={{ fontWeight: 700, fontSize: "0.9rem" }}>{detailTxn.description || "Sem descrição"}</p>
-                <p style={{ fontWeight: 800, fontSize: "1.05rem", color: detailTxn.type === "CREDIT" ? "#22C55E" : "#EF4444", marginTop: "2px" }}>
+                <p style={{ fontWeight: 800, fontSize: "1.05rem", color: detailTxn.type === "CREDIT" ? "var(--color-success)" : "#EF4444", marginTop: "2px" }}>
                   {detailTxn.type === "CREDIT" ? "+" : "−"} {formatCurrency(Number(detailTxn.value))}
                   <span style={{ fontSize: "0.75rem", fontWeight: 400, color: "var(--text-tertiary)", marginLeft: "8px" }}>
                     {new Date(`${detailTxn.date.split("T")[0]}T12:00:00`).toLocaleDateString("pt-BR")}
@@ -1194,10 +1194,10 @@ export function AsaasSync({
                       {entryPayments.map((p) => (
                         <div key={p.id} style={{ display: "flex", flexDirection: "column", gap: "1px" }}>
                           <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem" }}>
-                            <span style={{ color: p.id === detailTxn.id ? "#22C55E" : "var(--text-tertiary)", fontWeight: p.id === detailTxn.id ? 700 : 400 }}>
+                            <span style={{ color: p.id === detailTxn.id ? "var(--color-success)" : "var(--text-tertiary)", fontWeight: p.id === detailTxn.id ? 700 : 400 }}>
                               {p.id === detailTxn.id ? "▶ " : ""}{new Date(`${p.date.split("T")[0]}T12:00:00`).toLocaleDateString("pt-BR")}
                             </span>
-                            <span style={{ fontWeight: 600, color: p.id === detailTxn.id ? "#22C55E" : "#F59E0B" }}>
+                            <span style={{ fontWeight: 600, color: p.id === detailTxn.id ? "var(--color-success)" : "#F59E0B" }}>
                               − {formatCurrency(Math.abs(Number(p.value)))}
                             </span>
                           </div>
@@ -1210,7 +1210,7 @@ export function AsaasSync({
                       ))}
                       <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", fontWeight: 700, borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "4px", marginTop: "2px" }}>
                         <span>Total pago</span>
-                        <span style={{ color: totalPaid >= Number(dEntry.amount) ? "#22C55E" : "#F59E0B" }}>
+                        <span style={{ color: totalPaid >= Number(dEntry.amount) ? "var(--color-success)" : "#F59E0B" }}>
                           {formatCurrency(totalPaid)} / {formatCurrency(Number(dEntry.amount))}
                         </span>
                       </div>
@@ -1231,7 +1231,7 @@ export function AsaasSync({
                   <p style={{ fontSize: "0.7rem", color: "var(--text-secondary)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>Fatura vinculada</p>
                   <p style={{ fontWeight: 700 }}>{dClient.nome_fantasia || dClient.name}</p>
                   <p style={{ fontSize: "0.8rem", color: "var(--text-tertiary)" }}>{dInvoice.description}</p>
-                  <p style={{ fontWeight: 800, color: "#22C55E" }}>{formatCurrency(Number(dInvoice.amount))}</p>
+                  <p style={{ fontWeight: 800, color: "var(--color-success)" }}>{formatCurrency(Number(dInvoice.amount))}</p>
                   <p style={{ fontSize: "0.75rem", color: "var(--text-tertiary)" }}>
                     Vcto {new Date(`${dInvoice.due_date.split("T")[0]}T12:00:00`).toLocaleDateString("pt-BR")}
                     {dInvoice.paid_at && ` · Pago ${new Date(`${dInvoice.paid_at.split("T")[0]}T12:00:00`).toLocaleDateString("pt-BR")}`}
@@ -1248,21 +1248,21 @@ export function AsaasSync({
         const fin = descTxn.expense_entry_id
           ? { label: expenseEntries.find((e) => e.id === descTxn.expense_entry_id)?.description || "Despesa vinculada", color: "#EF4444" }
           : descTxn.invoice_id
-          ? { label: invoices.find((i) => i.id === descTxn.invoice_id)?.description || "Fatura vinculada", color: "#22C55E" }
+          ? { label: invoices.find((i) => i.id === descTxn.invoice_id)?.description || "Fatura vinculada", color: "var(--color-success)" }
           : null;
 
         const faturaNumber = descTxn.description ? extractFaturaNumber(descTxn.description) : null;
         const feeCategory = descTxn.description ? detectFeeCategory(descTxn.description) : null;
         const FEE_LABELS: Record<string, string> = { taxa_asaas: "Taxa Asaas", taxa_boleto: "Taxa de Boleto", taxa_mensageria: "Taxa de Mensageria", taxa_pix: "Taxa Pix" };
         const STATUS_META: Record<string, { label: string; color: string }> = {
-          RECEIVED: { label: "Recebida", color: "#22C55E" },
-          CONFIRMED: { label: "Confirmada", color: "#22C55E" },
-          RECEIVED_IN_CASH: { label: "Recebida em dinheiro", color: "#22C55E" },
+          RECEIVED: { label: "Recebida", color: "var(--color-success)" },
+          CONFIRMED: { label: "Confirmada", color: "var(--color-success)" },
+          RECEIVED_IN_CASH: { label: "Recebida em dinheiro", color: "var(--color-success)" },
           PENDING: { label: "Pendente", color: "#F59E0B" },
           OVERDUE: { label: "Vencida", color: "#EF4444" },
           REFUNDED: { label: "Estornada", color: "#EF4444" },
           DEBIT: { label: "Débito", color: "#EF4444" },
-          CREDIT: { label: "Crédito", color: "#22C55E" },
+          CREDIT: { label: "Crédito", color: "var(--color-success)" },
         };
         const statusMeta = descTxn.status ? (STATUS_META[descTxn.status] || { label: descTxn.status, color: "var(--text-secondary)" }) : null;
         const suggested = descTxn.description && !descClientId ? matchClient(descTxn.description, clients)?.client : undefined;
@@ -1296,14 +1296,14 @@ export function AsaasSync({
           >
             <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
               {/* Descrição completa */}
-              <div style={{ padding: "12px 16px", borderRadius: "12px", background: descTxn.type === "CREDIT" ? "rgba(34,197,94,0.06)" : "rgba(239,68,68,0.06)", border: `1px solid ${descTxn.type === "CREDIT" ? "rgba(34,197,94,0.2)" : "rgba(239,68,68,0.2)"}` }}>
+              <div style={{ padding: "12px 16px", borderRadius: "12px", background: descTxn.type === "CREDIT" ? "var(--color-success-wash)" : "rgba(239,68,68,0.06)", border: `1px solid ${descTxn.type === "CREDIT" ? "var(--color-success-wash)" : "rgba(239,68,68,0.2)"}` }}>
                 <p style={{ fontSize: "0.7rem", color: "var(--text-secondary)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "4px" }}>
                   Descrição · {descTxn.type === "CREDIT" ? "Receita" : "Despesa"}
                 </p>
                 <p style={{ fontSize: "0.9rem", fontWeight: 600, lineHeight: 1.45, wordBreak: "break-word" }}>
                   {descTxn.description || "Sem descrição"}
                 </p>
-                <p style={{ fontWeight: 800, fontSize: "1.05rem", color: descTxn.type === "CREDIT" ? "#22C55E" : "#EF4444", marginTop: "6px" }}>
+                <p style={{ fontWeight: 800, fontSize: "1.05rem", color: descTxn.type === "CREDIT" ? "var(--color-success)" : "#EF4444", marginTop: "6px" }}>
                   {descTxn.type === "CREDIT" ? "+" : "−"} {formatCurrency(Math.abs(Number(descTxn.value)))}
                   <span style={{ fontSize: "0.75rem", fontWeight: 400, color: "var(--text-tertiary)", marginLeft: "8px" }}>
                     {new Date(`${descTxn.date.split("T")[0]}T12:00:00`).toLocaleDateString("pt-BR")}
@@ -1495,15 +1495,15 @@ export function AsaasSync({
                     })}
                     style={{
                       display: "flex", alignItems: "center", gap: "12px", padding: "12px 14px",
-                      background: sel ? "rgba(34,197,94,0.08)" : "rgba(255,255,255,0.02)",
-                      border: `1px solid ${sel ? "rgba(34,197,94,0.3)" : "var(--border)"}`,
+                      background: sel ? "var(--color-success-wash)" : "rgba(255,255,255,0.02)",
+                      border: `1px solid ${sel ? "var(--color-success-wash)" : "var(--border)"}`,
                       borderRadius: "12px", cursor: "pointer", textAlign: "left", transition: "all 0.15s",
                     }}
                   >
                     <div style={{
                       width: "20px", height: "20px", borderRadius: "6px", flexShrink: 0,
-                      background: sel ? "#22C55E" : "rgba(255,255,255,0.08)",
-                      border: `2px solid ${sel ? "#22C55E" : "var(--border)"}`,
+                      background: sel ? "var(--color-success)" : "rgba(255,255,255,0.08)",
+                      border: `2px solid ${sel ? "var(--color-success)" : "var(--border)"}`,
                       display: "flex", alignItems: "center", justifyContent: "center",
                     }}>
                       {sel && <CheckCircle2 size={12} color="white" />}

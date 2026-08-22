@@ -268,7 +268,7 @@ export function LancamentosTable({
   }
 
   const statusColor: Record<string, string> = {
-    paid: "#22C55E",
+    paid: "var(--color-success)",
     partial: "#F59E0B",
     pending: "#F59E0B",
     overdue: "#EF4444",
@@ -292,7 +292,7 @@ export function LancamentosTable({
       <div className="responsive-grid-3" style={{ gap: "12px" }}>
         {[
           { label: "A receber (pendente)", value: totalAReceber, color: "#F59E0B" },
-          { label: "Recebido (pago)", value: totalRecebido, color: "#22C55E" },
+          { label: "Recebido (pago)", value: totalRecebido, color: "var(--color-success)" },
           { label: "Total do período", value: totalAReceber + totalRecebido, color: "var(--accent)" },
         ].map((item) => (
           <div key={item.label} className="glass-card" style={{ padding: "16px 20px" }}>
@@ -338,7 +338,7 @@ export function LancamentosTable({
         <button
           className="btn"
           onClick={openNewDialog}
-          style={{ display: "flex", alignItems: "center", gap: "6px", background: "rgba(34,197,94,0.12)", color: "#22C55E", border: "1px solid rgba(34,197,94,0.25)" }}
+          style={{ display: "flex", alignItems: "center", gap: "6px", background: "var(--color-success-wash)", color: "var(--color-success)", border: "1px solid var(--color-success-wash)" }}
         >
           <Plus size={15} />
           Nova Cobrança
@@ -404,12 +404,12 @@ export function LancamentosTable({
                 </td>
 
                 {/* Pagamento */}
-                <td style={{ color: row.paidAt ? "#22C55E" : "var(--text-tertiary)", fontWeight: 500, whiteSpace: "nowrap" }}>
+                <td style={{ color: row.paidAt ? "var(--color-success)" : "var(--text-tertiary)", fontWeight: 500, whiteSpace: "nowrap" }}>
                   {formatShortDate(row.paidAt)}
                 </td>
 
                 {/* Valor */}
-                <td style={{ textAlign: "right", fontWeight: 700, fontSize: "0.9rem", color: "#22C55E", whiteSpace: "nowrap" }}>
+                <td style={{ textAlign: "right", fontWeight: 700, fontSize: "0.9rem", color: "var(--color-success)", whiteSpace: "nowrap" }}>
                   + {formatCurrency(row.amount)}
                 </td>
 
@@ -446,7 +446,7 @@ export function LancamentosTable({
                       else openLinkDialog(row);
                     }}
                     title={row.asaasLinked ? "Vinculado ao Asaas — clique para ver detalhes" : "Vincular ao Asaas"}
-                    style={{ background: "none", border: "none", cursor: "pointer", padding: "4px", display: "inline-flex", color: row.asaasLinked ? "#22C55E" : "#F59E0B" }}
+                    style={{ background: "none", border: "none", cursor: "pointer", padding: "4px", display: "inline-flex", color: row.asaasLinked ? "var(--color-success)" : "#F59E0B" }}
                   >
                     {openingAsaas === row.asaasTransactionId
                       ? <RefreshCw size={14} style={{ animation: "spin 1s linear infinite" }} />
@@ -476,7 +476,7 @@ export function LancamentosTable({
                         {row.invoice.contract_id && (
                           <span className="badge" style={{ fontSize: "0.72rem", alignSelf: "flex-start" }}>Contrato</span>
                         )}
-                        <span style={{ fontSize: "0.72rem", fontWeight: 600, color: row.asaasLinked ? "#22C55E" : "#F59E0B" }}>
+                        <span style={{ fontSize: "0.72rem", fontWeight: 600, color: row.asaasLinked ? "var(--color-success)" : "#F59E0B" }}>
                           {row.asaasLinked ? "Asaas ✓" : "Sem vínculo Asaas"}
                         </span>
                       </div>
@@ -490,7 +490,7 @@ export function LancamentosTable({
                     <button
                       onClick={() => openBaixaDialog(row)}
                       title="Dar Baixa"
-                      style={{ background: "none", border: "none", cursor: "pointer", color: "#22C55E", padding: "4px", display: "inline-flex" }}
+                      style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-success)", padding: "4px", display: "inline-flex" }}
                     >
                       <Check size={14} />
                     </button>
@@ -524,13 +524,13 @@ export function LancamentosTable({
                   {row.paidAt && (
                     <>
                       <span style={{ fontSize: "0.65rem", color: "var(--text-tertiary)" }}>·</span>
-                      <span style={{ fontSize: "0.72rem", color: "#22C55E" }}>Pago {formatShortDate(row.paidAt)}</span>
+                      <span style={{ fontSize: "0.72rem", color: "var(--color-success)" }}>Pago {formatShortDate(row.paidAt)}</span>
                     </>
                   )}
                 </div>
               </div>
               <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "4px", flexShrink: 0 }}>
-                <span style={{ fontWeight: 700, fontSize: "0.9rem", color: "#22C55E" }}>
+                <span style={{ fontWeight: 700, fontSize: "0.9rem", color: "var(--color-success)" }}>
                   + {formatCurrency(row.amount)}
                 </span>
                 <span className="badge" style={{ fontSize: "0.65rem", padding: "1px 6px", color: statusColor[row.effectiveStatus] || "var(--text-secondary)", background: `${statusColor[row.effectiveStatus] || "var(--text-secondary)"}18`, border: `1px solid ${statusColor[row.effectiveStatus] || "var(--text-secondary)"}30` }}>
@@ -544,7 +544,7 @@ export function LancamentosTable({
               <span className="badge" style={{ fontSize: "0.7rem", padding: "2px 8px" }}>{row.categoryLabel}</span>
               <div style={{ display: "flex", gap: "4px" }}>
                 {row.asaasLinked ? (
-                  <button onClick={() => setDetailRow(row)} style={{ background: "none", border: "none", cursor: "pointer", color: "#22C55E", padding: "4px", display: "flex" }} title="Ver detalhe do vínculo">
+                  <button onClick={() => setDetailRow(row)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-success)", padding: "4px", display: "flex" }} title="Ver detalhe do vínculo">
                     <ExternalLink size={13} />
                   </button>
                 ) : (
@@ -558,7 +558,7 @@ export function LancamentosTable({
                 {row.effectiveStatus !== "paid" && (
                   <button
                     onClick={() => openBaixaDialog(row)}
-                    style={{ background: "none", border: "none", cursor: "pointer", color: "#22C55E", padding: "4px", display: "flex" }} title="Dar Baixa"
+                    style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-success)", padding: "4px", display: "flex" }} title="Dar Baixa"
                   >
                     <Check size={13} />
                   </button>
@@ -609,10 +609,10 @@ export function LancamentosTable({
 
               {/* Etapa 2 — Pagamento Asaas */}
               {stages.paymentTxn && (
-                <div style={{ padding: "12px 16px", borderRadius: "12px", background: "rgba(34,197,94,0.06)", border: "1px solid rgba(34,197,94,0.2)", display: "flex", flexDirection: "column", gap: "3px" }}>
-                  <p style={{ fontSize: "0.68rem", color: "#22C55E", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>2 · Asaas (pagamento)</p>
+                <div style={{ padding: "12px 16px", borderRadius: "12px", background: "var(--color-success-wash)", border: "1px solid var(--color-success-wash)", display: "flex", flexDirection: "column", gap: "3px" }}>
+                  <p style={{ fontSize: "0.68rem", color: "var(--color-success)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>2 · Asaas (pagamento)</p>
                   <p style={{ fontWeight: 700 }}>{stages.paymentTxn.description || "Pagamento"}</p>
-                  <p style={{ fontWeight: 800, color: "#22C55E" }}>+ {formatCurrency(Number(stages.paymentTxn.value))}</p>
+                  <p style={{ fontWeight: 800, color: "var(--color-success)" }}>+ {formatCurrency(Number(stages.paymentTxn.value))}</p>
                   <p style={{ fontSize: "0.75rem", color: "var(--text-tertiary)" }}>{fmtDate(stages.paymentTxn.date)}</p>
                 </div>
               )}
@@ -635,7 +635,7 @@ export function LancamentosTable({
                   ))}
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px", borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: "6px", marginTop: "2px" }}>
                     <span style={{ fontSize: "0.8rem", fontWeight: 700 }}>Líquido que entrou</span>
-                    <span style={{ fontSize: "0.95rem", fontWeight: 800, color: stages.net >= 0 ? "#22C55E" : "#EF4444" }}>{formatCurrency(stages.net)}</span>
+                    <span style={{ fontSize: "0.95rem", fontWeight: 800, color: stages.net >= 0 ? "var(--color-success)" : "#EF4444" }}>{formatCurrency(stages.net)}</span>
                   </div>
                 </div>
               ) : !stages.paymentTxn ? (
@@ -736,9 +736,9 @@ export function LancamentosTable({
                   onClick={() => setNewForm({ ...newForm, status: s })}
                   style={{
                     flex: 1, padding: "10px", borderRadius: "10px", cursor: "pointer", fontWeight: 700, fontSize: "0.85rem",
-                    border: `1px solid ${newForm.status === s ? (s === "paid" ? "#22C55E" : "#F59E0B") : "var(--border)"}`,
-                    background: newForm.status === s ? (s === "paid" ? "rgba(34,197,94,0.1)" : "rgba(245,158,11,0.1)") : "rgba(255,255,255,0.02)",
-                    color: newForm.status === s ? (s === "paid" ? "#22C55E" : "#F59E0B") : "var(--text-secondary)",
+                    border: `1px solid ${newForm.status === s ? (s === "paid" ? "var(--color-success)" : "#F59E0B") : "var(--border)"}`,
+                    background: newForm.status === s ? (s === "paid" ? "var(--color-success-wash)" : "rgba(245,158,11,0.1)") : "rgba(255,255,255,0.02)",
+                    color: newForm.status === s ? (s === "paid" ? "var(--color-success)" : "#F59E0B") : "var(--text-secondary)",
                     transition: "all 0.15s",
                   }}
                 >
@@ -782,10 +782,10 @@ export function LancamentosTable({
       >
         {baixaDialog && (
           <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-            <div style={{ padding: "14px 16px", background: "rgba(34,197,94,0.05)", border: "1px solid rgba(34,197,94,0.15)", borderRadius: "12px" }}>
+            <div style={{ padding: "14px 16px", background: "var(--color-success-wash)", border: "1px solid var(--color-success-wash)", borderRadius: "12px" }}>
               <p style={{ fontSize: "0.78rem", color: "var(--text-secondary)", marginBottom: "2px" }}>{baixaDialog.clientName}</p>
               <p style={{ fontWeight: 700, fontSize: "0.95rem" }}>{baixaDialog.description}</p>
-              <p style={{ fontWeight: 800, color: "#22C55E", fontSize: "1.1rem", marginTop: "4px" }}>
+              <p style={{ fontWeight: 800, color: "var(--color-success)", fontSize: "1.1rem", marginTop: "4px" }}>
                 + {formatCurrency(baixaDialog.amount)}
               </p>
             </div>
@@ -830,10 +830,10 @@ export function LancamentosTable({
         {linkDialog && (
           <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
             {/* Invoice summary */}
-            <div style={{ padding: "12px 16px", borderRadius: "12px", background: "rgba(34,197,94,0.06)", border: "1px solid rgba(34,197,94,0.2)" }}>
+            <div style={{ padding: "12px 16px", borderRadius: "12px", background: "var(--color-success-wash)", border: "1px solid var(--color-success-wash)" }}>
               <p style={{ fontSize: "0.78rem", color: "var(--text-secondary)", marginBottom: "2px" }}>{linkDialog.clientName}</p>
               <p style={{ fontWeight: 700, fontSize: "0.9rem" }}>{linkDialog.description}</p>
-              <p style={{ fontWeight: 800, fontSize: "1.05rem", color: "#22C55E", marginTop: "2px" }}>
+              <p style={{ fontWeight: 800, fontSize: "1.05rem", color: "var(--color-success)", marginTop: "2px" }}>
                 + {formatCurrency(linkDialog.amount)}
                 <span style={{ fontSize: "0.75rem", fontWeight: 400, color: "var(--text-tertiary)", marginLeft: "8px" }}>
                   vcto {formatShortDate(linkDialog.dueDate)}
@@ -867,7 +867,7 @@ export function LancamentosTable({
                 <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)", fontWeight: 600 }}>
                   {linkSelection.size} selecionada(s)
                 </span>
-                <span style={{ fontSize: "0.82rem", fontWeight: 700, color: linkSelectedTotal >= linkDialog.amount ? "#22C55E" : "#F59E0B" }}>
+                <span style={{ fontSize: "0.82rem", fontWeight: 700, color: linkSelectedTotal >= linkDialog.amount ? "var(--color-success)" : "#F59E0B" }}>
                   {formatCurrency(linkSelectedTotal)}{linkSelectedTotal >= linkDialog.amount ? " ✓" : ""}
                 </span>
               </div>
@@ -900,7 +900,7 @@ export function LancamentosTable({
                       </p>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
-                      <span style={{ fontWeight: 700, color: "#22C55E" }}>+ {formatCurrency(Number(txn.value))}</span>
+                      <span style={{ fontWeight: 700, color: "var(--color-success)" }}>+ {formatCurrency(Number(txn.value))}</span>
                       {selected && (
                         <span style={{ width: "18px", height: "18px", borderRadius: "50%", background: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                           <Check size={11} color="#fff" />

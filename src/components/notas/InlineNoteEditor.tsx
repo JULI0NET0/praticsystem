@@ -188,7 +188,7 @@ export default function InlineNoteEditor({ clientId, noteId, onClose, onSaved }:
             </span>
           )}
           {saved && (
-            <span style={{ fontSize: '0.78rem', color: '#22c55e', display: 'flex', alignItems: 'center', gap: '5px' }}>
+            <span style={{ fontSize: '0.78rem', color: 'var(--color-success)', display: 'flex', alignItems: 'center', gap: '5px' }}>
               <Check size={13} /> Salvo
             </span>
           )}

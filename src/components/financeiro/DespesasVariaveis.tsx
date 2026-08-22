@@ -219,7 +219,7 @@ export function DespesasVariaveis({
   }
 
   const STATUS_COLOR: Record<string, string> = {
-    paid: "#22C55E", partial: "#F59E0B", pending: "#F59E0B", cancelled: "var(--text-tertiary)",
+    paid: "var(--color-success)", partial: "#F59E0B", pending: "#F59E0B", cancelled: "var(--text-tertiary)",
   };
   const STATUS_LABEL: Record<string, string> = {
     paid: "Pago", partial: "Parcial", pending: "Pendente", cancelled: "Cancelado",
@@ -278,7 +278,7 @@ export function DespesasVariaveis({
                     {entries.length > 0 && (
                       <div style={{ display: "flex", gap: "14px", fontSize: "0.72rem", color: "var(--text-tertiary)", marginTop: "3px", flexWrap: "wrap" }}>
                         <span>{entries.length} lançamento{entries.length !== 1 ? "s" : ""}</span>
-                        {paid > 0 && <span style={{ color: "#22C55E" }}>Pago: {formatCurrency(paid)}</span>}
+                        {paid > 0 && <span style={{ color: "var(--color-success)" }}>Pago: {formatCurrency(paid)}</span>}
                         {pending > 0 && <span style={{ color: "#F59E0B" }}>Pendente: {formatCurrency(pending)}</span>}
                       </div>
                     )}
@@ -388,12 +388,12 @@ export function DespesasVariaveis({
                                             const remaining = Math.max(0, Number(entry.amount) - linkedSum);
                                             const isPaid = effStatus === "paid";
                                             return (
-                                              <div style={{ padding: "6px 8px", borderRadius: "6px", background: isPaid ? "rgba(34,197,94,0.05)" : "rgba(245,158,11,0.05)", border: `1px solid ${isPaid ? "rgba(34,197,94,0.15)" : "rgba(245,158,11,0.15)"}`, display: "flex", flexDirection: "column", gap: "3px" }}>
+                                              <div style={{ padding: "6px 8px", borderRadius: "6px", background: isPaid ? "var(--color-success-wash)" : "rgba(245,158,11,0.05)", border: `1px solid ${isPaid ? "var(--color-success-wash)" : "rgba(245,158,11,0.15)"}`, display: "flex", flexDirection: "column", gap: "3px" }}>
                                                 {partials.map((t) => (
                                                   <div key={t.id} style={{ display: "flex", flexDirection: "column", gap: "1px" }}>
                                                     <div style={{ display: "flex", justifyContent: "space-between", gap: "8px", fontSize: "0.65rem", color: "var(--text-tertiary)", whiteSpace: "nowrap" }}>
                                                       <span>{isPaid ? "Pgto." : "Adiant."} {new Date(`${t.date.split("T")[0]}T12:00:00`).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}</span>
-                                                      <span style={{ color: isPaid ? "#22C55E" : "#F59E0B", fontWeight: 600 }}>− {formatCurrency(Math.abs(Number(t.value)))}</span>
+                                                      <span style={{ color: isPaid ? "var(--color-success)" : "#F59E0B", fontWeight: 600 }}>− {formatCurrency(Math.abs(Number(t.value)))}</span>
                                                     </div>
                                                     {t.notes && (
                                                       <p style={{ fontSize: "0.62rem", color: "var(--text-tertiary)", fontStyle: "italic", margin: 0 }}>{t.notes}</p>
@@ -413,7 +413,7 @@ export function DespesasVariaveis({
                                       </td>
                                       <td>
                                         {isEntryLinked(entry) ? (
-                                          <span style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "0.72rem", color: "#22C55E", fontWeight: 600 }}>
+                                          <span style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "0.72rem", color: "var(--color-success)", fontWeight: 600 }}>
                                             <CheckCircle2 size={11} /> Banco
                                           </span>
                                         ) : (
@@ -441,7 +441,7 @@ export function DespesasVariaveis({
                                           {effStatus !== "paid" && effStatus !== "cancelled" && (
                                             <button
                                               onClick={() => { setBaixaDate(new Date().toISOString().split("T")[0]); setBaixaEntry(entry); }}
-                                              style={{ background: "none", border: "none", cursor: "pointer", color: "#22C55E", padding: "4px", display: "flex" }}
+                                              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-success)", padding: "4px", display: "flex" }}
                                               title="Dar baixa"
                                             >
                                               <Check size={13} />
@@ -618,7 +618,7 @@ export function DespesasVariaveis({
       >
         {baixaEntry && (
           <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-            <div style={{ padding: "14px 16px", background: "rgba(34,197,94,0.05)", border: "1px solid rgba(34,197,94,0.15)", borderRadius: "12px" }}>
+            <div style={{ padding: "14px 16px", background: "var(--color-success-wash)", border: "1px solid var(--color-success-wash)", borderRadius: "12px" }}>
               <p style={{ fontWeight: 700 }}>{baixaEntry.description}</p>
               <p style={{ fontWeight: 800, color: "#EF4444", fontSize: "1.1rem", marginTop: "4px" }}>{formatCurrency(Number(baixaEntry.amount))}</p>
             </div>

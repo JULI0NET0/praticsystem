@@ -398,7 +398,7 @@ export default function WorkspacePage() {
           flex: 1,
           minWidth: '200px'
         }}>
-          <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22C55E', boxShadow: '0 0 10px #22C55E', flexShrink: 0 }} />
+          <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--color-success)', boxShadow: '0 0 10px var(--color-success)', flexShrink: 0 }} />
           <input
             value={status}
             onChange={(e) => setStatus(e.target.value)}
@@ -451,11 +451,11 @@ export default function WorkspacePage() {
             title={isTracking ? "Parar Timer" : "Iniciar Timer"}
             style={{
               height: '36px', padding: '0 12px', borderRadius: '10px',
-              background: isTracking ? 'rgba(239, 68, 68, 0.1)' : 'rgba(34, 197, 94, 0.1)',
-              color: isTracking ? '#EF4444' : '#22C55E',
+              background: isTracking ? 'rgba(239, 68, 68, 0.1)' : 'var(--color-success-wash)',
+              color: isTracking ? '#EF4444' : 'var(--color-success)',
               display: 'flex', alignItems: 'center', gap: '6px',
               transition: 'all 0.3s ease', fontSize: '0.8rem', fontWeight: 600,
-              border: `1px solid ${isTracking ? 'rgba(239, 68, 68, 0.2)' : 'rgba(34, 197, 94, 0.2)'}`
+              border: `1px solid ${isTracking ? 'rgba(239, 68, 68, 0.2)' : 'var(--color-success-wash)'}`
             }}
           >
             {isTracking ? <Square size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" />}
@@ -651,7 +651,7 @@ export default function WorkspacePage() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '3px' }}>
                           <span style={{ fontWeight: 700, fontSize: '0.875rem', color: isActive ? 'var(--text-secondary)' : 'var(--text-primary)' }}>{widget.title}</span>
                           {isActive && (
-                            <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#22C55E', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.2)', padding: '1px 6px', borderRadius: '6px' }}>
+                            <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--color-success)', background: 'var(--color-success-wash)', border: '1px solid var(--color-success-wash)', padding: '1px 6px', borderRadius: '6px' }}>
                               ATIVO
                             </span>
                           )}
@@ -678,8 +678,8 @@ function StatsWidget({ colSpan, demandsCount, todayHours, isTracking, onTimerTog
 
   const items = [
     { id: 'demands', label: "Demandas", value: demandsCount, icon: CheckCircle2, color: "var(--accent)", gradient: "linear-gradient(135deg, rgba(217, 72, 15, 0.2), transparent)" },
-    { id: 'finished', label: "Finalizadas", value: "0", icon: CheckCircle2, color: "#10B981", gradient: "linear-gradient(135deg, rgba(16, 185, 129, 0.2), transparent)" },
-    { id: 'timer', label: "Tempo Hoje", value: todayHours.split(' ')[0], sub: todayHours.split(' ')[1], icon: isTracking ? Timer : Clock, color: isTracking ? "#22C55E" : "#3B82F6", gradient: isTracking ? "linear-gradient(135deg, rgba(34, 197, 94, 0.2), transparent)" : "linear-gradient(135deg, rgba(59, 130, 246, 0.2), transparent)", interactive: true },
+    { id: 'finished', label: "Finalizadas", value: "0", icon: CheckCircle2, color: "var(--color-success)", gradient: "linear-gradient(135deg, rgba(16, 185, 129, 0.2), transparent)" },
+    { id: 'timer', label: "Tempo Hoje", value: todayHours.split(' ')[0], sub: todayHours.split(' ')[1], icon: isTracking ? Timer : Clock, color: isTracking ? "var(--color-success)" : "#3B82F6", gradient: isTracking ? "linear-gradient(135deg, var(--color-success-wash), transparent)" : "linear-gradient(135deg, rgba(59, 130, 246, 0.2), transparent)", interactive: true },
     { id: 'alerts', label: "Alertas", value: "0", icon: Zap, color: "#EF4444", gradient: "linear-gradient(135deg, rgba(239, 68, 68, 0.2), transparent)" }
   ];
 
@@ -698,7 +698,7 @@ function StatsWidget({ colSpan, demandsCount, todayHours, isTracking, onTimerTog
             background: 'var(--card-inner-bg)',
             padding: '10px 14px',
             borderRadius: '16px',
-            border: item.id === 'timer' && isTracking ? '1px solid rgba(34, 197, 94, 0.3)' : '1px solid var(--border)',
+            border: item.id === 'timer' && isTracking ? '1px solid var(--color-success-wash)' : '1px solid var(--border)',
             position: 'relative',
             overflow: 'hidden',
             display: 'flex',
@@ -706,12 +706,12 @@ function StatsWidget({ colSpan, demandsCount, todayHours, isTracking, onTimerTog
             justifyContent: 'center',
             cursor: item.interactive ? 'pointer' : 'default',
             transition: 'all 0.3s ease',
-            boxShadow: item.id === 'timer' && isTracking ? '0 0 20px rgba(34, 197, 94, 0.1)' : 'none',
+            boxShadow: item.id === 'timer' && isTracking ? '0 0 20px var(--color-success-wash)' : 'none',
             flex: '1 1 100px',
             maxWidth: '160px'
           }}
           onMouseEnter={(e) => item.interactive && (e.currentTarget.style.borderColor = 'var(--accent)')}
-          onMouseLeave={(e) => item.interactive && (e.currentTarget.style.borderColor = item.id === 'timer' && isTracking ? 'rgba(34, 197, 94, 0.3)' : 'var(--border)')}
+          onMouseLeave={(e) => item.interactive && (e.currentTarget.style.borderColor = item.id === 'timer' && isTracking ? 'var(--color-success-wash)' : 'var(--border)')}
         >
           <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: item.gradient, opacity: 0.5, pointerEvents: 'none' }} />
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', position: 'relative' }}>
@@ -785,13 +785,13 @@ function TimeTrackerWidget({ isTracking, todayHours, todayMinutes, currentSessio
           width: '60px',
           height: '60px',
           borderRadius: '20px',
-          background: isTracking ? 'rgba(34, 197, 94, 0.1)' : 'rgba(255,255,255,0.05)',
+          background: isTracking ? 'var(--color-success-wash)' : 'rgba(255,255,255,0.05)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          color: isTracking ? '#22C55E' : 'var(--text-tertiary)',
+          color: isTracking ? 'var(--color-success)' : 'var(--text-tertiary)',
           marginBottom: '8px',
-          border: `1px solid ${isTracking ? 'rgba(34, 197, 94, 0.2)' : 'var(--border)'}`
+          border: `1px solid ${isTracking ? 'var(--color-success-wash)' : 'var(--border)'}`
         }}>
           <Timer size={28} className={isTracking ? "animate-pulse" : ""} />
         </div>
@@ -888,7 +888,7 @@ function PomodoroWidget() {
 
   const minutes  = Math.floor(remainingMs / 60000);
   const seconds  = Math.floor((remainingMs % 60000) / 1000);
-  const modeColor = mode === 'work' ? '#EF4444' : '#22C55E';
+  const modeColor = mode === 'work' ? '#EF4444' : 'var(--color-success)';
   const level = getPomodoroLevel(totalPoints);
   const nextLevel = POMODORO_LEVELS.find(l => l.min > totalPoints);
   const progressToNext = nextLevel ? ((totalPoints - level.min) / (nextLevel.min - level.min)) * 100 : 100;
@@ -950,9 +950,9 @@ function PomodoroWidget() {
             onClick={() => switchMode(m)}
             style={{
               flex: 1, padding: '7px', borderRadius: '10px', fontSize: '0.72rem', fontWeight: 700,
-              background: mode === m ? (m === 'work' ? 'rgba(239,68,68,0.15)' : 'rgba(34,197,94,0.15)') : 'rgba(255,255,255,0.03)',
-              color: mode === m ? (m === 'work' ? '#EF4444' : '#22C55E') : 'var(--text-secondary)',
-              border: `1px solid ${mode === m ? (m === 'work' ? 'rgba(239,68,68,0.3)' : 'rgba(34,197,94,0.3)') : 'var(--border)'}`,
+              background: mode === m ? (m === 'work' ? 'rgba(239,68,68,0.15)' : 'var(--color-success-wash)') : 'rgba(255,255,255,0.03)',
+              color: mode === m ? (m === 'work' ? '#EF4444' : 'var(--color-success)') : 'var(--text-secondary)',
+              border: `1px solid ${mode === m ? (m === 'work' ? 'rgba(239,68,68,0.3)' : 'var(--color-success-wash)') : 'var(--border)'}`,
               cursor: isRunning ? 'not-allowed' : 'pointer',
               transition: 'all 0.2s', opacity: isRunning && mode !== m ? 0.5 : 1
             }}
@@ -1377,9 +1377,9 @@ function TeamWidget({ isUserOnline, onlineUsers }: { isUserOnline: (id: string) 
         <h3 style={{ fontSize: '1.1rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
           <User size={18} color="var(--accent)" /> Equipe
         </h3>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(34, 197, 94, 0.1)', padding: '4px 10px', borderRadius: '10px' }}>
-          <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22C55E' }} />
-          <span style={{ fontSize: '0.7rem', color: '#22C55E', fontWeight: 800 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--color-success-wash)', padding: '4px 10px', borderRadius: '10px' }}>
+          <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--color-success)' }} />
+          <span style={{ fontSize: '0.7rem', color: 'var(--color-success)', fontWeight: 800 }}>
             {onlineUsers.length} ON
           </span>
         </div>
@@ -1407,7 +1407,7 @@ function TeamWidget({ isUserOnline, onlineUsers }: { isUserOnline: (id: string) 
                     background: 'var(--accent)', overflow: 'hidden',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontWeight: 800, fontSize: '0.9rem', color: 'white',
-                    border: online ? '2px solid #22C55E' : '2px solid transparent'
+                    border: online ? '2px solid var(--color-success)' : '2px solid transparent'
                   }}>
                     {m.avatar_url
                       ? <img src={m.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
@@ -1419,7 +1419,7 @@ function TeamWidget({ isUserOnline, onlineUsers }: { isUserOnline: (id: string) 
                       animate={{ scale: 1 }}
                       style={{
                         position: 'absolute', bottom: -2, right: -2, width: '14px', height: '14px',
-                        background: '#22C55E', borderRadius: '50%',
+                        background: 'var(--color-success)', borderRadius: '50%',
                         border: '3px solid var(--bg-primary)',
                         zIndex: 2
                       }}
@@ -1431,7 +1431,7 @@ function TeamWidget({ isUserOnline, onlineUsers }: { isUserOnline: (id: string) 
                     <p style={{ fontWeight: 700, fontSize: '0.9rem', color: online ? 'var(--text-primary)' : 'var(--text-secondary)' }}>{m.name}</p>
                     <span style={{ fontSize: '1rem' }}>{m.emoji}</span>
                   </div>
-                  <p style={{ fontSize: '0.7rem', color: online ? '#22C55E' : 'var(--text-tertiary)', fontWeight: 600 }}>
+                  <p style={{ fontSize: '0.7rem', color: online ? 'var(--color-success)' : 'var(--text-tertiary)', fontWeight: 600 }}>
                     {online ? 'Ativo agora' : 'Indisponível'}
                   </p>
                 </div>

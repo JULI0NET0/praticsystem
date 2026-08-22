@@ -1049,7 +1049,7 @@ export default function CreateClientPage() {
                         transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.1 }}
                         style={{
                           width: '80px', height: '80px', borderRadius: '50%',
-                          backgroundColor: 'rgba(34, 197, 94, 0.1)', color: '#22C55E',
+                          backgroundColor: 'var(--color-success-wash)', color: 'var(--color-success)',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           marginBottom: '32px'
                         }}

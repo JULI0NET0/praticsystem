@@ -34,8 +34,8 @@ export function RecurringRevenue({ contracts, clients, services }: RecurringReve
 
         <div className="glass-card" style={{ padding: '24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-            <div style={{ background: 'rgba(34, 197, 94, 0.1)', padding: '8px', borderRadius: '8px' }}>
-              <Zap size={20} color="#22C55E" />
+            <div style={{ background: 'var(--color-success-wash)', padding: '8px', borderRadius: '8px' }}>
+              <Zap size={20} color="var(--color-success)" />
             </div>
             <p style={{ fontWeight: 600 }}>LTV Estimado (Lifetime Value)</p>
           </div>
@@ -82,7 +82,7 @@ export function RecurringRevenue({ contracts, clients, services }: RecurringReve
                         {formatCurrency(Number(contract.value))}
                       </td>
                       <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#22C55E', fontSize: '0.875rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-success)', fontSize: '0.875rem' }}>
                           <ShieldCheck size={14} /> Ativo
                         </div>
                       </td>

@@ -1090,7 +1090,7 @@ export default function ClientDetailPage() {
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
                 <Spotlight className="glass-card" style={{ flex: '1 1 120px', maxWidth: '200px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: 'rgba(34, 197, 94, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#22C55E' }}>
+                    <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: 'var(--color-success-wash)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-success)' }}>
                       <TrendingUp size={14} />
                     </div>
                     <p style={{ fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Prev. MRR</p>
@@ -1184,9 +1184,9 @@ export default function ClientDetailPage() {
                     )}
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
-                    <div style={{ padding: '20px', background: 'rgba(34, 197, 94, 0.05)', borderRadius: '16px', border: '1px solid rgba(34, 197, 94, 0.1)' }}>
+                    <div style={{ padding: '20px', background: 'var(--color-success-wash)', borderRadius: '16px', border: '1px solid var(--color-success-wash)' }}>
                       <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Total Recebido</p>
-                      <p style={{ fontSize: '1.5rem', fontWeight: 800, color: '#22C55E' }}>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(getFinanceMetrics().totalReceived)}</p>
+                      <p style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-success)' }}>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(getFinanceMetrics().totalReceived)}</p>
                     </div>
                     <div style={{ padding: '20px', background: 'rgba(239, 68, 68, 0.05)', borderRadius: '16px', border: '1px solid rgba(239, 68, 68, 0.1)' }}>
                       <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Total Pendente</p>
@@ -1346,9 +1346,9 @@ export default function ClientDetailPage() {
                   </div>
                 </Spotlight>
 
-                <Spotlight className="glass-card" style={{ padding: '24px', backgroundColor: 'rgba(34, 197, 94, 0.05)', borderColor: 'rgba(34, 197, 94, 0.2)' }}>
+                <Spotlight className="glass-card" style={{ padding: '24px', backgroundColor: 'var(--color-success-wash)', borderColor: 'var(--color-success-wash)' }}>
                   <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                    <div style={{ color: '#22C55E' }}><ShieldCheck size={24} /></div>
+                    <div style={{ color: 'var(--color-success)' }}><ShieldCheck size={24} /></div>
                     <div>
                       <p style={{ fontWeight: 600 }}>Health Score: 9.5</p>
                       <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Cliente satisfeito e com pagamentos em dia.</p>
@@ -1578,7 +1578,7 @@ export default function ClientDetailPage() {
                       }}>{demand.type}</span>
                       <span style={{
                         fontSize: '0.75rem', fontWeight: 600,
-                        color: demand.priority === 'high' ? '#EF4444' : demand.priority === 'medium' ? 'var(--accent)' : '#22C55E'
+                        color: demand.priority === 'high' ? '#EF4444' : demand.priority === 'medium' ? 'var(--accent)' : 'var(--color-success)'
                       }}>
                         {demand.priority === 'high' ? 'Alta Prioridade' : demand.priority === 'medium' ? 'Média' : 'Baixa'}
                       </span>
@@ -1926,12 +1926,12 @@ export default function ClientDetailPage() {
                                 width: 'fit-content',
                                 whiteSpace: 'nowrap',
                                 backgroundColor: 
-                                  contract.document_status === 'signed' ? 'rgba(34, 197, 94, 0.1)' : 
+                                  contract.document_status === 'signed' ? 'var(--color-success-wash)' : 
                                   contract.document_status === 'sent' ? 'rgba(59, 130, 246, 0.1)' : 
                                   contract.document_status === 'generated' ? 'rgba(168, 85, 247, 0.1)' : 
                                   'rgba(255, 255, 255, 0.05)',
                                 color: 
-                                  contract.document_status === 'signed' ? '#22C55E' : 
+                                  contract.document_status === 'signed' ? 'var(--color-success)' : 
                                   contract.document_status === 'sent' ? '#3B82F6' : 
                                   contract.document_status === 'generated' ? '#A855F7' : 
                                   'var(--text-secondary)'
@@ -1951,7 +1951,7 @@ export default function ClientDetailPage() {
                                 href={contract.signed_document_url} 
                                 target="_blank" 
                                 rel="noreferrer"
-                                style={{ color: '#22C55E', display: 'flex', alignItems: 'center' }}
+                                style={{ color: 'var(--color-success)', display: 'flex', alignItems: 'center' }}
                                 title="Ver PDF Assinado"
                               >
                                 <FileCheck size={16} />
@@ -2122,12 +2122,12 @@ export default function ClientDetailPage() {
                 </Spotlight>
                 <Spotlight className="glass-card" style={{ flex: '1 1 120px', maxWidth: '180px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: 'rgba(34, 197, 94, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#22C55E' }}>
+                    <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: 'var(--color-success-wash)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-success)' }}>
                       <CheckCircle2 size={12} />
                     </div>
                     <p style={{ color: 'var(--text-tertiary)', fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', margin: 0 }}>Recebido</p>
                   </div>
-                  <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#22C55E', margin: 0 }}>
+                  <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--color-success)', margin: 0 }}>
                     {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(getFinanceMetrics().totalReceived)}
                   </h4>
                 </Spotlight>
@@ -2327,7 +2327,7 @@ export default function ClientDetailPage() {
                         {clientData.google_drive_url ? 'Acesse todos os documentos na pasta sincronizada.' : 'Vincule uma pasta do Google Drive para este cliente.'}
                       </p>
                       {clientData.drive_settings?.auto_backup && (
-                        <span style={{ fontSize: '0.65rem', background: 'rgba(34, 197, 94, 0.1)', color: '#22C55E', padding: '2px 8px', borderRadius: '100px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span style={{ fontSize: '0.65rem', background: 'var(--color-success-wash)', color: 'var(--color-success)', padding: '2px 8px', borderRadius: '100px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
                           <CheckCircle2 size={10} /> BACKUP ATIVO
                         </span>
                       )}

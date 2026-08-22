@@ -55,7 +55,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                 backdropFilter: 'blur(20px)'
               }}
             >
-              {toast.type === 'success' && <CheckCircle2 size={20} color="#10B981" />}
+              {toast.type === 'success' && <CheckCircle2 size={20} color="var(--color-success)" />}
               {toast.type === 'error' && <AlertCircle size={20} color="#EF4444" />}
               {toast.type === 'info' && <Info size={20} color="var(--accent)" />}
 

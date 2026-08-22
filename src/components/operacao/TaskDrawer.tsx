@@ -236,7 +236,7 @@ export default function TaskDrawer({ list, taskId, onClose }: Props) {
                 <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <span style={{ fontSize: "0.9rem", fontWeight: 800 }}>Etapas</span>
-                    <span style={{ fontSize: "0.75rem", fontWeight: 700, color: progress.pct === 100 ? "#22C55E" : "var(--text-secondary)" }}>
+                    <span style={{ fontSize: "0.75rem", fontWeight: 700, color: progress.pct === 100 ? "var(--color-success)" : "var(--text-secondary)" }}>
                       {progress.done}/{progress.total} ações · {progress.pct}%
                     </span>
                   </div>
@@ -275,8 +275,8 @@ export default function TaskDrawer({ list, taskId, onClose }: Props) {
                                   borderRadius: 5,
                                   flexShrink: 0,
                                   marginTop: 1,
-                                  border: `1.5px solid ${a.done ? "#22C55E" : "var(--border)"}`,
-                                  background: a.done ? "#22C55E" : "transparent",
+                                  border: `1.5px solid ${a.done ? "var(--color-success)" : "var(--border)"}`,
+                                  background: a.done ? "var(--color-success)" : "transparent",
                                   display: "flex",
                                   alignItems: "center",
                                   justifyContent: "center",

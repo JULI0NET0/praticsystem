@@ -67,7 +67,7 @@ export function ServiceStats() {
       label: "Clientes Ativos",
       value: data?.totalActiveClients || 0,
       icon: Users,
-      color: "#10b981",
+      color: "var(--color-success)",
       description: "Com contratos vigentes"
     },
     {

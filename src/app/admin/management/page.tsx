@@ -122,7 +122,7 @@ export default function ManagementPage() {
   const avgDaily = userStats.length > 0 ? Math.round(totalHoursToday / userStats.length) : 0;
 
   const kpis = [
-    { label: 'Online Agora', value: totalOnline.toString(), icon: Users, color: '#22C55E', sub: `de ${teamUsers.length} membros` },
+    { label: 'Online Agora', value: totalOnline.toString(), icon: Users, color: 'var(--color-success)', sub: `de ${teamUsers.length} membros` },
     { label: 'Horas Hoje (Equipe)', value: formatMinutes(totalHoursToday), icon: Clock, color: 'var(--accent)', sub: 'total acumulado' },
     { label: 'Média/Pessoa Hoje', value: formatMinutes(avgDaily), icon: TrendingUp, color: '#8B5CF6', sub: 'por membro ativo' },
     { label: 'Sessões Hoje', value: timeLogs.filter(l => l.start_time >= getDateRange('today')).length.toString(), icon: Activity, color: '#F59E0B', sub: 'registros de trabalho' },
@@ -187,7 +187,7 @@ export default function ManagementPage() {
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
           <h2 style={{ fontWeight: 700, fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Circle size={10} fill="#22C55E" color="#22C55E" /> Equipe Online
+            <Circle size={10} fill="var(--color-success)" color="var(--color-success)" /> Equipe Online
           </h2>
           <div style={{ display: 'flex', gap: '8px' }}>
             {(['today', 'week', 'month'] as const).map(p => (
@@ -219,8 +219,8 @@ export default function ManagementPage() {
                 transition={{ delay: i * 0.05 }}
                 style={{
                   padding: '20px', borderRadius: '16px',
-                  background: stat.isOnline ? 'rgba(34, 197, 94, 0.04)' : 'rgba(255,255,255,0.02)',
-                  border: `1px solid ${stat.isOnline ? 'rgba(34, 197, 94, 0.2)' : 'var(--border)'}`,
+                  background: stat.isOnline ? 'var(--color-success-wash)' : 'rgba(255,255,255,0.02)',
+                  border: `1px solid ${stat.isOnline ? 'var(--color-success-wash)' : 'var(--border)'}`,
                   display: 'flex', gap: '16px', alignItems: 'center'
                 }}
               >
@@ -237,7 +237,7 @@ export default function ManagementPage() {
                   <div style={{
                     position: 'absolute', bottom: 0, right: 0,
                     width: '12px', height: '12px', borderRadius: '50%',
-                    background: stat.isOnline ? '#22C55E' : '#6B7280',
+                    background: stat.isOnline ? 'var(--color-success)' : '#6B7280',
                     border: '2px solid var(--bg-secondary)'
                   }} />
                 </div>
@@ -246,7 +246,7 @@ export default function ManagementPage() {
                     <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>{stat.name}</span>
                     <span>{stat.emoji}</span>
                   </div>
-                  <span style={{ fontSize: '0.75rem', color: stat.isOnline ? '#22C55E' : '#6B7280' }}>
+                  <span style={{ fontSize: '0.75rem', color: stat.isOnline ? 'var(--color-success)' : '#6B7280' }}>
                     {stat.isOnline ? 'Online agora' : 'Offline'}
                   </span>
                   <div style={{ display: 'flex', gap: '16px', marginTop: '8px' }}>
@@ -318,8 +318,8 @@ export default function ManagementPage() {
                   <td style={{ padding: '14px 16px' }}>
                     <span style={{
                       padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 600,
-                      background: stat.isOnline ? 'rgba(34, 197, 94, 0.15)' : 'rgba(107, 114, 128, 0.15)',
-                      color: stat.isOnline ? '#22C55E' : '#6B7280'
+                      background: stat.isOnline ? 'var(--color-success-wash)' : 'rgba(107, 114, 128, 0.15)',
+                      color: stat.isOnline ? 'var(--color-success)' : '#6B7280'
                     }}>
                       {stat.isOnline ? 'Online' : 'Offline'}
                     </span>

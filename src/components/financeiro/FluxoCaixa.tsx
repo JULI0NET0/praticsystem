@@ -77,12 +77,12 @@ export function FluxoCaixa({ invoices, expenseEntries, expenses, selectedMonth }
     <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
       {/* Summary */}
       <div className="responsive-grid-3" style={{ gap: "14px" }}>
-        <div className="glass-card" style={{ padding: "20px", background: "rgba(34,197,94,0.05)", border: "1px solid rgba(34,197,94,0.12)" }}>
+        <div className="glass-card" style={{ padding: "20px", background: "var(--color-success-wash)", border: "1px solid var(--color-success-wash)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-            <TrendingUp size={16} color="#22C55E" />
-            <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#22C55E", textTransform: "uppercase", letterSpacing: "0.05em" }}>Total Entradas</span>
+            <TrendingUp size={16} color="var(--color-success)" />
+            <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--color-success)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Total Entradas</span>
           </div>
-          <p style={{ fontSize: "1.5rem", fontWeight: 800, color: "#22C55E" }}>{formatCurrency(totalEntradas)}</p>
+          <p style={{ fontSize: "1.5rem", fontWeight: 800, color: "var(--color-success)" }}>{formatCurrency(totalEntradas)}</p>
         </div>
         <div className="glass-card" style={{ padding: "20px", background: "rgba(239,68,68,0.05)", border: "1px solid rgba(239,68,68,0.12)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
@@ -130,11 +130,11 @@ export function FluxoCaixa({ invoices, expenseEntries, expenses, selectedMonth }
                       {new Date(`${week.endDate}T12:00:00`).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}
                     </p>
                   </td>
-                  <td style={{ fontWeight: 600, color: "#22C55E" }}>{formatCurrency(week.entradasRealizadas)}</td>
+                  <td style={{ fontWeight: 600, color: "var(--color-success)" }}>{formatCurrency(week.entradasRealizadas)}</td>
                   <td style={{ color: "var(--text-secondary)" }}>{formatCurrency(week.entradasPrevistas)}</td>
                   <td style={{ fontWeight: 600, color: "#EF4444" }}>{formatCurrency(week.saidasRealizadas)}</td>
                   <td style={{ color: "var(--text-secondary)" }}>{formatCurrency(week.saidasPrevistas)}</td>
-                  <td style={{ fontWeight: 800, color: saldo >= 0 ? "#22C55E" : "#EF4444" }}>{formatCurrency(saldo)}</td>
+                  <td style={{ fontWeight: 800, color: saldo >= 0 ? "var(--color-success)" : "#EF4444" }}>{formatCurrency(saldo)}</td>
                 </motion.tr>
               );
             })}
@@ -156,7 +156,7 @@ export function FluxoCaixa({ invoices, expenseEntries, expenses, selectedMonth }
               </div>
               <div className="mobile-card-row">
                 <span>Entradas realizadas</span>
-                <strong style={{ color: "#22C55E" }}>{formatCurrency(week.entradasRealizadas)}</strong>
+                <strong style={{ color: "var(--color-success)" }}>{formatCurrency(week.entradasRealizadas)}</strong>
               </div>
               <div className="mobile-card-row">
                 <span>Entradas previstas</span>
@@ -172,7 +172,7 @@ export function FluxoCaixa({ invoices, expenseEntries, expenses, selectedMonth }
               </div>
               <div className="mobile-card-row" style={{ borderTop: "1px solid var(--border)", paddingTop: "8px", marginTop: "2px" }}>
                 <span style={{ fontWeight: 700 }}>Saldo semana</span>
-                <strong style={{ color: saldo >= 0 ? "#22C55E" : "#EF4444", fontSize: "1rem" }}>{formatCurrency(saldo)}</strong>
+                <strong style={{ color: saldo >= 0 ? "var(--color-success)" : "#EF4444", fontSize: "1rem" }}>{formatCurrency(saldo)}</strong>
               </div>
             </div>
           );

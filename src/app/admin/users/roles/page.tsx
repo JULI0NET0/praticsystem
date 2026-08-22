@@ -178,9 +178,9 @@ export default function RolesPage() {
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                 {(role.permissions as string[]).includes('all') ? (
                   <span style={{
-                    fontSize: '0.75rem', background: 'rgba(34, 197, 94, 0.1)',
-                    color: '#22C55E', padding: '4px 10px', borderRadius: '6px',
-                    border: '1px solid rgba(34, 197, 94, 0.2)', fontWeight: 500
+                    fontSize: '0.75rem', background: 'var(--color-success-wash)',
+                    color: 'var(--color-success)', padding: '4px 10px', borderRadius: '6px',
+                    border: '1px solid var(--color-success-wash)', fontWeight: 500
                   }}>
                     Acesso Total
                   </span>

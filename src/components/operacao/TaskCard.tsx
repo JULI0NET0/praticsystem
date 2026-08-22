@@ -74,7 +74,7 @@ export default function TaskCard({ task, fields, onOpen, onDragStart, draggable 
               alignItems: "center",
               gap: 4,
               fontSize: "0.7rem",
-              color: progress.pct === 100 ? "#22C55E" : "var(--text-tertiary)",
+              color: progress.pct === 100 ? "var(--color-success)" : "var(--text-tertiary)",
               fontWeight: 700,
             }}
           >
@@ -90,7 +90,7 @@ export default function TaskCard({ task, fields, onOpen, onDragStart, draggable 
             style={{
               height: "100%",
               width: `${progress.pct}%`,
-              background: progress.pct === 100 ? "#22C55E" : "var(--accent)",
+              background: progress.pct === 100 ? "var(--color-success)" : "var(--accent)",
               borderRadius: 4,
               transition: "width 0.3s ease",
             }}

@@ -251,7 +251,7 @@ export default function ServicesPage() {
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <span style={{ fontWeight: 600 }}>{metrics.clientCount}</span>
-                          {metrics.clientCount > 0 && <ArrowUpRight size={14} color="#10b981" />}
+                          {metrics.clientCount > 0 && <ArrowUpRight size={14} color="var(--color-success)" />}
                         </div>
                       </td>
                       <td>
@@ -490,7 +490,7 @@ export default function ServicesPage() {
                           </p>
                         </div>
                         <div style={{ textAlign: 'right' }}>
-                          <p style={{ fontWeight: 800, color: '#22C55E' }}>
+                          <p style={{ fontWeight: 800, color: 'var(--color-success)' }}>
                             {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(c.value)}
                           </p>
                           <span style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)' }}>{c.billing_cycle === 'monthly' ? 'Mensal' : 'Avulso'}</span>

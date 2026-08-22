@@ -29,7 +29,7 @@ const RECURRENCES: Record<ExpenseRecurrence, string> = {
 const CATEGORY_COLORS: Record<ExpenseCategory, string> = {
   pro_labore: "#A78BFA",
   funcionario_pj: "#60A5FA",
-  sistema: "#34D399",
+  sistema: "var(--color-success)",
   internet: "#F59E0B",
   taxa_asaas: "#FB923C",
   taxa_boleto: "#F472B6",
@@ -290,7 +290,7 @@ export function DespesasList({ expenses, expenseEntries, users, asaasTransaction
                       const sum = linkedSumEntry(monthEntry.id);
                       const remaining = Math.max(0, Number(monthEntry.amount) - sum);
                       if (effStatus === "paid") {
-                        return <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "#22C55E" }}>✓ Pago</span>;
+                        return <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--color-success)" }}>✓ Pago</span>;
                       }
                       if (effStatus === "partial") {
                         return (
@@ -317,7 +317,7 @@ export function DespesasList({ expenses, expenseEntries, users, asaasTransaction
                       {entries.length > 0 && (
                         <span style={{ fontSize: "0.7rem", color: "var(--text-tertiary)" }}>
                           {entries.length} fatura{entries.length !== 1 ? "s" : ""}
-                          {paidCount > 0 && <span style={{ color: "#22C55E" }}> · {paidCount}✓</span>}
+                          {paidCount > 0 && <span style={{ color: "var(--color-success)" }}> · {paidCount}✓</span>}
                           {pendingCount > 0 && <span style={{ color: "#F59E0B" }}> · {pendingCount}⏳</span>}
                         </span>
                       )}
@@ -346,7 +346,7 @@ export function DespesasList({ expenses, expenseEntries, users, asaasTransaction
                         style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-secondary)", padding: "4px", display: "flex" }}
                         title={expense.status === "active" ? "Desativar" : "Ativar"}
                       >
-                        {expense.status === "active" ? <ToggleRight size={18} color="#22C55E" /> : <ToggleLeft size={18} />}
+                        {expense.status === "active" ? <ToggleRight size={18} color="var(--color-success)" /> : <ToggleLeft size={18} />}
                       </button>
                       <button
                         onClick={() => openEdit(expense)}
@@ -434,7 +434,7 @@ export function DespesasList({ expenses, expenseEntries, users, asaasTransaction
                 style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-secondary)", padding: "4px", display: "flex" }}
                 title={expense.status === "active" ? "Desativar" : "Ativar"}
               >
-                {expense.status === "active" ? <ToggleRight size={18} color="#22C55E" /> : <ToggleLeft size={18} />}
+                {expense.status === "active" ? <ToggleRight size={18} color="var(--color-success)" /> : <ToggleLeft size={18} />}
               </button>
               <button
                 onClick={() => openEdit(expense)}
@@ -512,7 +512,7 @@ export function DespesasList({ expenses, expenseEntries, users, asaasTransaction
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px" }}>
                   {[
                     { label: "Total gerado", value: entries.length, suffix: ` fatura${entries.length !== 1 ? "s" : ""}`, color: "var(--text-primary)" },
-                    { label: "Pago", value: formatCurrency(totalPago), suffix: ` (${paidCount})`, color: "#22C55E" },
+                    { label: "Pago", value: formatCurrency(totalPago), suffix: ` (${paidCount})`, color: "var(--color-success)" },
                     { label: "Pendente", value: formatCurrency(totalPendente), suffix: ` (${pendingCount})`, color: "#F59E0B" },
                   ].map((item) => (
                     <div key={item.label} style={{ padding: "10px 12px", background: "rgba(255,255,255,0.02)", border: "1px solid var(--border)", borderRadius: "10px", textAlign: "center" }}>
@@ -540,7 +540,7 @@ export function DespesasList({ expenses, expenseEntries, users, asaasTransaction
                       const diaLabel = dateObj.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit" });
                       const effStatus = effectiveEntryStatus(entry);
                       const linkedSum = linkedSumEntry(entry.id);
-                      const sc = effStatus === "paid" ? "#22C55E" : effStatus === "cancelled" ? "var(--text-tertiary)" : "#F59E0B";
+                      const sc = effStatus === "paid" ? "var(--color-success)" : effStatus === "cancelled" ? "var(--text-tertiary)" : "#F59E0B";
                       const sl = effStatus === "paid" ? "Pago" : effStatus === "cancelled" ? "Cancelado" : effStatus === "partial" ? "Parcial" : "Pendente";
                       return (
                         <div
@@ -562,7 +562,7 @@ export function DespesasList({ expenses, expenseEntries, users, asaasTransaction
                             )}
                           </div>
                           {effStatus === "paid" ? (
-                            <span title="Vinculado ao banco" style={{ display: "flex", flexShrink: 0, color: "#22C55E" }}>
+                            <span title="Vinculado ao banco" style={{ display: "flex", flexShrink: 0, color: "var(--color-success)" }}>
                               <CheckCircle2 size={15} />
                             </span>
                           ) : effStatus !== "cancelled" && (
@@ -580,7 +580,7 @@ export function DespesasList({ expenses, expenseEntries, users, asaasTransaction
                                 setBaixaDate(new Date().toISOString().split("T")[0]);
                                 setBaixaEntry(entry);
                               }}
-                              style={{ background: "none", border: "none", cursor: "pointer", color: "#22C55E", padding: "2px", display: "flex", flexShrink: 0 }}
+                              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-success)", padding: "2px", display: "flex", flexShrink: 0 }}
                               title="Dar baixa"
                             >
                               <Check size={15} />
@@ -593,12 +593,12 @@ export function DespesasList({ expenses, expenseEntries, users, asaasTransaction
                             const remaining = Math.max(0, Number(entry.amount) - linkedSum);
                             const isPaid = effStatus === "paid";
                             return (
-                              <div style={{ flexBasis: "100%", padding: "8px 10px", borderRadius: "8px", background: isPaid ? "rgba(34,197,94,0.05)" : "rgba(245,158,11,0.05)", border: `1px solid ${isPaid ? "rgba(34,197,94,0.15)" : "rgba(245,158,11,0.15)"}`, display: "flex", flexDirection: "column", gap: "4px" }}>
+                              <div style={{ flexBasis: "100%", padding: "8px 10px", borderRadius: "8px", background: isPaid ? "var(--color-success-wash)" : "rgba(245,158,11,0.05)", border: `1px solid ${isPaid ? "var(--color-success-wash)" : "rgba(245,158,11,0.15)"}`, display: "flex", flexDirection: "column", gap: "4px" }}>
                                 {partials.map((t) => (
                                   <div key={t.id} style={{ display: "flex", flexDirection: "column", gap: "1px" }}>
                                     <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.68rem", color: "var(--text-tertiary)" }}>
                                       <span>{isPaid ? "Pgto." : "Adiant."} {new Date(`${t.date.split("T")[0]}T12:00:00`).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}</span>
-                                      <span style={{ color: isPaid ? "#22C55E" : "#F59E0B", fontWeight: 600 }}>− {formatCurrency(Math.abs(Number(t.value)))}</span>
+                                      <span style={{ color: isPaid ? "var(--color-success)" : "#F59E0B", fontWeight: 600 }}>− {formatCurrency(Math.abs(Number(t.value)))}</span>
                                     </div>
                                     {t.notes && (
                                       <p style={{ fontSize: "0.65rem", color: "var(--text-tertiary)", fontStyle: "italic", margin: 0 }}>{t.notes}</p>
@@ -649,7 +649,7 @@ export function DespesasList({ expenses, expenseEntries, users, asaasTransaction
       >
         {baixaEntry && (
           <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-            <div style={{ padding: "14px 16px", background: "rgba(34,197,94,0.05)", border: "1px solid rgba(34,197,94,0.15)", borderRadius: "12px" }}>
+            <div style={{ padding: "14px 16px", background: "var(--color-success-wash)", border: "1px solid var(--color-success-wash)", borderRadius: "12px" }}>
               <p style={{ fontWeight: 700 }}>{baixaEntry.description}</p>
               <p style={{ fontWeight: 800, color: "#EF4444", fontSize: "1.1rem", marginTop: "4px" }}>
                 {formatCurrency(Number(baixaEntry.amount))}

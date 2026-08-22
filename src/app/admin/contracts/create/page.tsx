@@ -244,9 +244,9 @@ export default function CreateContractPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <div style={{
                 width: '40px', height: '40px', borderRadius: '10px',
-                background: formData.auto_renew ? 'rgba(34, 197, 94, 0.1)' : 'rgba(255,255,255,0.05)',
+                background: formData.auto_renew ? 'var(--color-success-wash)' : 'rgba(255,255,255,0.05)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: formData.auto_renew ? '#22C55E' : 'var(--text-secondary)',
+                color: formData.auto_renew ? 'var(--color-success)' : 'var(--text-secondary)',
                 transition: 'all 0.3s ease'
               }}>
                 <RefreshCw size={20} className={formData.auto_renew ? 'spin-slow' : ''} />
@@ -337,7 +337,7 @@ export default function CreateContractPage() {
               initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
               className="glass-card" style={{ padding: '32px', maxWidth: '450px', width: '100%', position: 'relative', display: 'flex', flexDirection: 'column', gap: '20px', textAlign: 'center' }}
             >
-              <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(34, 197, 94, 0.1)', color: '#22C55E', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
+              <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'var(--color-success-wash)', color: 'var(--color-success)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
                 <CheckCircle2 size={32} />
               </div>
               <div>

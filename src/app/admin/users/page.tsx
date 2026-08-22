@@ -280,7 +280,7 @@ export default function UsersPage() {
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                               {user.role === 'admin' && <ShieldAlert size={14} color="#EF4444" />}
                               {user.role === 'board' && <Shield size={14} color="var(--accent)" />}
-                              {user.role === 'social_media' && <Shield size={14} color="#22C55E" />}
+                              {user.role === 'social_media' && <Shield size={14} color="var(--color-success)" />}
                               {user.role === 'filmmaker' && <Shield size={14} color="#8B5CF6" />}
                               {user.role === 'client' && <UserIcon size={14} color="var(--text-secondary)" />}
                               <span style={{
@@ -288,7 +288,7 @@ export default function UsersPage() {
                                 fontSize: '0.875rem',
                                 color: user.role === 'admin' ? '#EF4444' :
                                   user.role === 'board' ? 'var(--accent)' :
-                                    user.role === 'social_media' ? '#22C55E' :
+                                    user.role === 'social_media' ? 'var(--color-success)' :
                                       user.role === 'filmmaker' ? '#8B5CF6' : 'var(--text-secondary)'
                               }}>
                                 {roleObj?.name || user.role}
@@ -421,7 +421,7 @@ export default function UsersPage() {
                             fontWeight: 500, fontSize: '0.75rem',
                             color: user.role === 'admin' ? '#EF4444' :
                               user.role === 'board' ? 'var(--accent)' :
-                                user.role === 'social_media' ? '#22C55E' : '#8B5CF6'
+                                user.role === 'social_media' ? 'var(--color-success)' : '#8B5CF6'
                           }}>
                             {roleObj?.name || user.role}
                           </span>

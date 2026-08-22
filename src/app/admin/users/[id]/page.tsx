@@ -38,8 +38,8 @@ const DEMAND_STATUS_COLOR: Record<string, string> = {
   in_progress: "#60A5FA",
   in_production: "#3B82F6",
   in_review: "#A78BFA",
-  done: "#22C55E",
-  completed: "#22C55E",
+  done: "var(--color-success)",
+  completed: "var(--color-success)",
   cancelled: "var(--text-tertiary)",
 };
 
@@ -238,7 +238,7 @@ export default function UserDetailPage() {
               <div style={{
                 position: "absolute", bottom: "5px", right: "5px",
                 width: "24px", height: "24px", borderRadius: "50%",
-                backgroundColor: "#22C55E", border: "4px solid var(--bg-secondary)",
+                backgroundColor: "var(--color-success)", border: "4px solid var(--bg-secondary)",
               }} />
             </div>
 
@@ -327,7 +327,7 @@ export default function UserDetailPage() {
               </p>
               <h4 style={{ fontSize: "1.8rem", fontWeight: 800 }}>{userDemands.length}</h4>
               {doneDemands.length > 0 && (
-                <p style={{ fontSize: "0.72rem", color: "#22C55E", marginTop: "4px" }}>{doneDemands.length} concluída{doneDemands.length !== 1 ? "s" : ""}</p>
+                <p style={{ fontSize: "0.72rem", color: "var(--color-success)", marginTop: "4px" }}>{doneDemands.length} concluída{doneDemands.length !== 1 ? "s" : ""}</p>
               )}
             </Spotlight>
             <Spotlight className="glass-card" style={{ padding: "24px" }}>
@@ -432,7 +432,7 @@ export default function UserDetailPage() {
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px", marginBottom: "16px" }}>
                   {[
                     { label: "Custo mensal", value: formatCurrency(custoMensal), color: "#EF4444" },
-                    { label: "Total pago", value: formatCurrency(totalPago), color: "#22C55E" },
+                    { label: "Total pago", value: formatCurrency(totalPago), color: "var(--color-success)" },
                     { label: "Total pendente", value: formatCurrency(totalPendente), color: "#F59E0B" },
                   ].map((item) => (
                     <div key={item.label} style={{ padding: "12px 14px", background: "var(--card-inner-bg)", border: "1px solid var(--border)", borderRadius: "12px" }}>
@@ -472,7 +472,7 @@ export default function UserDetailPage() {
                           {entries.length > 0 && (
                             <span style={{ fontSize: "0.68rem", color: "var(--text-tertiary)", flexShrink: 0, minWidth: "60px", textAlign: "right" }}>
                               {entries.length} fat.
-                              {paid > 0 && <span style={{ color: "#22C55E" }}> {paid}✓</span>}
+                              {paid > 0 && <span style={{ color: "var(--color-success)" }}> {paid}✓</span>}
                               {pending > 0 && <span style={{ color: "#F59E0B" }}> {pending}⏳</span>}
                             </span>
                           )}
@@ -488,7 +488,7 @@ export default function UserDetailPage() {
                                 .sort((a: any, b: any) => a.date.localeCompare(b.date))
                                 .map((entry: any) => {
                                   const d = new Date(`${entry.date}T12:00:00`);
-                                  const sc = entry.status === "paid" ? "#22C55E" : entry.status === "cancelled" ? "var(--text-tertiary)" : "#F59E0B";
+                                  const sc = entry.status === "paid" ? "var(--color-success)" : entry.status === "cancelled" ? "var(--text-tertiary)" : "#F59E0B";
                                   const sl = entry.status === "paid" ? "Pago" : entry.status === "cancelled" ? "Cancelado" : "Pendente";
                                   return (
                                     <div key={entry.id} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "7px 10px", borderRadius: "8px", background: "rgba(255,255,255,0.02)", marginTop: "6px" }}>

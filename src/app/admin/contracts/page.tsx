@@ -388,12 +388,12 @@ export default function ContractsPage() {
                                 width: 'fit-content',
                                 padding: '4px 12px', fontSize: '0.75rem',
                                 backgroundColor: 
-                                  contract.document_status === 'signed' ? 'rgba(34, 197, 94, 0.1)' : 
+                                  contract.document_status === 'signed' ? 'var(--color-success-wash)' : 
                                   contract.document_status === 'sent' ? 'rgba(59, 130, 246, 0.1)' : 
                                   contract.document_status === 'generated' ? 'rgba(168, 85, 247, 0.1)' : 
                                   'rgba(255, 255, 255, 0.05)',
                                 color: 
-                                  contract.document_status === 'signed' ? '#22C55E' : 
+                                  contract.document_status === 'signed' ? 'var(--color-success)' : 
                                   contract.document_status === 'sent' ? '#3B82F6' : 
                                   contract.document_status === 'generated' ? '#A855F7' : 
                                   'var(--text-secondary)'
@@ -484,10 +484,10 @@ export default function ContractsPage() {
                         className="badge"
                         style={{ 
                           fontSize: '0.65rem', padding: '2px 8px',
-                          backgroundColor: contract.document_status === 'signed' ? 'rgba(34, 197, 94, 0.1)' : 
+                          backgroundColor: contract.document_status === 'signed' ? 'var(--color-success-wash)' : 
                             contract.document_status === 'sent' ? 'rgba(59, 130, 246, 0.1)' : 
                             contract.document_status === 'generated' ? 'rgba(168, 85, 247, 0.1)' : 'rgba(255, 255, 255, 0.05)',
-                          color: contract.document_status === 'signed' ? '#22C55E' : 
+                          color: contract.document_status === 'signed' ? 'var(--color-success)' : 
                             contract.document_status === 'sent' ? '#3B82F6' : 
                             contract.document_status === 'generated' ? '#A855F7' : 'var(--text-secondary)'
                         }}
@@ -560,7 +560,7 @@ export default function ContractsPage() {
           </p>
           <div style={{ position: 'relative', paddingLeft: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <div>
-              <div style={{ position: 'absolute', left: '-7px', width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#22C55E' }}></div>
+              <div style={{ position: 'absolute', left: '-7px', width: '12px', height: '12px', borderRadius: '50%', backgroundColor: 'var(--color-success)' }}></div>
               <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>Assinatura do Contrato</div>
               <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Geração automática do documento PDF e envio para assinatura.</p>
             </div>

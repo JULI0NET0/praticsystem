@@ -28,7 +28,7 @@ const CATEGORIES = [
   { id: 'social_media', label: 'Social Media', color: '#EC4899', icon: ExternalLink },
   { id: 'ads', label: 'Tráfego Pago', color: '#8B5CF6', icon: ExternalLink },
   { id: 'launch', label: 'Lançamento', color: '#F97316', icon: ExternalLink },
-  { id: 'payment', label: 'Pagamento', color: '#22C55E', icon: Clock },
+  { id: 'payment', label: 'Pagamento', color: 'var(--color-success)', icon: Clock },
 ];
 
 const toLocalISOString = (dateInput: any) => {
@@ -130,7 +130,7 @@ export default function SchedulePage() {
               start: inv.due_date,
               allDay: true,
               type: 'payment',
-              color: '#22C55E',
+              color: 'var(--color-success)',
               extendedProps: {
                 amount: inv.amount,
                 status: inv.status,
@@ -681,7 +681,7 @@ export default function SchedulePage() {
                   width: '7px',
                   height: '7px',
                   borderRadius: '50%',
-                  backgroundColor: googleStatus?.accounts?.agenciapratic?.configured ? '#22C55E' : '#EAB308',
+                  backgroundColor: googleStatus?.accounts?.agenciapratic?.configured ? 'var(--color-success)' : '#EAB308',
                 }}
               />
             </button>
@@ -843,9 +843,9 @@ export default function SchedulePage() {
                             borderRadius: '20px',
                             fontSize: '0.65rem',
                             fontWeight: 700,
-                            backgroundColor: selectedEvent.extendedProps.status === 'paid' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                            color: selectedEvent.extendedProps.status === 'paid' ? '#22C55E' : '#EF4444',
-                            border: `1px solid ${selectedEvent.extendedProps.status === 'paid' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`
+                            backgroundColor: selectedEvent.extendedProps.status === 'paid' ? 'var(--color-success-wash)' : 'rgba(239, 68, 68, 0.1)',
+                            color: selectedEvent.extendedProps.status === 'paid' ? 'var(--color-success)' : '#EF4444',
+                            border: `1px solid ${selectedEvent.extendedProps.status === 'paid' ? 'var(--color-success-wash)' : 'rgba(239, 68, 68, 0.2)'}`
                           }}>
                             {selectedEvent.extendedProps.status === 'paid' ? 'PAGO' : 'PENDENTE'}
                           </span>
@@ -880,11 +880,11 @@ export default function SchedulePage() {
                         </div>
                       )}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-secondary)' }}>
-                        {selectedEvent.extendedProps.visibility === 'public' ? <Shield size={16} color="#22C55E" /> : <ShieldOff size={16} color="#EF4444" />}
+                        {selectedEvent.extendedProps.visibility === 'public' ? <Shield size={16} color="var(--color-success)" /> : <ShieldOff size={16} color="#EF4444" />}
                         <span style={{ fontSize: '0.85rem' }}>{selectedEvent.extendedProps.visibility === 'public' ? 'Visível para todos' : 'Apenas para mim'}</span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-secondary)' }}>
-                        {selectedEvent.extendedProps.status === 'completed' ? <CheckCircle2 size={16} color="#22C55E" /> : <Clock size={16} color="#EAB308" />}
+                        {selectedEvent.extendedProps.status === 'completed' ? <CheckCircle2 size={16} color="var(--color-success)" /> : <Clock size={16} color="#EAB308" />}
                         <span style={{ fontSize: '0.85rem' }}>{selectedEvent.extendedProps.status === 'completed' ? 'Concluído' : 'Agendado'}</span>
                       </div>
                       {selectedEvent.extendedProps?.google_event_id && (
@@ -988,7 +988,7 @@ export default function SchedulePage() {
 
                       <div style={{ display: 'flex', gap: '10px', alignItems: 'center', padding: '10px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', flex: 1 }} onClick={() => setFormData({ ...formData, visibility: formData.visibility === 'public' ? 'private' : 'public' })}>
-                          {formData.visibility === 'public' ? <Shield size={18} color="#22C55E" /> : <ShieldOff size={18} color="#EF4444" />}
+                          {formData.visibility === 'public' ? <Shield size={18} color="var(--color-success)" /> : <ShieldOff size={18} color="#EF4444" />}
                           <div>
                             <p style={{ fontSize: '0.8rem', fontWeight: 600 }}>{formData.visibility === 'public' ? 'Público' : 'Privado'}</p>
                             <p style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>{formData.visibility === 'public' ? 'Visível para todos' : 'Apenas para mim'}</p>
@@ -1087,9 +1087,9 @@ export default function SchedulePage() {
                         padding: '3px 8px',
                         borderRadius: '12px',
                         backgroundColor: googleStatus?.accounts?.agenciapratic?.configured
-                          ? 'rgba(34, 197, 94, 0.15)'
+                          ? 'var(--color-success-wash)'
                           : 'rgba(234, 179, 8, 0.15)',
-                        color: googleStatus?.accounts?.agenciapratic?.configured ? '#22C55E' : '#EAB308',
+                        color: googleStatus?.accounts?.agenciapratic?.configured ? 'var(--color-success)' : '#EAB308',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '4px',
@@ -1100,7 +1100,7 @@ export default function SchedulePage() {
                           width: '6px',
                           height: '6px',
                           borderRadius: '50%',
-                          backgroundColor: googleStatus?.accounts?.agenciapratic?.configured ? '#22C55E' : '#EAB308',
+                          backgroundColor: googleStatus?.accounts?.agenciapratic?.configured ? 'var(--color-success)' : '#EAB308',
                         }}
                       />
                       {googleStatus?.accounts?.agenciapratic?.configured ? 'Conectado' : 'Pendente'}

@@ -95,7 +95,7 @@ export function FinancialKPIs({
       border: "rgba(59,130,246,0.15)",
       splitValues: [
         { label: "Previsto", value: formatCurrency(faturamentoPrevisto), color: "#60A5FA" },
-        { label: "Realizado", value: formatCurrency(faturamentoRealizado), color: "#22C55E" },
+        { label: "Realizado", value: formatCurrency(faturamentoRealizado), color: "var(--color-success)" },
       ],
       onClick: () => setFaturamentoOpen(true),
     },
@@ -127,7 +127,7 @@ export function FinancialKPIs({
       value: `${margem.toFixed(1)}%`,
       sub: `Lucro: ${formatCurrency(lucro)}`,
       icon: <Percent size={20} />,
-      color: margem >= 20 ? "#22C55E" : margem >= 0 ? "#F59E0B" : "#EF4444",
+      color: margem >= 20 ? "var(--color-success)" : margem >= 0 ? "#F59E0B" : "#EF4444",
       bg: "rgba(255,255,255,0.02)",
       border: "var(--border)",
     },
@@ -312,7 +312,7 @@ export function FinancialKPIs({
                   item.status === "cancelled"
                     ? { label: "Cancelada", color: "var(--text-tertiary)", bg: "rgba(255,255,255,0.04)" }
                     : item.status === "paid" || open <= 0
-                    ? { label: "Paga", color: "#22C55E", bg: "rgba(34,197,94,0.1)" }
+                    ? { label: "Paga", color: "var(--color-success)", bg: "var(--color-success-wash)" }
                     : item.paid > 0
                     ? { label: "Parcial", color: "#F59E0B", bg: "rgba(245,158,11,0.1)" }
                     : { label: "Prevista", color: "#F59E0B", bg: "rgba(245,158,11,0.1)" };
@@ -384,7 +384,7 @@ export function FinancialKPIs({
               </span>
               <span style={{ fontSize: "0.85rem", fontWeight: 700 }}>
                 <span style={{ color: "var(--text-tertiary)" }}>Realizado: </span>
-                <span style={{ color: "#22C55E" }}>{formatCurrency(faturamentoRealizado)}</span>
+                <span style={{ color: "var(--color-success)" }}>{formatCurrency(faturamentoRealizado)}</span>
               </span>
             </div>
           </div>
@@ -401,7 +401,7 @@ export function FinancialKPIs({
               .map((item) => {
                 const statusMeta =
                   item.status === "paid"
-                    ? { label: "Recebido", color: "#22C55E", bg: "rgba(34,197,94,0.1)" }
+                    ? { label: "Recebido", color: "var(--color-success)", bg: "var(--color-success-wash)" }
                     : item.status === "overdue"
                     ? { label: "Vencido", color: "#EF4444", bg: "rgba(239,68,68,0.1)" }
                     : { label: "Previsto", color: "#F59E0B", bg: "rgba(245,158,11,0.1)" };
@@ -429,7 +429,7 @@ export function FinancialKPIs({
                       </span>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: "12px", flexShrink: 0 }}>
-                      <span style={{ fontSize: "1rem", fontWeight: 800, color: statusMeta.label === "Recebido" ? "#22C55E" : "var(--text-primary)" }}>
+                      <span style={{ fontSize: "1rem", fontWeight: 800, color: statusMeta.label === "Recebido" ? "var(--color-success)" : "var(--text-primary)" }}>
                         {formatCurrency(item.amount)}
                       </span>
                       <span

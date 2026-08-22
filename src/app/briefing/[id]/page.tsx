@@ -679,19 +679,19 @@ DADOS DO BRIEFING:
               padding: '48px',
               textAlign: 'center',
               zIndex: 1,
-              border: '1px solid rgba(34, 197, 94, 0.2)'
+              border: '1px solid var(--color-success-wash)'
             }}
           >
             <div style={{
               width: '80px',
               height: '80px',
-              background: 'rgba(34, 197, 94, 0.1)',
+              background: 'var(--color-success-wash)',
               borderRadius: '50%',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               margin: '0 auto 32px',
-              color: '#22c55e'
+              color: 'var(--color-success)'
             }}>
               <CheckCircle2 size={40} />
             </div>

@@ -483,8 +483,8 @@ export default function ClientsPage() {
                                 <span style={{ fontWeight: 500 }}>R$ {p.value?.toFixed(2)}</span>
                                 <span style={{
                                   padding: '2px 8px', borderRadius: '999px', fontSize: '0.7rem', fontWeight: 600,
-                                  background: isPaid ? 'rgba(34,197,94,0.15)' : isOverdue ? 'rgba(239,68,68,0.15)' : 'rgba(234,179,8,0.15)',
-                                  color: isPaid ? '#4ade80' : isOverdue ? '#f87171' : '#facc15',
+                                  background: isPaid ? 'var(--color-success-wash)' : isOverdue ? 'rgba(239,68,68,0.15)' : 'rgba(234,179,8,0.15)',
+                                  color: isPaid ? 'var(--color-success)' : isOverdue ? '#f87171' : '#facc15',
                                 }}>
                                   {isPaid ? 'Pago' : isOverdue ? 'Vencido' : 'Pendente'}
                                 </span>
@@ -495,7 +495,7 @@ export default function ClientsPage() {
                       </div>
 
                       {asaasImported ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#4ade80', fontSize: '0.9rem', fontWeight: 600 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-success)', fontSize: '0.9rem', fontWeight: 600 }}>
                           <CheckCircle size={18} /> Importado com sucesso!
                         </div>
                       ) : (

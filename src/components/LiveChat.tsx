@@ -260,7 +260,7 @@ export default function LiveChat() {
               <div style={{
                 position: 'absolute', top: '-6px', right: '-6px',
                 minWidth: '20px', height: '20px', borderRadius: '10px',
-                background: totalUnread > 0 ? '#EF4444' : '#22C55E',
+                background: totalUnread > 0 ? '#EF4444' : 'var(--color-success)',
                 color: 'white', fontSize: '0.6rem', fontWeight: 800,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 padding: '0 5px', border: '2px solid var(--bg-primary)',
@@ -299,7 +299,7 @@ export default function LiveChat() {
               }}>
                 <div style={{
                   padding: '12px', borderBottom: '1px solid var(--border)',
-                  background: isTracking ? 'rgba(34, 197, 94, 0.04)' : 'transparent',
+                  background: isTracking ? 'var(--color-success-wash)' : 'transparent',
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
                     <span style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: 'var(--text-secondary)', letterSpacing: '0.05em', fontWeight: 600 }}>
@@ -311,8 +311,8 @@ export default function LiveChat() {
                     onClick={isTracking ? clockOut : clockIn}
                     style={{
                       width: '100%', padding: '6px', borderRadius: '8px', border: 'none',
-                      background: isTracking ? 'rgba(239, 68, 68, 0.12)' : 'rgba(34, 197, 94, 0.12)',
-                      color: isTracking ? '#EF4444' : '#22C55E',
+                      background: isTracking ? 'rgba(239, 68, 68, 0.12)' : 'var(--color-success-wash)',
+                      color: isTracking ? '#EF4444' : 'var(--color-success)',
                       fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer',
                     }}
                   >
@@ -374,7 +374,7 @@ export default function LiveChat() {
                           </div>
                           <div style={{
                             position: 'absolute', bottom: -1, right: -1, width: '8px', height: '8px',
-                            background: online ? '#22C55E' : '#6B7280', borderRadius: '50%',
+                            background: online ? 'var(--color-success)' : '#6B7280', borderRadius: '50%',
                             border: '2px solid rgba(12,12,12,0.96)',
                           }} />
                         </div>
@@ -414,7 +414,7 @@ export default function LiveChat() {
                             ? <img src={activeMember.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
                             : activeMember.name.substring(0, 2).toUpperCase()}
                         </div>
-                        <div style={{ position: 'absolute', bottom: -1, right: -1, width: '7px', height: '7px', background: isUserOnline(activeMember.id) ? '#22C55E' : '#6B7280', borderRadius: '50%', border: '2px solid rgba(12,12,12,0.96)' }} />
+                        <div style={{ position: 'absolute', bottom: -1, right: -1, width: '7px', height: '7px', background: isUserOnline(activeMember.id) ? 'var(--color-success)' : '#6B7280', borderRadius: '50%', border: '2px solid rgba(12,12,12,0.96)' }} />
                       </div>
                     )}
                   <div>
@@ -422,7 +422,7 @@ export default function LiveChat() {
                       {activeChat === 'general' ? 'Canal Geral' : activeMember?.name}
                     </h4>
                     {activeChat !== 'general' && activeMember && (
-                      <span style={{ fontSize: '0.65rem', color: isUserOnline(activeMember.id) ? '#22C55E' : '#6B7280' }}>
+                      <span style={{ fontSize: '0.65rem', color: isUserOnline(activeMember.id) ? 'var(--color-success)' : '#6B7280' }}>
                         {isUserOnline(activeMember.id) ? 'Online' : 'Offline'}
                       </span>
                     )}

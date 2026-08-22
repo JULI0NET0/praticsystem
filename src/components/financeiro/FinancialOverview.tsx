@@ -76,10 +76,10 @@ export function FinancialOverview({ invoices, contracts }: FinancialOverviewProp
 
         {/* Alerts & Insights */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          <div className="glass-card" style={{ padding: '24px', background: 'rgba(34, 197, 94, 0.05)', border: '1px solid rgba(34, 197, 94, 0.1)' }}>
+          <div className="glass-card" style={{ padding: '24px', background: 'var(--color-success-wash)', border: '1px solid var(--color-success-wash)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-              <TrendingUp size={20} color="#22C55E" />
-              <p style={{ fontWeight: 700, fontSize: '0.9rem', color: '#22C55E' }}>Performance do Período</p>
+              <TrendingUp size={20} color="var(--color-success)" />
+              <p style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--color-success)' }}>Performance do Período</p>
             </div>
             <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
               Você já recebeu **{formatCurrency(totalPaid)}** este mês. 

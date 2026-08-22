@@ -36,7 +36,7 @@ const REGISTRATION_CARDS = [
     icon: Briefcase,
     href: "/admin/services",
     stats: "8 Serviços ativos",
-    color: "#10B981"
+    color: "var(--color-success)"
   },
   {
     title: "Contratos",

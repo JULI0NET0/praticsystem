@@ -147,9 +147,9 @@ export default function BillingPage() {
           <p style={{ color: 'var(--text-tertiary)', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>A Vencer</p>
           <h3 style={{ fontSize: '1.5rem', fontWeight: 800 }}>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(metrics.upcoming)}</h3>
         </div>
-        <div className="glass-card" style={{ padding: '24px', background: 'rgba(34, 197, 94, 0.03)' }}>
+        <div className="glass-card" style={{ padding: '24px', background: 'var(--color-success-wash)' }}>
           <p style={{ color: 'var(--text-tertiary)', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>Total Recebido</p>
-          <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#22C55E' }}>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(metrics.totalReceived)}</h3>
+          <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-success)' }}>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(metrics.totalReceived)}</h3>
         </div>
         <div className="glass-card" style={{ padding: '24px', background: 'rgba(239, 68, 68, 0.03)' }}>
           <p style={{ color: 'var(--text-tertiary)', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>Total Pendentes</p>
