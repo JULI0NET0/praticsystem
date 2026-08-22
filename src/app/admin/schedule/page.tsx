@@ -843,9 +843,9 @@ export default function SchedulePage() {
                             borderRadius: '20px',
                             fontSize: '0.65rem',
                             fontWeight: 700,
-                            backgroundColor: selectedEvent.extendedProps.status === 'paid' ? 'var(--color-success-wash)' : 'rgba(239, 68, 68, 0.1)',
-                            color: selectedEvent.extendedProps.status === 'paid' ? 'var(--color-success)' : '#EF4444',
-                            border: `1px solid ${selectedEvent.extendedProps.status === 'paid' ? 'var(--color-success-wash)' : 'rgba(239, 68, 68, 0.2)'}`
+                            backgroundColor: selectedEvent.extendedProps.status === 'paid' ? 'var(--color-success-wash)' : 'var(--color-danger-wash)',
+                            color: selectedEvent.extendedProps.status === 'paid' ? 'var(--color-success)' : 'var(--color-danger)',
+                            border: `1px solid ${selectedEvent.extendedProps.status === 'paid' ? 'var(--color-success-wash)' : 'var(--color-danger-wash)'}`
                           }}>
                             {selectedEvent.extendedProps.status === 'paid' ? 'PAGO' : 'PENDENTE'}
                           </span>
@@ -880,7 +880,7 @@ export default function SchedulePage() {
                         </div>
                       )}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-secondary)' }}>
-                        {selectedEvent.extendedProps.visibility === 'public' ? <Shield size={16} color="var(--color-success)" /> : <ShieldOff size={16} color="#EF4444" />}
+                        {selectedEvent.extendedProps.visibility === 'public' ? <Shield size={16} color="var(--color-success)" /> : <ShieldOff size={16} color="var(--color-danger)" />}
                         <span style={{ fontSize: '0.85rem' }}>{selectedEvent.extendedProps.visibility === 'public' ? 'Visível para todos' : 'Apenas para mim'}</span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-secondary)' }}>
@@ -931,7 +931,7 @@ export default function SchedulePage() {
                         <button
                           onClick={handleDeleteEvent}
                           className="btn btn-secondary"
-                          style={{ padding: '8px', color: '#EF4444', height: '36px' }}
+                          style={{ padding: '8px', color: 'var(--color-danger)', height: '36px' }}
                         >
                           <Trash2 size={16} />
                         </button>
@@ -988,7 +988,7 @@ export default function SchedulePage() {
 
                       <div style={{ display: 'flex', gap: '10px', alignItems: 'center', padding: '10px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', flex: 1 }} onClick={() => setFormData({ ...formData, visibility: formData.visibility === 'public' ? 'private' : 'public' })}>
-                          {formData.visibility === 'public' ? <Shield size={18} color="var(--color-success)" /> : <ShieldOff size={18} color="#EF4444" />}
+                          {formData.visibility === 'public' ? <Shield size={18} color="var(--color-success)" /> : <ShieldOff size={18} color="var(--color-danger)" />}
                           <div>
                             <p style={{ fontSize: '0.8rem', fontWeight: 600 }}>{formData.visibility === 'public' ? 'Público' : 'Privado'}</p>
                             <p style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>{formData.visibility === 'public' ? 'Visível para todos' : 'Apenas para mim'}</p>

@@ -271,7 +271,7 @@ export function LancamentosTable({
     paid: "var(--color-success)",
     partial: "#F59E0B",
     pending: "#F59E0B",
-    overdue: "#EF4444",
+    overdue: "var(--color-danger)",
     cancelled: "var(--text-tertiary)",
   };
 
@@ -630,12 +630,12 @@ export function LancamentosTable({
                   {stages.feeTxns.map((fee) => (
                     <div key={fee.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px" }}>
                       <span style={{ fontSize: "0.78rem", color: "var(--text-tertiary)" }}>{fee.description || "Taxa Asaas"}</span>
-                      <span style={{ fontSize: "0.78rem", color: "#EF4444", fontWeight: 700, whiteSpace: "nowrap" }}>− {formatCurrency(Math.abs(Number(fee.value)))}</span>
+                      <span style={{ fontSize: "0.78rem", color: "var(--color-danger)", fontWeight: 700, whiteSpace: "nowrap" }}>− {formatCurrency(Math.abs(Number(fee.value)))}</span>
                     </div>
                   ))}
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px", borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: "6px", marginTop: "2px" }}>
                     <span style={{ fontSize: "0.8rem", fontWeight: 700 }}>Líquido que entrou</span>
-                    <span style={{ fontSize: "0.95rem", fontWeight: 800, color: stages.net >= 0 ? "var(--color-success)" : "#EF4444" }}>{formatCurrency(stages.net)}</span>
+                    <span style={{ fontSize: "0.95rem", fontWeight: 800, color: stages.net >= 0 ? "var(--color-success)" : "var(--color-danger)" }}>{formatCurrency(stages.net)}</span>
                   </div>
                 </div>
               ) : !stages.paymentTxn ? (

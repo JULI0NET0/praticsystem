@@ -353,7 +353,7 @@ export default function Sidebar() {
                         setShowUserSwitcher(false);
                       }}
                       style={{
-                        padding: '10px 12px', borderRadius: '12px', background: 'rgba(239, 68, 68, 0.1)',
+                        padding: '10px 12px', borderRadius: '12px', background: 'var(--color-danger-wash)',
                         border: 'none', color: 'var(--color-danger)',
                         fontSize: '0.875rem', textAlign: 'left', cursor: 'pointer', transition: 'all 0.2s',
                         display: 'flex', alignItems: 'center', gap: '8px'

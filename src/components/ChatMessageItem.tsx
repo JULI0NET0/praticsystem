@@ -128,7 +128,7 @@ export function ChatMessageItem({ message, isOwnMessage, showHeader, compact = f
               {formatTime(message.createdAt)}
             </span>
             {sendError && (
-              <span style={{ fontSize: '0.6rem', color: '#EF4444', marginLeft: '6px', fontWeight: 600 }}>
+              <span style={{ fontSize: '0.6rem', color: 'var(--color-danger)', marginLeft: '6px', fontWeight: 600 }}>
                 ⚠ Não salvo
               </span>
             )}

@@ -210,14 +210,14 @@ export function AsaasLinkDialog({
         {transaction && (
           <div style={{
             padding: "12px 16px", borderRadius: "12px",
-            background: transaction.type === "CREDIT" ? "var(--color-success-wash)" : "rgba(239,68,68,0.06)",
-            border: `1px solid ${transaction.type === "CREDIT" ? "var(--color-success-wash)" : "rgba(239,68,68,0.2)"}`,
+            background: transaction.type === "CREDIT" ? "var(--color-success-wash)" : "var(--color-danger-wash)",
+            border: `1px solid ${transaction.type === "CREDIT" ? "var(--color-success-wash)" : "var(--color-danger-wash)"}`,
           }}>
             <p style={{ fontSize: "0.78rem", color: "var(--text-secondary)", marginBottom: "2px" }}>
               Transação Asaas — {transaction.type === "CREDIT" ? "Crédito" : "Débito"}
             </p>
             <p style={{ fontWeight: 700, fontSize: "0.9rem" }}>{transaction.description || "Sem descrição"}</p>
-            <p style={{ fontWeight: 800, fontSize: "1.05rem", color: transaction.type === "CREDIT" ? "var(--color-success)" : "#EF4444", marginTop: "2px" }}>
+            <p style={{ fontWeight: 800, fontSize: "1.05rem", color: transaction.type === "CREDIT" ? "var(--color-success)" : "var(--color-danger)", marginTop: "2px" }}>
               {transaction.type === "CREDIT" ? "+" : "−"} {formatCurrency(Math.abs(transaction.value))}
               <span style={{ fontSize: "0.75rem", fontWeight: 400, color: "var(--text-tertiary)", marginLeft: "8px" }}>
                 {new Date(`${transaction.date}T12:00:00`).toLocaleDateString("pt-BR")}
@@ -585,7 +585,7 @@ export function AsaasLinkDialog({
                     </p>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
-                    <span style={{ fontWeight: 700, color: "#EF4444" }}>−{formatCurrency(Number(entry.amount))}</span>
+                    <span style={{ fontWeight: 700, color: "var(--color-danger)" }}>−{formatCurrency(Number(entry.amount))}</span>
                     {isSelected && <Check size={14} color="var(--accent)" />}
                   </div>
                 </button>

@@ -16,7 +16,7 @@ function PageUnreadBadge({ count }: { count: number }) {
   return (
     <div style={{
       minWidth: '20px', height: '20px', borderRadius: '10px',
-      background: '#EF4444', color: 'white',
+      background: 'var(--color-danger)', color: 'white',
       fontSize: '0.65rem', fontWeight: 800,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       padding: '0 5px', flexShrink: 0,
@@ -372,8 +372,8 @@ export default function ChatPage() {
             )}
           </div>
           {!isConnected && (
-            <span style={{ fontSize: '0.7rem', color: '#EF4444', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#EF4444', display: 'inline-block' }} />
+            <span style={{ fontSize: '0.7rem', color: 'var(--color-danger)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--color-danger)', display: 'inline-block' }} />
               Reconectando...
             </span>
           )}

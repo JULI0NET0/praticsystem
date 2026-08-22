@@ -218,8 +218,8 @@ export default function NoteCard({
                   transition: 'color 0.15s, background 0.15s',
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.color = '#ef4444';
-                  e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
+                  e.currentTarget.style.color = 'var(--color-danger)';
+                  e.currentTarget.style.background = 'var(--color-danger-wash)';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.color = 'var(--text-secondary)';

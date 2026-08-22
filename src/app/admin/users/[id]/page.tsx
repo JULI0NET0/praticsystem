@@ -345,7 +345,7 @@ export default function UserDetailPage() {
               <p style={{ color: "var(--text-secondary)", fontSize: "0.78rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "8px" }}>
                 Custo Mensal
               </p>
-              <h4 style={{ fontSize: custoMensal > 0 ? "1.4rem" : "1.8rem", fontWeight: 800, color: custoMensal > 0 ? "#EF4444" : "var(--text-tertiary)" }}>
+              <h4 style={{ fontSize: custoMensal > 0 ? "1.4rem" : "1.8rem", fontWeight: 800, color: custoMensal > 0 ? "var(--color-danger)" : "var(--text-tertiary)" }}>
                 {custoMensal > 0 ? formatCurrency(custoMensal) : "—"}
               </h4>
               {custoMensal === 0 && (
@@ -431,7 +431,7 @@ export default function UserDetailPage() {
                 {/* Cards resumo */}
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px", marginBottom: "16px" }}>
                   {[
-                    { label: "Custo mensal", value: formatCurrency(custoMensal), color: "#EF4444" },
+                    { label: "Custo mensal", value: formatCurrency(custoMensal), color: "var(--color-danger)" },
                     { label: "Total pago", value: formatCurrency(totalPago), color: "var(--color-success)" },
                     { label: "Total pendente", value: formatCurrency(totalPendente), color: "#F59E0B" },
                   ].map((item) => (
@@ -466,7 +466,7 @@ export default function UserDetailPage() {
                           <span style={{ fontSize: "0.72rem", color: "var(--text-secondary)", flexShrink: 0 }}>
                             {RECURRENCE_LABEL[expense.recurrence]}
                           </span>
-                          <span style={{ fontWeight: 800, color: "#EF4444", fontSize: "0.9rem", flexShrink: 0 }}>
+                          <span style={{ fontWeight: 800, color: "var(--color-danger)", fontSize: "0.9rem", flexShrink: 0 }}>
                             {formatCurrency(Number(expense.amount))}
                           </span>
                           {entries.length > 0 && (
@@ -498,7 +498,7 @@ export default function UserDetailPage() {
                                       <span style={{ fontSize: "0.72rem", color: "var(--text-tertiary)", flex: 1 }}>
                                         vcto {d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}
                                       </span>
-                                      <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#EF4444" }}>{formatCurrency(Number(entry.amount))}</span>
+                                      <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--color-danger)" }}>{formatCurrency(Number(entry.amount))}</span>
                                       <span style={{ fontSize: "0.68rem", fontWeight: 700, padding: "2px 7px", borderRadius: "5px", color: sc, background: `${sc}18`, border: `1px solid ${sc}30` }}>{sl}</span>
                                     </div>
                                   );

@@ -181,7 +181,7 @@ export default function ServicesPage() {
         {/* Enhanced Table */}
         <div className="table-container">
           {error && (
-            <div style={{ padding: '20px', margin: '20px', borderRadius: '12px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', color: '#ef4444', textAlign: 'center' }}>
+            <div style={{ padding: '20px', margin: '20px', borderRadius: '12px', background: 'var(--color-danger-wash)', border: '1px solid var(--color-danger-wash)', color: 'var(--color-danger)', textAlign: 'center' }}>
               {error}
             </div>
           )}

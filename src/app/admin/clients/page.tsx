@@ -483,8 +483,8 @@ export default function ClientsPage() {
                                 <span style={{ fontWeight: 500 }}>R$ {p.value?.toFixed(2)}</span>
                                 <span style={{
                                   padding: '2px 8px', borderRadius: '999px', fontSize: '0.7rem', fontWeight: 600,
-                                  background: isPaid ? 'var(--color-success-wash)' : isOverdue ? 'rgba(239,68,68,0.15)' : 'rgba(234,179,8,0.15)',
-                                  color: isPaid ? 'var(--color-success)' : isOverdue ? '#f87171' : '#facc15',
+                                  background: isPaid ? 'var(--color-success-wash)' : isOverdue ? 'var(--color-danger-wash)' : 'rgba(234,179,8,0.15)',
+                                  color: isPaid ? 'var(--color-success)' : isOverdue ? 'var(--color-danger)' : '#facc15',
                                 }}>
                                   {isPaid ? 'Pago' : isOverdue ? 'Vencido' : 'Pendente'}
                                 </span>

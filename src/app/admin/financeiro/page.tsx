@@ -537,7 +537,7 @@ export default function FinanceiroPage() {
               {[
                 { label: "Previsto", value: faturamentoPrevisto, color: "#60A5FA", max: Math.max(faturamentoPrevisto, despesas, 1) },
                 { label: "Realizado", value: faturamentoRealizado, color: "var(--color-success)", max: Math.max(faturamentoPrevisto, despesas, 1) },
-                { label: "Despesas", value: despesas, color: "#EF4444", max: Math.max(faturamentoPrevisto, despesas, 1) },
+                { label: "Despesas", value: despesas, color: "var(--color-danger)", max: Math.max(faturamentoPrevisto, despesas, 1) },
                 { label: "Lucro", value: Math.max(faturamentoRealizado - despesas, 0), color: "var(--accent)", max: Math.max(faturamentoPrevisto, despesas, 1) },
               ].map((item) => (
                 <div key={item.label} style={{ marginBottom: "16px" }}>
@@ -604,7 +604,7 @@ export default function FinanceiroPage() {
               {expenses.filter((e) => e.status === "active" && e.recurrence === "monthly").slice(0, 8).map((e) => (
                 <div key={e.id} style={{ padding: "14px 16px", background: "rgba(255,255,255,0.02)", border: "1px solid var(--border)", borderRadius: "14px" }}>
                   <p style={{ fontSize: "0.8rem", fontWeight: 700, marginBottom: "4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.description}</p>
-                  <p style={{ fontSize: "1.1rem", fontWeight: 800, color: "#EF4444" }}>
+                  <p style={{ fontSize: "1.1rem", fontWeight: 800, color: "var(--color-danger)" }}>
                     {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(e.amount))}
                   </p>
                   {e.due_day && <p style={{ fontSize: "0.72rem", color: "var(--text-tertiary)", marginTop: "2px" }}>Dia {String(e.due_day).padStart(2, "0")}</p>}

@@ -70,7 +70,7 @@ export default function MobileNav({ onOpenMenu, unreadChat = 0 }: MobileNavProps
                     minWidth: '16px',
                     height: '16px',
                     borderRadius: '8px',
-                    backgroundColor: '#EF4444',
+                    backgroundColor: 'var(--color-danger)',
                     color: 'white',
                     fontSize: '0.55rem',
                     fontWeight: 800,

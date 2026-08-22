@@ -70,7 +70,7 @@ export default function DropdownMenu({ trigger, items, align = 'left', className
                   key={index}
                   className="context-menu-item"
                   style={{
-                    color: item.danger ? '#EF4444' : 'var(--text-primary)',
+                    color: item.danger ? 'var(--color-danger)' : 'var(--text-primary)',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '12px',
@@ -86,13 +86,13 @@ export default function DropdownMenu({ trigger, items, align = 'left', className
                     transition: 'all 0.2s'
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.background = item.danger ? 'rgba(239, 68, 68, 0.15)' : 'rgba(217, 72, 15, 0.15)';
-                    e.currentTarget.style.color = item.danger ? '#EF4444' : 'var(--accent)';
+                    e.currentTarget.style.background = item.danger ? 'var(--color-danger-wash)' : 'rgba(217, 72, 15, 0.15)';
+                    e.currentTarget.style.color = item.danger ? 'var(--color-danger)' : 'var(--accent)';
                     e.currentTarget.style.transform = 'translateX(4px)';
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.background = 'transparent';
-                    e.currentTarget.style.color = item.danger ? '#EF4444' : 'var(--text-primary)';
+                    e.currentTarget.style.color = item.danger ? 'var(--color-danger)' : 'var(--text-primary)';
                     e.currentTarget.style.transform = 'translateX(0)';
                   }}
                   onClick={(e) => {

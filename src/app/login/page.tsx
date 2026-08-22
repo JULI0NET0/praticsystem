@@ -112,7 +112,7 @@ export default function LoginPage() {
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
-                style={{ padding: '12px', borderRadius: '12px', background: 'rgba(239, 68, 68, 0.1)', color: '#EF4444', fontSize: '0.875rem', textAlign: 'center', border: '1px solid rgba(239, 68, 68, 0.2)' }}
+                style={{ padding: '12px', borderRadius: '12px', background: 'var(--color-danger-wash)', color: 'var(--color-danger)', fontSize: '0.875rem', textAlign: 'center', border: '1px solid var(--color-danger-wash)' }}
               >
                 {error}
               </motion.div>

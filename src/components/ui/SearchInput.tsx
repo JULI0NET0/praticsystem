@@ -81,9 +81,9 @@ export default function SearchInput({
             transition: 'all 0.2s'
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'rgba(239, 68, 68, 0.15)';
-            e.currentTarget.style.color = '#EF4444';
-            e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+            e.currentTarget.style.background = 'var(--color-danger-wash)';
+            e.currentTarget.style.color = 'var(--color-danger)';
+            e.currentTarget.style.borderColor = 'var(--color-danger-wash)';
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';

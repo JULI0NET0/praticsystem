@@ -123,9 +123,9 @@ export default function LoginPage() {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             style={{ 
-              padding: '12px', borderRadius: '12px', background: 'rgba(239, 68, 68, 0.1)', 
-              color: '#EF4444', fontSize: '0.85rem', display: 'flex', alignItems: 'center', 
-              gap: '8px', border: '1px solid rgba(239, 68, 68, 0.2)' 
+              padding: '12px', borderRadius: '12px', background: 'var(--color-danger-wash)', 
+              color: 'var(--color-danger)', fontSize: '0.85rem', display: 'flex', alignItems: 'center', 
+              gap: '8px', border: '1px solid var(--color-danger-wash)' 
             }}
           >
             <AlertCircle size={16} /> {error}

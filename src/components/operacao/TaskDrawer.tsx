@@ -142,7 +142,7 @@ export default function TaskDrawer({ list, taskId, onClose }: Props) {
                     onClose();
                   }}
                   title="Excluir tarefa"
-                  style={{ background: "none", border: "none", color: "#EF4444", cursor: "pointer", padding: 6 }}
+                  style={{ background: "none", border: "none", color: "var(--color-danger)", cursor: "pointer", padding: 6 }}
                 >
                   <Trash2 size={16} />
                 </button>

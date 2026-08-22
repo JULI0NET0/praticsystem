@@ -423,7 +423,7 @@ export default function ContractsPage() {
                                 e.stopPropagation();
                                 setContractToDelete(contract.id);
                               }}
-                              style={{ width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--card-inner-bg)', color: '#EF4444', border: 'none', cursor: 'pointer' }}
+                              style={{ width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--card-inner-bg)', color: 'var(--color-danger)', border: 'none', cursor: 'pointer' }}
                             >
                               <Trash2 size={16} />
                             </button>
@@ -514,7 +514,7 @@ export default function ContractsPage() {
                           e.stopPropagation();
                           setContractToDelete(contract.id);
                         }}
-                        style={{ backgroundColor: 'var(--card-inner-bg)', color: '#EF4444' }}
+                        style={{ backgroundColor: 'var(--card-inner-bg)', color: 'var(--color-danger)' }}
                       >
                         <Trash2 size={16} />
                       </button>
@@ -544,7 +544,7 @@ export default function ContractsPage() {
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <div style={{ fontWeight: 700, color: 'var(--accent)' }}>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(invoice.amount)}</div>
-                  <div style={{ fontSize: '0.75rem', color: '#EF4444' }}>Pendente</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--color-danger)' }}>Pendente</div>
                 </div>
               </div>
             ))}
@@ -594,8 +594,8 @@ export default function ContractsPage() {
               style={{ width: '100%', maxWidth: '450px', padding: '32px', textAlign: 'center' }}
             >
               <div style={{
-                width: '64px', height: '64px', borderRadius: '50%', backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#EF4444', margin: '0 auto 24px'
+                width: '64px', height: '64px', borderRadius: '50%', backgroundColor: 'var(--color-danger-wash)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-danger)', margin: '0 auto 24px'
               }}>
                 <Trash2 size={32} />
               </div>
@@ -607,7 +607,7 @@ export default function ContractsPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <button
                   className="btn"
-                  style={{ backgroundColor: '#EF4444', color: 'white', width: '100%' }}
+                  style={{ backgroundColor: 'var(--color-danger)', color: 'white', width: '100%' }}
                   onClick={handleDeleteContract}
                   disabled={isDeleting}
                 >

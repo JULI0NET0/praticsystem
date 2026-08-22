@@ -301,7 +301,7 @@ export function Repasses({ asaasTransactions, clients, startDate, endDate, onSet
                               onClick={() => handleUnmark(t.id)}
                               disabled={busy === t.id}
                               title="Remover do repasse"
-                              style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "26px", height: "26px", borderRadius: "8px", border: "1px solid var(--border)", background: "rgba(239,68,68,0.08)", color: "#EF4444", cursor: "pointer" }}
+                              style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "26px", height: "26px", borderRadius: "8px", border: "1px solid var(--border)", background: "var(--color-danger-wash)", color: "var(--color-danger)", cursor: "pointer" }}
                             >
                               <X size={14} />
                             </button>

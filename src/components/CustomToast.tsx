@@ -50,13 +50,13 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                 alignItems: 'center',
                 gap: '12px',
                 boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
-                border: toast.type === 'error' ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid var(--border)',
-                background: toast.type === 'error' ? 'rgba(239, 68, 68, 0.1)' : 'var(--glass-bg)',
+                border: toast.type === 'error' ? '1px solid var(--color-danger-wash)' : '1px solid var(--border)',
+                background: toast.type === 'error' ? 'var(--color-danger-wash)' : 'var(--glass-bg)',
                 backdropFilter: 'blur(20px)'
               }}
             >
               {toast.type === 'success' && <CheckCircle2 size={20} color="var(--color-success)" />}
-              {toast.type === 'error' && <AlertCircle size={20} color="#EF4444" />}
+              {toast.type === 'error' && <AlertCircle size={20} color="var(--color-danger)" />}
               {toast.type === 'info' && <Info size={20} color="var(--accent)" />}
 
               <span style={{ fontSize: '0.9rem', fontWeight: 600, flex: 1 }}>{toast.message}</span>

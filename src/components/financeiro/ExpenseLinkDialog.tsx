@@ -103,9 +103,9 @@ export function ExpenseLinkDialog({
       {entry && (
         <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
           {/* Entry summary */}
-          <div style={{ padding: "12px 16px", borderRadius: "12px", background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.2)" }}>
+          <div style={{ padding: "12px 16px", borderRadius: "12px", background: "var(--color-danger-wash)", border: "1px solid var(--color-danger-wash)" }}>
             <p style={{ fontWeight: 700, fontSize: "0.9rem" }}>{entry.description}</p>
-            <p style={{ fontWeight: 800, fontSize: "1.05rem", color: "#EF4444", marginTop: "2px" }}>
+            <p style={{ fontWeight: 800, fontSize: "1.05rem", color: "var(--color-danger)", marginTop: "2px" }}>
               − {formatCurrency(entry.amount)}
             </p>
           </div>
@@ -169,7 +169,7 @@ export function ExpenseLinkDialog({
                     </p>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
-                    <span style={{ fontWeight: 700, color: "#EF4444" }}>− {formatCurrency(Number(txn.value))}</span>
+                    <span style={{ fontWeight: 700, color: "var(--color-danger)" }}>− {formatCurrency(Number(txn.value))}</span>
                     {selected && (
                       <span style={{ width: "18px", height: "18px", borderRadius: "50%", background: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                         <Check size={11} color="#fff" />

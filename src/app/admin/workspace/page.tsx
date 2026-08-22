@@ -451,11 +451,11 @@ export default function WorkspacePage() {
             title={isTracking ? "Parar Timer" : "Iniciar Timer"}
             style={{
               height: '36px', padding: '0 12px', borderRadius: '10px',
-              background: isTracking ? 'rgba(239, 68, 68, 0.1)' : 'var(--color-success-wash)',
-              color: isTracking ? '#EF4444' : 'var(--color-success)',
+              background: isTracking ? 'var(--color-danger-wash)' : 'var(--color-success-wash)',
+              color: isTracking ? 'var(--color-danger)' : 'var(--color-success)',
               display: 'flex', alignItems: 'center', gap: '6px',
               transition: 'all 0.3s ease', fontSize: '0.8rem', fontWeight: 600,
-              border: `1px solid ${isTracking ? 'rgba(239, 68, 68, 0.2)' : 'var(--color-success-wash)'}`
+              border: `1px solid ${isTracking ? 'var(--color-danger-wash)' : 'var(--color-success-wash)'}`
             }}
           >
             {isTracking ? <Square size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" />}
@@ -552,7 +552,7 @@ export default function WorkspacePage() {
                     <div style={{ background: 'var(--accent)', color: 'white', padding: '4px 10px', borderRadius: '10px', fontSize: '0.65rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <GripVertical size={10} /> {w.colSpan}x{w.rowSpan}
                     </div>
-                    <button onClick={() => removeWidget(w.id)} style={{ color: '#EF4444', padding: '4px' }}>
+                    <button onClick={() => removeWidget(w.id)} style={{ color: 'var(--color-danger)', padding: '4px' }}>
                       <X size={16} />
                     </button>
                   </div>
@@ -680,7 +680,7 @@ function StatsWidget({ colSpan, demandsCount, todayHours, isTracking, onTimerTog
     { id: 'demands', label: "Demandas", value: demandsCount, icon: CheckCircle2, color: "var(--accent)", gradient: "linear-gradient(135deg, rgba(217, 72, 15, 0.2), transparent)" },
     { id: 'finished', label: "Finalizadas", value: "0", icon: CheckCircle2, color: "var(--color-success)", gradient: "linear-gradient(135deg, rgba(16, 185, 129, 0.2), transparent)" },
     { id: 'timer', label: "Tempo Hoje", value: todayHours.split(' ')[0], sub: todayHours.split(' ')[1], icon: isTracking ? Timer : Clock, color: isTracking ? "var(--color-success)" : "#3B82F6", gradient: isTracking ? "linear-gradient(135deg, var(--color-success-wash), transparent)" : "linear-gradient(135deg, rgba(59, 130, 246, 0.2), transparent)", interactive: true },
-    { id: 'alerts', label: "Alertas", value: "0", icon: Zap, color: "#EF4444", gradient: "linear-gradient(135deg, rgba(239, 68, 68, 0.2), transparent)" }
+    { id: 'alerts', label: "Alertas", value: "0", icon: Zap, color: "var(--color-danger)", gradient: "linear-gradient(135deg, var(--color-danger-wash), transparent)" }
   ];
 
   return (
@@ -832,8 +832,8 @@ function TimeTrackerWidget({ isTracking, todayHours, todayMinutes, currentSessio
             marginTop: '20px',
             padding: '10px 28px',
             borderRadius: '14px',
-            background: isTracking ? 'rgba(239, 68, 68, 0.1)' : 'var(--accent)',
-            color: isTracking ? '#EF4444' : 'white',
+            background: isTracking ? 'var(--color-danger-wash)' : 'var(--accent)',
+            color: isTracking ? 'var(--color-danger)' : 'white',
             fontSize: '0.9rem',
             fontWeight: 700,
             cursor: 'pointer',
@@ -841,7 +841,7 @@ function TimeTrackerWidget({ isTracking, todayHours, todayMinutes, currentSessio
             alignItems: 'center',
             gap: '8px',
             transition: 'all 0.3s ease',
-            border: isTracking ? '1px solid rgba(239, 68, 68, 0.2)' : 'none'
+            border: isTracking ? '1px solid var(--color-danger-wash)' : 'none'
           }}
         >
           {isTracking ? <><Square size={16} fill="currentColor" /> Parar Sessão</> : <><Play size={16} fill="currentColor" /> Iniciar Agora</>}
@@ -888,7 +888,7 @@ function PomodoroWidget() {
 
   const minutes  = Math.floor(remainingMs / 60000);
   const seconds  = Math.floor((remainingMs % 60000) / 1000);
-  const modeColor = mode === 'work' ? '#EF4444' : 'var(--color-success)';
+  const modeColor = mode === 'work' ? 'var(--color-danger)' : 'var(--color-success)';
   const level = getPomodoroLevel(totalPoints);
   const nextLevel = POMODORO_LEVELS.find(l => l.min > totalPoints);
   const progressToNext = nextLevel ? ((totalPoints - level.min) / (nextLevel.min - level.min)) * 100 : 100;
@@ -950,9 +950,9 @@ function PomodoroWidget() {
             onClick={() => switchMode(m)}
             style={{
               flex: 1, padding: '7px', borderRadius: '10px', fontSize: '0.72rem', fontWeight: 700,
-              background: mode === m ? (m === 'work' ? 'rgba(239,68,68,0.15)' : 'var(--color-success-wash)') : 'rgba(255,255,255,0.03)',
-              color: mode === m ? (m === 'work' ? '#EF4444' : 'var(--color-success)') : 'var(--text-secondary)',
-              border: `1px solid ${mode === m ? (m === 'work' ? 'rgba(239,68,68,0.3)' : 'var(--color-success-wash)') : 'var(--border)'}`,
+              background: mode === m ? (m === 'work' ? 'var(--color-danger-wash)' : 'var(--color-success-wash)') : 'rgba(255,255,255,0.03)',
+              color: mode === m ? (m === 'work' ? 'var(--color-danger)' : 'var(--color-success)') : 'var(--text-secondary)',
+              border: `1px solid ${mode === m ? (m === 'work' ? 'var(--color-danger-wash)' : 'var(--color-success-wash)') : 'var(--border)'}`,
               cursor: isRunning ? 'not-allowed' : 'pointer',
               transition: 'all 0.2s', opacity: isRunning && mode !== m ? 0.5 : 1
             }}
@@ -1070,7 +1070,7 @@ function PomodoroWidget() {
               key={i}
               style={{
                 width: '10px', height: '10px', borderRadius: '50%',
-                background: '#EF4444', boxShadow: '0 0 6px rgba(239,68,68,0.5)'
+                background: 'var(--color-danger)', boxShadow: '0 0 6px var(--color-danger-wash)'
               }}
             />
           ))}

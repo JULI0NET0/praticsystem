@@ -461,9 +461,9 @@ export default function MobileMenuDrawer({ isOpen, onClose }: MobileMenuDrawerPr
                   gap: '14px',
                   padding: '14px 16px',
                   borderRadius: '14px',
-                  background: 'rgba(239, 68, 68, 0.06)',
-                  border: '1px solid rgba(239, 68, 68, 0.1)',
-                  color: '#EF4444',
+                  background: 'var(--color-danger-wash)',
+                  border: '1px solid var(--color-danger-wash)',
+                  color: 'var(--color-danger)',
                   cursor: 'pointer',
                   textAlign: 'left',
                   minHeight: '48px'

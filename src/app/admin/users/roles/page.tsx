@@ -169,7 +169,7 @@ export default function RolesPage() {
                 </div>
                 <button
                   onClick={() => handleDeleteRole(role.id)}
-                  style={{ background: 'none', border: 'none', color: 'rgba(239, 68, 68, 0.6)', cursor: 'pointer' }}
+                  style={{ background: 'none', border: 'none', color: 'var(--color-danger-wash)', cursor: 'pointer' }}
                 >
                   <Trash2 size={18} />
                 </button>

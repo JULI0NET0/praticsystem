@@ -285,7 +285,7 @@ export function DespesasVariaveis({
                   </div>
 
                   <div style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 }}>
-                    <span style={{ fontWeight: 800, color: "#EF4444", fontSize: "1.1rem" }}>
+                    <span style={{ fontWeight: 800, color: "var(--color-danger)", fontSize: "1.1rem" }}>
                       {total > 0 ? formatCurrency(total) : "—"}
                     </span>
                     <button
@@ -300,7 +300,7 @@ export function DespesasVariaveis({
                         e.stopPropagation();
                         if (confirm(`Excluir o grupo "${group.description}" e todos os seus lançamentos?`)) onDeleteGroup(group.id);
                       }}
-                      style={{ background: "none", border: "none", cursor: "pointer", color: "#EF4444", padding: "4px", display: "flex" }}
+                      style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-danger)", padding: "4px", display: "flex" }}
                       title="Excluir grupo"
                     >
                       <Trash2 size={14} />
@@ -371,7 +371,7 @@ export function DespesasVariaveis({
                                           {responsible?.label ?? "Empresa"}
                                         </span>
                                       </td>
-                                      <td style={{ textAlign: "right", fontWeight: 700, color: "#EF4444", whiteSpace: "nowrap" }}>
+                                      <td style={{ textAlign: "right", fontWeight: 700, color: "var(--color-danger)", whiteSpace: "nowrap" }}>
                                         {formatCurrency(Number(entry.amount))}
                                       </td>
                                       <td>
@@ -403,7 +403,7 @@ export function DespesasVariaveis({
                                                 {remaining > 0 && (
                                                   <div style={{ display: "flex", justifyContent: "space-between", gap: "8px", fontSize: "0.68rem", fontWeight: 700, borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "3px", marginTop: "1px", whiteSpace: "nowrap" }}>
                                                     <span style={{ color: "var(--text-secondary)" }}>Em aberto</span>
-                                                    <span style={{ color: "#EF4444" }}>{formatCurrency(remaining)}</span>
+                                                    <span style={{ color: "var(--color-danger)" }}>{formatCurrency(remaining)}</span>
                                                   </div>
                                                 )}
                                               </div>
@@ -450,7 +450,7 @@ export function DespesasVariaveis({
                                           {onDeleteEntry && (
                                             <button
                                               onClick={() => { if (confirm("Excluir este lançamento?")) onDeleteEntry(entry.id); }}
-                                              style={{ background: "none", border: "none", cursor: "pointer", color: "#EF4444", padding: "4px", display: "flex" }}
+                                              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-danger)", padding: "4px", display: "flex" }}
                                               title="Excluir"
                                             >
                                               <Trash2 size={13} />
@@ -620,7 +620,7 @@ export function DespesasVariaveis({
           <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
             <div style={{ padding: "14px 16px", background: "var(--color-success-wash)", border: "1px solid var(--color-success-wash)", borderRadius: "12px" }}>
               <p style={{ fontWeight: 700 }}>{baixaEntry.description}</p>
-              <p style={{ fontWeight: 800, color: "#EF4444", fontSize: "1.1rem", marginTop: "4px" }}>{formatCurrency(Number(baixaEntry.amount))}</p>
+              <p style={{ fontWeight: 800, color: "var(--color-danger)", fontSize: "1.1rem", marginTop: "4px" }}>{formatCurrency(Number(baixaEntry.amount))}</p>
             </div>
             <div>
               <label style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--text-secondary)", display: "block", marginBottom: "6px" }}>Data do Pagamento</label>

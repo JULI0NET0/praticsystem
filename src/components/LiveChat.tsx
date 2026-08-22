@@ -18,7 +18,7 @@ function UnreadBadge({ count }: { count: number }) {
   return (
     <div style={{
       minWidth: '18px', height: '18px', borderRadius: '9px',
-      background: '#EF4444', color: 'white',
+      background: 'var(--color-danger)', color: 'white',
       fontSize: '0.6rem', fontWeight: 800,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       padding: '0 4px', flexShrink: 0,
@@ -260,7 +260,7 @@ export default function LiveChat() {
               <div style={{
                 position: 'absolute', top: '-6px', right: '-6px',
                 minWidth: '20px', height: '20px', borderRadius: '10px',
-                background: totalUnread > 0 ? '#EF4444' : 'var(--color-success)',
+                background: totalUnread > 0 ? 'var(--color-danger)' : 'var(--color-success)',
                 color: 'white', fontSize: '0.6rem', fontWeight: 800,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 padding: '0 5px', border: '2px solid var(--bg-primary)',
@@ -311,8 +311,8 @@ export default function LiveChat() {
                     onClick={isTracking ? clockOut : clockIn}
                     style={{
                       width: '100%', padding: '6px', borderRadius: '8px', border: 'none',
-                      background: isTracking ? 'rgba(239, 68, 68, 0.12)' : 'var(--color-success-wash)',
-                      color: isTracking ? '#EF4444' : 'var(--color-success)',
+                      background: isTracking ? 'var(--color-danger-wash)' : 'var(--color-success-wash)',
+                      color: isTracking ? 'var(--color-danger)' : 'var(--color-success)',
                       fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer',
                     }}
                   >

@@ -278,7 +278,7 @@ export default function UsersPage() {
                         <td>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              {user.role === 'admin' && <ShieldAlert size={14} color="#EF4444" />}
+                              {user.role === 'admin' && <ShieldAlert size={14} color="var(--color-danger)" />}
                               {user.role === 'board' && <Shield size={14} color="var(--accent)" />}
                               {user.role === 'social_media' && <Shield size={14} color="var(--color-success)" />}
                               {user.role === 'filmmaker' && <Shield size={14} color="#8B5CF6" />}
@@ -286,7 +286,7 @@ export default function UsersPage() {
                               <span style={{
                                 fontWeight: 500,
                                 fontSize: '0.875rem',
-                                color: user.role === 'admin' ? '#EF4444' :
+                                color: user.role === 'admin' ? 'var(--color-danger)' :
                                   user.role === 'board' ? 'var(--accent)' :
                                     user.role === 'social_media' ? 'var(--color-success)' :
                                       user.role === 'filmmaker' ? '#8B5CF6' : 'var(--text-secondary)'
@@ -339,8 +339,8 @@ export default function UsersPage() {
                               style={{
                                 width: '32px', height: '32px', borderRadius: '8px',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                background: 'rgba(239, 68, 68, 0.1)', color: '#EF4444',
-                                border: '1px solid rgba(239, 68, 68, 0.2)'
+                                background: 'var(--color-danger-wash)', color: 'var(--color-danger)',
+                                border: '1px solid var(--color-danger-wash)'
                               }}
                             >
                               <Trash2 size={16} />
@@ -419,7 +419,7 @@ export default function UsersPage() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <span style={{
                             fontWeight: 500, fontSize: '0.75rem',
-                            color: user.role === 'admin' ? '#EF4444' :
+                            color: user.role === 'admin' ? 'var(--color-danger)' :
                               user.role === 'board' ? 'var(--accent)' :
                                 user.role === 'social_media' ? 'var(--color-success)' : '#8B5CF6'
                           }}>
@@ -469,8 +469,8 @@ export default function UsersPage() {
               style={{ width: '100%', maxWidth: '450px', padding: '32px', textAlign: 'center' }}
             >
               <div style={{
-                width: '64px', height: '64px', borderRadius: '50%', backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#EF4444', margin: '0 auto 24px'
+                width: '64px', height: '64px', borderRadius: '50%', backgroundColor: 'var(--color-danger-wash)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-danger)', margin: '0 auto 24px'
               }}>
                 <Trash2 size={32} />
               </div>
@@ -482,7 +482,7 @@ export default function UsersPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <button
                   className="btn"
-                  style={{ backgroundColor: '#EF4444', color: 'white', width: '100%' }}
+                  style={{ backgroundColor: 'var(--color-danger)', color: 'white', width: '100%' }}
                   onClick={handleDeleteUser}
                   disabled={isProcessing}
                 >

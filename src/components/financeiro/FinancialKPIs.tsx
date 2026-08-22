@@ -104,11 +104,11 @@ export function FinancialKPIs({
       value: null,
       sub: null,
       icon: <ArrowDownRight size={20} />,
-      color: "#EF4444",
-      bg: "rgba(239,68,68,0.06)",
-      border: "rgba(239,68,68,0.15)",
+      color: "var(--color-danger)",
+      bg: "var(--color-danger-wash)",
+      border: "var(--color-danger-wash)",
       splitValues: [
-        { label: "Pagas", value: formatCurrency(despesas), color: "#EF4444" },
+        { label: "Pagas", value: formatCurrency(despesas), color: "var(--color-danger)" },
         { label: "Previstas", value: formatCurrency(despesasPrevistas), color: "#F59E0B" },
       ],
       onClick: () => setDespesasOpen(true),
@@ -127,7 +127,7 @@ export function FinancialKPIs({
       value: `${margem.toFixed(1)}%`,
       sub: `Lucro: ${formatCurrency(lucro)}`,
       icon: <Percent size={20} />,
-      color: margem >= 20 ? "var(--color-success)" : margem >= 0 ? "#F59E0B" : "#EF4444",
+      color: margem >= 20 ? "var(--color-success)" : margem >= 0 ? "#F59E0B" : "var(--color-danger)",
       bg: "rgba(255,255,255,0.02)",
       border: "var(--border)",
     },
@@ -288,7 +288,7 @@ export function FinancialKPIs({
             <div style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
               <span style={{ fontSize: "0.85rem", fontWeight: 700 }}>
                 <span style={{ color: "var(--text-tertiary)" }}>Pagas: </span>
-                <span style={{ color: "#EF4444" }}>{formatCurrency(despesas)}</span>
+                <span style={{ color: "var(--color-danger)" }}>{formatCurrency(despesas)}</span>
               </span>
               <span style={{ fontSize: "0.85rem", fontWeight: 700 }}>
                 <span style={{ color: "var(--text-tertiary)" }}>Previstas: </span>
@@ -341,7 +341,7 @@ export function FinancialKPIs({
                       </span>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: "12px", flexShrink: 0 }}>
-                      <span style={{ fontSize: "1rem", fontWeight: 800, color: statusMeta.label === "Paga" ? "#EF4444" : "var(--text-primary)" }}>
+                      <span style={{ fontSize: "1rem", fontWeight: 800, color: statusMeta.label === "Paga" ? "var(--color-danger)" : "var(--text-primary)" }}>
                         {formatCurrency(item.amount)}
                       </span>
                       <span
@@ -403,7 +403,7 @@ export function FinancialKPIs({
                   item.status === "paid"
                     ? { label: "Recebido", color: "var(--color-success)", bg: "var(--color-success-wash)" }
                     : item.status === "overdue"
-                    ? { label: "Vencido", color: "#EF4444", bg: "rgba(239,68,68,0.1)" }
+                    ? { label: "Vencido", color: "var(--color-danger)", bg: "var(--color-danger-wash)" }
                     : { label: "Previsto", color: "#F59E0B", bg: "rgba(245,158,11,0.1)" };
                 return (
                   <div

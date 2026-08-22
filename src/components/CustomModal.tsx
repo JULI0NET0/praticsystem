@@ -36,9 +36,9 @@ export default function CustomModal({
         className="glass-card"
         style={{ width: '100%', maxWidth: '400px', padding: '32px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}
       >
-        <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: type === 'error' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(217, 72, 15, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: type === 'error' ? 'var(--color-danger-wash)' : 'rgba(217, 72, 15, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {type === 'success' && <CheckCircle2 size={32} color="var(--color-success)" />}
-          {type === 'error' && <AlertCircle size={32} color="#EF4444" />}
+          {type === 'error' && <AlertCircle size={32} color="var(--color-danger)" />}
           {type === 'info' && <Info size={32} color="var(--accent)" />}
           {type === 'confirm' && <Info size={32} color="var(--accent)" />}
         </div>
@@ -62,7 +62,7 @@ export default function CustomModal({
             as="button"
             onClick={onConfirm || onClose}
             className={`btn ${type === 'error' ? 'btn-danger' : 'btn-accent'}`}
-            style={{ flex: 1, background: type === 'error' ? '#EF4444' : 'var(--accent)' }}
+            style={{ flex: 1, background: type === 'error' ? 'var(--color-danger)' : 'var(--accent)' }}
           >
             {confirmText}
           </Spotlight>

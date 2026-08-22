@@ -214,14 +214,14 @@ export function DespesasList({ expenses, expenseEntries, users, asaasTransaction
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          background: "rgba(239,68,68,0.05)",
-          border: "1px solid rgba(239,68,68,0.12)",
+          background: "var(--color-danger-wash)",
+          border: "1px solid var(--color-danger-wash)",
         }}
       >
         <span style={{ fontSize: "0.9rem", color: "var(--text-secondary)", fontWeight: 600 }}>
           Total de despesas fixas mensais ativas
         </span>
-        <span style={{ fontSize: "1.5rem", fontWeight: 800, color: "#EF4444" }}>
+        <span style={{ fontSize: "1.5rem", fontWeight: 800, color: "var(--color-danger)" }}>
           {formatCurrency(totalMensal)}
         </span>
       </div>
@@ -280,7 +280,7 @@ export function DespesasList({ expenses, expenseEntries, users, asaasTransaction
                   <td style={{ color: "var(--text-secondary)", fontSize: "0.875rem" }}>
                     {RECURRENCES[expense.recurrence]}
                   </td>
-                  <td style={{ fontWeight: 700, color: "#EF4444" }}>{formatCurrency(Number(expense.amount))}</td>
+                  <td style={{ fontWeight: 700, color: "var(--color-danger)" }}>{formatCurrency(Number(expense.amount))}</td>
                   <td>
                     {(() => {
                       if (!selectedMonth) return <span style={{ color: "var(--text-tertiary)", fontSize: "0.78rem" }}>—</span>;
@@ -296,14 +296,14 @@ export function DespesasList({ expenses, expenseEntries, users, asaasTransaction
                         return (
                           <div style={{ display: "flex", flexDirection: "column", gap: "1px" }}>
                             <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "#F59E0B" }}>Parcial</span>
-                            <span style={{ fontSize: "0.7rem", color: "#EF4444" }}>{formatCurrency(remaining)} em aberto</span>
+                            <span style={{ fontSize: "0.7rem", color: "var(--color-danger)" }}>{formatCurrency(remaining)} em aberto</span>
                           </div>
                         );
                       }
                       return (
                         <div style={{ display: "flex", flexDirection: "column", gap: "1px" }}>
-                          <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "#EF4444" }}>Pendente</span>
-                          <span style={{ fontSize: "0.7rem", color: "#EF4444" }}>{formatCurrency(Number(monthEntry.amount))}</span>
+                          <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--color-danger)" }}>Pendente</span>
+                          <span style={{ fontSize: "0.7rem", color: "var(--color-danger)" }}>{formatCurrency(Number(monthEntry.amount))}</span>
                         </div>
                       );
                     })()}
@@ -356,7 +356,7 @@ export function DespesasList({ expenses, expenseEntries, users, asaasTransaction
                       </button>
                       <button
                         onClick={() => onDelete(expense.id)}
-                        style={{ background: "none", border: "none", cursor: "pointer", color: "#EF4444", padding: "4px", display: "flex" }}
+                        style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-danger)", padding: "4px", display: "flex" }}
                       >
                         <Trash2 size={15} />
                       </button>
@@ -395,7 +395,7 @@ export function DespesasList({ expenses, expenseEntries, users, asaasTransaction
             </div>
             <div className="mobile-card-row">
               <span>Valor</span>
-              <strong style={{ color: "#EF4444" }}>{formatCurrency(Number(expense.amount))}</strong>
+              <strong style={{ color: "var(--color-danger)" }}>{formatCurrency(Number(expense.amount))}</strong>
             </div>
             <div className="mobile-card-row">
               <span>Recorrência</span>
@@ -444,7 +444,7 @@ export function DespesasList({ expenses, expenseEntries, users, asaasTransaction
               </button>
               <button
                 onClick={() => onDelete(expense.id)}
-                style={{ background: "none", border: "none", cursor: "pointer", color: "#EF4444", padding: "4px", display: "flex" }}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-danger)", padding: "4px", display: "flex" }}
               >
                 <Trash2 size={15} />
               </button>
@@ -492,7 +492,7 @@ export function DespesasList({ expenses, expenseEntries, users, asaasTransaction
           >
             <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
               {/* Cabeçalho da despesa */}
-              <div style={{ padding: "14px 16px", background: "rgba(239,68,68,0.05)", border: "1px solid rgba(239,68,68,0.12)", borderRadius: "12px" }}>
+              <div style={{ padding: "14px 16px", background: "var(--color-danger-wash)", border: "1px solid var(--color-danger-wash)", borderRadius: "12px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px" }}>
                   <div>
                     <p style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginBottom: "2px" }}>
@@ -501,7 +501,7 @@ export function DespesasList({ expenses, expenseEntries, users, asaasTransaction
                     </p>
                     <p style={{ fontWeight: 700, fontSize: "1rem" }}>{viewEntriesDialog.description}</p>
                   </div>
-                  <p style={{ fontWeight: 800, color: "#EF4444", fontSize: "1.15rem", flexShrink: 0 }}>
+                  <p style={{ fontWeight: 800, color: "var(--color-danger)", fontSize: "1.15rem", flexShrink: 0 }}>
                     {formatCurrency(Number(viewEntriesDialog.amount))}
                   </p>
                 </div>
@@ -552,7 +552,7 @@ export function DespesasList({ expenses, expenseEntries, users, asaasTransaction
                             <p style={{ fontSize: "0.875rem", fontWeight: 600, textTransform: "capitalize" }}>{mesLabel}</p>
                             <p style={{ fontSize: "0.72rem", color: "var(--text-tertiary)", marginTop: "1px" }}>vcto {diaLabel}</p>
                           </div>
-                          <span style={{ fontWeight: 700, color: "#EF4444", fontSize: "0.9rem" }}>{formatCurrency(Number(entry.amount))}</span>
+                          <span style={{ fontWeight: 700, color: "var(--color-danger)", fontSize: "0.9rem" }}>{formatCurrency(Number(entry.amount))}</span>
                           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "1px", flexShrink: 0 }}>
                             <span style={{ fontSize: "0.72rem", fontWeight: 700, padding: "3px 8px", borderRadius: "6px", color: sc, background: `${sc}18`, border: `1px solid ${sc}30` }}>{sl}</span>
                             {effStatus === "partial" && (
@@ -608,7 +608,7 @@ export function DespesasList({ expenses, expenseEntries, users, asaasTransaction
                                 {remaining > 0 && (
                                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.72rem", fontWeight: 700, borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "4px", marginTop: "2px" }}>
                                     <span style={{ color: "var(--text-secondary)" }}>Saldo em aberto</span>
-                                    <span style={{ color: "#EF4444" }}>{formatCurrency(remaining)}</span>
+                                    <span style={{ color: "var(--color-danger)" }}>{formatCurrency(remaining)}</span>
                                   </div>
                                 )}
                               </div>
@@ -651,7 +651,7 @@ export function DespesasList({ expenses, expenseEntries, users, asaasTransaction
           <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
             <div style={{ padding: "14px 16px", background: "var(--color-success-wash)", border: "1px solid var(--color-success-wash)", borderRadius: "12px" }}>
               <p style={{ fontWeight: 700 }}>{baixaEntry.description}</p>
-              <p style={{ fontWeight: 800, color: "#EF4444", fontSize: "1.1rem", marginTop: "4px" }}>
+              <p style={{ fontWeight: 800, color: "var(--color-danger)", fontSize: "1.1rem", marginTop: "4px" }}>
                 {formatCurrency(Number(baixaEntry.amount))}
               </p>
             </div>
@@ -819,10 +819,10 @@ export function DespesasList({ expenses, expenseEntries, users, asaasTransaction
       >
         {genDialog && (
           <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-            <div className="glass-card" style={{ padding: "14px 16px", background: "rgba(239,68,68,0.05)", border: "1px solid rgba(239,68,68,0.12)" }}>
+            <div className="glass-card" style={{ padding: "14px 16px", background: "var(--color-danger-wash)", border: "1px solid var(--color-danger-wash)" }}>
               <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginBottom: "2px" }}>{CATEGORIES[genDialog.category]}</p>
               <p style={{ fontWeight: 700, fontSize: "1rem" }}>{genDialog.description}</p>
-              <p style={{ fontWeight: 800, color: "#EF4444", fontSize: "1.15rem", marginTop: "2px" }}>
+              <p style={{ fontWeight: 800, color: "var(--color-danger)", fontSize: "1.15rem", marginTop: "2px" }}>
                 {formatCurrency(Number(genDialog.amount))}
                 {genDialog.due_day && (
                   <span style={{ fontSize: "0.8rem", fontWeight: 500, color: "var(--text-secondary)", marginLeft: "8px" }}>
@@ -871,9 +871,9 @@ export function DespesasList({ expenses, expenseEntries, users, asaasTransaction
                         borderRadius: "8px",
                         fontSize: "0.78rem",
                         fontWeight: 600,
-                        background: "rgba(239,68,68,0.08)",
-                        color: "#EF4444",
-                        border: "1px solid rgba(239,68,68,0.2)",
+                        background: "var(--color-danger-wash)",
+                        color: "var(--color-danger)",
+                        border: "1px solid var(--color-danger-wash)",
                       }}
                     >
                       {date}

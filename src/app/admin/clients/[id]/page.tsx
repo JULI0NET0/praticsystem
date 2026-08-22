@@ -1016,7 +1016,7 @@ export default function ClientDetailPage() {
           </div>
         </div>
         <div className="client-page-actions" style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
-          <button className="btn btn-secondary" onClick={() => setIsDeleteModalOpen(true)} style={{ color: '#EF4444', minHeight: '44px' }}><Trash2 size={18} /></button>
+          <button className="btn btn-secondary" onClick={() => setIsDeleteModalOpen(true)} style={{ color: 'var(--color-danger)', minHeight: '44px' }}><Trash2 size={18} /></button>
           <button className="btn btn-secondary" onClick={handleOpenEdit} style={{ minHeight: '44px' }}><Edit2 size={18} /> <span className="hide-mobile">Editar</span></button>
           <button className="btn btn-accent" onClick={() => setIsActionModalOpen(true)} style={{ minHeight: '44px' }}><Plus size={18} /> <span className="hide-mobile">Nova</span> Ação</button>
         </div>
@@ -1188,9 +1188,9 @@ export default function ClientDetailPage() {
                       <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Total Recebido</p>
                       <p style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-success)' }}>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(getFinanceMetrics().totalReceived)}</p>
                     </div>
-                    <div style={{ padding: '20px', background: 'rgba(239, 68, 68, 0.05)', borderRadius: '16px', border: '1px solid rgba(239, 68, 68, 0.1)' }}>
+                    <div style={{ padding: '20px', background: 'var(--color-danger-wash)', borderRadius: '16px', border: '1px solid var(--color-danger-wash)' }}>
                       <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Total Pendente</p>
-                      <p style={{ fontSize: '1.5rem', fontWeight: 800, color: '#EF4444' }}>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(getFinanceMetrics().overdue)}</p>
+                      <p style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-danger)' }}>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(getFinanceMetrics().overdue)}</p>
                     </div>
                   </div>
                 </Spotlight>
@@ -1578,7 +1578,7 @@ export default function ClientDetailPage() {
                       }}>{demand.type}</span>
                       <span style={{
                         fontSize: '0.75rem', fontWeight: 600,
-                        color: demand.priority === 'high' ? '#EF4444' : demand.priority === 'medium' ? 'var(--accent)' : 'var(--color-success)'
+                        color: demand.priority === 'high' ? 'var(--color-danger)' : demand.priority === 'medium' ? 'var(--accent)' : 'var(--color-success)'
                       }}>
                         {demand.priority === 'high' ? 'Alta Prioridade' : demand.priority === 'medium' ? 'Média' : 'Baixa'}
                       </span>
@@ -1978,7 +1978,7 @@ export default function ClientDetailPage() {
                               <ExternalLink size={16} />
                             </button>
                             <button
-                              style={{ color: '#EF4444' }}
+                              style={{ color: 'var(--color-danger)' }}
                               onClick={() => setContractToDelete(contract.id)}
                               title="Excluir Serviço/Contrato"
                             >
@@ -2133,12 +2133,12 @@ export default function ClientDetailPage() {
                 </Spotlight>
                 <Spotlight className="glass-card" style={{ flex: '1 1 120px', maxWidth: '180px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: 'rgba(239, 68, 68, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#EF4444' }}>
+                    <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: 'var(--color-danger-wash)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-danger)' }}>
                       <AlertCircle size={12} />
                     </div>
                     <p style={{ color: 'var(--text-tertiary)', fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', margin: 0 }}>Pendente</p>
                   </div>
-                  <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#EF4444', margin: 0 }}>
+                  <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--color-danger)', margin: 0 }}>
                     {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(getFinanceMetrics().overdue)}
                   </h4>
                 </Spotlight>
@@ -2577,7 +2577,7 @@ export default function ClientDetailPage() {
                         width: '48px', height: '48px', borderRadius: '12px',
                         backgroundColor: 'rgba(255,255,255,0.03)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        color: doc.file_type?.includes('pdf') ? '#EF4444' : doc.file_type?.includes('image') ? '#3B82F6' : 'var(--accent)'
+                        color: doc.file_type?.includes('pdf') ? 'var(--color-danger)' : doc.file_type?.includes('image') ? '#3B82F6' : 'var(--accent)'
                       }}>
                         <FileText size={24} />
                       </div>
@@ -3130,7 +3130,7 @@ export default function ClientDetailPage() {
                               </button>
                               <button 
                                 type="button" 
-                                style={{ color: '#EF4444', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.7rem' }}
+                                style={{ color: 'var(--color-danger)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.7rem' }}
                                 onClick={() => setEditFormData({
                                   ...editFormData,
                                   social_access: {
@@ -3209,8 +3209,8 @@ export default function ClientDetailPage() {
               style={{ width: '100%', maxWidth: '450px', padding: '32px', textAlign: 'center' }}
             >
               <div style={{
-                width: '64px', height: '64px', borderRadius: '50%', backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#EF4444', margin: '0 auto 24px'
+                width: '64px', height: '64px', borderRadius: '50%', backgroundColor: 'var(--color-danger-wash)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-danger)', margin: '0 auto 24px'
               }}>
                 <Trash2 size={32} />
               </div>
@@ -3222,7 +3222,7 @@ export default function ClientDetailPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <button
                   className="btn"
-                  style={{ backgroundColor: '#EF4444', color: 'white', width: '100%' }}
+                  style={{ backgroundColor: 'var(--color-danger)', color: 'white', width: '100%' }}
                   onClick={handleDeleteClient}
                   disabled={isDeleting}
                 >
@@ -3258,8 +3258,8 @@ export default function ClientDetailPage() {
               style={{ width: '100%', maxWidth: '450px', padding: '32px', textAlign: 'center' }}
             >
               <div style={{
-                width: '64px', height: '64px', borderRadius: '50%', backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#EF4444', margin: '0 auto 24px'
+                width: '64px', height: '64px', borderRadius: '50%', backgroundColor: 'var(--color-danger-wash)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-danger)', margin: '0 auto 24px'
               }}>
                 <Trash2 size={32} />
               </div>
@@ -3271,7 +3271,7 @@ export default function ClientDetailPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <button
                   className="btn"
-                  style={{ backgroundColor: '#EF4444', color: 'white', width: '100%' }}
+                  style={{ backgroundColor: 'var(--color-danger)', color: 'white', width: '100%' }}
                   onClick={handleDeleteContract}
                   disabled={isDeleting}
                 >

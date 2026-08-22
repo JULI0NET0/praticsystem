@@ -950,7 +950,7 @@ export default function BlockEditor({
         .callout-orange { background: rgba(217, 72, 15, 0.08); border-left: 4px solid #d9480f; }
         .callout-blue { background: rgba(30, 144, 255, 0.08); border-left: 4px solid #1e90ff; }
         .callout-green { background: var(--color-success-wash); border-left: 4px solid var(--color-success); }
-        .callout-red { background: rgba(239, 68, 68, 0.08); border-left: 4px solid #ef4444; }
+        .callout-red { background: var(--color-danger-wash); border-left: 4px solid var(--color-danger); }
         .callout-icon { font-size: 1.15rem; user-select: none; line-height: 1.4; }
         .callout-content { flex: 1; min-width: 0; color: rgba(255, 255, 255, 0.88); }
         .callout-content p { margin: 0; }

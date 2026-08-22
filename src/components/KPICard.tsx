@@ -73,7 +73,7 @@ export default function KPICard({ title, value, numericValue, prefix = "", subti
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.7rem' }}>
           {trend && trendValue && (
             <span style={{
-              color: trend === 'up' ? 'var(--color-success)' : trend === 'down' ? '#EF4444' : 'var(--text-secondary)',
+              color: trend === 'up' ? 'var(--color-success)' : trend === 'down' ? 'var(--color-danger)' : 'var(--text-secondary)',
               fontWeight: 600
             }}>
               {trend === 'up' ? '↑' : trend === 'down' ? '↓' : '→'} {trendValue}
