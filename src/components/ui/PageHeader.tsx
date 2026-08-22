@@ -1,0 +1,91 @@
+"use client";
+
+import { cn } from "@/lib/cn";
+
+export interface PageHeaderProps {
+  title: React.ReactNode;
+  subtitle?: React.ReactNode;
+  /** Migalhas ou rótulo de seção acima do título. */
+  eyebrow?: React.ReactNode;
+  actions?: React.ReactNode;
+  className?: string;
+}
+
+/**
+ * O único lugar (junto do EmptyState) onde a serifa aparece: é o
+ * registro editorial da marca. No resto da interface a serifa
+ * atrapalharia a densidade.
+ */
+export default function PageHeader({
+  title,
+  subtitle,
+  eyebrow,
+  actions,
+  className,
+}: PageHeaderProps) {
+  return (
+    <div
+      className={cn("mobile-stack", className)}
+      style={{
+        display: "flex",
+        alignItems: "flex-start",
+        gap: 12,
+        marginBottom: "var(--space-5)",
+      }}
+    >
+      <div style={{ minWidth: 0, flex: 1 }}>
+        {eyebrow && (
+          <div
+            style={{
+              fontSize: "var(--text-micro)",
+              fontWeight: 600,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              color: "var(--color-terracotta-700)",
+              marginBottom: 4,
+            }}
+          >
+            {eyebrow}
+          </div>
+        )}
+        <h1
+          style={{
+            fontFamily: "var(--font-serif)",
+            fontSize: "var(--text-h1)",
+            fontWeight: 500,
+            lineHeight: 1.15,
+            letterSpacing: "-0.01em",
+            color: "var(--color-text-primary)",
+            margin: 0,
+          }}
+        >
+          {title}
+        </h1>
+        {subtitle && (
+          <p
+            style={{
+              fontSize: "var(--text-ui)",
+              color: "var(--color-text-secondary)",
+              margin: "4px 0 0",
+            }}
+          >
+            {subtitle}
+          </p>
+        )}
+      </div>
+      {actions && (
+        <div
+          style={{
+            display: "flex",
+            gap: 8,
+            flexShrink: 0,
+            flexWrap: "wrap",
+            alignItems: "center",
+          }}
+        >
+          {actions}
+        </div>
+      )}
+    </div>
+  );
+}

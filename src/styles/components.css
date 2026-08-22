@@ -58,12 +58,13 @@
 }
 
 .btn-accent:hover {
-  background: var(--color-terracotta-700);
-  border-color: var(--color-terracotta-700);
+  background: var(--color-terracotta-hover-solid);
+  border-color: var(--color-terracotta-hover-solid);
 }
 
 .btn-accent:active {
-  background: var(--color-terracotta-800);
+  background: var(--color-terracotta-active-solid);
+  border-color: var(--color-terracotta-active-solid);
 }
 
 .btn-secondary {
@@ -89,7 +90,7 @@
 
 .btn-danger {
   background: var(--color-danger);
-  color: var(--color-text-on-accent);
+  color: var(--color-text-on-danger);
   border-color: var(--color-danger);
 }
 
@@ -255,7 +256,7 @@ input[type='date'] {
 
 .badge-accent {
   background-color: var(--color-terracotta-100);
-  color: var(--color-terracotta-700);
+  color: var(--color-terracotta-ink);
   border: 1px solid transparent;
 }
 
@@ -360,7 +361,7 @@ input[type='date'] {
 
 .context-menu-item:hover {
   background: var(--color-terracotta-100);
-  color: var(--color-terracotta-700);
+  color: var(--color-terracotta-ink);
 }
 
 .context-menu-item svg {

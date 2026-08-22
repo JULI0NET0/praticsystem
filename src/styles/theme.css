@@ -30,24 +30,37 @@
 
   /* ---------- Acento de marca (coral + terracota Stitch) ---------- */
   --color-terracotta: #d97757; /* CTA primário */
-  --color-terracotta-700: #c96442; /* hover / ativo */
-  --color-terracotta-800: #b84627; /* pressionado */
+  --color-terracotta-700: #c96442; /* hover em superfícies, bordas */
+  --color-terracotta-800: #b84627; /* pressionado em superfícies */
+  /* Hover do botão sólido vai para o CLARO, não para o escuro: como
+     o rótulo é ink (texto escuro), clarear o fundo AUMENTA o
+     contraste (6.54:1). Escurecer para o -700 derrubaria para 4.39. */
+  --color-terracotta-hover-solid: #e08a6e;
+  --color-terracotta-active-solid: #eba48f;
   --color-terracotta-100: #fff1ed; /* wash */
   --color-terracotta-200: #f3dfd3; /* wash forte / borda */
+  /* Texto sobre wash terracota. Separado do -700 porque o -700
+     (#c96442, o terracota validado no mockup) dá só 3.54:1 sobre o
+     wash e reprova em AA — ele continua sendo a cor de hover e de
+     borda, mas não pode carregar texto de 11px. */
+  --color-terracotta-ink: #a54a29;
 
   /* ---------- Famílias semânticas (design-system.md) ----------
      Cada acento tem UM papel fixo. Terracota nunca é erro.
      Azul é informação e foco de campo — nunca ação primária. */
   --color-success: #788c5d; /* oliva */
-  --color-success-ink: #5e6f48;
+  /* inks escurecidos: os valores originais reprovavam em AA
+     sobre os próprios washes (4.47 / 3.59 / 4.14) e badges carregam
+     texto de 11px, que exige 4.5:1. */
+  --color-success-ink: #4a5838;
   --color-success-wash: #e6eadd;
 
   --color-info: #6a9bcc; /* azul */
-  --color-info-ink: #4c7eae;
+  --color-info-ink: #3a6491;
   --color-info-wash: #e3ecf6;
 
   --color-warning: #d37f49;
-  --color-warning-ink: #b84627;
+  --color-warning-ink: #a03b1f;
   --color-warning-wash: #f3dfd3;
 
   --color-danger: #b23b2e;
@@ -72,7 +85,13 @@
      restrito a ícones e divisores. */
   --color-text-tertiary: #6e6d66;
   --color-text-muted: var(--color-stone-gray);
-  --color-text-on-accent: #ffffff;
+  /* Texto sobre o coral. Escuro, não branco: branco sobre #D97757 dá
+     só 3.12:1 e reprova em AA, e o rótulo de botão tem 13.5px — não
+     se qualifica como "texto grande". O ink dá 5.48:1 e preserva o
+     coral validado intacto. */
+  --color-text-on-accent: var(--color-ink);
+  /* Sobre vermelho de perigo o branco passa (5.90:1). */
+  --color-text-on-danger: #ffffff;
 
   /* ---------- Escala de raio ---------- */
   --radius-sm: 6px;
@@ -153,6 +172,9 @@
      muda, só a luminosidade, para manter AA nos dois modos. */
   --color-terracotta-100: #3a2419;
   --color-terracotta-200: #4a2e20;
+  /* Clareia junto com os outros inks: #a54a29 sobre o wash escuro
+     seria ilegível. 7.25:1 sobre #3a2419. */
+  --color-terracotta-ink: #e8a98d;
 
   --color-success-wash: #232a1c;
   --color-success-ink: #9cb381;
@@ -208,7 +230,7 @@
   --radius-input: 8px;
   --radius-badge: 6px;
 
-  --sidebar-active-text: var(--color-terracotta-700);
+  --sidebar-active-text: var(--color-terracotta-ink);
   --sidebar-active-bg: var(--color-terracotta-100);
 
   /* Layout / densidade */
@@ -220,9 +242,8 @@
   --page-gap: 12px;
 }
 
-[data-theme='dark'] {
-  --sidebar-active-text: #e8a98d;
-}
+/* --sidebar-active-text já segue --color-terracotta-ink, que tem seu
+   próprio override no bloco escuro. Não precisa de override aqui. */
 
 /* Re-declaração responsiva — o padrão original (globals.css:167/175)
    é legítimo e .admin-content-area depende dele. */

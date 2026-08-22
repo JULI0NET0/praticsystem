@@ -54,12 +54,15 @@ export default function Sidebar() {
     <aside
       className="sidebar-desktop"
       style={{
-        width: isExpanded ? '210px' : '80px',
+        width: isExpanded ? 'var(--sidebar-width)' : 'var(--sidebar-collapsed-width)',
         display: 'flex',
         flexDirection: 'column',
         position: 'relative',
-        background: 'transparent',
-        transition: 'width 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+        // Painel opaco com borda: é a borda que separa a sidebar do
+        // conteúdo agora que o gutter do shell virou 0.
+        background: 'var(--color-surface-raised)',
+        borderRight: '1px solid var(--color-border-subtle)',
+        transition: 'width var(--duration-base) var(--ease-standard)',
         zIndex: 50,
       }}
     >
@@ -73,16 +76,14 @@ export default function Sidebar() {
             transition={{ duration: 0.15, ease: "easeOut" }}
             style={{
               position: 'fixed',
-              left: '90px', // 80px da barra + 10px
+              left: 'calc(var(--sidebar-collapsed-width) + 10px)',
               top: activeTooltip.top,
               transform: 'translateY(-50%)',
-              background: 'rgba(15, 15, 15, 0.85)',
-              backdropFilter: 'blur(16px) saturate(180%)',
-              WebkitBackdropFilter: 'blur(16px) saturate(180%)',
-              border: '1px solid rgba(255, 255, 255, 0.15)',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
-              padding: '8px 16px',
-              borderRadius: '14px',
+              background: 'var(--color-surface-inverse)',
+              border: '1px solid var(--color-border-default)',
+              boxShadow: 'var(--shadow-md)',
+              padding: '5px 10px',
+              borderRadius: 'var(--radius-md)',
               zIndex: 999999,
               pointerEvents: 'none',
               display: 'flex',
@@ -90,7 +91,7 @@ export default function Sidebar() {
               whiteSpace: 'nowrap'
             }}
           >
-            <span style={{ color: '#FFFFFF', fontSize: '0.875rem', fontWeight: 600, letterSpacing: '0.02em' }}>
+            <span style={{ color: 'var(--color-surface-canvas)', fontSize: 'var(--text-caption)', fontWeight: 600 }}>
               {activeTooltip.label}
             </span>
           </motion.div>
@@ -123,23 +124,24 @@ export default function Sidebar() {
       </button>
 
       <div style={{
-        padding: isExpanded ? '32px 16px' : '32px 16px',
+        padding: '0 12px',
         display: 'flex',
         justifyContent: isExpanded ? 'flex-start' : 'center',
         alignItems: 'center',
-        height: '90px',
-        transition: 'padding 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+        height: 'var(--header-height)',
+        flexShrink: 0,
+        borderBottom: '1px solid var(--color-border-subtle)',
       }}>
         <ThemeLogo
-          width={160}
-          height={35}
+          width={130}
+          height={28}
           align="left"
           isCollapsed={!isExpanded}
         />
       </div>
 
-      <nav style={{ flex: 1, padding: '16px 0', overflowY: 'auto', overflowX: 'hidden' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', padding: isExpanded ? '0 16px' : '0 12px', transition: 'padding 0.4s cubic-bezier(0.16, 1, 0.3, 1)' }}>
+      <nav style={{ flex: 1, padding: '12px 0', overflowY: 'auto', overflowX: 'hidden' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', padding: isExpanded ? '0 12px' : '0 8px' }}>
           {NAV_GROUPS.filter(group => !currentUser || group.roles.includes(currentUser.role)).map((group) => (
             <div key={group.title} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <AnimatePresence initial={false}>
@@ -150,11 +152,11 @@ export default function Sidebar() {
                     exit={{ opacity: 0, height: 0 }}
                     transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
                     style={{
-                      fontSize: '0.75rem',
+                      fontSize: 'var(--text-micro)',
                       textTransform: 'uppercase',
-                      letterSpacing: '0.05em',
-                      color: 'var(--text-secondary)',
-                      paddingLeft: '16px',
+                      letterSpacing: '0.07em',
+                      color: 'var(--color-text-tertiary)',
+                      paddingLeft: '10px',
                       fontWeight: 600,
                       overflow: 'hidden',
                       whiteSpace: 'nowrap'
@@ -185,27 +187,31 @@ export default function Sidebar() {
                       }}
                       style={{ position: 'relative' }}
                     >
-                      {/* Magnetic Hover Animation */}
+                      {/* Realce de hover.
+                          Antes três elementos compartilhavam
+                          layoutId="sidebar-hover-pill": o framer-motion
+                          animava a pílula ENTRE eles, fazendo-a voar pela
+                          tela ao passar da nav para o rodapé. O destaque
+                          plano não precisa de layout compartilhado. */}
                       <AnimatePresence>
-                        {isHovered && (
+                        {isHovered && !isActive && (
                           <motion.div
-                            layoutId="sidebar-hover-pill"
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                            transition={{ duration: 0.12 }}
                             style={{
                               position: 'absolute',
                               inset: 0,
-                              backgroundColor: 'rgba(217, 72, 15, 0.15)',
-                              borderRadius: 'var(--radius-input)',
+                              backgroundColor: 'var(--color-surface-sunken)',
+                              borderRadius: 'var(--radius-md)',
                               zIndex: 0
                             }}
                           />
                         )}
                       </AnimatePresence>
 
-                      <motion.div whileTap={{ scale: 0.96 }} style={{ width: '100%' }}>
+                      <motion.div whileTap={{ scale: 0.98 }} style={{ width: '100%' }}>
                         <Link
                           href={item.href}
                           style={{
@@ -213,19 +219,23 @@ export default function Sidebar() {
                             zIndex: 1,
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '12px',
-                            padding: isExpanded ? '12px 16px' : '12px 0',
-                            borderRadius: 'var(--radius-input)',
-                            color: isActive ? 'var(--sidebar-active-text)' : 'var(--text-secondary)',
+                            gap: '10px',
+                            padding: isExpanded ? '7px 10px' : '7px 0',
+                            borderRadius: 'var(--radius-md)',
+                            fontSize: 'var(--text-ui)',
+                            fontWeight: isActive ? 600 : 500,
+                            color: isActive ? 'var(--sidebar-active-text)' : 'var(--color-text-secondary)',
                             backgroundColor: isActive ? 'var(--sidebar-active-bg)' : 'transparent',
-                            border: isActive ? '1px solid rgba(217, 72, 15, 0.1)' : '1px solid transparent',
-                            transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+                            border: isActive
+                              ? '1px solid var(--color-terracotta-200)'
+                              : '1px solid transparent',
+                            transition: 'color var(--duration-fast) var(--ease-standard), background-color var(--duration-fast) var(--ease-standard)',
                             justifyContent: isExpanded ? 'flex-start' : 'center',
                             overflow: 'hidden'
                           }}
                         >
-                          <div style={{ minWidth: '20px', minHeight: '20px', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            <item.icon size={20} color={isActive ? 'var(--accent)' : 'currentColor'} />
+                          <div style={{ minWidth: '16px', minHeight: '16px', width: '16px', height: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <item.icon size={16} strokeWidth={1.75} color={isActive ? 'var(--accent)' : 'currentColor'} />
                           </div>
                           <AnimatePresence initial={false}>
                             {isExpanded && (
@@ -290,12 +300,11 @@ export default function Sidebar() {
           <AnimatePresence>
             {hoveredPath === 'profile-container' && !isExpanded && (
               <motion.div
-                layoutId="sidebar-hover-pill"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                style={{ position: 'absolute', inset: -8, backgroundColor: 'rgba(217, 72, 15, 0.15)', borderRadius: 'var(--radius-input)', zIndex: 0 }}
+                transition={{ duration: 0.12 }}
+                style={{ position: 'absolute', inset: -8, backgroundColor: 'var(--color-surface-sunken)', borderRadius: 'var(--radius-md)', zIndex: 0 }}
               />
             )}
           </AnimatePresence>
@@ -318,7 +327,7 @@ export default function Sidebar() {
               ) : (currentUser.name || "??").substring(0, 2).toUpperCase()
             ) : <Loader2 size={14} className="animate-spin" />}
             {!isExpanded && (
-              <div style={{ position: 'absolute', top: '-2px', right: '-2px', width: '8px', height: '8px', backgroundColor: '#EF4444', borderRadius: '50%', border: '2px solid var(--bg-secondary)' }} />
+              <div style={{ position: 'absolute', top: '-2px', right: '-2px', width: '8px', height: '8px', backgroundColor: 'var(--color-danger)', borderRadius: '50%', border: '2px solid var(--color-surface-raised)' }} />
             )}
 
             {/* Auth Actions Popover */}
@@ -345,7 +354,7 @@ export default function Sidebar() {
                       }}
                       style={{
                         padding: '10px 12px', borderRadius: '12px', background: 'rgba(239, 68, 68, 0.1)',
-                        border: 'none', color: '#EF4444',
+                        border: 'none', color: 'var(--color-danger)',
                         fontSize: '0.875rem', textAlign: 'left', cursor: 'pointer', transition: 'all 0.2s',
                         display: 'flex', alignItems: 'center', gap: '8px'
                       }}
@@ -437,7 +446,7 @@ export default function Sidebar() {
                             }}
                             style={{
                               padding: '14px', borderRadius: '16px',
-                              background: notif.read ? 'rgba(255,255,255,0.02)' : 'rgba(217, 72, 15, 0.05)',
+                              background: notif.read ? 'transparent' : 'var(--color-terracotta-100)',
                               border: '1px solid var(--border)', display: 'flex', gap: '12px',
                               cursor: 'pointer', transition: 'all 0.2s'
                             }}
@@ -496,12 +505,11 @@ export default function Sidebar() {
             <AnimatePresence>
               {hoveredPath === 'theme-toggle' && (
                 <motion.div
-                  layoutId="sidebar-hover-pill"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                  style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(217, 72, 15, 0.15)', borderRadius: 'var(--radius-input)', zIndex: 0 }}
+                  transition={{ duration: 0.12 }}
+                  style={{ position: 'absolute', inset: 0, backgroundColor: 'var(--color-surface-sunken)', borderRadius: 'var(--radius-md)', zIndex: 0 }}
                 />
               )}
             </AnimatePresence>
