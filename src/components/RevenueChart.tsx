@@ -43,8 +43,8 @@ export default function RevenueChart() {
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#282828" vertical={false} />
-              <XAxis dataKey="name" stroke="#A8A8A8" fontSize={12} tickLine={false} axisLine={false} />
-              <YAxis stroke="#A8A8A8" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `R$${val/1000}k`} />
+              <XAxis dataKey="name" stroke="var(--color-text-secondary)" fontSize={12} tickLine={false} axisLine={false} />
+              <YAxis stroke="var(--color-text-secondary)" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `R$${val/1000}k`} />
               <Tooltip 
                 contentStyle={{ backgroundColor: '#1C1C1C', borderColor: '#282828', borderRadius: '8px' }}
                 itemStyle={{ color: '#FFFFFF' }}

@@ -13,7 +13,7 @@ export default function AppleIcon() {
     (
       <div
         style={{
-          background: '#0A0A0A',
+          background: '#141413', // canvas escuro do tema; o #0A0A0A foi aposentado
           width: '100%',
           height: '100%',
           display: 'flex',

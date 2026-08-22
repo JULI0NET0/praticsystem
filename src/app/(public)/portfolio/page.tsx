@@ -8,7 +8,7 @@ export default function PortfolioPage() {
       <div className="container animate-fade-in-up">
         <div style={{ textAlign: 'center', marginBottom: '64px' }}>
           <h1 style={{ fontSize: '3rem', fontWeight: 700, marginBottom: '16px' }}>Nosso Portfólio</h1>
-          <p style={{ color: '#4A4A4A', fontSize: '1.25rem' }}>Projetos que entregam resultados reais.</p>
+          <p style={{ color: 'var(--color-text-tertiary)', fontSize: '1.25rem' }}>Projetos que entregam resultados reais.</p>
         </div>
 
         {/* Filters */}
@@ -45,7 +45,7 @@ export default function PortfolioPage() {
             >
               <div style={{ height: '240px', backgroundColor: '#E5E5E5', position: 'relative' }}>
                 {/* Mock Image Placeholder */}
-                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#A8A8A8', fontSize: '2rem', fontWeight: 700 }}>
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-secondary)', fontSize: '2rem', fontWeight: 700 }}>
                   {item.title.substring(0,2).toUpperCase()}
                 </div>
               </div>
@@ -63,7 +63,7 @@ export default function PortfolioPage() {
                   {item.category}
                 </span>
                 <h3 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '12px' }}>{item.title}</h3>
-                <p style={{ color: '#4A4A4A', marginBottom: '24px' }}>{item.description}</p>
+                <p style={{ color: 'var(--color-text-tertiary)', marginBottom: '24px' }}>{item.description}</p>
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                   {item.results.map(res => (
                     <span key={res} style={{ fontSize: '0.875rem', fontWeight: 600, color: '#1C1C1C', backgroundColor: '#F1EFED', padding: '4px 12px', borderRadius: '4px' }}>

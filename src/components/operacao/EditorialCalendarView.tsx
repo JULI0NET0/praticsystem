@@ -23,8 +23,8 @@ export default function EditorialCalendarView({ list, tasks, onOpenTask }: Props
         title: t.title,
         start: date,
         allDay: true,
-        backgroundColor: status?.color ?? "#71717A",
-        borderColor: status?.color ?? "#71717A",
+        backgroundColor: status?.color ?? "var(--color-text-tertiary)",
+        borderColor: status?.color ?? "var(--color-text-tertiary)",
       };
     })
     .filter(Boolean) as {

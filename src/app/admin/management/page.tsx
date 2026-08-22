@@ -238,7 +238,7 @@ export default function ManagementPage() {
                   <div style={{
                     position: 'absolute', bottom: 0, right: 0,
                     width: '12px', height: '12px', borderRadius: '50%',
-                    background: stat.isOnline ? 'var(--color-success)' : '#6B7280',
+                    background: stat.isOnline ? 'var(--color-success)' : 'var(--color-text-tertiary)',
                     border: '2px solid var(--bg-secondary)'
                   }} />
                 </div>
@@ -247,7 +247,7 @@ export default function ManagementPage() {
                     <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>{stat.name}</span>
                     <span>{stat.emoji}</span>
                   </div>
-                  <span style={{ fontSize: '0.75rem', color: stat.isOnline ? 'var(--color-success)' : '#6B7280' }}>
+                  <span style={{ fontSize: '0.75rem', color: stat.isOnline ? 'var(--color-success)' : 'var(--color-text-tertiary)' }}>
                     {stat.isOnline ? 'Online agora' : 'Offline'}
                   </span>
                   <div style={{ display: 'flex', gap: '16px', marginTop: '8px' }}>
@@ -320,7 +320,7 @@ export default function ManagementPage() {
                     <span style={{
                       padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 600,
                       background: stat.isOnline ? 'var(--color-success-wash)' : 'rgba(107, 114, 128, 0.15)',
-                      color: stat.isOnline ? 'var(--color-success)' : '#6B7280'
+                      color: stat.isOnline ? 'var(--color-success)' : 'var(--color-text-tertiary)'
                     }}>
                       {stat.isOnline ? 'Online' : 'Offline'}
                     </span>

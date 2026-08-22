@@ -374,7 +374,7 @@ export default function LiveChat() {
                           </div>
                           <div style={{
                             position: 'absolute', bottom: -1, right: -1, width: '8px', height: '8px',
-                            background: online ? 'var(--color-success)' : '#6B7280', borderRadius: '50%',
+                            background: online ? 'var(--color-success)' : 'var(--color-text-tertiary)', borderRadius: '50%',
                             border: '2px solid rgba(12,12,12,0.96)',
                           }} />
                         </div>
@@ -414,7 +414,7 @@ export default function LiveChat() {
                             ? <img src={activeMember.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
                             : activeMember.name.substring(0, 2).toUpperCase()}
                         </div>
-                        <div style={{ position: 'absolute', bottom: -1, right: -1, width: '7px', height: '7px', background: isUserOnline(activeMember.id) ? 'var(--color-success)' : '#6B7280', borderRadius: '50%', border: '2px solid rgba(12,12,12,0.96)' }} />
+                        <div style={{ position: 'absolute', bottom: -1, right: -1, width: '7px', height: '7px', background: isUserOnline(activeMember.id) ? 'var(--color-success)' : 'var(--color-text-tertiary)', borderRadius: '50%', border: '2px solid rgba(12,12,12,0.96)' }} />
                       </div>
                     )}
                   <div>
@@ -422,7 +422,7 @@ export default function LiveChat() {
                       {activeChat === 'general' ? 'Canal Geral' : activeMember?.name}
                     </h4>
                     {activeChat !== 'general' && activeMember && (
-                      <span style={{ fontSize: '0.65rem', color: isUserOnline(activeMember.id) ? 'var(--color-success)' : '#6B7280' }}>
+                      <span style={{ fontSize: '0.65rem', color: isUserOnline(activeMember.id) ? 'var(--color-success)' : 'var(--color-text-tertiary)' }}>
                         {isUserOnline(activeMember.id) ? 'Online' : 'Offline'}
                       </span>
                     )}

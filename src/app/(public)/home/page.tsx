@@ -12,7 +12,7 @@ export default function HomePage() {
           <h1 style={{ fontSize: '4rem', fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1.1, marginBottom: '24px' }}>
             Elevando o Padrão do<br/>Seu Negócio Digital
           </h1>
-          <p style={{ fontSize: '1.25rem', color: '#4A4A4A', maxWidth: '600px', margin: '0 auto 40px' }}>
+          <p style={{ fontSize: '1.25rem', color: 'var(--color-text-tertiary)', maxWidth: '600px', margin: '0 auto 40px' }}>
             A Agência Prátic une design premium, tecnologia moderna e estratégias de alta conversão.
           </p>
           <div style={{ display: 'flex', gap: '16px', justifyContent: 'center' }}>
@@ -31,7 +31,7 @@ export default function HomePage() {
         <div className="container">
           <div style={{ textAlign: 'center', marginBottom: '64px' }}>
             <h2 style={{ fontSize: '2.5rem', fontWeight: 700 }}>Nossas Especialidades</h2>
-            <p style={{ color: '#4A4A4A', marginTop: '16px' }}>Soluções ponta a ponta para o seu crescimento.</p>
+            <p style={{ color: 'var(--color-text-tertiary)', marginTop: '16px' }}>Soluções ponta a ponta para o seu crescimento.</p>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '32px' }}>
@@ -40,7 +40,7 @@ export default function HomePage() {
                 <Monitor color="#FFFFFF" size={32} />
               </div>
               <h3 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '16px' }}>Desenvolvimento Web</h3>
-              <p style={{ color: '#4A4A4A' }}>Sites institucionais, landing pages e e-commerces com foco absoluto em performance e experiência do usuário.</p>
+              <p style={{ color: 'var(--color-text-tertiary)' }}>Sites institucionais, landing pages e e-commerces com foco absoluto em performance e experiência do usuário.</p>
             </div>
 
             <div style={{ padding: '40px', backgroundColor: '#F8F8F8', borderRadius: '24px', transition: 'transform 0.3s' }} onMouseOver={e => e.currentTarget.style.transform = 'translateY(-8px)'} onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}>
@@ -48,7 +48,7 @@ export default function HomePage() {
                 <BarChart2 color="#FFFFFF" size={32} />
               </div>
               <h3 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '16px' }}>Performance & Tráfego</h3>
-              <p style={{ color: '#4A4A4A' }}>Gestão de anúncios em Meta Ads e Google Ads com estratégias data-driven para maximizar seu ROAS.</p>
+              <p style={{ color: 'var(--color-text-tertiary)' }}>Gestão de anúncios em Meta Ads e Google Ads com estratégias data-driven para maximizar seu ROAS.</p>
             </div>
 
             <div style={{ padding: '40px', backgroundColor: '#F8F8F8', borderRadius: '24px', transition: 'transform 0.3s' }} onMouseOver={e => e.currentTarget.style.transform = 'translateY(-8px)'} onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}>
@@ -56,7 +56,7 @@ export default function HomePage() {
                 <PenTool color="#FFFFFF" size={32} />
               </div>
               <h3 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '16px' }}>Identidade Visual</h3>
-              <p style={{ color: '#4A4A4A' }}>Criação de marcas memoráveis, desde o logotipo até o manual completo de aplicação visual.</p>
+              <p style={{ color: 'var(--color-text-tertiary)' }}>Criação de marcas memoráveis, desde o logotipo até o manual completo de aplicação visual.</p>
             </div>
           </div>
         </div>

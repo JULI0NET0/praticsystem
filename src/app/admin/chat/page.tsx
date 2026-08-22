@@ -316,11 +316,11 @@ export default function ChatPage() {
                       ? <img src={user.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
                       : user.name.substring(0, 2).toUpperCase()}
                   </div>
-                  <div style={{ position: 'absolute', bottom: 0, right: 0, width: '10px', height: '10px', background: online ? 'var(--color-success)' : '#6B7280', borderRadius: '50%', border: '2px solid var(--bg-primary)' }} />
+                  <div style={{ position: 'absolute', bottom: 0, right: 0, width: '10px', height: '10px', background: online ? 'var(--color-success)' : 'var(--color-text-tertiary)', borderRadius: '50%', border: '2px solid var(--bg-primary)' }} />
                 </div>
                 <div style={{ flex: 1, textAlign: 'left', overflow: 'hidden' }}>
                   <span style={{ fontWeight: userUnread > 0 ? 800 : 600, fontSize: '0.85rem', display: 'block', color: userUnread > 0 ? 'var(--text-primary)' : undefined }}>{user.name}</span>
-                  <span style={{ fontSize: '0.65rem', color: online ? 'var(--color-success)' : '#6B7280' }}>{online ? 'Online' : 'Offline'}</span>
+                  <span style={{ fontSize: '0.65rem', color: online ? 'var(--color-success)' : 'var(--color-text-tertiary)' }}>{online ? 'Online' : 'Offline'}</span>
                 </div>
                 {userUnread > 0 && <PageUnreadBadge count={userUnread} />}
               </button>
@@ -360,11 +360,11 @@ export default function ChatPage() {
                       ? <img src={activeMember.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} alt="" />
                       : activeMember.name.substring(0, 2).toUpperCase()}
                   </div>
-                  <div style={{ position: 'absolute', bottom: 0, right: 0, width: '12px', height: '12px', background: isUserOnline(activeMember.id) ? 'var(--color-success)' : '#6B7280', borderRadius: '50%', border: '2px solid var(--bg-primary)' }} />
+                  <div style={{ position: 'absolute', bottom: 0, right: 0, width: '12px', height: '12px', background: isUserOnline(activeMember.id) ? 'var(--color-success)' : 'var(--color-text-tertiary)', borderRadius: '50%', border: '2px solid var(--bg-primary)' }} />
                 </div>
                 <div>
                   <h3 style={{ fontWeight: 700, fontSize: '1.05rem' }}>{activeMember.name} {activeMember.emoji}</h3>
-                  <span style={{ fontSize: '0.75rem', color: isUserOnline(activeMember.id) ? 'var(--color-success)' : '#6B7280' }}>
+                  <span style={{ fontSize: '0.75rem', color: isUserOnline(activeMember.id) ? 'var(--color-success)' : 'var(--color-text-tertiary)' }}>
                     {isUserOnline(activeMember.id) ? 'Online agora' : 'Offline'}
                   </span>
                 </div>

@@ -25,7 +25,7 @@ const CATEGORIES = [
   { id: 'meeting', label: 'Reunião', color: '#3B82F6', icon: Users },
   { id: 'leadership_meeting', label: 'Reunião de Liderança', color: '#14B8A6', icon: Users },
   { id: 'prospecting', label: 'Captação', color: 'var(--color-warning)', icon: MapPin },
-  { id: 'task', label: 'Tarefa Interna', color: '#A8A8A8', icon: CheckCircle2 },
+  { id: 'task', label: 'Tarefa Interna', color: 'var(--color-text-secondary)', icon: CheckCircle2 },
   { id: 'social_media', label: 'Social Media', color: '#EC4899', icon: ExternalLink },
   { id: 'ads', label: 'Tráfego Pago', color: '#8B5CF6', icon: ExternalLink },
   { id: 'launch', label: 'Lançamento', color: '#F97316', icon: ExternalLink },
@@ -148,7 +148,7 @@ export default function SchedulePage() {
         title: event.title,
         start: event.date,
         type: event.type,
-        color: CATEGORIES.find(c => c.id === event.type)?.color || '#A8A8A8',
+        color: CATEGORIES.find(c => c.id === event.type)?.color || 'var(--color-text-secondary)',
         extendedProps: { ...event },
         className: event.status === 'completed' ? 'event-completed' : ''
       }));
@@ -456,7 +456,7 @@ export default function SchedulePage() {
   const renderEventContent = (eventInfo: any) => {
     const type = eventInfo.event.extendedProps.type;
     const category = CATEGORIES.find(c => c.id === type);
-    const color = category?.color || '#A8A8A8';
+    const color = category?.color || 'var(--color-text-secondary)';
     const isCompleted = eventInfo.event.extendedProps.status === 'completed';
 
     if (eventInfo.event.allDay) {

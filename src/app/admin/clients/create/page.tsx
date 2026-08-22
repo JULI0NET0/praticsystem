@@ -956,7 +956,7 @@ export default function CreateClientPage() {
                                   transform: isActive ? 'rotate(45deg)' : 'rotate(0deg)',
                                   transition: 'transform 0.3s'
                                 }}>
-                                  <Plus size={16} color={isActive ? '#FFF' : '#A8A8A8'} />
+                                  <Plus size={16} color={isActive ? '#FFF' : 'var(--color-text-secondary)'} />
                                 </div>
                               </button>
 

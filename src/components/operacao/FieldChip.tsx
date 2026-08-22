@@ -9,7 +9,7 @@ export default function FieldChip({ field, value }: { field: FieldDef; value: Cu
 
   if (field.type === "label" || field.type === "dropdown") {
     const opt = field.options?.find((o) => o.value === value);
-    const color = opt?.color ?? "#71717A";
+    const color = opt?.color ?? "var(--color-text-tertiary)";
     return (
       <span
         style={{
