@@ -558,7 +558,7 @@ export default function NotaDetailPage() {
                   <SideSection icon={<Tag size={13} />} label="Assuntos">
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: (note.subjects ?? []).filter(s => !s.startsWith('_')).length ? '6px' : 0 }}>
                       {(note.subjects ?? []).filter(s => !s.startsWith('_')).map(s => (
-                        <span key={s} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(217, 72, 15, 0.1)', color: 'var(--accent)', padding: '2px 8px', borderRadius: '20px', fontSize: '0.72rem', fontWeight: 600, border: '1px solid rgba(217, 72, 15, 0.2)' }}>
+                        <span key={s} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'color-mix(in oklab, var(--accent) 10%, transparent)', color: 'var(--accent)', padding: '2px 8px', borderRadius: '20px', fontSize: '0.72rem', fontWeight: 600, border: '1px solid color-mix(in oklab, var(--accent) 20%, transparent)' }}>
                           {s}
                           {canEdit && (
                             <button onClick={() => removeSubject(s)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: 0, display: 'flex', lineHeight: 1 }}>
@@ -595,7 +595,7 @@ export default function NotaDetailPage() {
                             padding: '6px 8px', borderRadius: '8px', border: '1px solid',
                             fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
                             borderColor: note.share_all ? 'var(--accent)' : 'var(--border)',
-                            background: note.share_all ? 'rgba(217, 72, 15, 0.15)' : 'rgba(255,255,255,0.04)',
+                            background: note.share_all ? 'color-mix(in oklab, var(--accent) 15%, transparent)' : 'rgba(255,255,255,0.04)',
                             color: note.share_all ? 'var(--accent)' : 'var(--text-secondary)',
                           }}
                         >
@@ -664,7 +664,7 @@ export default function NotaDetailPage() {
                     )}
 
                     {note.client_id && canEdit && (
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px', cursor: 'pointer', padding: '6px 8px', borderRadius: '8px', border: '1px solid', transition: 'all 0.15s', borderColor: note.pin_to_client ? 'rgba(217,72,15,0.35)' : 'var(--border)', background: note.pin_to_client ? 'rgba(217,72,15,0.08)' : 'rgba(255,255,255,0.02)' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px', cursor: 'pointer', padding: '6px 8px', borderRadius: '8px', border: '1px solid', transition: 'all 0.15s', borderColor: note.pin_to_client ? 'color-mix(in oklab, var(--accent) 35%, transparent)' : 'var(--border)', background: note.pin_to_client ? 'color-mix(in oklab, var(--accent) 8%, transparent)' : 'rgba(255,255,255,0.02)' }}>
                         <BookmarkCheck size={14} color={note.pin_to_client ? 'var(--accent)' : 'var(--text-secondary)'} style={{ flexShrink: 0 }} />
                         <span style={{ fontSize: '0.75rem', fontWeight: 600, color: note.pin_to_client ? 'var(--accent)' : 'white' }}>
                           Incluir no cadastro
@@ -802,7 +802,7 @@ function PrintOverlay({
         #note-print-overlay #print-body .editor-callout {
           display: flex; gap: 12px; padding: 12px 14px; border-radius: 6px; margin: 10px 0; align-items: flex-start;
         }
-        #note-print-overlay #print-body .callout-orange { background: rgba(217, 72, 15, 0.06); border-left: 4px solid #d9480f; }
+        #note-print-overlay #print-body .callout-orange { background: color-mix(in oklab, var(--accent) 6%, transparent); border-left: 4px solid #d9480f; }
         #note-print-overlay #print-body .callout-blue { background: rgba(30, 144, 255, 0.06); border-left: 4px solid #1e90ff; }
         #note-print-overlay #print-body .callout-green { background: rgba(34, 197, 94, 0.06); border-left: 4px solid #22c55e; }
         #note-print-overlay #print-body .callout-red { background: rgba(239, 68, 68, 0.06); border-left: 4px solid #ef4444; }
@@ -923,7 +923,7 @@ function PrintOverlay({
 
           {/* ── Orange line — dentro das margens ── */}
           <div style={{ padding: '0 22mm', flexShrink: 0 }}>
-            <div style={{ height: '1.5px', background: 'linear-gradient(90deg, #d9480f 0%, #f76b35 60%, rgba(217,72,15,0) 100%)', borderRadius: '1px' }} />
+            <div style={{ height: '1.5px', background: 'linear-gradient(90deg, #d9480f 0%, #f76b35 60%, transparent 100%)', borderRadius: '1px' }} />
           </div>
 
           {/* ── Title ── */}

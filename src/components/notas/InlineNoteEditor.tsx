@@ -236,7 +236,7 @@ export default function InlineNoteEditor({ clientId, noteId, onClose, onSaved }:
           </label>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
             {state.subjects.map(s => (
-              <span key={s} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(217,72,15,0.1)', color: 'var(--accent)', padding: '3px 10px', borderRadius: '20px', fontSize: '0.72rem', fontWeight: 600, border: '1px solid rgba(217,72,15,0.2)' }}>
+              <span key={s} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'color-mix(in oklab, var(--accent) 10%, transparent)', color: 'var(--accent)', padding: '3px 10px', borderRadius: '20px', fontSize: '0.72rem', fontWeight: 600, border: '1px solid color-mix(in oklab, var(--accent) 20%, transparent)' }}>
                 {s}
                 <button onClick={() => removeSubject(s)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: 0, display: 'flex', lineHeight: 1 }}>
                   <X size={10} />

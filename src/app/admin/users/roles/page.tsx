@@ -160,7 +160,7 @@ export default function RolesPage() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <div style={{
                     width: '40px', height: '40px', borderRadius: '10px',
-                    background: 'rgba(217, 72, 15, 0.1)', display: 'flex',
+                    background: 'color-mix(in oklab, var(--accent) 10%, transparent)', display: 'flex',
                     alignItems: 'center', justifyContent: 'center', color: 'var(--accent)'
                   }}>
                     <Shield size={20} />
@@ -261,7 +261,7 @@ export default function RolesPage() {
                             onClick={() => togglePermission(p.id)}
                             style={{
                               padding: '10px 12px', borderRadius: '10px', border: '1px solid var(--border)',
-                              background: selectedPermissions.includes(p.id) ? 'rgba(217, 72, 15, 0.05)' : 'rgba(255,255,255,0.02)',
+                              background: selectedPermissions.includes(p.id) ? 'color-mix(in oklab, var(--accent) 5%, transparent)' : 'rgba(255,255,255,0.02)',
                               borderColor: selectedPermissions.includes(p.id) ? 'var(--accent)' : 'var(--border)',
                               cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '12px',
                               transition: 'all 0.2s ease'

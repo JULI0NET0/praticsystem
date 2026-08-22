@@ -130,7 +130,7 @@ const SlashMenuList = forwardRef<any, any>((props, ref) => {
       {props.items.map((item: any, index: number) => {
         const Icon = item.icon;
         return (
-          <button key={item.title} onClick={() => props.command(item)} onMouseEnter={() => setSelectedIndex(index)} style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '8px 12px', borderRadius: '8px', border: 'none', background: index === selectedIndex ? 'rgba(217,72,15,0.15)' : 'transparent', color: index === selectedIndex ? '#d9480f' : 'rgba(255,255,255,0.85)', cursor: 'pointer', textAlign: 'left', transition: 'background 0.1s' }}>
+          <button key={item.title} onClick={() => props.command(item)} onMouseEnter={() => setSelectedIndex(index)} style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '8px 12px', borderRadius: '8px', border: 'none', background: index === selectedIndex ? 'color-mix(in oklab, var(--accent) 15%, transparent)' : 'transparent', color: index === selectedIndex ? 'var(--accent)' : 'rgba(255,255,255,0.85)', cursor: 'pointer', textAlign: 'left', transition: 'background 0.1s' }}>
             <Icon size={15} style={{ flexShrink: 0, opacity: 0.85 }} />
             <div>
               <div style={{ fontSize: '0.85rem', fontWeight: 500 }}>{item.title}</div>
@@ -171,13 +171,13 @@ const MentionList = forwardRef<any, any>((props, ref) => {
       key={item.id}
       onClick={() => props.command(item)}
       onMouseEnter={() => setSelectedIndex(globalIdx)}
-      style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '7px 10px', borderRadius: '8px', border: 'none', background: globalIdx === selectedIndex ? 'rgba(217,72,15,0.15)' : 'transparent', color: 'white', cursor: 'pointer', textAlign: 'left', transition: 'background 0.1s' }}
+      style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '7px 10px', borderRadius: '8px', border: 'none', background: globalIdx === selectedIndex ? 'color-mix(in oklab, var(--accent) 15%, transparent)' : 'transparent', color: 'white', cursor: 'pointer', textAlign: 'left', transition: 'background 0.1s' }}
     >
       {item.avatar ? (
         <img src={item.avatar} alt={item.label} style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
       ) : (
-        <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: item.type === 'client' ? 'rgba(217,72,15,0.2)' : 'rgba(100,100,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          {item.type === 'client' ? <Building2 size={12} color="#d9480f" /> : <User size={12} color="#8888ff" />}
+        <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: item.type === 'client' ? 'color-mix(in oklab, var(--accent) 20%, transparent)' : 'rgba(100,100,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          {item.type === 'client' ? <Building2 size={12} color="var(--accent)" /> : <User size={12} color="#8888ff" />}
         </div>
       )}
       <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>{item.label}</span>
@@ -225,11 +225,11 @@ const FileNodeView = ({ node }: { node: any }) => {
           transition: 'border-color 0.15s, background 0.15s',
           maxWidth: '420px', userSelect: 'none',
         }}
-        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(217,72,15,0.4)'; (e.currentTarget as HTMLElement).style.background = 'rgba(217,72,15,0.06)'; }}
+        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'color-mix(in oklab, var(--accent) 40%, transparent)'; (e.currentTarget as HTMLElement).style.background = 'color-mix(in oklab, var(--accent) 6%, transparent)'; }}
         onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.12)'; (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)'; }}
       >
-        <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'rgba(217,72,15,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          <FileDown size={17} color="#d9480f" />
+        <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'color-mix(in oklab, var(--accent) 15%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <FileDown size={17} color="var(--accent)" />
         </div>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: '0.88rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '280px' }}>{name}</div>
@@ -810,9 +810,9 @@ export default function BlockEditor({
 
             {/* Orange text color */}
             <button
-              onClick={() => editor.chain().focus().setColor('#d9480f').run()}
-              className={editor.isActive('textStyle', { color: '#d9480f' }) ? 'is-active' : ''}
-              style={{ color: '#d9480f' }}
+              onClick={() => editor.chain().focus().setColor('var(--accent)').run()}
+              className={editor.isActive('textStyle', { color: 'var(--accent)' }) ? 'is-active' : ''}
+              style={{ color: 'var(--accent)' }}
               title="Texto Laranja"
             >
               A
@@ -876,7 +876,7 @@ export default function BlockEditor({
         .block-editor-content ul, .block-editor-content ol { padding-left: 24px; margin: 4px 0; }
         .block-editor-content li { margin: 3px 0; }
         .block-editor-content li > p { margin: 0; }
-        .block-editor-content blockquote { border-left: 3px solid #d9480f; margin: 10px 0; padding: 8px 16px; background: rgba(217,72,15,0.06); border-radius: 0 8px 8px 0; color: rgba(255,255,255,0.65); }
+        .block-editor-content blockquote { border-left: 3px solid var(--accent); margin: 10px 0; padding: 8px 16px; background: color-mix(in oklab, var(--accent) 6%, transparent); border-radius: 0 8px 8px 0; color: rgba(255,255,255,0.65); }
         .block-editor-content pre { background: rgba(0,0,0,0.45); border-radius: 8px; padding: 14px 16px; margin: 10px 0; overflow-x: auto; }
         .block-editor-content pre code { color: #e2e8f0; font-family: monospace; font-size: 0.875rem; background: none; padding: 0; }
         .block-editor-content :not(pre) > code { background: rgba(255,255,255,0.1); padding: 1px 5px; border-radius: 4px; font-size: 0.875em; font-family: monospace; }
@@ -884,7 +884,7 @@ export default function BlockEditor({
         .block-editor-content ul[data-type="taskList"] { list-style: none; padding: 0; }
         .block-editor-content ul[data-type="taskList"] > li { display: flex; align-items: flex-start; gap: 8px; margin: 4px 0; }
         .block-editor-content ul[data-type="taskList"] > li > label { margin-top: 3px; }
-        .block-editor-content ul[data-type="taskList"] > li > label input[type="checkbox"] { accent-color: #d9480f; width: 15px; height: 15px; cursor: pointer; }
+        .block-editor-content ul[data-type="taskList"] > li > label input[type="checkbox"] { accent-color: var(--accent); width: 15px; height: 15px; cursor: pointer; }
         
         /* Bubble Menu Styles */
         .editor-bubble-menu {
@@ -917,8 +917,8 @@ export default function BlockEditor({
           color: white;
         }
         .editor-bubble-menu button.is-active {
-          background: rgba(217, 72, 15, 0.18);
-          color: #d9480f;
+          background: color-mix(in oklab, var(--accent) 18%, transparent);
+          color: var(--accent);
         }
         .bubble-divider {
           width: 1px;
@@ -947,7 +947,7 @@ export default function BlockEditor({
           margin: 12px 0;
           align-items: flex-start;
         }
-        .callout-orange { background: rgba(217, 72, 15, 0.08); border-left: 4px solid #d9480f; }
+        .callout-orange { background: color-mix(in oklab, var(--accent) 8%, transparent); border-left: 4px solid var(--accent); }
         .callout-blue { background: rgba(30, 144, 255, 0.08); border-left: 4px solid var(--color-info); }
         .callout-green { background: var(--color-success-wash); border-left: 4px solid var(--color-success); }
         .callout-red { background: var(--color-danger-wash); border-left: 4px solid var(--color-danger); }
@@ -970,8 +970,8 @@ export default function BlockEditor({
           max-width: 100%;
         }
         .editor-link-card:hover {
-          border-color: rgba(217, 72, 15, 0.4);
-          background: rgba(217, 72, 15, 0.04);
+          border-color: color-mix(in oklab, var(--accent) 40%, transparent);
+          background: color-mix(in oklab, var(--accent) 4%, transparent);
         }
         .link-card-info {
           flex: 1;
@@ -1036,9 +1036,9 @@ export default function BlockEditor({
         .block-editor-content strong { font-weight: 700; }
         .block-editor-content em { font-style: italic; }
         .block-editor-content s { text-decoration: line-through; opacity: 0.6; }
-        .editor-mention { background: rgba(217,72,15,0.18); color: #d9480f; border-radius: 5px; padding: 1px 6px; font-weight: 600; cursor: default; display: inline-block; }
-        .editor-link { color: #d9480f; text-decoration: underline; cursor: pointer; }
-        .editor-link:hover { color: #f76b35; }
+        .editor-mention { background: color-mix(in oklab, var(--accent) 18%, transparent); color: var(--accent); border-radius: 5px; padding: 1px 6px; font-weight: 600; cursor: default; display: inline-block; }
+        .editor-link { color: var(--accent); text-decoration: underline; cursor: pointer; }
+        .editor-link:hover { color: var(--accent); }
         .editor-image { max-width: 100%; border-radius: 10px; display: block; cursor: default; }
 
         /* Resize container */
@@ -1048,7 +1048,7 @@ export default function BlockEditor({
         /* Resize handles — shown on hover */
         [data-resize-handle] {
           width: 10px; height: 10px;
-          background: white; border: 2px solid #d9480f; border-radius: 50%;
+          background: white; border: 2px solid var(--accent); border-radius: 50%;
           z-index: 20; opacity: 0; transition: opacity 0.15s;
           box-shadow: 0 1px 4px rgba(0,0,0,0.35);
         }
@@ -1060,7 +1060,7 @@ export default function BlockEditor({
 
         /* Selected image */
         [data-resize-container]:has(img.ProseMirror-selectednode) [data-resize-handle] { opacity: 1; }
-        [data-resize-container]:has(img.ProseMirror-selectednode) [data-resize-wrapper] { outline: 2px solid rgba(217,72,15,0.6); outline-offset: 2px; border-radius: 10px; }
+        [data-resize-container]:has(img.ProseMirror-selectednode) [data-resize-wrapper] { outline: 2px solid color-mix(in oklab, var(--accent) 60%, transparent); outline-offset: 2px; border-radius: 10px; }
       `}</style>
       <EditorContent editor={editor} />
     </div>

@@ -160,7 +160,7 @@ export function Repasses({ asaasTransactions, clients, startDate, endDate, onSet
           onClick={() => setPickerOpen(true)}
           style={{
             display: "flex", alignItems: "center", gap: "8px", padding: "10px 16px", borderRadius: "12px",
-            border: "1px solid var(--accent)", background: "rgba(217,72,15,0.12)", color: "var(--accent)",
+            border: "1px solid var(--accent)", background: "color-mix(in oklab, var(--accent) 12%, transparent)", color: "var(--accent)",
             fontWeight: 700, fontSize: "0.85rem", cursor: "pointer", whiteSpace: "nowrap",
           }}
         >
@@ -202,7 +202,7 @@ export function Repasses({ asaasTransactions, clients, startDate, endDate, onSet
               : quitado
               ? { label: "Quitado", color: "var(--color-success)", bg: "var(--color-success-wash)" }
               : g.saldo > 0
-              ? { label: "A receber", color: "var(--accent)", bg: "rgba(217,72,15,0.12)" }
+              ? { label: "A receber", color: "var(--accent)", bg: "color-mix(in oklab, var(--accent) 12%, transparent)" }
               : { label: "Crédito", color: "var(--color-info)", bg: "rgba(96,165,250,0.12)" };
             return (
               <motion.div
@@ -453,7 +453,7 @@ function PickerDialog({ isOpen, onClose, transactions, clients, startDate, endDa
                   style={{
                     display: "flex", alignItems: "center", gap: "10px", padding: "10px 12px", borderRadius: "12px",
                     border: `1px solid ${isSel ? "var(--accent)" : "var(--border)"}`,
-                    background: isSel ? "rgba(217,72,15,0.08)" : "rgba(255,255,255,0.02)",
+                    background: isSel ? "color-mix(in oklab, var(--accent) 8%, transparent)" : "rgba(255,255,255,0.02)",
                   }}
                 >
                   <button

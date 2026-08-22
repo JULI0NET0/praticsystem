@@ -31,7 +31,7 @@ export default function SearchInput({
         borderRadius: '100px',
         gap: '12px',
         border: isFocused ? '1px solid var(--accent)' : '1px solid var(--border)',
-        boxShadow: isFocused ? '0 0 0 3px rgba(217, 72, 15, 0.15)' : 'var(--shadow-glow)',
+        boxShadow: isFocused ? '0 0 0 3px color-mix(in oklab, var(--accent) 15%, transparent)' : 'var(--shadow-glow)',
         background: 'var(--bg-secondary)',
         backdropFilter: 'blur(24px)',
         WebkitBackdropFilter: 'blur(24px)',

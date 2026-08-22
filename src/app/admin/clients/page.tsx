@@ -256,7 +256,7 @@ export default function ClientsPage() {
                               </p>
                               <span style={{
                                 fontFamily: 'monospace', fontSize: '0.7rem', fontWeight: 600, color: 'var(--accent)',
-                                background: 'rgba(217, 72, 15, 0.05)', padding: '2px 6px', borderRadius: '4px', border: '1px solid rgba(217, 72, 15, 0.1)',
+                                background: 'color-mix(in oklab, var(--accent) 5%, transparent)', padding: '2px 6px', borderRadius: '4px', border: '1px solid color-mix(in oklab, var(--accent) 10%, transparent)',
                                 flexShrink: 0
                               }}>
                                 #{String(client.sequential_id || idx + 1).padStart(3, '0')}
@@ -298,7 +298,7 @@ export default function ClientsPage() {
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <div style={{
                               width: '24px', height: '24px', borderRadius: '50%',
-                              background: (demandsCount[client.id] || 0) > 0 ? 'rgba(217, 72, 15, 0.2)' : 'rgba(255,255,255,0.05)',
+                              background: (demandsCount[client.id] || 0) > 0 ? 'color-mix(in oklab, var(--accent) 20%, transparent)' : 'rgba(255,255,255,0.05)',
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
                               fontSize: '0.75rem', fontWeight: 600, color: (demandsCount[client.id] || 0) > 0 ? 'var(--accent)' : 'var(--text-secondary)'
                             }}>

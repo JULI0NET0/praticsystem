@@ -153,7 +153,7 @@ export default function CreateServicePage() {
               style={{
                 padding: '16px', borderRadius: '16px', border: '1px solid',
                 borderColor: formData.is_recurring ? 'var(--accent)' : 'var(--border)',
-                background: formData.is_recurring ? 'rgba(217, 72, 15, 0.05)' : 'rgba(255,255,255,0.02)',
+                background: formData.is_recurring ? 'color-mix(in oklab, var(--accent) 5%, transparent)' : 'rgba(255,255,255,0.02)',
                 color: formData.is_recurring ? 'white' : 'var(--text-secondary)',
                 display: 'flex', flexDirection: 'column', gap: '8px', textAlign: 'left', cursor: 'pointer', transition: 'all 0.2s'
               }}
@@ -167,7 +167,7 @@ export default function CreateServicePage() {
               style={{
                 padding: '16px', borderRadius: '16px', border: '1px solid',
                 borderColor: !formData.is_recurring ? 'var(--accent)' : 'var(--border)',
-                background: !formData.is_recurring ? 'rgba(217, 72, 15, 0.05)' : 'rgba(255,255,255,0.02)',
+                background: !formData.is_recurring ? 'color-mix(in oklab, var(--accent) 5%, transparent)' : 'rgba(255,255,255,0.02)',
                 color: !formData.is_recurring ? 'white' : 'var(--text-secondary)',
                 display: 'flex', flexDirection: 'column', gap: '8px', textAlign: 'left', cursor: 'pointer', transition: 'all 0.2s'
               }}
@@ -205,9 +205,9 @@ export default function CreateServicePage() {
         {/* Configurações de Entrega (Social Media) */}
         <div style={{
           padding: '24px',
-          background: 'rgba(217, 72, 15, 0.05)',
+          background: 'color-mix(in oklab, var(--accent) 5%, transparent)',
           borderRadius: '20px',
-          border: '1px solid rgba(217, 72, 15, 0.1)',
+          border: '1px solid color-mix(in oklab, var(--accent) 10%, transparent)',
           display: 'flex',
           flexDirection: 'column',
           gap: '20px'

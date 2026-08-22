@@ -256,7 +256,7 @@ export default function UsersPage() {
                               ) : (
                                 <div style={{
                                   width: '48px', height: '48px', borderRadius: '14px',
-                                  backgroundColor: 'rgba(217, 72, 15, 0.1)', border: '1px solid rgba(217, 72, 15, 0.2)',
+                                  backgroundColor: 'color-mix(in oklab, var(--accent) 10%, transparent)', border: '1px solid color-mix(in oklab, var(--accent) 20%, transparent)',
                                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                                   color: 'var(--accent)', fontWeight: 600, fontSize: '1rem'
                                 }}>
@@ -266,7 +266,7 @@ export default function UsersPage() {
                               <div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                   <p style={{ fontWeight: 600, fontSize: '1rem' }}>{user.name}</p>
-                                  <span style={{ fontSize: '0.75rem', color: 'var(--accent)', background: 'rgba(217, 72, 15, 0.1)', padding: '2px 6px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '2px' }}>
+                                  <span style={{ fontSize: '0.75rem', color: 'var(--accent)', background: 'color-mix(in oklab, var(--accent) 10%, transparent)', padding: '2px 6px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '2px' }}>
                                     <AtSign size={10} />{user.username}
                                   </span>
                                 </div>
@@ -408,7 +408,7 @@ export default function UsersPage() {
                       ) : (
                         <div style={{
                           width: '44px', height: '44px', borderRadius: '12px',
-                          backgroundColor: 'rgba(217, 72, 15, 0.1)', color: 'var(--accent)',
+                          backgroundColor: 'color-mix(in oklab, var(--accent) 10%, transparent)', color: 'var(--accent)',
                           display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700
                         }}>
                           {user.name.substring(0, 2).toUpperCase()}
@@ -613,7 +613,7 @@ export default function UsersPage() {
               style={{ width: '100%', maxWidth: '450px', padding: '32px', textAlign: 'center' }}
             >
               <div style={{
-                width: '64px', height: '64px', borderRadius: '50%', backgroundColor: 'rgba(217, 72, 15, 0.1)',
+                width: '64px', height: '64px', borderRadius: '50%', backgroundColor: 'color-mix(in oklab, var(--accent) 10%, transparent)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)', margin: '0 auto 24px'
               }}>
                 <Shield size={32} />

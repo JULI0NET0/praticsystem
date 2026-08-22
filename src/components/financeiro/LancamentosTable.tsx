@@ -890,7 +890,7 @@ export function LancamentosTable({
                       display: "flex", justifyContent: "space-between", alignItems: "center",
                       padding: "10px 14px", borderRadius: "10px",
                       border: `1px solid ${selected ? "var(--accent)" : "var(--border)"}`,
-                      background: selected ? "rgba(217,72,15,0.08)" : "rgba(255,255,255,0.02)",
+                      background: selected ? "color-mix(in oklab, var(--accent) 8%, transparent)" : "rgba(255,255,255,0.02)",
                       cursor: "pointer", textAlign: "left", color: "var(--text-primary)", transition: "all 0.15s",
                     }}
                   >

@@ -193,7 +193,7 @@ export default function ContractsPage() {
                   cursor: 'pointer',
                   transition: 'all 0.2s',
                   border: datePreset === preset.id ? '1px solid var(--accent)' : '1px solid var(--border)',
-                  background: datePreset === preset.id ? 'rgba(217, 72, 15, 0.15)' : 'rgba(255,255,255,0.02)',
+                  background: datePreset === preset.id ? 'color-mix(in oklab, var(--accent) 15%, transparent)' : 'rgba(255,255,255,0.02)',
                   color: datePreset === preset.id ? 'var(--accent)' : 'var(--text-secondary)'
                 }}
               >

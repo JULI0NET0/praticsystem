@@ -343,7 +343,7 @@ export default function CreateClientPage() {
             <div style={{
               position: 'absolute',
               inset: '-50%',
-              backgroundImage: 'linear-gradient(rgba(217, 72, 15, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(217, 72, 15, 0.1) 1px, transparent 1px)',
+              backgroundImage: 'linear-gradient(color-mix(in oklab, var(--accent) 10%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in oklab, var(--accent) 10%, transparent) 1px, transparent 1px)',
               backgroundSize: '40px 40px',
               animation: 'gridMove 10s linear infinite',
               opacity: 0.6,
@@ -365,7 +365,7 @@ export default function CreateClientPage() {
               transition={{ delay: 0.3, duration: 0.8 }}
               style={{ position: 'relative', zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center' }}
             >
-              <div style={{ marginBottom: '50px', filter: 'drop-shadow(0 0 20px rgba(217, 72, 15, 0.5))' }}>
+              <div style={{ marginBottom: '50px', filter: 'drop-shadow(0 0 20px color-mix(in oklab, var(--accent) 50%, transparent))' }}>
                 <ThemeLogo width={320} height={80} />
               </div>
 
@@ -518,7 +518,7 @@ export default function CreateClientPage() {
                   {step === 1 && (
                     <motion.div key="step1" variants={pageVariants} initial="initial" animate="in" exit="out" transition={{ type: "tween", ease: "anticipate", duration: 0.4 }} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '8px' }}>
-                        <div style={{ padding: '12px', background: 'rgba(217, 72, 15, 0.1)', color: 'var(--accent)', borderRadius: '16px' }}>
+                        <div style={{ padding: '12px', background: 'color-mix(in oklab, var(--accent) 10%, transparent)', color: 'var(--accent)', borderRadius: '16px' }}>
                           <Building2 size={24} />
                         </div>
                         <h2 style={{ fontSize: '1.75rem', fontWeight: 700 }}>Identificação</h2>
@@ -682,7 +682,7 @@ export default function CreateClientPage() {
                   {step === 2 && (
                     <motion.div key="step2" variants={pageVariants} initial="initial" animate="in" exit="out" transition={{ type: "tween", ease: "anticipate", duration: 0.4 }} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '8px' }}>
-                        <div style={{ padding: '12px', background: 'rgba(217, 72, 15, 0.1)', color: 'var(--accent)', borderRadius: '16px' }}>
+                        <div style={{ padding: '12px', background: 'color-mix(in oklab, var(--accent) 10%, transparent)', color: 'var(--accent)', borderRadius: '16px' }}>
                           <MapPin size={24} />
                         </div>
                         <h2 style={{ fontSize: '1.75rem', fontWeight: 700 }}>Endereço</h2>
@@ -757,7 +757,7 @@ export default function CreateClientPage() {
                   {step === 3 && (
                     <motion.div key="step3" variants={pageVariants} initial="initial" animate="in" exit="out" transition={{ type: "tween", ease: "anticipate", duration: 0.4 }} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '8px' }}>
-                        <div style={{ padding: '12px', background: 'rgba(217, 72, 15, 0.1)', color: 'var(--accent)', borderRadius: '16px' }}>
+                        <div style={{ padding: '12px', background: 'color-mix(in oklab, var(--accent) 10%, transparent)', color: 'var(--accent)', borderRadius: '16px' }}>
                           <Phone size={24} />
                         </div>
                         <h2 style={{ fontSize: '1.75rem', fontWeight: 700 }}>Contatos Principais</h2>
@@ -832,7 +832,7 @@ export default function CreateClientPage() {
                   {step === 4 && (
                     <motion.div key="step4" variants={pageVariants} initial="initial" animate="in" exit="out" transition={{ type: "tween", ease: "anticipate", duration: 0.4 }} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '8px' }}>
-                        <div style={{ padding: '12px', background: 'rgba(217, 72, 15, 0.1)', color: 'var(--accent)', borderRadius: '16px' }}>
+                        <div style={{ padding: '12px', background: 'color-mix(in oklab, var(--accent) 10%, transparent)', color: 'var(--accent)', borderRadius: '16px' }}>
                           <Lock size={24} />
                         </div>
                         <h2 style={{ fontSize: '1.75rem', fontWeight: 700 }}>Acesso ao Portal</h2>
@@ -870,7 +870,7 @@ export default function CreateClientPage() {
                           </div>
                         </div>
 
-                        <div style={{ padding: '16px', borderRadius: '12px', background: 'rgba(217, 72, 15, 0.05)', border: '1px solid rgba(217, 72, 15, 0.1)' }}>
+                        <div style={{ padding: '16px', borderRadius: '12px', background: 'color-mix(in oklab, var(--accent) 5%, transparent)', border: '1px solid color-mix(in oklab, var(--accent) 10%, transparent)' }}>
                           <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
                             Com esse acesso, você poderá acompanhar o status dos seus projetos, aprovar briefings e visualizar faturas.
                           </p>

@@ -143,7 +143,7 @@ export default function BillingPage() {
           <p style={{ color: 'var(--text-tertiary)', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>Avulsos</p>
           <h3 style={{ fontSize: '1.5rem', fontWeight: 800 }}>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(metrics.avulsos)}</h3>
         </div>
-        <div className="glass-card" style={{ padding: '24px', background: 'rgba(217, 72, 15, 0.03)' }}>
+        <div className="glass-card" style={{ padding: '24px', background: 'color-mix(in oklab, var(--accent) 3%, transparent)' }}>
           <p style={{ color: 'var(--text-tertiary)', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>A Vencer</p>
           <h3 style={{ fontSize: '1.5rem', fontWeight: 800 }}>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(metrics.upcoming)}</h3>
         </div>

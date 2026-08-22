@@ -146,7 +146,7 @@ export default function ProfilePage() {
                 gap: '8px',
                 padding: '12px 24px',
                 borderRadius: '12px 12px 0 0',
-                background: isActive ? 'rgba(217, 72, 15, 0.1)' : 'transparent',
+                background: isActive ? 'color-mix(in oklab, var(--accent) 10%, transparent)' : 'transparent',
                 color: isActive ? 'var(--accent)' : 'var(--text-secondary)',
                 border: 'none',
                 cursor: 'pointer',
@@ -186,7 +186,7 @@ export default function ProfilePage() {
                   width: '140px', height: '140px', borderRadius: '50%',
                   background: 'var(--accent)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: '#fff', boxShadow: '0 0 30px rgba(217, 72, 15, 0.3)',
+                  color: '#fff', boxShadow: '0 0 30px color-mix(in oklab, var(--accent) 30%, transparent)',
                   cursor: 'pointer', position: 'relative', overflow: 'hidden'
                 }}
               >
@@ -218,7 +218,7 @@ export default function ProfilePage() {
                       onClick={() => setFormData({ ...formData, emoji })}
                       style={{
                         fontSize: '1.2rem', padding: '6px', borderRadius: '8px',
-                        background: formData.emoji === emoji ? 'rgba(217, 72, 15, 0.2)' : 'transparent',
+                        background: formData.emoji === emoji ? 'color-mix(in oklab, var(--accent) 20%, transparent)' : 'transparent',
                         border: formData.emoji === emoji ? '1px solid var(--accent)' : '1px solid transparent',
                         cursor: 'pointer', transition: 'all 0.2s'
                       }}

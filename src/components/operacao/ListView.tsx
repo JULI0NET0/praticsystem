@@ -147,7 +147,7 @@ export default function ListView({ areaId, listId }: { areaId: string; listId: s
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <h1 style={{ fontSize: "1.6rem", fontWeight: 900, margin: 0, letterSpacing: "-0.02em" }}>{list.name}</h1>
             {list.isTemplate && (
-              <span style={{ fontSize: "0.65rem", fontWeight: 800, color: "var(--accent)", background: "rgba(217,72,15,0.12)", border: "1px solid rgba(217,72,15,0.25)", padding: "3px 8px", borderRadius: 6, textTransform: "uppercase" }}>
+              <span style={{ fontSize: "0.65rem", fontWeight: 800, color: "var(--accent)", background: "color-mix(in oklab, var(--accent) 12%, transparent)", border: "1px solid color-mix(in oklab, var(--accent) 25%, transparent)", padding: "3px 8px", borderRadius: 6, textTransform: "uppercase" }}>
                 Template
               </span>
             )}

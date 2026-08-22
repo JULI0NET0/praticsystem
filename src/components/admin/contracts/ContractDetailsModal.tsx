@@ -474,7 +474,7 @@ export default function ContractDetailsModal({ isOpen, onClose, onRenew, contrac
                     width: '48px',
                     height: '48px',
                     borderRadius: '12px',
-                    backgroundColor: 'rgba(217, 72, 15, 0.1)',
+                    backgroundColor: 'color-mix(in oklab, var(--accent) 10%, transparent)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -565,7 +565,7 @@ export default function ContractDetailsModal({ isOpen, onClose, onRenew, contrac
                             {service?.description}
                           </p>
                           <div style={{ marginTop: '16px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                            <span style={{ fontSize: '0.75rem', backgroundColor: 'rgba(217, 72, 15, 0.1)', color: 'var(--accent)', padding: '4px 10px', borderRadius: '100px', fontWeight: 500 }}>
+                            <span style={{ fontSize: '0.75rem', backgroundColor: 'color-mix(in oklab, var(--accent) 10%, transparent)', color: 'var(--accent)', padding: '4px 10px', borderRadius: '100px', fontWeight: 500 }}>
                               Recorrente
                             </span>
                             <span style={{ fontSize: '0.75rem', backgroundColor: 'rgba(255, 255, 255, 0.05)', color: 'var(--text-secondary)', padding: '4px 10px', borderRadius: '100px', fontWeight: 500 }}>
@@ -710,7 +710,7 @@ export default function ContractDetailsModal({ isOpen, onClose, onRenew, contrac
                     </div>
 
                     {/* Renewal Panel — sempre visível */}
-                    <div style={{ padding: '16px 20px', borderRadius: '16px', border: '1px solid rgba(217,72,15,0.3)', background: 'rgba(217,72,15,0.06)' }}>
+                    <div style={{ padding: '16px 20px', borderRadius: '16px', border: '1px solid color-mix(in oklab, var(--accent) 30%, transparent)', background: 'color-mix(in oklab, var(--accent) 6%, transparent)' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div>
                           <p style={{ fontWeight: 600, color: 'white', fontSize: '0.9rem', marginBottom: '2px' }}>Prorrogar Contrato</p>
@@ -974,7 +974,7 @@ function PrintOverlay({ contract, client, docContent }: PrintOverlayProps) {
 
           {/* Linha Divisória Laranja */}
           <div style={{ padding: '0 12mm', flexShrink: 0 }}>
-            <div style={{ height: '1.5px', background: 'linear-gradient(90deg, #d9480f 0%, #f76b35 60%, rgba(217,72,15,0) 100%)', borderRadius: '1px' }} />
+            <div style={{ height: '1.5px', background: 'linear-gradient(90deg, #d9480f 0%, #f76b35 60%, transparent 100%)', borderRadius: '1px' }} />
           </div>
 
           {/* Corpo do Contrato */}

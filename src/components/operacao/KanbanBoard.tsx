@@ -52,8 +52,8 @@ export default function KanbanBoard({ list, tasks, onOpenTask }: Props) {
               gap: 12,
               padding: 12,
               borderRadius: 18,
-              background: isOver ? "rgba(217,72,15,0.06)" : "rgba(255,255,255,0.02)",
-              border: `1px solid ${isOver ? "rgba(217,72,15,0.35)" : "var(--border)"}`,
+              background: isOver ? "color-mix(in oklab, var(--accent) 6%, transparent)" : "rgba(255,255,255,0.02)",
+              border: `1px solid ${isOver ? "color-mix(in oklab, var(--accent) 35%, transparent)" : "var(--border)"}`,
               transition: "background 0.15s, border-color 0.15s",
             }}
           >

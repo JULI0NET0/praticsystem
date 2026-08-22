@@ -154,8 +154,8 @@ export default function EditorialCalendarModal({ list, isOpen, onClose, onGenera
           style={{
             padding: 14,
             borderRadius: 14,
-            background: "rgba(217,72,15,0.06)",
-            border: "1px solid rgba(217,72,15,0.2)",
+            background: "color-mix(in oklab, var(--accent) 6%, transparent)",
+            border: "1px solid color-mix(in oklab, var(--accent) 20%, transparent)",
             display: "flex",
             flexDirection: "column",
             gap: 8,

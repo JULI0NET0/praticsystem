@@ -86,7 +86,7 @@ export default function DropdownMenu({ trigger, items, align = 'left', className
                     transition: 'all 0.2s'
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.background = item.danger ? 'var(--color-danger-wash)' : 'rgba(217, 72, 15, 0.15)';
+                    e.currentTarget.style.background = item.danger ? 'var(--color-danger-wash)' : 'color-mix(in oklab, var(--accent) 15%, transparent)';
                     e.currentTarget.style.color = item.danger ? 'var(--color-danger)' : 'var(--accent)';
                     e.currentTarget.style.transform = 'translateX(4px)';
                   }}

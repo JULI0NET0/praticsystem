@@ -259,7 +259,7 @@ export default function ClientDetailPage() {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', padding: '100px' }}>
         <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }}>
-          <div style={{ width: '40px', height: '40px', border: '3px solid rgba(217, 72, 15, 0.3)', borderTopColor: 'var(--accent)', borderRadius: '50%' }} />
+          <div style={{ width: '40px', height: '40px', border: '3px solid color-mix(in oklab, var(--accent) 30%, transparent)', borderTopColor: 'var(--accent)', borderRadius: '50%' }} />
         </motion.div>
       </div>
     );
@@ -888,7 +888,7 @@ export default function ClientDetailPage() {
             </span>
             <span style={{
               fontFamily: 'monospace', fontSize: '0.85rem', fontWeight: 600, color: 'var(--accent)',
-              background: 'rgba(217, 72, 15, 0.05)', padding: '4px 8px', borderRadius: '6px', border: '1px solid rgba(217, 72, 15, 0.1)'
+              background: 'color-mix(in oklab, var(--accent) 5%, transparent)', padding: '4px 8px', borderRadius: '6px', border: '1px solid color-mix(in oklab, var(--accent) 10%, transparent)'
             }}>
               #{String(clientData.sequential_id || 0).padStart(3, '0')}
             </span>
@@ -984,7 +984,7 @@ export default function ClientDetailPage() {
               <button
                 onClick={() => window.open(`/client/dashboard?simulate=${clientData.id}`, '_blank')}
                 title="Visão do Cliente"
-                style={{ padding: '8px', borderRadius: '8px', backgroundColor: 'rgba(217, 72, 15, 0.05)', border: '1px solid rgba(217, 72, 15, 0.2)', color: 'var(--accent)', display: 'flex', alignItems: 'center', transition: '0.2s' }}
+                style={{ padding: '8px', borderRadius: '8px', backgroundColor: 'color-mix(in oklab, var(--accent) 5%, transparent)', border: '1px solid color-mix(in oklab, var(--accent) 20%, transparent)', color: 'var(--accent)', display: 'flex', alignItems: 'center', transition: '0.2s' }}
                 className="hover-accent"
               >
                 <Eye size={16} />
@@ -1045,7 +1045,7 @@ export default function ClientDetailPage() {
                 gap: '8px',
                 padding: '10px 16px',
                 borderRadius: '12px 12px 0 0',
-                background: isActive ? 'rgba(217, 72, 15, 0.1)' : 'transparent',
+                background: isActive ? 'color-mix(in oklab, var(--accent) 10%, transparent)' : 'transparent',
                 color: isActive ? 'var(--accent)' : 'var(--text-secondary)',
                 border: 'none',
                 cursor: 'pointer',
@@ -1100,7 +1100,7 @@ export default function ClientDetailPage() {
 
                 <Spotlight className="glass-card" style={{ flex: '1 1 120px', maxWidth: '200px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: 'rgba(217, 72, 15, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
+                    <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: 'color-mix(in oklab, var(--accent) 10%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
                       <ClipboardList size={14} />
                     </div>
                     <p style={{ fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Demandas</p>
@@ -1144,7 +1144,7 @@ export default function ClientDetailPage() {
                             cursor: 'pointer',
                             transition: 'all 0.2s',
                             border: datePreset === preset.id ? '1px solid var(--accent)' : '1px solid var(--border)',
-                            background: datePreset === preset.id ? 'rgba(217, 72, 15, 0.15)' : 'rgba(255,255,255,0.02)',
+                            background: datePreset === preset.id ? 'color-mix(in oklab, var(--accent) 15%, transparent)' : 'rgba(255,255,255,0.02)',
                             color: datePreset === preset.id ? 'var(--accent)' : 'var(--text-secondary)'
                           }}
                         >
@@ -1312,7 +1312,7 @@ export default function ClientDetailPage() {
                     {clientEvents.length > 0 ? clientEvents.map(event => (
                       <div key={event.id} style={{ display: 'flex', gap: '16px', alignItems: 'center', padding: '12px', backgroundColor: 'var(--card-inner-bg)', borderRadius: '12px' }}>
                         <div style={{
-                          width: '40px', height: '40px', borderRadius: '10px', backgroundColor: 'rgba(217, 72, 15, 0.1)',
+                          width: '40px', height: '40px', borderRadius: '10px', backgroundColor: 'color-mix(in oklab, var(--accent) 10%, transparent)',
                           display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)'
                         }}>
                           <Calendar size={20} />
@@ -1475,7 +1475,7 @@ export default function ClientDetailPage() {
                   ) : (
                     <Spotlight className="glass-card" style={{ padding: '40px', textAlign: 'center' }}>
                       <div style={{
-                        width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(217, 72, 15, 0.1)',
+                        width: '64px', height: '64px', borderRadius: '50%', background: 'color-mix(in oklab, var(--accent) 10%, transparent)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)',
                         margin: '0 auto 24px'
                       }}>
@@ -1695,14 +1695,14 @@ export default function ClientDetailPage() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <div style={{
-                      width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(217, 72, 15, 0.2)',
+                      width: '40px', height: '40px', borderRadius: '12px', background: 'color-mix(in oklab, var(--accent) 20%, transparent)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)'
                     }}>
                       <ShieldCheck size={20} />
                     </div>
                     <h4 style={{ fontWeight: 700, fontSize: '1.1rem' }}>Portal do Cliente</h4>
                   </div>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--accent)', background: 'rgba(217, 72, 15, 0.1)', padding: '4px 8px', borderRadius: '6px' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--accent)', background: 'color-mix(in oklab, var(--accent) 10%, transparent)', padding: '4px 8px', borderRadius: '6px' }}>
                     Agência Prátic
                   </span>
                 </div>
@@ -1771,7 +1771,7 @@ export default function ClientDetailPage() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <div style={{
-                          width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(217, 72, 15, 0.1)',
+                          width: '40px', height: '40px', borderRadius: '12px', background: 'color-mix(in oklab, var(--accent) 10%, transparent)',
                           display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)'
                         }}>
                           {key === 'instagram' ? <InstagramIcon size={20} style={{ color: '#E1306C' }} /> :
@@ -1906,7 +1906,7 @@ export default function ClientDetailPage() {
                               </span>
                             )}
                             {contract.content_capture && (
-                              <span style={{ fontSize: '0.65rem', background: 'rgba(217, 72, 15, 0.1)', padding: '2px 6px', borderRadius: '4px', color: 'var(--accent)' }}>
+                              <span style={{ fontSize: '0.65rem', background: 'color-mix(in oklab, var(--accent) 10%, transparent)', padding: '2px 6px', borderRadius: '4px', color: 'var(--accent)' }}>
                                 Captação: {contract.capture_frequency}
                               </span>
                             )}
@@ -2024,7 +2024,7 @@ export default function ClientDetailPage() {
                           cursor: 'pointer',
                           transition: 'all 0.2s',
                           border: datePreset === preset.id ? '1px solid var(--accent)' : '1px solid var(--border)',
-                          background: datePreset === preset.id ? 'rgba(217, 72, 15, 0.15)' : 'rgba(255,255,255,0.02)',
+                          background: datePreset === preset.id ? 'color-mix(in oklab, var(--accent) 15%, transparent)' : 'rgba(255,255,255,0.02)',
                           color: datePreset === preset.id ? 'var(--accent)' : 'var(--text-secondary)'
                         }}
                       >
@@ -2075,8 +2075,8 @@ export default function ClientDetailPage() {
                       display: 'flex', alignItems: 'center', gap: '6px',
                       padding: '6px 12px', borderRadius: '10px', fontSize: '0.75rem',
                       fontWeight: 600, cursor: syncingAsaas ? 'not-allowed' : 'pointer',
-                      border: '1px solid rgba(217, 72, 15, 0.3)',
-                      background: 'rgba(217, 72, 15, 0.08)',
+                      border: '1px solid color-mix(in oklab, var(--accent) 30%, transparent)',
+                      background: 'color-mix(in oklab, var(--accent) 8%, transparent)',
                       color: 'var(--accent)', opacity: syncingAsaas ? 0.6 : 1
                     }}
                   >
@@ -2111,7 +2111,7 @@ export default function ClientDetailPage() {
                 </Spotlight>
                 <Spotlight className="glass-card" style={{ flex: '1 1 120px', maxWidth: '180px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: 'rgba(217, 72, 15, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
+                    <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: 'color-mix(in oklab, var(--accent) 10%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
                       <Clock size={12} />
                     </div>
                     <p style={{ color: 'var(--text-tertiary)', fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', margin: 0 }}>A Vencer</p>
@@ -2188,7 +2188,7 @@ export default function ClientDetailPage() {
                                     color: 'var(--accent)',
                                     padding: '8px',
                                     borderRadius: '8px',
-                                    background: 'rgba(217, 72, 15, 0.1)',
+                                    background: 'color-mix(in oklab, var(--accent) 10%, transparent)',
                                     border: 'none',
                                     cursor: 'pointer',
                                   }}
@@ -2264,7 +2264,7 @@ export default function ClientDetailPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(217, 72, 15, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
+                    <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'color-mix(in oklab, var(--accent) 10%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
                       <Link size={18} />
                     </div>
                     <h3 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Links Essenciais</h3>
@@ -2782,7 +2782,7 @@ export default function ClientDetailPage() {
                         <motion.div
                           initial={{ opacity: 0, height: 0 }}
                           animate={{ opacity: 1, height: 'auto' }}
-                          style={{ background: 'rgba(217, 72, 15, 0.05)', padding: '20px', borderRadius: '16px', border: '1px solid rgba(217, 72, 15, 0.15)', display: 'flex', flexDirection: 'column', gap: '16px' }}
+                          style={{ background: 'color-mix(in oklab, var(--accent) 5%, transparent)', padding: '20px', borderRadius: '16px', border: '1px solid color-mix(in oklab, var(--accent) 15%, transparent)', display: 'flex', flexDirection: 'column', gap: '16px' }}
                         >
                           <p style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '1px' }}>Especificações de Gestão</p>
 

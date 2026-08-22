@@ -248,9 +248,9 @@ export default function LiveChat() {
             onClick={() => setIsOpen(true)}
             style={{
               width: '52px', height: '52px', borderRadius: '16px',
-              background: 'linear-gradient(135deg, var(--accent), #e85d26)',
+              background: 'linear-gradient(135deg, var(--accent), var(--accent))',
               color: 'white', border: 'none',
-              boxShadow: '0 6px 20px rgba(217, 72, 15, 0.35)',
+              boxShadow: '0 6px 20px color-mix(in oklab, var(--accent) 35%, transparent)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               cursor: 'pointer', position: 'relative',
             }}
@@ -329,7 +329,7 @@ export default function LiveChat() {
                     onClick={() => { setActiveChat('general'); clearUnread('general'); }}
                     style={{
                       width: '100%', padding: '10px', borderRadius: '10px', border: 'none',
-                      background: activeChat === 'general' ? 'rgba(217, 72, 15, 0.12)' : 'transparent',
+                      background: activeChat === 'general' ? 'color-mix(in oklab, var(--accent) 12%, transparent)' : 'transparent',
                       color: activeChat === 'general' ? 'var(--accent)' : 'var(--text-secondary)',
                       display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer',
                       marginBottom: '6px', fontSize: '0.85rem', fontWeight: 600,
@@ -355,7 +355,7 @@ export default function LiveChat() {
                         onClick={() => { setActiveChat(user.id); clearUnread(user.id); }}
                         style={{
                           width: '100%', padding: '8px', borderRadius: '10px', border: 'none',
-                          background: activeChat === user.id ? 'rgba(217, 72, 15, 0.12)' : 'transparent',
+                          background: activeChat === user.id ? 'color-mix(in oklab, var(--accent) 12%, transparent)' : 'transparent',
                           color: activeChat === user.id ? 'var(--text-primary)' : 'var(--text-secondary)',
                           display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer',
                           marginBottom: '2px',
@@ -394,7 +394,7 @@ export default function LiveChat() {
               {/* Header */}
               <div style={{
                 padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                borderBottom: '1px solid var(--border)', background: 'rgba(217,72,15,0.03)',
+                borderBottom: '1px solid var(--border)', background: 'color-mix(in oklab, var(--accent) 3%, transparent)',
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <button
@@ -485,7 +485,7 @@ export default function LiveChat() {
                             background: 'transparent', color: 'var(--text-primary)', textAlign: 'left',
                             cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem',
                           }}
-                          onMouseEnter={e => (e.currentTarget.style.background = 'rgba(217,72,15,0.1)')}
+                          onMouseEnter={e => (e.currentTarget.style.background = 'color-mix(in oklab, var(--accent) 10%, transparent)')}
                           onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                         >
                           <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.55rem', fontWeight: 700 }}>

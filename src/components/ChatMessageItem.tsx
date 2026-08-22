@@ -26,7 +26,7 @@ function renderContent(content: string, isOwnMessage: boolean) {
         style={{
           fontWeight: 700,
           color: isOwnMessage ? 'white' : 'var(--accent)',
-          background: isOwnMessage ? 'rgba(0,0,0,0.22)' : 'rgba(217, 72, 15, 0.15)',
+          background: isOwnMessage ? 'rgba(0,0,0,0.22)' : 'color-mix(in oklab, var(--accent) 15%, transparent)',
           borderRadius: '4px',
           padding: '1px 5px',
           display: 'inline-block',

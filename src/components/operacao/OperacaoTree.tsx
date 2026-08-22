@@ -43,8 +43,8 @@ export default function OperacaoTree() {
           padding: "10px 12px",
           borderRadius: 14,
           marginBottom: 8,
-          background: pathname === "/admin/operacao" ? "rgba(217,72,15,0.12)" : "transparent",
-          border: `1px solid ${pathname === "/admin/operacao" ? "rgba(217,72,15,0.25)" : "var(--border)"}`,
+          background: pathname === "/admin/operacao" ? "color-mix(in oklab, var(--accent) 12%, transparent)" : "transparent",
+          border: `1px solid ${pathname === "/admin/operacao" ? "color-mix(in oklab, var(--accent) 25%, transparent)" : "var(--border)"}`,
         }}
       >
         <div
@@ -126,7 +126,7 @@ export default function OperacaoTree() {
                             padding: "7px 10px",
                             borderRadius: 10,
                             marginTop: 2,
-                            background: active ? "rgba(217,72,15,0.12)" : "transparent",
+                            background: active ? "color-mix(in oklab, var(--accent) 12%, transparent)" : "transparent",
                             color: active ? "var(--accent)" : "var(--text-secondary)",
                             fontWeight: active ? 700 : 500,
                             fontSize: "0.8rem",

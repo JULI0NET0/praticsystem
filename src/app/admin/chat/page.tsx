@@ -290,7 +290,7 @@ export default function ChatPage() {
           <p style={{ fontSize: '0.6rem', textTransform: 'uppercase', color: 'var(--text-secondary)', padding: '8px 8px 4px', letterSpacing: '0.05em', fontWeight: 700 }}>Canais</p>
           <button
             onClick={() => openChat('general')}
-            style={{ width: '100%', padding: '12px', borderRadius: '12px', border: 'none', background: activeChat === 'general' ? 'rgba(217, 72, 15, 0.1)' : 'transparent', color: activeChat === 'general' ? 'var(--accent)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', marginBottom: '4px', fontSize: '0.9rem', fontWeight: (unread['general'] ?? 0) > 0 ? 800 : 600 }}
+            style={{ width: '100%', padding: '12px', borderRadius: '12px', border: 'none', background: activeChat === 'general' ? 'color-mix(in oklab, var(--accent) 10%, transparent)' : 'transparent', color: activeChat === 'general' ? 'var(--accent)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', marginBottom: '4px', fontSize: '0.9rem', fontWeight: (unread['general'] ?? 0) > 0 ? 800 : 600 }}
           >
             <Hash size={18} />
             <span style={{ flex: 1, textAlign: 'left' }}>Canal Geral</span>
@@ -308,7 +308,7 @@ export default function ChatPage() {
             return (
               <button
                 key={user.id} onClick={() => openChat(user.id)}
-                style={{ width: '100%', padding: '10px 12px', borderRadius: '12px', border: 'none', background: isActive ? 'rgba(217, 72, 15, 0.1)' : 'transparent', color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', marginBottom: '2px', transition: 'all 0.15s' }}
+                style={{ width: '100%', padding: '10px 12px', borderRadius: '12px', border: 'none', background: isActive ? 'color-mix(in oklab, var(--accent) 10%, transparent)' : 'transparent', color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', marginBottom: '2px', transition: 'all 0.15s' }}
               >
                 <div style={{ position: 'relative', flexShrink: 0 }}>
                   <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--accent)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700, overflow: 'hidden' }}>
@@ -344,7 +344,7 @@ export default function ChatPage() {
             )}
             {activeChat === 'general' ? (
               <>
-                <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(217,72,15,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'color-mix(in oklab, var(--accent) 10%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Hash size={20} color="var(--accent)" />
                 </div>
                 <div>
@@ -437,7 +437,7 @@ export default function ChatPage() {
                   <button
                     key={u.id} type="button" onClick={() => insertMention(u.username || u.name.split(' ')[0])}
                     style={{ width: '100%', padding: '8px 12px', border: 'none', borderRadius: '8px', background: 'transparent', color: 'var(--text-primary)', textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.85rem' }}
-                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(217,72,15,0.1)')}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'color-mix(in oklab, var(--accent) 10%, transparent)')}
                     onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                   >
                     <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.65rem', fontWeight: 700 }}>

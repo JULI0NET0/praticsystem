@@ -236,7 +236,7 @@ export function AsaasLinkDialog({
           <div style={{
             padding: "14px", borderRadius: "12px", width: "100%",
             border: `1px solid ${selected?.kind === "passthrough" ? "var(--accent)" : "var(--border)"}`,
-            background: selected?.kind === "passthrough" ? "rgba(217,72,15,0.06)" : "rgba(255,255,255,0.01)",
+            background: selected?.kind === "passthrough" ? "color-mix(in oklab, var(--accent) 6%, transparent)" : "rgba(255,255,255,0.01)",
             display: "flex", flexDirection: "column", gap: "10px",
           }}>
             <button
@@ -406,7 +406,7 @@ export function AsaasLinkDialog({
                         style={{
                           display: "flex", justifyContent: "space-between", alignItems: "center",
                           padding: "10px 14px", borderRadius: "10px", border: `1px solid ${isSelected ? "var(--accent)" : "var(--border)"}`,
-                          background: isSelected ? "rgba(217,72,15,0.08)" : "rgba(255,255,255,0.02)",
+                          background: isSelected ? "color-mix(in oklab, var(--accent) 8%, transparent)" : "rgba(255,255,255,0.02)",
                           cursor: "pointer", textAlign: "left", color: "var(--text-primary)", transition: "all 0.15s",
                           width: "100%"
                         }}
@@ -432,7 +432,7 @@ export function AsaasLinkDialog({
                 padding: "14px",
                 borderRadius: "12px",
                 border: `1px solid ${selected?.kind === "create_invoice" ? "var(--accent)" : "var(--border)"}`,
-                background: selected?.kind === "create_invoice" ? "rgba(217,72,15,0.04)" : "rgba(255,255,255,0.01)",
+                background: selected?.kind === "create_invoice" ? "color-mix(in oklab, var(--accent) 4%, transparent)" : "rgba(255,255,255,0.01)",
                 display: "flex",
                 flexDirection: "column",
                 gap: "10px",
@@ -574,7 +574,7 @@ export function AsaasLinkDialog({
                   style={{
                     display: "flex", justifyContent: "space-between", alignItems: "center",
                     padding: "10px 14px", borderRadius: "10px", border: `1px solid ${isSelected ? "var(--accent)" : "var(--border)"}`,
-                    background: isSelected ? "rgba(217,72,15,0.08)" : "rgba(255,255,255,0.02)",
+                    background: isSelected ? "color-mix(in oklab, var(--accent) 8%, transparent)" : "rgba(255,255,255,0.02)",
                     cursor: "pointer", textAlign: "left", color: "var(--text-primary)", transition: "all 0.15s",
                   }}
                 >
@@ -610,7 +610,7 @@ export function AsaasLinkDialog({
                     }}
                     style={{
                       width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center",
-                      padding: "10px 14px", background: isSelected ? "rgba(217,72,15,0.08)" : "rgba(255,255,255,0.02)",
+                      padding: "10px 14px", background: isSelected ? "color-mix(in oklab, var(--accent) 8%, transparent)" : "rgba(255,255,255,0.02)",
                       border: "none", cursor: "pointer", textAlign: "left", color: "var(--text-primary)", transition: "all 0.15s",
                     }}
                   >
@@ -626,7 +626,7 @@ export function AsaasLinkDialog({
                   </button>
 
                   {isSelected && (
-                    <div style={{ padding: "10px 14px", background: "rgba(217,72,15,0.04)", borderTop: "1px solid var(--border)" }}>
+                    <div style={{ padding: "10px 14px", background: "color-mix(in oklab, var(--accent) 4%, transparent)", borderTop: "1px solid var(--border)" }}>
                       <p style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginBottom: "6px", fontWeight: 600 }}>
                         Valor do lançamento a criar neste grupo:
                       </p>

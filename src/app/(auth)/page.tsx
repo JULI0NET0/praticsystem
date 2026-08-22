@@ -76,7 +76,7 @@ export default function LoginPage() {
         position: 'absolute',
         width: '600px',
         height: '600px',
-        background: 'radial-gradient(circle, rgba(217, 72, 15, 0.15) 0%, rgba(10, 10, 10, 0) 70%)',
+        background: 'radial-gradient(circle, color-mix(in oklab, var(--accent) 15%, transparent) 0%, rgba(10, 10, 10, 0) 70%)',
         top: '-200px',
         left: '-200px',
         borderRadius: '50%',
@@ -87,7 +87,7 @@ export default function LoginPage() {
         position: 'absolute',
         width: '500px',
         height: '500px',
-        background: 'radial-gradient(circle, rgba(217, 72, 15, 0.08) 0%, rgba(10, 10, 10, 0) 70%)',
+        background: 'radial-gradient(circle, color-mix(in oklab, var(--accent) 8%, transparent) 0%, rgba(10, 10, 10, 0) 70%)',
         bottom: '-150px',
         right: '-100px',
         borderRadius: '50%',
@@ -196,7 +196,7 @@ export default function LoginPage() {
               justifyContent: 'center',
               background: rememberMe ? 'var(--accent)' : 'rgba(255, 255, 255, 0.05)',
               transition: 'all 0.2s ease',
-              boxShadow: rememberMe ? '0 0 10px rgba(217, 72, 15, 0.3)' : 'none'
+              boxShadow: rememberMe ? '0 0 10px color-mix(in oklab, var(--accent) 30%, transparent)' : 'none'
             }}>
               {rememberMe && <div style={{ width: '8px', height: '8px', backgroundColor: 'white', borderRadius: '2px' }} />}
             </div>

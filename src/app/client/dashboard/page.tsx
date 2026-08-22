@@ -13,7 +13,7 @@ export default function ClientDashboardWrapper() {
   return (
     <Suspense fallback={
       <div style={{ display: 'flex', justifyContent: 'center', padding: '100px' }}>
-        <div style={{ width: '40px', height: '40px', border: '3px solid rgba(217, 72, 15, 0.3)', borderTopColor: 'var(--accent)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+        <div style={{ width: '40px', height: '40px', border: '3px solid color-mix(in oklab, var(--accent) 30%, transparent)', borderTopColor: 'var(--accent)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
       </div>
     }>
       <ClientDashboard />
@@ -74,7 +74,7 @@ function ClientDashboard() {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', padding: '100px' }}>
         <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }}>
-          <div style={{ width: '40px', height: '40px', border: '3px solid rgba(217, 72, 15, 0.3)', borderTopColor: 'var(--accent)', borderRadius: '50%' }} />
+          <div style={{ width: '40px', height: '40px', border: '3px solid color-mix(in oklab, var(--accent) 30%, transparent)', borderTopColor: 'var(--accent)', borderRadius: '50%' }} />
         </motion.div>
       </div>
     );
@@ -89,7 +89,7 @@ function ClientDashboard() {
     >
       {simulateId && (
         <div style={{ 
-          padding: '12px 20px', background: 'rgba(217, 72, 15, 0.1)', borderRadius: '12px', 
+          padding: '12px 20px', background: 'color-mix(in oklab, var(--accent) 10%, transparent)', borderRadius: '12px', 
           border: '1px solid var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '8px'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>

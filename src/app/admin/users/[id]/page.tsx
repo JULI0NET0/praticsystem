@@ -168,7 +168,7 @@ export default function UserDetailPage() {
     return (
       <div style={{ display: "flex", justifyContent: "center", padding: "100px" }}>
         <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }}>
-          <div style={{ width: "40px", height: "40px", border: "3px solid rgba(217,72,15,0.3)", borderTopColor: "var(--accent)", borderRadius: "50%" }} />
+          <div style={{ width: "40px", height: "40px", border: "3px solid color-mix(in oklab, var(--accent) 30%, transparent)", borderTopColor: "var(--accent)", borderRadius: "50%" }} />
         </motion.div>
       </div>
     );
@@ -233,7 +233,7 @@ export default function UserDetailPage() {
               width: "120px", height: "120px", borderRadius: "50%", background: "var(--accent)",
               margin: "0 auto 20px", fontSize: "3rem", fontWeight: 700,
               display: "flex", alignItems: "center", justifyContent: "center", color: "#fff",
-              boxShadow: "0 0 30px rgba(217,72,15,0.3)", position: "relative",
+              boxShadow: "0 0 30px color-mix(in oklab, var(--accent) 30%, transparent)", position: "relative",
             }}>
               {user.name.substring(0, 2).toUpperCase()}
               <div style={{
@@ -533,7 +533,7 @@ export default function UserDetailPage() {
               style={{ width: "100%", maxWidth: "450px", padding: "32px", textAlign: "center" }}
             >
               <div style={{
-                width: "64px", height: "64px", borderRadius: "50%", backgroundColor: "rgba(217,72,15,0.1)",
+                width: "64px", height: "64px", borderRadius: "50%", backgroundColor: "color-mix(in oklab, var(--accent) 10%, transparent)",
                 display: "flex", alignItems: "center", justifyContent: "center", color: "var(--accent)", margin: "0 auto 24px",
               }}>
                 <Shield size={32} />

@@ -533,7 +533,7 @@ export default function WorkspacePage() {
                 border: isEditing ? '2px dashed var(--accent)' : '1px solid var(--border)',
                 transition: 'all 0.3s ease',
                 position: 'relative',
-                background: isEditing ? 'rgba(217, 72, 15, 0.08)' : 'var(--glass-bg)',
+                background: isEditing ? 'color-mix(in oklab, var(--accent) 8%, transparent)' : 'var(--glass-bg)',
                 display: 'flex',
                 flexDirection: 'column',
                 cursor: isEditing ? 'grab' : 'default',
@@ -642,8 +642,8 @@ export default function WorkspacePage() {
                     >
                       <div style={{
                         width: '44px', height: '44px', borderRadius: '12px', flexShrink: 0,
-                        background: isActive ? 'rgba(255,255,255,0.04)' : 'rgba(217, 72, 15, 0.12)',
-                        border: `1px solid ${isActive ? 'var(--border)' : 'rgba(217, 72, 15, 0.25)'}`,
+                        background: isActive ? 'rgba(255,255,255,0.04)' : 'color-mix(in oklab, var(--accent) 12%, transparent)',
+                        border: `1px solid ${isActive ? 'var(--border)' : 'color-mix(in oklab, var(--accent) 25%, transparent)'}`,
                         display: 'flex', alignItems: 'center', justifyContent: 'center'
                       }}>
                         <widget.icon size={20} color={isActive ? 'var(--text-secondary)' : 'var(--accent)'} />
@@ -678,7 +678,7 @@ function StatsWidget({ colSpan, demandsCount, todayHours, isTracking, onTimerTog
   const gridCols = colSpan > 8 ? 'repeat(4, 1fr)' : colSpan > 5 ? 'repeat(3, 1fr)' : colSpan > 2 ? 'repeat(2, 1fr)' : '1fr';
 
   const items = [
-    { id: 'demands', label: "Demandas", value: demandsCount, icon: CheckCircle2, color: "var(--accent)", gradient: "linear-gradient(135deg, rgba(217, 72, 15, 0.2), transparent)" },
+    { id: 'demands', label: "Demandas", value: demandsCount, icon: CheckCircle2, color: "var(--accent)", gradient: "linear-gradient(135deg, color-mix(in oklab, var(--accent) 20%, transparent), transparent)" },
     { id: 'finished', label: "Finalizadas", value: "0", icon: CheckCircle2, color: "var(--color-success)", gradient: "linear-gradient(135deg, rgba(16, 185, 129, 0.2), transparent)" },
     { id: 'timer', label: "Tempo Hoje", value: todayHours.split(' ')[0], sub: todayHours.split(' ')[1], icon: isTracking ? Timer : Clock, color: isTracking ? "var(--color-success)" : "#3B82F6", gradient: isTracking ? "linear-gradient(135deg, var(--color-success-wash), transparent)" : "linear-gradient(135deg, rgba(59, 130, 246, 0.2), transparent)", interactive: true },
     { id: 'alerts', label: "Alertas", value: "0", icon: Zap, color: "var(--color-danger)", gradient: "linear-gradient(135deg, var(--color-danger-wash), transparent)" }
@@ -1227,8 +1227,8 @@ function NotesWidget() {
         <Link href="/admin/notas/create">
           <button style={{
             display: 'flex', alignItems: 'center', gap: '4px',
-            background: 'rgba(217, 72, 15, 0.1)', color: 'var(--accent)',
-            border: '1px solid rgba(217, 72, 15, 0.2)', borderRadius: '8px',
+            background: 'color-mix(in oklab, var(--accent) 10%, transparent)', color: 'var(--accent)',
+            border: '1px solid color-mix(in oklab, var(--accent) 20%, transparent)', borderRadius: '8px',
             padding: '4px 10px', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer',
             transition: 'all 0.2s'
           }}
@@ -1237,7 +1237,7 @@ function NotesWidget() {
             e.currentTarget.style.color = 'white';
           }}
           onMouseLeave={e => {
-            e.currentTarget.style.background = 'rgba(217, 72, 15, 0.1)';
+            e.currentTarget.style.background = 'color-mix(in oklab, var(--accent) 10%, transparent)';
             e.currentTarget.style.color = 'var(--accent)';
           }}
           >
@@ -1276,7 +1276,7 @@ function NotesWidget() {
                   transition: 'all 0.2s'
                 }}
                 onMouseEnter={e => {
-                  e.currentTarget.style.borderColor = 'rgba(217, 72, 15, 0.25)';
+                  e.currentTarget.style.borderColor = 'color-mix(in oklab, var(--accent) 25%, transparent)';
                   e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
                 }}
                 onMouseLeave={e => {
@@ -1462,7 +1462,7 @@ function TeamWidget({ isUserOnline, onlineUsers }: { isUserOnline: (id: string) 
                         cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.85rem',
                         fontWeight: 600
                       }}
-                      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(217,72,15,0.1)')}
+                      onMouseEnter={e => (e.currentTarget.style.background = 'color-mix(in oklab, var(--accent) 10%, transparent)')}
                       onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                     >
                       <MessageSquare size={16} color="var(--accent)" /> Enviar Mensagem

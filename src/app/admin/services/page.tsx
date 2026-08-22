@@ -390,7 +390,7 @@ export default function ServicesPage() {
                     </div>
                   </div>
 
-                  <div style={{ padding: '24px', background: 'rgba(217, 72, 15, 0.05)', borderRadius: '20px', border: '1px solid rgba(217, 72, 15, 0.1)' }}>
+                  <div style={{ padding: '24px', background: 'color-mix(in oklab, var(--accent) 5%, transparent)', borderRadius: '20px', border: '1px solid color-mix(in oklab, var(--accent) 10%, transparent)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
                       <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
                         <Share2 size={16} />
@@ -507,9 +507,9 @@ export default function ServicesPage() {
                 <div style={{
                   marginTop: 'auto',
                   padding: '24px',
-                  background: 'linear-gradient(135deg, rgba(217, 72, 15, 0.1) 0%, rgba(217, 72, 15, 0.02) 100%)',
+                  background: 'linear-gradient(135deg, color-mix(in oklab, var(--accent) 10%, transparent) 0%, color-mix(in oklab, var(--accent) 2%, transparent) 100%)',
                   borderRadius: '20px',
-                  border: '1px solid rgba(217, 72, 15, 0.15)',
+                  border: '1px solid color-mix(in oklab, var(--accent) 15%, transparent)',
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',

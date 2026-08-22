@@ -55,7 +55,7 @@ export default function QuickAccess() {
                 width: '40px',
                 height: '40px',
                 borderRadius: '50%',
-                backgroundColor: 'rgba(217, 72, 15, 0.1)',
+                backgroundColor: 'color-mix(in oklab, var(--accent) 10%, transparent)',
                 color: 'var(--accent)',
                 display: 'flex',
                 alignItems: 'center',

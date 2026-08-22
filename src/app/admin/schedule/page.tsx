@@ -1258,7 +1258,7 @@ export default function SchedulePage() {
           box-shadow: none !important;
         }
         .fc-day-today {
-          background: rgba(217, 72, 15, 0.08) !important;
+          background: color-mix(in oklab, var(--accent) 8%, transparent) !important;
         }
         .fc-day-today .fc-daygrid-day-number {
           color: white !important;

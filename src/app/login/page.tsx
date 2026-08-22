@@ -86,7 +86,7 @@ export default function LoginPage() {
       backgroundColor: 'var(--color-surface-canvas)',
       // Halo único no topo — o único gesto de cor suave que o
       // sistema permite (design-system §8). Antes usava o acento
-      // aposentado #D9480F direto.
+      // aposentado var(--accent) direto.
       backgroundImage:
         'radial-gradient(circle at 50% -20%, var(--color-terracotta-200), transparent 60%)',
       padding: '24px'

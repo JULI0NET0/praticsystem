@@ -249,7 +249,7 @@ export default function FloatingSearch() {
                               textAlign: 'left', width: '100%',
                               transition: 'background 0.15s',
                             }}
-                            onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(217,72,15,0.1)')}
+                            onMouseEnter={(e) => (e.currentTarget.style.background = 'color-mix(in oklab, var(--accent) 10%, transparent)')}
                             onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                           >
                             <div style={{

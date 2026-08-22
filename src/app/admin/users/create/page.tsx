@@ -133,7 +133,7 @@ export default function CreateUserPage() {
           <div style={{ position: 'relative' }}>
             <div style={{
               width: '100px', height: '100px', borderRadius: '24px',
-              background: 'rgba(217, 72, 15, 0.05)', border: '2px dashed rgba(217, 72, 15, 0.2)',
+              background: 'color-mix(in oklab, var(--accent) 5%, transparent)', border: '2px dashed color-mix(in oklab, var(--accent) 20%, transparent)',
               display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden'
             }}>
               {formData.avatarUrl ? (

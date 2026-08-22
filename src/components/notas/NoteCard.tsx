@@ -84,7 +84,7 @@ export default function NoteCard({
           position: 'relative',
         }}
         onMouseEnter={e => {
-          (e.currentTarget as HTMLElement).style.borderColor = 'rgba(217, 72, 15, 0.35)';
+          (e.currentTarget as HTMLElement).style.borderColor = 'color-mix(in oklab, var(--accent) 35%, transparent)';
           (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)';
         }}
         onMouseLeave={e => {
@@ -133,9 +133,9 @@ export default function NoteCard({
             {subjects.slice(0, 3).map(s => (
               <span key={s} style={{
                 fontSize: '0.68rem', fontWeight: 600,
-                background: 'rgba(217, 72, 15, 0.1)', color: 'var(--accent)',
+                background: 'color-mix(in oklab, var(--accent) 10%, transparent)', color: 'var(--accent)',
                 padding: '2px 8px', borderRadius: '20px',
-                border: '1px solid rgba(217, 72, 15, 0.2)',
+                border: '1px solid color-mix(in oklab, var(--accent) 20%, transparent)',
               }}>
                 {s}
               </span>
@@ -187,7 +187,7 @@ export default function NoteCard({
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.color = 'var(--accent)';
-                  e.currentTarget.style.background = 'rgba(217, 72, 15, 0.1)';
+                  e.currentTarget.style.background = 'color-mix(in oklab, var(--accent) 10%, transparent)';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.color = isPinned ? 'var(--accent)' : 'var(--text-secondary)';

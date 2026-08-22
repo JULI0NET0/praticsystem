@@ -893,7 +893,7 @@ export function AsaasSync({
                   initial={{ opacity: 0, y: 4 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.015 }}
-                  style={{ background: isBatchSelected ? "rgba(217,72,15,0.06)" : undefined }}
+                  style={{ background: isBatchSelected ? "color-mix(in oklab, var(--accent) 6%, transparent)" : undefined }}
                 >
                   {/* Checkbox */}
                   <td>

@@ -119,7 +119,7 @@ export default function ClientSidebar() {
                       style={{
                         position: 'absolute',
                         inset: 0,
-                        backgroundColor: 'rgba(217, 72, 15, 0.1)',
+                        backgroundColor: 'color-mix(in oklab, var(--accent) 10%, transparent)',
                         borderRadius: '12px',
                         zIndex: 0
                       }}
@@ -138,7 +138,7 @@ export default function ClientSidebar() {
                     padding: isExpanded ? '12px 16px' : '12px 0',
                     borderRadius: '12px',
                     color: isActive ? 'var(--accent)' : 'var(--text-secondary)',
-                    backgroundColor: isActive ? 'rgba(217, 72, 15, 0.05)' : 'transparent',
+                    backgroundColor: isActive ? 'color-mix(in oklab, var(--accent) 5%, transparent)' : 'transparent',
                     transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
                     textDecoration: 'none',
                     justifyContent: isExpanded ? 'flex-start' : 'center',

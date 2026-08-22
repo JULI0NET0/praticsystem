@@ -60,7 +60,7 @@ export default function ShortcutOverlay() {
                   width: "40px", 
                   height: "40px", 
                   borderRadius: "12px", 
-                  background: "rgba(217, 72, 15, 0.1)", 
+                  background: "color-mix(in oklab, var(--accent) 10%, transparent)", 
                   display: "flex", 
                   alignItems: "center", 
                   justifyContent: "center",
