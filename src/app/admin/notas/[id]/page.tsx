@@ -516,8 +516,8 @@ export default function NotaDetailPage() {
 
           <style>{`
             .sticky-title-container {
-              background: var(--glass-bg) !important;
-              border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+              background: var(--color-surface-canvas) !important;
+              border-bottom: 1px solid var(--color-border-subtle);
             }
           `}</style>
 

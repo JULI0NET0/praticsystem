@@ -45,3 +45,6 @@
    overrides precisam ficar FORA das camadas. Detalhes no cabeçalho
    do arquivo. */
 @import './vendor/fullcalendar.css';
+
+/* Impressão — independente de tema, valores literais. */
+@import './print.css' layer(components);

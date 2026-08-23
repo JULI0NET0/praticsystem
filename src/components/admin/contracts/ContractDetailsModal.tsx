@@ -900,56 +900,7 @@ function PrintOverlay({ contract, client, docContent }: PrintOverlayProps) {
 
   return (
     <>
-      <style>{`
-        #contract-print-overlay .clause-section {
-          page-break-inside: avoid;
-          break-inside: avoid;
-          margin-bottom: 16px;
-        }
-        #contract-print-overlay .clause-header {
-          color: #111;
-          font-weight: 800;
-          font-size: 13px;
-          margin-top: 12px;
-          margin-bottom: 6px;
-          text-transform: uppercase;
-          font-family: "Helvetica Neue", Arial, sans-serif;
-        }
-        #contract-print-overlay .content-body {
-          color: #1a1a1a;
-          font-size: 11.5px;
-          line-height: 1.45;
-          text-align: justify;
-          font-family: "Helvetica Neue", Arial, sans-serif;
-        }
-        #contract-print-overlay .content-body p {
-          margin: 0 0 4px 0;
-        }
-        #contract-print-overlay .topic-line {
-          margin: 2px 0 2px 14px;
-          text-align: justify;
-        }
-        #contract-print-overlay .content-body strong {
-          color: #000;
-          font-weight: 700;
-        }
-        #contract-print-overlay .content-body ul,
-        #contract-print-overlay .content-body ol {
-          padding-left: 20px;
-          margin: 4px 0;
-        }
-        #contract-print-overlay .content-body li {
-          margin: 2px 0;
-        }
-        #contract-print-overlay .signatures-block {
-          display: flex;
-          justify-content: space-between;
-          margin-top: 40px;
-          padding-bottom: 20px;
-          page-break-inside: avoid;
-          break-inside: avoid;
-        }
-      `}</style>
+      {/* Estilos de impressão extraídos para src/styles/print.css */}
 
       <div id="contract-print-overlay" style={{ display: 'none' }}>
         <div style={{ fontFamily: '"Helvetica Neue", Arial, sans-serif', color: '#1a1a1a', display: 'flex', flexDirection: 'column', width: '794px', background: '#fff' }}>

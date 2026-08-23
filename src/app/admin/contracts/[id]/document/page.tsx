@@ -230,10 +230,20 @@ export default function ContractDocumentPage() {
         </div>
       </div>
 
+      {/* Este bloco FICA em styled-jsx de propósito, ao contrário do
+          FullCalendar e do TipTap. Ele define `body { background }`
+          global, e é justamente o escopo de montagem do styled-jsx que
+          o mantém restrito a esta rota — movê-lo para um CSS global
+          pintaria o body de TODA página. E, sendo superfície de
+          impressão, é deliberadamente independente de tema: papel
+          branco e serifada, no claro e no escuro. Por isso os valores
+          aqui são literais, não tokens. */}
       <style jsx global>{`
         /* Reset para a página do documento */
         body {
-          background-color: #e5e7eb !important;
+          /* cinza morno em vez do #e5e7eb frio, para combinar com o
+             pergaminho do resto do produto */
+          background-color: #e9e8e4 !important;
           margin: 0;
           padding: 0;
         }
