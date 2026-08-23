@@ -35,3 +35,9 @@
    utilitários utilizáveis (className="p-3" sobrescreve .btn). */
 @import './legacy.css' layer(components);
 @import './components.css' layer(components);
+
+/* Vendor — SEM camada de propósito. O FullCalendar injeta a folha
+   dele em runtime, sem camada e depois de nós; CSS sem camada vence
+   qualquer @layer, então os overrides precisam ficar aqui fora.
+   Detalhes no cabeçalho do arquivo. */
+@import './vendor/fullcalendar.css';

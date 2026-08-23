@@ -323,43 +323,9 @@
   gap: 24px;
 }
 
-.fc-event-premium {
-  overflow: hidden;
-  position: relative;
-}
-
-/* Altura fixa e uniforme para todas as células do mês */
-.fc-daygrid-body > table > tbody > tr {
-  height: 96px !important;
-}
-.fc-daygrid-day-frame {
-  min-height: 0 !important;
-  overflow: hidden !important;
-}
-
-.fc-daygrid-day.fc-day-today {
-  background: var(--color-terracotta-100) !important;
-}
-
-.fc-daygrid-day-number {
-  font-weight: 600 !important;
-  padding: 6px !important;
-  font-size: var(--text-caption);
-}
-
-.fc-day-today .fc-daygrid-day-number {
-  background: var(--accent) !important;
-  color: var(--color-text-on-accent) !important;
-  border-radius: var(--radius-sm) !important;
-  width: 26px;
-  height: 26px;
-  display: flex;
-  /* era `alignItems`/`justifyContent` em camelCase — CSS inválido,
-     as regras nunca aplicaram */
-  align-items: center;
-  justify-content: center;
-  margin: 4px;
-}
+/* As regras do FullCalendar migraram para vendor/fullcalendar.css.
+   Aqui elas ficavam em layer(components) e perdiam para a folha que o
+   FC injeta em runtime sem camada — eram letra morta. */
 
 @media (max-width: 1100px) {
   .agenda-layout {

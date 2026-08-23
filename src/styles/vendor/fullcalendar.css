@@ -1,0 +1,251 @@
+/* ============================================================
+   FullCalendar — overrides de tema
+   ------------------------------------------------------------
+   ⚠️ Este arquivo é importado SEM `layer()` de propósito, e os
+   `!important` são necessários. Não "limpe" nenhum dos dois.
+
+   O FullCalendar v6 não distribui .css: ele injeta a folha dele em
+   runtime com `injectStyles()` (@fullcalendar/core/internal-common.js),
+   criando um <style> sem camada e DEPOIS do nosso CSS no documento.
+   Como CSS sem camada vence qualquer @layer, e os seletores dele
+   ainda são mais específicos que os nossos (`.fc .fc-button-primary`
+   contra `.fc-button-primary`), rebaixar isto para layer(components)
+   faria todo override aqui perder silenciosamente.
+   ============================================================ */
+
+/* Variáveis próprias do FC — o caminho limpo, quando ele oferece */
+.fc {
+  --fc-border-color: var(--color-border-subtle);
+  --fc-page-bg-color: var(--color-surface-raised);
+  --fc-neutral-bg-color: var(--color-surface-sunken);
+  --fc-neutral-text-color: var(--color-text-tertiary);
+  --fc-daygrid-event-dot-width: 8px;
+  --fc-list-event-hover-bg-color: var(--color-surface-sunken);
+  --fc-today-bg-color: var(--color-terracotta-100);
+  --fc-highlight-color: var(--color-info-wash);
+  --fc-small-font-size: var(--text-caption);
+  font-family: inherit; /* era 'Outfit', fonte aposentada */
+}
+
+/* ---------- Grade ---------- */
+.fc-view-harness {
+  background: transparent !important;
+}
+
+.fc-scrollgrid {
+  border: none !important;
+  background: transparent !important;
+}
+
+.fc-theme-standard td,
+.fc-theme-standard th {
+  border: 1px solid var(--color-border-subtle) !important;
+  background: transparent !important;
+}
+
+.fc-col-header-cell {
+  padding: 6px 0 !important;
+  background: var(--color-surface-sunken) !important;
+  border: none !important;
+}
+
+.fc-col-header-cell-cushion {
+  color: var(--color-text-tertiary) !important;
+  font-size: var(--text-micro) !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.06em;
+  text-decoration: none !important;
+}
+
+.fc-daygrid-day-number {
+  font-size: var(--text-caption) !important;
+  font-weight: 600 !important;
+  padding: 6px !important;
+  color: var(--color-text-secondary) !important;
+}
+
+/* ---------- Toolbar ---------- */
+.fc-header-toolbar {
+  margin-bottom: var(--space-4) !important;
+  padding: 0 var(--space-4) !important;
+}
+
+.fc-toolbar-title {
+  font-size: var(--text-h3) !important;
+  font-weight: 600 !important;
+  color: var(--color-text-primary);
+}
+
+.fc-button-primary {
+  background-color: var(--color-surface-raised) !important;
+  border-color: var(--color-border-default) !important;
+  color: var(--color-text-primary) !important;
+  font-weight: 600 !important;
+  font-size: var(--text-ui) !important;
+  border-radius: var(--radius-input) !important;
+  padding: 6px 12px !important;
+  text-transform: capitalize !important;
+  box-shadow: none !important;
+  transition: background-color var(--duration-fast) var(--ease-standard) !important;
+}
+
+.fc-button-primary:hover {
+  background-color: var(--color-surface-sunken) !important;
+  border-color: var(--color-border-strong) !important;
+}
+
+.fc-button-primary:focus {
+  box-shadow: 0 0 0 3px var(--color-info-wash) !important;
+}
+
+/* Texto ESCURO sobre o coral — branco reprova AA (3.12:1) */
+.fc-button-active,
+.fc-button-primary:not(:disabled).fc-button-active,
+.fc-button-primary:not(:disabled):active {
+  background-color: var(--accent) !important;
+  border-color: var(--accent) !important;
+  color: var(--color-text-on-accent) !important;
+}
+
+/* ---------- Eventos ---------- */
+.fc-event {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.fc-event-premium {
+  overflow: hidden;
+  position: relative;
+}
+
+.fc-day-today {
+  background: var(--color-terracotta-100) !important;
+}
+
+.fc-day-today .fc-daygrid-day-number {
+  color: var(--color-text-on-accent) !important;
+  background: var(--accent) !important;
+  border-radius: var(--radius-sm) !important;
+  font-weight: 700;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 4px;
+}
+
+/* ---------- Células de mês com altura fixa ---------- */
+.fc-daygrid-body > table > tbody > tr {
+  height: 96px !important;
+}
+
+.fc-daygrid-day {
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+.fc-daygrid-day-frame {
+  position: absolute !important;
+  inset: 0 !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+.fc-daygrid-day-events {
+  min-height: 0 !important;
+}
+
+/* ---------- "mais N" ---------- */
+.fc-daygrid-more-link {
+  font-size: var(--text-micro) !important;
+  font-weight: 600 !important;
+  color: var(--color-text-secondary) !important;
+  padding: 1px 6px !important;
+  border-radius: var(--radius-sm) !important;
+  background: var(--color-surface-sunken) !important;
+  margin-top: 1px !important;
+  display: block !important;
+  text-decoration: none !important;
+}
+
+.fc-daygrid-more-link:hover {
+  background: var(--color-surface-inset) !important;
+  color: var(--color-text-primary) !important;
+}
+
+/* ---------- Lista ---------- */
+.fc-list-event:hover td {
+  background: var(--color-surface-sunken) !important;
+}
+
+.fc-list-day-cushion {
+  background: var(--color-surface-sunken) !important;
+}
+
+/* ---------- Popover ---------- */
+.agenda-popover {
+  background: var(--color-surface-raised) !important;
+  border: 1px solid var(--color-border-default) !important;
+}
+
+.fc-theme-standard .fc-popover {
+  background: var(--color-surface-raised) !important;
+  border: 1px solid var(--color-border-default) !important;
+  box-shadow: var(--shadow-lg) !important;
+}
+
+.fc-theme-standard .fc-popover-header {
+  background: var(--color-surface-sunken) !important;
+  color: var(--color-text-primary) !important;
+}
+
+/* ---------- Layout da página de agenda ----------
+   A agenda quer sangrar até a borda. Antes isso era um override
+   global de `.admin-content-area` dentro do styled-jsx da rota, que
+   valia enquanto o componente estivesse montado; `:has()` faz o mesmo
+   recorte de forma declarativa, sem depender da montagem. */
+.admin-content-area:has(#agenda-page-container) {
+  padding: var(--space-5) var(--space-3) calc(var(--space-3) + 60px) !important;
+}
+
+.admin-content-area:has(#agenda-page-container) > div {
+  max-width: 100% !important;
+}
+
+@media (max-width: 768px) {
+  .admin-content-area:has(#agenda-page-container) {
+    padding: var(--space-3) 6px calc(var(--mobile-nav-height) + 20px) !important;
+  }
+}
+
+@media (min-width: 769px) {
+  #agenda-page-container {
+    height: calc(100vh - 130px) !important;
+  }
+  .fc {
+    height: 100% !important;
+  }
+  .fc-view-harness {
+    flex: 1 !important;
+    height: 100% !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .agenda-layout {
+    grid-template-columns: 1fr;
+  }
+  .fc-header-toolbar {
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: 0 var(--space-2) !important;
+  }
+  .fc-toolbar-chunk {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+  }
+}
