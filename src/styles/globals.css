@@ -36,8 +36,12 @@
 @import './legacy.css' layer(components);
 @import './components.css' layer(components);
 
-/* Vendor — SEM camada de propósito. O FullCalendar injeta a folha
-   dele em runtime, sem camada e depois de nós; CSS sem camada vence
-   qualquer @layer, então os overrides precisam ficar aqui fora.
-   Detalhes no cabeçalho do arquivo. */
+/* O TipTap não injeta CSS próprio — todo o estilo do conteúdo é
+   nosso, então entra na camada normalmente. */
+@import './vendor/tiptap.css' layer(components);
+
+/* Já o FullCalendar injeta a folha dele em runtime, sem camada e
+   depois de nós; CSS sem camada vence qualquer @layer, então estes
+   overrides precisam ficar FORA das camadas. Detalhes no cabeçalho
+   do arquivo. */
 @import './vendor/fullcalendar.css';
