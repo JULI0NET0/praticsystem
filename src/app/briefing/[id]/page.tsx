@@ -13,36 +13,9 @@ import { supabase } from '@/lib/supabase';
 import { useToast } from '@/components/CustomToast';
 import Link from 'next/link';
 
-// Componentes Reutilizados (Estilo Onboarding)
-const Spotlight = ({ children, className = "", style = {} }: any) => {
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [opacity, setOpacity] = useState(0);
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    const div = e.currentTarget;
-    const rect = div.getBoundingClientRect();
-    setPosition({ x: e.clientX - rect.left, y: e.clientY - rect.top });
-  };
-
-  return (
-    <div
-      onMouseMove={handleMouseMove}
-      onMouseEnter={() => setOpacity(1)}
-      onMouseLeave={() => setOpacity(0)}
-      className={`relative overflow-hidden ${className}`}
-      style={{ ...style, position: 'relative' }}
-    >
-      <div
-        className="pointer-events-none absolute -inset-px transition duration-300"
-        style={{
-          background: `radial-gradient(600px circle at ${position.x}px ${position.y}px, rgba(249, 115, 22, 0.1), transparent 40%)`,
-          opacity,
-        }}
-      />
-      {children}
-    </div>
-  );
-};
+// Havia aqui um Spotlight local (não o componente compartilhado) que
+// pintava um radial laranja seguindo o mouse. Era código morto — nunca
+// foi instanciado nesta página — e o laranja #F97316 saiu da paleta.
 
 export default function BriefingPage() {
   const params = useParams();
@@ -206,15 +179,15 @@ DADOS DO BRIEFING:
 
   if (loading) {
     return (
-      <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#09090b' }}>
-        <Loader2 className="animate-spin" color="#f97316" size={40} />
+      <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-surface-canvas)' }}>
+        <Loader2 className="animate-spin" color="var(--accent)" size={32} />
       </div>
     );
   }
 
   if (!client) {
     return (
-      <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#09090b', color: 'white' }}>
+      <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-surface-canvas)', color: 'var(--color-text-secondary)' }}>
         <p>Cliente não encontrado.</p>
       </div>
     );
@@ -231,19 +204,17 @@ DADOS DO BRIEFING:
   return (
     <div style={{
       minHeight: '100vh',
-      background: '#09090b',
-      color: 'white',
+      background: 'var(--color-surface-canvas)',
+      color: 'var(--color-text-primary)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '20px',
-      fontFamily: 'Inter, sans-serif'
+      padding: 'var(--space-5)',
+      // o halo único do sistema — mesmo gesto do login, sem os orbs
+      // de blur(100px) que existiam aqui
+      backgroundImage:
+        'radial-gradient(circle at 50% -10%, var(--color-terracotta-200), transparent 55%)',
     }}>
-      {/* Background Effects */}
-      <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, overflow: 'hidden', zIndex: 0 }}>
-        <div style={{ position: 'absolute', top: '10%', left: '20%', width: '400px', height: '400px', background: 'rgba(249, 115, 22, 0.05)', filter: 'blur(100px)', borderRadius: '50%' }} />
-        <div style={{ position: 'absolute', bottom: '10%', right: '20%', width: '400px', height: '400px', background: 'rgba(249, 115, 22, 0.03)', filter: 'blur(100px)', borderRadius: '50%' }} />
-      </div>
 
       <AnimatePresence mode="wait">
         {step === 0 && (
@@ -255,33 +226,33 @@ DADOS DO BRIEFING:
             className="glass-card"
             style={{
               maxWidth: '600px',
-              padding: '48px',
+              padding: 'var(--space-6)',
               textAlign: 'center',
               zIndex: 1,
-              border: '1px solid rgba(255, 255, 255, 0.1)'
+              border: '1px solid var(--color-border-subtle)'
             }}
           >
             <div style={{
               width: '80px',
               height: '80px',
-              background: 'rgba(249, 115, 22, 0.1)',
-              borderRadius: '24px',
+              background: 'var(--color-terracotta-100)',
+              borderRadius: 'var(--radius-card)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               margin: '0 auto 32px',
-              color: '#f97316'
+              color: 'var(--accent)'
             }}>
               <Sparkles size={40} />
             </div>
             <h1 style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '16px' }}>Bem-vindo ao seu Briefing</h1>
-            <p style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '1.125rem', marginBottom: '40px', lineHeight: '1.6' }}>
+            <p style={{ color: 'var(--color-text-secondary)', fontSize: '1.125rem', marginBottom: '40px', lineHeight: '1.6' }}>
               Olá, <strong>{client.nome_fantasia || client.name}</strong>! Este formulário nos ajudará a entender profundamente o seu negócio para criarmos estratégias de alto impacto.
             </p>
             <button
               onClick={() => setStep(1)}
               className="btn btn-accent"
-              style={{ width: '100%', padding: '16px', fontSize: '1rem', fontWeight: 600 }}
+              style={{ width: '100%', padding: 'var(--card-pad)', fontSize: '1rem', fontWeight: 600 }}
             >
               Começar Briefing <ArrowRight size={20} />
             </button>
@@ -300,7 +271,7 @@ DADOS DO BRIEFING:
               maxWidth: '800px',
               minHeight: '600px',
               zIndex: 1,
-              border: '1px solid rgba(255, 255, 255, 0.1)',
+              border: '1px solid var(--color-border-subtle)',
               display: 'flex',
               flexDirection: 'column',
               overflow: 'hidden'
@@ -309,8 +280,8 @@ DADOS DO BRIEFING:
             {/* Mac OS Window Header */}
             <div style={{
               padding: '16px 24px',
-              background: 'rgba(255, 255, 255, 0.03)',
-              borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+              background: 'var(--color-surface-sunken)',
+              borderBottom: '1px solid var(--color-surface-sunken)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between'
@@ -320,13 +291,13 @@ DADOS DO BRIEFING:
                 <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#ffbd2e' }} />
                 <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#27c93f' }} />
               </div>
-              <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'rgba(255, 255, 255, 0.3)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-muted)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
                 Briefing Strategy Portal — {client.nome_fantasia || client.name}
               </div>
               <div style={{ width: '52px' }} />
             </div>
 
-            <div style={{ padding: '40px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+            <div style={{ padding: 'var(--space-5)', flex: 1, display: 'flex', flexDirection: 'column' }}>
               {/* Progress Bar */}
               <div style={{ display: 'flex', gap: '8px', marginBottom: '40px' }}>
                 {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
@@ -334,7 +305,7 @@ DADOS DO BRIEFING:
                     flex: 1,
                     height: '4px',
                     borderRadius: '2px',
-                    background: s <= step ? '#f97316' : 'rgba(255, 255, 255, 0.1)',
+                    background: s <= step ? 'var(--accent)' : 'var(--color-border-subtle)',
                     transition: 'all 0.3s ease'
                   }} />
                 ))}
@@ -358,14 +329,14 @@ DADOS DO BRIEFING:
                   {step === 1 && (
                     <>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '8px' }}>
-                        <div style={{ padding: '12px', background: 'rgba(249, 115, 22, 0.1)', color: '#f97316', borderRadius: '16px' }}>
+                        <div style={{ padding: '12px', background: 'var(--color-terracotta-100)', color: 'var(--accent)', borderRadius: 'var(--radius-card)' }}>
                           <Info size={24} />
                         </div>
                         <h2 style={{ fontSize: '1.75rem', fontWeight: 700 }}>Informações Gerais</h2>
                       </div>
-                      <p style={{ color: 'rgba(255, 255, 255, 0.5)', marginBottom: '32px' }}>Confirme os dados de contato principais.</p>
+                      <p style={{ color: 'var(--color-text-tertiary)', marginBottom: '32px' }}>Confirme os dados de contato principais.</p>
 
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
                         <div>
                           <label className="label-briefing">Nome do Responsável</label>
                           <input className="input-briefing" value={formData.nome_contato} onChange={e => updateForm('nome_contato', e.target.value)} placeholder="Quem cuidará do projeto?" />
@@ -393,14 +364,14 @@ DADOS DO BRIEFING:
                   {step === 2 && (
                     <>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '8px' }}>
-                        <div style={{ padding: '12px', background: 'rgba(249, 115, 22, 0.1)', color: '#f97316', borderRadius: '16px' }}>
+                        <div style={{ padding: '12px', background: 'var(--color-terracotta-100)', color: 'var(--accent)', borderRadius: 'var(--radius-card)' }}>
                           <Monitor size={24} />
                         </div>
                         <h2 style={{ fontSize: '1.75rem', fontWeight: 700 }}>Identidade da Empresa</h2>
                       </div>
-                      <p style={{ color: 'rgba(255, 255, 255, 0.5)', marginBottom: '32px' }}>Conte-nos sobre a essência do seu negócio.</p>
+                      <p style={{ color: 'var(--color-text-tertiary)', marginBottom: '32px' }}>Conte-nos sobre a essência do seu negócio.</p>
 
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                           <div>
                             <label className="label-briefing">Nicho / Setor</label>
@@ -421,9 +392,9 @@ DADOS DO BRIEFING:
                                 onClick={() => updateForm('empresa_nova', opt)}
                                 style={{
                                   flex: 1, padding: '12px', borderRadius: '12px',
-                                  background: formData.empresa_nova === opt ? 'rgba(249, 115, 22, 0.2)' : 'rgba(255,255,255,0.05)',
-                                  border: `1px solid ${formData.empresa_nova === opt ? '#f97316' : 'rgba(255,255,255,0.1)'}`,
-                                  color: formData.empresa_nova === opt ? '#f97316' : 'white',
+                                  background: formData.empresa_nova === opt ? 'var(--color-terracotta-200)' : 'var(--color-surface-sunken)',
+                                  border: `1px solid ${formData.empresa_nova === opt ? 'var(--accent)' : 'var(--color-border-subtle)'}`,
+                                  color: formData.empresa_nova === opt ? 'var(--accent)' : 'white',
                                   fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s'
                                 }}
                               >
@@ -449,14 +420,14 @@ DADOS DO BRIEFING:
                   {step === 3 && (
                     <>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '8px' }}>
-                        <div style={{ padding: '12px', background: 'rgba(249, 115, 22, 0.1)', color: '#f97316', borderRadius: '16px' }}>
+                        <div style={{ padding: '12px', background: 'var(--color-terracotta-100)', color: 'var(--accent)', borderRadius: 'var(--radius-card)' }}>
                           <Users size={24} />
                         </div>
                         <h2 style={{ fontSize: '1.75rem', fontWeight: 700 }}>Público Alvo</h2>
                       </div>
-                      <p style={{ color: 'rgba(255, 255, 255, 0.5)', marginBottom: '32px' }}>Quem é o cliente ideal para você?</p>
+                      <p style={{ color: 'var(--color-text-tertiary)', marginBottom: '32px' }}>Quem é o cliente ideal para você?</p>
 
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
                         <div>
                           <label className="label-briefing">Perfil do Público (Idade, Região, Interesses)</label>
                           <textarea className="input-briefing" rows={3} value={formData.perfil_publico} onChange={e => updateForm('perfil_publico', e.target.value)} placeholder="Ex: Mulheres de 25-45 anos, residentes em São Paulo..." />
@@ -477,14 +448,14 @@ DADOS DO BRIEFING:
                   {step === 4 && (
                     <>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '8px' }}>
-                        <div style={{ padding: '12px', background: 'rgba(249, 115, 22, 0.1)', color: '#f97316', borderRadius: '16px' }}>
+                        <div style={{ padding: '12px', background: 'var(--color-terracotta-100)', color: 'var(--accent)', borderRadius: 'var(--radius-card)' }}>
                           <Search size={24} />
                         </div>
                         <h2 style={{ fontSize: '1.75rem', fontWeight: 700 }}>Concorrência e Referências</h2>
                       </div>
-                      <p style={{ color: 'rgba(255, 255, 255, 0.5)', marginBottom: '32px' }}>Quem são seus vizinhos de mercado?</p>
+                      <p style={{ color: 'var(--color-text-tertiary)', marginBottom: '32px' }}>Quem são seus vizinhos de mercado?</p>
 
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
                         <div>
                           <label className="label-briefing">Principais Concorrentes (Links ou Nomes)</label>
                           <textarea className="input-briefing" rows={3} value={formData.concorrentes} onChange={e => updateForm('concorrentes', e.target.value)} placeholder="Ex: @concorrente_A, @concorrente_B..." />
@@ -501,14 +472,14 @@ DADOS DO BRIEFING:
                   {step === 5 && (
                     <>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '8px' }}>
-                        <div style={{ padding: '12px', background: 'rgba(249, 115, 22, 0.1)', color: '#f97316', borderRadius: '16px' }}>
+                        <div style={{ padding: '12px', background: 'var(--color-terracotta-100)', color: 'var(--accent)', borderRadius: 'var(--radius-card)' }}>
                           <Settings size={24} />
                         </div>
                         <h2 style={{ fontSize: '1.75rem', fontWeight: 700 }}>Estrutura Interna</h2>
                       </div>
-                      <p style={{ color: 'rgba(255, 255, 255, 0.5)', marginBottom: '32px' }}>Como as coisas funcionam por dentro?</p>
+                      <p style={{ color: 'var(--color-text-tertiary)', marginBottom: '32px' }}>Como as coisas funcionam por dentro?</p>
 
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
                         <div>
                           <label className="label-briefing">Possui equipe de marketing ou alguém interno?</label>
                           <div style={{ display: 'flex', gap: '12px' }}>
@@ -518,9 +489,9 @@ DADOS DO BRIEFING:
                                 onClick={() => updateForm('equipe_marketing_interna', opt)}
                                 style={{
                                   flex: 1, padding: '12px', borderRadius: '12px',
-                                  background: formData.equipe_marketing_interna === opt ? 'rgba(249, 115, 22, 0.2)' : 'rgba(255,255,255,0.05)',
-                                  border: `1px solid ${formData.equipe_marketing_interna === opt ? '#f97316' : 'rgba(255,255,255,0.1)'}`,
-                                  color: formData.equipe_marketing_interna === opt ? '#f97316' : 'white',
+                                  background: formData.equipe_marketing_interna === opt ? 'var(--color-terracotta-200)' : 'var(--color-surface-sunken)',
+                                  border: `1px solid ${formData.equipe_marketing_interna === opt ? 'var(--accent)' : 'var(--color-border-subtle)'}`,
+                                  color: formData.equipe_marketing_interna === opt ? 'var(--accent)' : 'white',
                                   fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s'
                                 }}
                               >
@@ -541,14 +512,14 @@ DADOS DO BRIEFING:
                   {step === 6 && (
                     <>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '8px' }}>
-                        <div style={{ padding: '12px', background: 'rgba(249, 115, 22, 0.1)', color: '#f97316', borderRadius: '16px' }}>
+                        <div style={{ padding: '12px', background: 'var(--color-terracotta-100)', color: 'var(--accent)', borderRadius: 'var(--radius-card)' }}>
                           <TrendingUp size={24} />
                         </div>
                         <h2 style={{ fontSize: '1.75rem', fontWeight: 700 }}>Dados de Mercado</h2>
                       </div>
-                      <p style={{ color: 'rgba(255, 255, 255, 0.5)', marginBottom: '32px' }}>Números que nos ajudam no ROI.</p>
+                      <p style={{ color: 'var(--color-text-tertiary)', marginBottom: '32px' }}>Números que nos ajudam no ROI.</p>
 
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
                         <div>
                           <label className="label-briefing">Ticket Médio (Valor médio por venda)</label>
                           <input className="input-briefing" value={formData.ticket_medio} onChange={e => updateForm('ticket_medio', e.target.value)} placeholder="Ex: R$ 500,00" />
@@ -565,14 +536,14 @@ DADOS DO BRIEFING:
                   {step === 7 && (
                     <>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '8px' }}>
-                        <div style={{ padding: '12px', background: 'rgba(249, 115, 22, 0.1)', color: '#f97316', borderRadius: '16px' }}>
+                        <div style={{ padding: '12px', background: 'var(--color-terracotta-100)', color: 'var(--accent)', borderRadius: 'var(--radius-card)' }}>
                           <Megaphone size={24} />
                         </div>
                         <h2 style={{ fontSize: '1.75rem', fontWeight: 700 }}>Marketing & Estratégia</h2>
                       </div>
-                      <p style={{ color: 'rgba(255, 255, 255, 0.5)', marginBottom: '32px' }}>Onde estamos e para onde vamos.</p>
+                      <p style={{ color: 'var(--color-text-tertiary)', marginBottom: '32px' }}>Onde estamos e para onde vamos.</p>
 
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
                         <div>
                           <label className="label-briefing">Quais redes sociais você já trabalha?</label>
                           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
@@ -588,9 +559,9 @@ DADOS DO BRIEFING:
                                 }}
                                 style={{
                                   padding: '12px', borderRadius: '12px', textAlign: 'left',
-                                  background: (formData.redes_sociais || []).includes(red) ? 'rgba(249, 115, 22, 0.2)' : 'rgba(255,255,255,0.05)',
-                                  border: `1px solid ${(formData.redes_sociais || []).includes(red) ? '#f97316' : 'rgba(255,255,255,0.1)'}`,
-                                  color: (formData.redes_sociais || []).includes(red) ? '#f97316' : 'white',
+                                  background: (formData.redes_sociais || []).includes(red) ? 'var(--color-terracotta-200)' : 'var(--color-surface-sunken)',
+                                  border: `1px solid ${(formData.redes_sociais || []).includes(red) ? 'var(--accent)' : 'var(--color-border-subtle)'}`,
+                                  color: (formData.redes_sociais || []).includes(red) ? 'var(--accent)' : 'white',
                                   fontSize: '0.9rem', cursor: 'pointer', transition: 'all 0.2s',
                                   display: 'flex', alignItems: 'center', gap: '8px'
                                 }}
@@ -619,14 +590,14 @@ DADOS DO BRIEFING:
                   {step === 8 && (
                     <>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '8px' }}>
-                        <div style={{ padding: '12px', background: 'rgba(249, 115, 22, 0.1)', color: '#f97316', borderRadius: '16px' }}>
+                        <div style={{ padding: '12px', background: 'var(--color-terracotta-100)', color: 'var(--accent)', borderRadius: 'var(--radius-card)' }}>
                           <Palette size={24} />
                         </div>
                         <h2 style={{ fontSize: '1.75rem', fontWeight: 700 }}>Personalidade da Marca</h2>
                       </div>
-                      <p style={{ color: 'rgba(255, 255, 255, 0.5)', marginBottom: '32px' }}>A cara do seu projeto.</p>
+                      <p style={{ color: 'var(--color-text-tertiary)', marginBottom: '32px' }}>A cara do seu projeto.</p>
 
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
                         <div>
                           <label className="label-briefing">Cores ou Elementos que Deseja (ou já utiliza)</label>
                           <input className="input-briefing" value={formData.cores_desejadas} onChange={e => updateForm('cores_desejadas', e.target.value)} placeholder="Ex: Azul marinho, Dourado, Minimalismo..." />
@@ -676,7 +647,7 @@ DADOS DO BRIEFING:
             className="glass-card"
             style={{
               maxWidth: '500px',
-              padding: '48px',
+              padding: 'var(--space-6)',
               textAlign: 'center',
               zIndex: 1,
               border: '1px solid var(--color-success-wash)'
@@ -696,89 +667,59 @@ DADOS DO BRIEFING:
               <CheckCircle2 size={40} />
             </div>
             <h1 style={{ fontSize: '2rem', fontWeight: 800, marginBottom: '16px' }}>Briefing Enviado!</h1>
-            <p style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '1.125rem', marginBottom: '32px', lineHeight: '1.6' }}>
+            <p style={{ color: 'var(--color-text-secondary)', fontSize: '1.125rem', marginBottom: '32px', lineHeight: '1.6' }}>
               Excelente, <strong>{client.name}</strong>! Recebemos suas respostas. Nosso time de estratégia agora irá analisar tudo para iniciarmos o seu projeto com força total.
             </p>
-            <p style={{ color: '#f97316', fontSize: '0.875rem', fontWeight: 500 }}>
+            <p style={{ color: 'var(--accent)', fontSize: '0.875rem', fontWeight: 500 }}>
               Você já pode fechar esta aba.
             </p>
           </motion.div>
         )}
       </AnimatePresence>
 
+      {/* Só o que é específico do briefing.
+          Os overrides de .glass-card / .btn-accent / .btn-secondary que
+          existiam aqui foram removidos: styled-jsx é injetado sem
+          camada e vencia o components.css, então nesta rota os botões
+          continuavam com texto branco (reprova AA) e translateY no
+          hover. As definições globais já estão corretas. */}
       <style jsx global>{`
-        .glass-card {
-          background: rgba(18, 18, 20, 0.7);
-          -webkit-
-          border-radius: 24px;
-          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-        }
-        
         .label-briefing {
           display: block;
-          margin-bottom: 8px;
-          font-size: 0.875rem;
-          font-weight: 500;
-          color: rgba(255, 255, 255, 0.5);
+          margin-bottom: 6px;
+          font-size: var(--text-caption);
+          font-weight: 600;
+          color: var(--color-text-secondary);
         }
-        
+
         .input-briefing {
           width: 100%;
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          border-radius: 12px;
-          padding: 12px 16px;
-          color: white;
-          font-size: 1rem;
-          transition: all 0.2s ease;
+          background: var(--color-surface-raised);
+          border: 1px solid var(--color-border-default);
+          border-radius: var(--radius-input);
+          padding: 9px 12px;
+          color: var(--color-text-primary);
+          font-size: var(--text-body);
+          font-family: inherit;
+          transition: border-color var(--duration-fast) var(--ease-standard),
+            box-shadow var(--duration-fast) var(--ease-standard);
         }
-        
+
+        .input-briefing::placeholder {
+          color: var(--color-text-tertiary);
+        }
+
+        /* Foco em azul — terracota é reservado para ação */
         .input-briefing:focus {
           outline: none;
-          border-color: #f97316;
-          background: rgba(255, 255, 255, 0.08);
-          box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.1);
+          border-color: var(--color-info);
+          box-shadow: 0 0 0 3px var(--color-info-wash);
         }
 
-        .btn-accent {
-          background: #f97316;
-          color: white;
-          border: none;
-          border-radius: 12px;
-          padding: 12px 24px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-
-        .btn-accent:hover {
-          transform: translateY(-2px);
-          filter: brightness(1.1);
-          box-shadow: 0 10px 15px -3px rgba(249, 115, 22, 0.3);
-        }
-        
-        .btn-accent:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-          transform: none;
-        }
-
-        .btn-secondary {
-          color: rgba(255, 255, 255, 0.5);
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          cursor: pointer;
-          font-weight: 500;
-          background: transparent;
-          border: none;
-        }
-        
-        .btn-secondary:hover {
-          color: white;
+        @media (max-width: 768px) {
+          .input-briefing {
+            font-size: 16px;
+          }
         }
       `}</style>
     </div>
