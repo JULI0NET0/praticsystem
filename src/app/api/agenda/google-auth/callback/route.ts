@@ -67,10 +67,13 @@ function renderHtmlSuccess({
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Google Agenda Conectado - PraticSystem</title>
   <style>
+    /* Página HTML avulsa, servida fora do React: os tokens do
+       theme.css não chegam aqui, então os valores são hex literais
+       espelhando o tema claro. Manter em sincronia manualmente. */
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #09090b;
-      color: #f4f4f5;
+      background: #faf9f5;
+      color: #1b1c1a;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -79,63 +82,62 @@ function renderHtmlSuccess({
       padding: 20px;
     }
     .card {
-      background: #18181b;
-      border: 1px solid #27272a;
-      border-radius: 16px;
-      padding: 32px;
+      background: #ffffff;
+      border: 1px solid #e3e2df;
+      border-radius: 12px;
+      padding: 24px;
       max-width: 540px;
       width: 100%;
-      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
       text-align: center;
     }
     .icon {
-      width: 64px;
-      height: 64px;
-      background: rgba(34, 197, 94, 0.15);
-      color: #22c55e;
+      width: 56px;
+      height: 56px;
+      background: #e6eadd;
+      color: #4a5838;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      margin: 0 auto 20px;
-      font-size: 32px;
+      margin: 0 auto 16px;
+      font-size: 28px;
     }
     h1 {
-      font-size: 22px;
+      font-size: 20px;
       margin: 0 0 8px;
-      color: #fff;
+      color: #1b1c1a;
     }
     p {
-      color: #a1a1aa;
+      color: #5e5d59;
       font-size: 14px;
       line-height: 1.5;
-      margin: 0 0 20px;
+      margin: 0 0 16px;
     }
     .code-box {
-      background: #09090b;
-      border: 1px solid #27272a;
+      background: #f4f4f0;
+      border: 1px solid #e3e2df;
       border-radius: 8px;
       padding: 12px;
-      font-family: monospace;
+      font-family: ui-monospace, monospace;
       font-size: 12px;
-      color: #38bdf8;
+      color: #3a6491;
       word-break: break-all;
       text-align: left;
-      margin-bottom: 24px;
+      margin-bottom: 16px;
     }
     .btn {
       display: inline-block;
-      background: #3b82f6;
-      color: white;
+      background: #d97757;
+      color: #1b1c1a;
       text-decoration: none;
-      padding: 12px 24px;
+      padding: 8px 14px;
       border-radius: 8px;
-      font-weight: 500;
-      font-size: 14px;
+      font-weight: 600;
+      font-size: 13.5px;
       transition: background 0.2s;
     }
     .btn:hover {
-      background: #2563eb;
+      background: #e08a6e;
     }
   </style>
 </head>
@@ -152,7 +154,7 @@ function renderHtmlSuccess({
       <div class="code-box">${envVarName}=${refreshToken}</div>
     `
         : `
-      <p style="color: #eab308; font-size: 13px;">O token de acesso já foi gerado. Se não recebeu um refresh token novo, a permissão offline já estava concedida anteriormente.</p>
+      <p style="color: #a03b1f; font-size: 13px;">O token de acesso já foi gerado. Se não recebeu um refresh token novo, a permissão offline já estava concedida anteriormente.</p>
     `
     }
 
@@ -169,10 +171,11 @@ function renderHtmlError(message: string) {
   <meta charset="UTF-8">
   <title>Erro de Conexão - PraticSystem</title>
   <style>
+    /* mesmos hex literais do tema claro — ver comentário acima */
     body {
-      font-family: sans-serif;
-      background: #09090b;
-      color: #f4f4f5;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #faf9f5;
+      color: #1b1c1a;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -181,17 +184,17 @@ function renderHtmlError(message: string) {
       padding: 20px;
     }
     .card {
-      background: #18181b;
-      border: 1px solid #7f1d1d;
-      border-radius: 16px;
-      padding: 32px;
+      background: #ffffff;
+      border: 1px solid #f5e1dc;
+      border-radius: 12px;
+      padding: 24px;
       max-width: 480px;
       width: 100%;
       text-align: center;
     }
-    h1 { color: #ef4444; font-size: 20px; margin-bottom: 12px; }
-    p { color: #a1a1aa; font-size: 14px; margin-bottom: 24px; line-height: 1.5; }
-    .btn { background: #27272a; color: white; text-decoration: none; padding: 10px 20px; border-radius: 8px; font-size: 14px; }
+    h1 { color: #8f2e23; font-size: 20px; margin-bottom: 12px; }
+    p { color: #5e5d59; font-size: 14px; margin-bottom: 16px; line-height: 1.5; }
+    .btn { background: #ffffff; border: 1px solid #c7c7bf; color: #1b1c1a; text-decoration: none; padding: 8px 14px; border-radius: 8px; font-size: 13.5px; font-weight: 600; }
   </style>
 </head>
 <body>
