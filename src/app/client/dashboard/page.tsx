@@ -101,7 +101,7 @@ function ClientDashboard() {
           <button 
             onClick={() => window.close()} 
             style={{ 
-              padding: '6px 12px', borderRadius: '8px', background: 'var(--accent)', color: 'white', 
+              padding: '6px 12px', borderRadius: '8px', background: 'var(--accent)', color: 'var(--color-text-on-accent)', 
               fontSize: '0.75rem', fontWeight: 600, border: 'none', cursor: 'pointer' 
             }}
           >
@@ -166,7 +166,7 @@ function ClientDashboard() {
                 </div>
               </Spotlight>
             )) : (
-              <div style={{ padding: '40px', textAlign: 'center', background: 'rgba(255,255,255,0.02)', borderRadius: '16px', border: '1px dashed var(--border)' }}>
+              <div style={{ padding: '40px', textAlign: 'center', background: 'var(--color-surface-sunken)', borderRadius: '16px', border: '1px dashed var(--border)' }}>
                 <p style={{ color: 'var(--text-secondary)' }}>Nenhuma demanda ativa no momento.</p>
               </div>
             )}

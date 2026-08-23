@@ -107,7 +107,7 @@ export default function BillingPage() {
           <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem' }}>Controle de faturamentos e saúde financeira da agência.</p>
         </div>
         <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: '10px 20px', borderRadius: '16px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-glow)' }}>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', background: 'var(--color-surface-sunken)', padding: '10px 20px', borderRadius: '16px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-glow)' }}>
             <Calendar size={18} color="var(--accent)" style={{ marginRight: '8px', opacity: 0.8 }} />
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
               <span style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Período Inicial</span>
@@ -118,7 +118,7 @@ export default function BillingPage() {
                 onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
               />
             </div>
-            <div style={{ width: '1px', height: '28px', background: 'rgba(255,255,255,0.1)', margin: '0 8px' }} />
+            <div style={{ width: '1px', height: '28px', background: 'var(--color-border-subtle)', margin: '0 8px' }} />
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
               <span style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Período Final</span>
               <input
@@ -161,7 +161,7 @@ export default function BillingPage() {
       <div style={{
         display: 'flex',
         gap: '8px',
-        borderBottom: '1px solid rgba(255,255,255,0.1)',
+        borderBottom: '1px solid var(--color-border-subtle)',
         paddingBottom: '2px'
       }}>
         {tabs.map(tab => (

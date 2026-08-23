@@ -232,7 +232,7 @@ export default function UserDetailPage() {
             <div style={{
               width: "120px", height: "120px", borderRadius: "50%", background: "var(--accent)",
               margin: "0 auto 20px", fontSize: "3rem", fontWeight: 700,
-              display: "flex", alignItems: "center", justifyContent: "center", color: "#fff",
+              display: "flex", alignItems: "center", justifyContent: "center", color: 'var(--color-text-primary)',
               boxShadow: "0 0 30px color-mix(in oklab, var(--accent) 30%, transparent)", position: "relative",
             }}>
               {user.name.substring(0, 2).toUpperCase()}
@@ -492,7 +492,7 @@ export default function UserDetailPage() {
                                   const sc = entry.status === "paid" ? "var(--color-success)" : entry.status === "cancelled" ? "var(--text-tertiary)" : "var(--color-warning)";
                                   const sl = entry.status === "paid" ? "Pago" : entry.status === "cancelled" ? "Cancelado" : "Pendente";
                                   return (
-                                    <div key={entry.id} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "7px 10px", borderRadius: "8px", background: "rgba(255,255,255,0.02)", marginTop: "6px" }}>
+                                    <div key={entry.id} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "7px 10px", borderRadius: "8px", background: "var(--color-surface-sunken)", marginTop: "6px" }}>
                                       <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--text-secondary)", minWidth: "52px" }}>
                                         {d.toLocaleDateString("pt-BR", { month: "short", year: "2-digit" })}
                                       </span>

@@ -909,7 +909,7 @@ export default function ClientDetailPage() {
                 {clientData.name}
               </p>
             )}
-            <span style={{ color: 'rgba(255,255,255,0.1)' }}>•</span>
+            <span style={{ color: 'var(--color-border-subtle)' }}>•</span>
             <p
               title={clientContracts.find(c => c.status === 'active') ? availableServices.find(s => s.id === clientContracts.find(c => c.status === 'active').service_id)?.name : (clientData.servico_interesse || 'Sem serviço definido')}
               style={{
@@ -966,7 +966,7 @@ export default function ClientDetailPage() {
                 <button
                   onClick={() => window.open(`https://tiktok.com/@${clientData.social_access.tiktok.usuario}`, '_blank')}
                   title={`TikTok: @${clientData.social_access.tiktok.usuario}`}
-                  style={{ padding: '8px', borderRadius: '8px', backgroundColor: 'var(--card-inner-bg)', border: '1px solid var(--border)', color: '#FFF', display: 'flex', alignItems: 'center', transition: '0.2s' }}
+                  style={{ padding: '8px', borderRadius: '8px', backgroundColor: 'var(--card-inner-bg)', border: '1px solid var(--border)', color: 'var(--color-text-primary)', display: 'flex', alignItems: 'center', transition: '0.2s' }}
                   className="hover-accent"
                 >
                   <TikTokIcon size={16} />
@@ -991,7 +991,7 @@ export default function ClientDetailPage() {
               </button>
             </div>
 
-            <span style={{ color: 'rgba(255,255,255,0.1)' }}>•</span>
+            <span style={{ color: 'var(--color-border-subtle)' }}>•</span>
 
             <div
               title={clientData.onboarding_date ? `Onboarding em ${formatDate(clientData.onboarding_date)}` : 'Sem data de onboarding'}
@@ -1144,7 +1144,7 @@ export default function ClientDetailPage() {
                             cursor: 'pointer',
                             transition: 'all 0.2s',
                             border: datePreset === preset.id ? '1px solid var(--accent)' : '1px solid var(--border)',
-                            background: datePreset === preset.id ? 'color-mix(in oklab, var(--accent) 15%, transparent)' : 'rgba(255,255,255,0.02)',
+                            background: datePreset === preset.id ? 'color-mix(in oklab, var(--accent) 15%, transparent)' : 'var(--color-surface-sunken)',
                             color: datePreset === preset.id ? 'var(--accent)' : 'var(--text-secondary)'
                           }}
                         >
@@ -1153,7 +1153,7 @@ export default function ClientDetailPage() {
                       ))}
                     </div>
                     {(datePreset === 'custom' || dateRange.start || dateRange.end) && (
-                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: '10px 16px', borderRadius: '16px', border: '1px solid var(--border)' }}>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', background: 'var(--color-surface-sunken)', padding: '10px 16px', borderRadius: '16px', border: '1px solid var(--border)' }}>
                         <Calendar size={16} color="var(--accent)" style={{ marginRight: '4px', opacity: 0.7 }} />
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
                           <span style={{ fontSize: '0.55rem', color: 'var(--text-tertiary)', fontWeight: 800, textTransform: 'uppercase' }}>Início</span>
@@ -1167,7 +1167,7 @@ export default function ClientDetailPage() {
                             }}
                           />
                         </div>
-                        <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)', margin: '0 8px' }} />
+                        <div style={{ width: '1px', height: '24px', background: 'var(--color-border-subtle)', margin: '0 8px' }} />
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
                           <span style={{ fontSize: '0.55rem', color: 'var(--text-tertiary)', fontWeight: 800, textTransform: 'uppercase' }}>Fim</span>
                           <input
@@ -1200,7 +1200,7 @@ export default function ClientDetailPage() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     {clientContracts.filter(c => c.status === 'active').length > 0 ? (
                       clientContracts.filter(c => c.status === 'active').map(c => (
-                        <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: 'rgba(255,255,255,0.02)', borderRadius: '10px' }}>
+                        <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: 'var(--color-surface-sunken)', borderRadius: '10px' }}>
                           <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>{availableServices.find(s => s.id === c.service_id)?.name}</span>
                           <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--accent)' }}>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(c.value)}</span>
                         </div>
@@ -1448,7 +1448,7 @@ export default function ClientDetailPage() {
                                     const displayValue = Array.isArray(value) ? value.join(', ') : value;
 
                                     return (
-                                      <div key={field} style={{ backgroundColor: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                      <div key={field} style={{ backgroundColor: 'var(--color-surface-sunken)', padding: '16px', borderRadius: '12px', border: '1px solid var(--color-border-subtle)' }}>
                                         <p style={{ color: 'var(--text-secondary)', fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
                                           {labels[field] || field.replace(/_/g, ' ')}
                                         </p>
@@ -1512,7 +1512,7 @@ export default function ClientDetailPage() {
                   <Spotlight className="glass-card" style={{ padding: '24px' }}>
                     <h4 style={{ fontWeight: 600, marginBottom: '16px' }}>Gestão de Briefing</h4>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: 'var(--color-surface-sunken)', borderRadius: '12px', border: '1px solid var(--border)' }}>
                         <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Status</span>
                         <span className={`badge ${clientData.briefing_completed ? 'badge-success' : 'badge-warning'}`}>
                           {clientData.briefing_completed ? 'Concluído' : 'Pendente'}
@@ -1574,7 +1574,7 @@ export default function ClientDetailPage() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                       <span style={{
                         fontSize: '0.75rem', fontWeight: 600, padding: '4px 8px', borderRadius: '6px',
-                        backgroundColor: 'rgba(255,255,255,0.05)', color: 'var(--text-secondary)'
+                        backgroundColor: 'var(--color-surface-sunken)', color: 'var(--text-secondary)'
                       }}>{demand.type}</span>
                       <span style={{
                         fontSize: '0.75rem', fontWeight: 600,
@@ -1590,7 +1590,7 @@ export default function ClientDetailPage() {
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
                       <div style={{
-                        flex: 1, height: '6px', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden'
+                        flex: 1, height: '6px', backgroundColor: 'var(--color-surface-sunken)', borderRadius: '3px', overflow: 'hidden'
                       }}>
                         <div style={{
                           width: demand.status === 'completed' ? '100%' : demand.status === 'approved' ? '80%' : demand.status === 'review' ? '60%' : demand.status === 'in_production' ? '40%' : '10%',
@@ -1777,7 +1777,7 @@ export default function ClientDetailPage() {
                           {key === 'instagram' ? <InstagramIcon size={20} style={{ color: '#E1306C' }} /> :
                             key === 'facebook' ? <FacebookIcon size={20} style={{ color: '#1877F2' }} /> :
                               key === 'linkedin' ? <LinkedInIcon size={20} style={{ color: '#0A66C2' }} /> :
-                                key === 'tiktok' ? <TikTokIcon size={20} style={{ color: '#FFF' }} /> :
+                                key === 'tiktok' ? <TikTokIcon size={20} style={{ color: 'var(--color-text-primary)' }} /> :
                                   key === 'google' ? <GoogleIcon size={20} /> :
                                     <Globe size={20} />}
                         </div>
@@ -1855,7 +1855,7 @@ export default function ClientDetailPage() {
                                 <Eye size={12} /> Visualizar
                               </a>
                             </div>
-                            <div style={{ position: 'relative', width: '100%', maxHeight: '180px', overflow: 'hidden', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,0,0,0.3)', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                            <div style={{ position: 'relative', width: '100%', maxHeight: '180px', overflow: 'hidden', borderRadius: '8px', border: '1px solid var(--color-border-subtle)', background: 'rgba(0,0,0,0.3)', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                               <img src={data.reserva_image_url} alt="Código de Reserva" style={{ maxWidth: '100%', maxHeight: '180px', width: 'auto', height: 'auto', display: 'block', objectFit: 'contain' }} />
                             </div>
                           </div>
@@ -1901,7 +1901,7 @@ export default function ClientDetailPage() {
                           </div>
                           <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
                             {contract.posts_per_week > 0 && (
-                              <span style={{ fontSize: '0.65rem', background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: '4px', color: 'var(--text-secondary)' }}>
+                              <span style={{ fontSize: '0.65rem', background: 'var(--color-surface-sunken)', padding: '2px 6px', borderRadius: '4px', color: 'var(--text-secondary)' }}>
                                 {contract.posts_per_week} posts/sem ({contract.posts_per_week * 4} mes)
                               </span>
                             )}
@@ -1929,7 +1929,7 @@ export default function ClientDetailPage() {
                                   contract.document_status === 'signed' ? 'var(--color-success-wash)' : 
                                   contract.document_status === 'sent' ? 'rgba(59, 130, 246, 0.1)' : 
                                   contract.document_status === 'generated' ? 'rgba(168, 85, 247, 0.1)' : 
-                                  'rgba(255, 255, 255, 0.05)',
+                                  'var(--color-surface-sunken)',
                                 color: 
                                   contract.document_status === 'signed' ? 'var(--color-success)' : 
                                   contract.document_status === 'sent' ? '#3B82F6' : 
@@ -2024,7 +2024,7 @@ export default function ClientDetailPage() {
                           cursor: 'pointer',
                           transition: 'all 0.2s',
                           border: datePreset === preset.id ? '1px solid var(--accent)' : '1px solid var(--border)',
-                          background: datePreset === preset.id ? 'color-mix(in oklab, var(--accent) 15%, transparent)' : 'rgba(255,255,255,0.02)',
+                          background: datePreset === preset.id ? 'color-mix(in oklab, var(--accent) 15%, transparent)' : 'var(--color-surface-sunken)',
                           color: datePreset === preset.id ? 'var(--accent)' : 'var(--text-secondary)'
                         }}
                       >
@@ -2033,7 +2033,7 @@ export default function ClientDetailPage() {
                     ))}
                   </div>
                   {(datePreset === 'custom' || dateRange.start || dateRange.end) && (
-                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: '10px 20px', borderRadius: '16px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-glow)', width: 'fit-content' }}>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', background: 'var(--color-surface-sunken)', padding: '10px 20px', borderRadius: '16px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-glow)', width: 'fit-content' }}>
                       <Calendar size={18} color="var(--accent)" style={{ marginRight: '8px', opacity: 0.8 }} />
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
                         <span style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Período Inicial</span>
@@ -2047,7 +2047,7 @@ export default function ClientDetailPage() {
                           }}
                         />
                       </div>
-                      <div style={{ width: '1px', height: '28px', background: 'rgba(255,255,255,0.1)', margin: '0 8px' }} />
+                      <div style={{ width: '1px', height: '28px', background: 'var(--color-border-subtle)', margin: '0 8px' }} />
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
                         <span style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Período Final</span>
                         <input
@@ -2285,7 +2285,7 @@ export default function ClientDetailPage() {
                         onClick={() => window.open(link.url, '_blank')}
                         style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', flex: 1, minWidth: 0 }}
                       >
-                        <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(255,255,255,0.03)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
+                        <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'var(--color-surface-sunken)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
                           {link.url.includes('canva.com') ? <Sparkles size={20} /> :
                             link.url.includes('trello.com') ? <Layout size={20} /> :
                               link.url.includes('figma.com') ? <Target size={20} /> :
@@ -2307,7 +2307,7 @@ export default function ClientDetailPage() {
                   ))}
 
                   {(!clientData.essential_links || clientData.essential_links.length === 0) && (
-                    <div style={{ gridColumn: '1 / -1', padding: '32px', textAlign: 'center', background: 'rgba(255,255,255,0.01)', borderRadius: '16px', border: '1px dashed var(--border)' }}>
+                    <div style={{ gridColumn: '1 / -1', padding: '32px', textAlign: 'center', background: 'var(--color-surface-sunken)', borderRadius: '16px', border: '1px dashed var(--border)' }}>
                       <p style={{ color: 'var(--text-tertiary)', fontSize: '0.875rem' }}>Nenhum link essencial cadastrado.</p>
                     </div>
                   )}
@@ -2530,7 +2530,7 @@ export default function ClientDetailPage() {
                     <div style={{ gridColumn: '1 / -1', padding: '32px', textAlign: 'center', background: 'rgba(168, 85, 247, 0.02)', borderRadius: '16px', border: '1px dashed rgba(168, 85, 247, 0.2)' }}>
                       <Palette size={28} style={{ color: 'rgba(168, 85, 247, 0.3)', margin: '0 auto 8px' }} />
                       <p style={{ color: 'var(--text-tertiary)', fontSize: '0.875rem' }}>Nenhum arquivo de marca enviado.</p>
-                      <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.2)', marginTop: '4px' }}>Suba logos, paletas, fontes ou manual da marca.</p>
+                      <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginTop: '4px' }}>Suba logos, paletas, fontes ou manual da marca.</p>
                     </div>
                   )}
                 </div>
@@ -2540,7 +2540,7 @@ export default function ClientDetailPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(255, 255, 255, 0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
+                    <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'var(--color-surface-sunken)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
                       <FilePlus size={18} />
                     </div>
                     <h3 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Anexos Diretos</h3>
@@ -2575,7 +2575,7 @@ export default function ClientDetailPage() {
                     <Spotlight key={doc.id} className="glass-card" style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
                       <div style={{
                         width: '48px', height: '48px', borderRadius: '12px',
-                        backgroundColor: 'rgba(255,255,255,0.03)',
+                        backgroundColor: 'var(--color-surface-sunken)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         color: doc.file_type?.includes('pdf') ? 'var(--color-danger)' : doc.file_type?.includes('image') ? '#3B82F6' : 'var(--accent)'
                       }}>
@@ -2615,12 +2615,12 @@ export default function ClientDetailPage() {
                   {clientDocuments.filter(d => d.category !== 'brand-identity').length === 0 && !isUploading && (
                     <div style={{
                       gridColumn: '1 / -1', padding: '48px', textAlign: 'center',
-                      backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '24px',
+                      backgroundColor: 'var(--color-surface-sunken)', borderRadius: '24px',
                       border: '2px dashed var(--border)'
                     }}>
                       <div style={{ color: 'var(--text-secondary)', marginBottom: '12px' }}><Upload size={40} style={{ opacity: 0.3 }} /></div>
                       <p style={{ color: 'var(--text-secondary)' }}>Nenhum anexo enviado diretamente.</p>
-                      <p style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.3)', marginTop: '4px' }}>Suba contratos, briefings em PDF ou outros arquivos rápidos.</p>
+                      <p style={{ fontSize: '0.875rem', color: 'var(--color-text-tertiary)', marginTop: '4px' }}>Suba contratos, briefings em PDF ou outros arquivos rápidos.</p>
                     </div>
                   )}
                 </div>
@@ -2834,7 +2834,7 @@ export default function ClientDetailPage() {
 
                   {/* Resumo Visual e Botões */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginTop: 'auto' }}>
-                    <div style={{ padding: '20px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', borderRadius: '16px' }}>
+                    <div style={{ padding: '20px', background: 'var(--color-surface-sunken)', border: '1px solid var(--border)', borderRadius: '16px' }}>
                       <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700 }}>Resumo do Contrato</p>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                         <p style={{ fontWeight: 700, fontSize: '1.1rem' }}>{availableServices.find(s => s.id === actionFormData.service_id)?.name || 'Nenhum serviço'}</p>
@@ -2906,7 +2906,7 @@ export default function ClientDetailPage() {
                     borderRadius: '20px',
                     fontSize: '0.8rem',
                     fontWeight: 600,
-                    background: editTab === tab.id ? 'var(--accent)' : 'rgba(255,255,255,0.06)',
+                    background: editTab === tab.id ? 'var(--accent)' : 'var(--color-surface-sunken)',
                     color: editTab === tab.id ? '#fff' : 'var(--text-secondary)',
                     border: '1px solid',
                     borderColor: editTab === tab.id ? 'var(--accent)' : 'var(--border)',
@@ -3106,7 +3106,7 @@ export default function ClientDetailPage() {
                       social === 'linkedin' ? '#0A66C2' :
                         social === 'tiktok' ? '#FFF' : '#EA4335';
                   return (
-                    <div key={social} style={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '14px', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                    <div key={social} style={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '14px', background: 'var(--color-surface-sunken)', borderRadius: '12px', border: '1px solid var(--border)' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <Icon size={14} style={{ color }} />
                         <p style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-secondary)' }}>{social}</p>
@@ -3222,7 +3222,7 @@ export default function ClientDetailPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <button
                   className="btn"
-                  style={{ backgroundColor: 'var(--color-danger)', color: 'white', width: '100%' }}
+                  style={{ backgroundColor: 'var(--color-danger)', color: 'var(--color-text-on-danger)', width: '100%' }}
                   onClick={handleDeleteClient}
                   disabled={isDeleting}
                 >
@@ -3271,7 +3271,7 @@ export default function ClientDetailPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <button
                   className="btn"
-                  style={{ backgroundColor: 'var(--color-danger)', color: 'white', width: '100%' }}
+                  style={{ backgroundColor: 'var(--color-danger)', color: 'var(--color-text-on-danger)', width: '100%' }}
                   onClick={handleDeleteContract}
                   disabled={isDeleting}
                 >

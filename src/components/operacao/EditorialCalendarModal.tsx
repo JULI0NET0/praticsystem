@@ -137,7 +137,7 @@ export default function EditorialCalendarModal({ list, isOpen, onClose, onGenera
                     fontSize: "0.78rem",
                     fontWeight: 700,
                     cursor: "pointer",
-                    background: active ? "var(--accent)" : "rgba(255,255,255,0.04)",
+                    background: active ? "var(--accent)" : "var(--color-surface-sunken)",
                     color: active ? "#fff" : "var(--text-secondary)",
                     border: `1px solid ${active ? "var(--accent)" : "var(--border)"}`,
                   }}
@@ -176,7 +176,7 @@ export default function EditorialCalendarModal({ list, isOpen, onClose, onGenera
                   fontWeight: 700,
                   padding: "2px 8px",
                   borderRadius: 6,
-                  background: "rgba(255,255,255,0.05)",
+                  background: "var(--color-surface-sunken)",
                   color: "var(--text-secondary)",
                 }}
               >

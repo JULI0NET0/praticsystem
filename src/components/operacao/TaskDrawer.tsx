@@ -117,7 +117,7 @@ export default function TaskDrawer({ list, taskId, onClose }: Props) {
                             gap: 8,
                             padding: "8px 10px",
                             borderRadius: 8,
-                            background: s.id === task.statusId ? "rgba(255,255,255,0.06)" : "transparent",
+                            background: s.id === task.statusId ? "var(--color-surface-sunken)" : "transparent",
                             border: "none",
                             cursor: "pointer",
                             color: "var(--text-primary)",
@@ -280,7 +280,7 @@ export default function TaskDrawer({ list, taskId, onClose }: Props) {
                                   display: "flex",
                                   alignItems: "center",
                                   justifyContent: "center",
-                                  color: "#fff",
+                                  color: 'var(--color-text-primary)',
                                   fontSize: "0.7rem",
                                 }}
                               >

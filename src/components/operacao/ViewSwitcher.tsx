@@ -23,7 +23,7 @@ export default function ViewSwitcher({ views, active, onChange }: Props) {
         gap: 4,
         padding: 4,
         borderRadius: 12,
-        background: "rgba(255,255,255,0.03)",
+        background: "var(--color-surface-sunken)",
         border: "1px solid var(--border)",
       }}
     >

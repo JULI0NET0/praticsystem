@@ -56,7 +56,7 @@ export default function DropdownMenu({ trigger, items, align = 'left', className
               zIndex: 9999,
               padding: '8px',
               borderRadius: '18px',
-              boxShadow: '0 10px 40px rgba(0, 0, 0, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.1)',
+              boxShadow: '0 10px 40px rgba(0, 0, 0, 0.3), inset 0 1px 1px var(--color-border-subtle)',
               background: 'var(--glass-bg)',
             }}
           >

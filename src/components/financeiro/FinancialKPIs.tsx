@@ -128,7 +128,7 @@ export function FinancialKPIs({
       sub: `Lucro: ${formatCurrency(lucro)}`,
       icon: <Percent size={20} />,
       color: margem >= 20 ? "var(--color-success)" : margem >= 0 ? "var(--color-warning)" : "var(--color-danger)",
-      bg: "rgba(255,255,255,0.02)",
+      bg: "var(--color-surface-sunken)",
       border: "var(--border)",
     },
     {
@@ -174,7 +174,7 @@ export function FinancialKPIs({
                   cursor: 'pointer',
                   transition: 'all 0.2s',
                   border: datePreset === preset.id ? '1px solid var(--accent)' : '1px solid var(--border)',
-                  background: datePreset === preset.id ? 'color-mix(in oklab, var(--accent) 15%, transparent)' : 'rgba(255,255,255,0.02)',
+                  background: datePreset === preset.id ? 'color-mix(in oklab, var(--accent) 15%, transparent)' : 'var(--color-surface-sunken)',
                   color: datePreset === preset.id ? 'var(--accent)' : 'var(--text-secondary)'
                 }}
               >
@@ -183,7 +183,7 @@ export function FinancialKPIs({
             ))}
           </div>
           {(datePreset === 'custom' || dateRange.start || dateRange.end) && (
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: '8px 16px', borderRadius: '14px', border: '1px solid var(--border)' }}>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', background: 'var(--color-surface-sunken)', padding: '8px 16px', borderRadius: '14px', border: '1px solid var(--border)' }}>
               <Calendar size={16} color="var(--accent)" />
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
                 <span style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)', fontWeight: 800, textTransform: 'uppercase' }}>Início</span>
@@ -197,7 +197,7 @@ export function FinancialKPIs({
                   }}
                 />
               </div>
-              <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)', margin: '0 8px' }} />
+              <div style={{ width: '1px', height: '24px', background: 'var(--color-border-subtle)', margin: '0 8px' }} />
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
                 <span style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)', fontWeight: 800, textTransform: 'uppercase' }}>Fim</span>
                 <input
@@ -310,7 +310,7 @@ export function FinancialKPIs({
                 const open = Math.max(0, item.amount - item.paid);
                 const statusMeta =
                   item.status === "cancelled"
-                    ? { label: "Cancelada", color: "var(--text-tertiary)", bg: "rgba(255,255,255,0.04)" }
+                    ? { label: "Cancelada", color: "var(--text-tertiary)", bg: "var(--color-surface-sunken)" }
                     : item.status === "paid" || open <= 0
                     ? { label: "Paga", color: "var(--color-success)", bg: "var(--color-success-wash)" }
                     : item.paid > 0
@@ -325,7 +325,7 @@ export function FinancialKPIs({
                       justifyContent: "space-between",
                       gap: "12px",
                       padding: "12px 14px",
-                      background: "rgba(255,255,255,0.02)",
+                      background: "var(--color-surface-sunken)",
                       border: "1px solid var(--border)",
                       borderRadius: "12px",
                     }}
@@ -414,7 +414,7 @@ export function FinancialKPIs({
                       justifyContent: "space-between",
                       gap: "12px",
                       padding: "12px 14px",
-                      background: "rgba(255,255,255,0.02)",
+                      background: "var(--color-surface-sunken)",
                       border: "1px solid var(--border)",
                       borderRadius: "12px",
                     }}

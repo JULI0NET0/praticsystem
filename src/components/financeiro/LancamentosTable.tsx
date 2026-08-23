@@ -634,7 +634,7 @@ export function LancamentosTable({
                       <span style={{ fontSize: "0.78rem", color: "var(--color-danger)", fontWeight: 700, whiteSpace: "nowrap" }}>− {formatCurrency(Math.abs(Number(fee.value)))}</span>
                     </div>
                   ))}
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px", borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: "6px", marginTop: "2px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px", borderTop: "1px solid var(--color-border-subtle)", paddingTop: "6px", marginTop: "2px" }}>
                     <span style={{ fontSize: "0.8rem", fontWeight: 700 }}>Líquido que entrou</span>
                     <span style={{ fontSize: "0.95rem", fontWeight: 800, color: stages.net >= 0 ? "var(--color-success)" : "var(--color-danger)" }}>{formatCurrency(stages.net)}</span>
                   </div>
@@ -738,7 +738,7 @@ export function LancamentosTable({
                   style={{
                     flex: 1, padding: "10px", borderRadius: "10px", cursor: "pointer", fontWeight: 700, fontSize: "0.85rem",
                     border: `1px solid ${newForm.status === s ? (s === "paid" ? "var(--color-success)" : "var(--color-warning)") : "var(--border)"}`,
-                    background: newForm.status === s ? (s === "paid" ? "var(--color-success-wash)" : "var(--color-warning-wash)") : "rgba(255,255,255,0.02)",
+                    background: newForm.status === s ? (s === "paid" ? "var(--color-success-wash)" : "var(--color-warning-wash)") : "var(--color-surface-sunken)",
                     color: newForm.status === s ? (s === "paid" ? "var(--color-success)" : "var(--color-warning)") : "var(--text-secondary)",
                     transition: "all 0.15s",
                   }}
@@ -864,7 +864,7 @@ export function LancamentosTable({
             </div>
 
             {linkSelection.size > 0 && (
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", borderRadius: "10px", background: "rgba(255,255,255,0.02)", border: "1px solid var(--border)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", borderRadius: "10px", background: "var(--color-surface-sunken)", border: "1px solid var(--border)" }}>
                 <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)", fontWeight: 600 }}>
                   {linkSelection.size} selecionada(s)
                 </span>
@@ -890,7 +890,7 @@ export function LancamentosTable({
                       display: "flex", justifyContent: "space-between", alignItems: "center",
                       padding: "10px 14px", borderRadius: "10px",
                       border: `1px solid ${selected ? "var(--accent)" : "var(--border)"}`,
-                      background: selected ? "color-mix(in oklab, var(--accent) 8%, transparent)" : "rgba(255,255,255,0.02)",
+                      background: selected ? "color-mix(in oklab, var(--accent) 8%, transparent)" : "var(--color-surface-sunken)",
                       cursor: "pointer", textAlign: "left", color: "var(--text-primary)", transition: "all 0.15s",
                     }}
                   >

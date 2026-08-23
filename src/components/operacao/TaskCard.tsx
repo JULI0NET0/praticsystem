@@ -85,7 +85,7 @@ export default function TaskCard({ task, fields, onOpen, onDragStart, draggable 
       </div>
 
       {progress.total > 0 && (
-        <div style={{ height: 4, borderRadius: 4, background: "rgba(255,255,255,0.06)", overflow: "hidden" }}>
+        <div style={{ height: 4, borderRadius: 4, background: "var(--color-surface-sunken)", overflow: "hidden" }}>
           <div
             style={{
               height: "100%",

@@ -125,12 +125,12 @@ const SlashMenuList = forwardRef<any, any>((props, ref) => {
   if (!props.items.length) return null;
 
   return (
-    <div ref={containerRef} style={{ background: '#16162a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '8px', boxShadow: '0 8px 32px rgba(0,0,0,0.5)', minWidth: '220px', maxHeight: '360px', overflowY: 'auto' }}>
-      <p style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.4)', padding: '2px 8px 6px', margin: 0, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Blocos</p>
+    <div ref={containerRef} style={{ background: '#16162a', border: '1px solid var(--color-border-subtle)', borderRadius: '12px', padding: '8px', boxShadow: '0 8px 32px rgba(0,0,0,0.5)', minWidth: '220px', maxHeight: '360px', overflowY: 'auto' }}>
+      <p style={{ fontSize: '0.68rem', color: 'var(--color-text-tertiary)', padding: '2px 8px 6px', margin: 0, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Blocos</p>
       {props.items.map((item: any, index: number) => {
         const Icon = item.icon;
         return (
-          <button key={item.title} onClick={() => props.command(item)} onMouseEnter={() => setSelectedIndex(index)} style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '8px 12px', borderRadius: '8px', border: 'none', background: index === selectedIndex ? 'color-mix(in oklab, var(--accent) 15%, transparent)' : 'transparent', color: index === selectedIndex ? 'var(--accent)' : 'rgba(255,255,255,0.85)', cursor: 'pointer', textAlign: 'left', transition: 'background 0.1s' }}>
+          <button key={item.title} onClick={() => props.command(item)} onMouseEnter={() => setSelectedIndex(index)} style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '8px 12px', borderRadius: '8px', border: 'none', background: index === selectedIndex ? 'color-mix(in oklab, var(--accent) 15%, transparent)' : 'transparent', color: index === selectedIndex ? 'var(--accent)' : 'var(--color-surface-raised)', cursor: 'pointer', textAlign: 'left', transition: 'background 0.1s' }}>
             <Icon size={15} style={{ flexShrink: 0, opacity: 0.85 }} />
             <div>
               <div style={{ fontSize: '0.85rem', fontWeight: 500 }}>{item.title}</div>
@@ -171,7 +171,7 @@ const MentionList = forwardRef<any, any>((props, ref) => {
       key={item.id}
       onClick={() => props.command(item)}
       onMouseEnter={() => setSelectedIndex(globalIdx)}
-      style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '7px 10px', borderRadius: '8px', border: 'none', background: globalIdx === selectedIndex ? 'color-mix(in oklab, var(--accent) 15%, transparent)' : 'transparent', color: 'white', cursor: 'pointer', textAlign: 'left', transition: 'background 0.1s' }}
+      style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '7px 10px', borderRadius: '8px', border: 'none', background: globalIdx === selectedIndex ? 'color-mix(in oklab, var(--accent) 15%, transparent)' : 'transparent', color: 'var(--color-text-primary)', cursor: 'pointer', textAlign: 'left', transition: 'background 0.1s' }}
     >
       {item.avatar ? (
         <img src={item.avatar} alt={item.label} style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
@@ -185,16 +185,16 @@ const MentionList = forwardRef<any, any>((props, ref) => {
   );
 
   return (
-    <div style={{ background: '#16162a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '8px', boxShadow: '0 8px 32px rgba(0,0,0,0.5)', minWidth: '220px', maxHeight: '300px', overflowY: 'auto' }}>
+    <div style={{ background: '#16162a', border: '1px solid var(--color-border-subtle)', borderRadius: '12px', padding: '8px', boxShadow: '0 8px 32px rgba(0,0,0,0.5)', minWidth: '220px', maxHeight: '300px', overflowY: 'auto' }}>
       {clients.length > 0 && (
         <>
-          <p style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.4)', padding: '2px 8px 4px', margin: 0, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Clientes</p>
+          <p style={{ fontSize: '0.68rem', color: 'var(--color-text-tertiary)', padding: '2px 8px 4px', margin: 0, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Clientes</p>
           {clients.map(item => renderItem(item, props.items.indexOf(item)))}
         </>
       )}
       {users.length > 0 && (
         <>
-          <p style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.4)', padding: clients.length ? '8px 8px 4px' : '2px 8px 4px', margin: 0, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Equipe</p>
+          <p style={{ fontSize: '0.68rem', color: 'var(--color-text-tertiary)', padding: clients.length ? '8px 8px 4px' : '2px 8px 4px', margin: 0, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Equipe</p>
           {users.map(item => renderItem(item, props.items.indexOf(item)))}
         </>
       )}
@@ -219,21 +219,21 @@ const FileNodeView = ({ node }: { node: any }) => {
         contentEditable={false}
         style={{
           display: 'inline-flex', alignItems: 'center', gap: '12px',
-          background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)',
+          background: 'var(--color-surface-sunken)', border: '1px solid var(--color-border-subtle)',
           borderRadius: '10px', padding: '10px 16px', margin: '6px 0',
-          textDecoration: 'none', color: 'white', cursor: 'pointer',
+          textDecoration: 'none', color: 'var(--color-text-primary)', cursor: 'pointer',
           transition: 'border-color 0.15s, background 0.15s',
           maxWidth: '420px', userSelect: 'none',
         }}
         onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'color-mix(in oklab, var(--accent) 40%, transparent)'; (e.currentTarget as HTMLElement).style.background = 'color-mix(in oklab, var(--accent) 6%, transparent)'; }}
-        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.12)'; (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)'; }}
+        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--color-border-subtle)'; (e.currentTarget as HTMLElement).style.background = 'var(--color-surface-sunken)'; }}
       >
         <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'color-mix(in oklab, var(--accent) 15%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
           <FileDown size={17} color="var(--accent)" />
         </div>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: '0.88rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '280px' }}>{name}</div>
-          <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.45)', marginTop: '2px' }}>{ext} · {fmtSize(size)}</div>
+          <div style={{ fontSize: '0.72rem', color: 'var(--color-text-tertiary)', marginTop: '2px' }}>{ext} · {fmtSize(size)}</div>
         </div>
       </a>
     </NodeViewWrapper>
@@ -749,7 +749,7 @@ export default function BlockEditor({
   return (
     <div style={{ position: 'relative' }}>
       {uploading && (
-        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.4)', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px', gap: '10px', color: 'white', fontSize: '0.9rem' }}>
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.4)', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px', gap: '10px', color: 'var(--color-text-primary)', fontSize: '0.9rem' }}>
           <Loader2 size={20} className="spin" style={{ animation: 'spin 1s linear infinite' }} />
           Enviando...
         </div>

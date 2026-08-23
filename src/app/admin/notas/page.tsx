@@ -167,7 +167,7 @@ export default function NotasPage() {
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
           <div style={{
             display: 'flex', gap: '4px',
-            background: 'rgba(255,255,255,0.05)',
+            background: 'var(--color-surface-sunken)',
             borderRadius: '10px', padding: '4px', flexShrink: 0,
           }}>
             {([

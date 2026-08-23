@@ -100,7 +100,7 @@ export default function ClientDemands() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <span style={{
                   fontSize: '0.75rem', fontWeight: 600, padding: '4px 10px', borderRadius: '8px',
-                  backgroundColor: 'rgba(255,255,255,0.05)', color: 'var(--text-secondary)',
+                  backgroundColor: 'var(--color-surface-sunken)', color: 'var(--text-secondary)',
                   textTransform: 'uppercase'
                 }}>{demand.type}</span>
                 <span className={`badge ${demand.status === 'completed' ? 'badge-success' :
@@ -123,7 +123,7 @@ export default function ClientDemands() {
                   <span>Previsão de Entrega: <strong>{new Date(demand.due_date).toLocaleDateString('pt-BR')}</strong></span>
                 </div>
 
-                <div style={{ height: '8px', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
+                <div style={{ height: '8px', backgroundColor: 'var(--color-surface-sunken)', borderRadius: '4px', overflow: 'hidden' }}>
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: demand.status === 'completed' ? '100%' : '40%' }}

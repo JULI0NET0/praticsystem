@@ -189,7 +189,7 @@ export default function RolesPage() {
                     const p = AVAILABLE_PERMISSIONS.find(ap => ap.id === pId);
                     return (
                       <span key={pId} style={{
-                        fontSize: '0.75rem', background: 'rgba(255, 255, 255, 0.05)',
+                        fontSize: '0.75rem', background: 'var(--color-surface-sunken)',
                         color: 'var(--text-secondary)', padding: '4px 10px', borderRadius: '6px',
                         border: '1px solid var(--border)'
                       }}>
@@ -220,7 +220,7 @@ export default function RolesPage() {
               style={{
                 width: '100%', maxWidth: '580px', padding: '40px', position: 'relative',
                 background: 'var(--color-surface-raised)',
-                boxShadow: '0 0 50px rgba(0,0,0,0.5), 0 0 1px rgba(255,255,255,0.1)',
+                boxShadow: '0 0 50px rgba(0,0,0,0.5), 0 0 1px var(--color-border-subtle)',
                 maxHeight: '90vh', overflowY: 'auto'
               }}
             >
@@ -260,7 +260,7 @@ export default function RolesPage() {
                             onClick={() => togglePermission(p.id)}
                             style={{
                               padding: '10px 12px', borderRadius: '10px', border: '1px solid var(--border)',
-                              background: selectedPermissions.includes(p.id) ? 'color-mix(in oklab, var(--accent) 5%, transparent)' : 'rgba(255,255,255,0.02)',
+                              background: selectedPermissions.includes(p.id) ? 'color-mix(in oklab, var(--accent) 5%, transparent)' : 'var(--color-surface-sunken)',
                               borderColor: selectedPermissions.includes(p.id) ? 'var(--accent)' : 'var(--border)',
                               cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '12px',
                               transition: 'all 0.2s ease'

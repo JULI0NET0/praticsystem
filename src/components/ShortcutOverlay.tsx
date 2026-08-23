@@ -77,7 +77,7 @@ export default function ShortcutOverlay() {
                   borderRadius: "50%",
                   transition: "background 0.2s"
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.05)"}
+                onMouseEnter={(e) => e.currentTarget.style.background = "var(--color-surface-sunken)"}
                 onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
               >
                 <X size={20} />

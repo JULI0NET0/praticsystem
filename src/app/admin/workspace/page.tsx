@@ -266,7 +266,7 @@ export default function WorkspacePage() {
         display: 'flex',
         alignItems: 'center',
         gap: '16px',
-        background: 'rgba(255, 255, 255, 0.02)',
+        background: 'var(--color-surface-sunken)',
         padding: '12px 20px',
         borderRadius: '24px',
         border: '1px solid var(--border)',
@@ -282,8 +282,8 @@ export default function WorkspacePage() {
               onClick={(e) => { e.stopPropagation(); setShowEmojiPicker(!showEmojiPicker); }}
               style={{
                 fontSize: '2.2rem',
-                background: 'rgba(255,255,255,0.05)',
-                border: '1px solid rgba(255,255,255,0.1)',
+                background: 'var(--color-surface-sunken)',
+                border: '1px solid var(--color-border-subtle)',
                 borderRadius: '18px',
                 width: '56px',
                 height: '56px',
@@ -296,11 +296,11 @@ export default function WorkspacePage() {
                 boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(255,255,255,0.12)';
+                e.currentTarget.style.background = 'var(--color-border-subtle)';
                 e.currentTarget.style.transform = 'scale(1.08)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+                e.currentTarget.style.background = 'var(--color-surface-sunken)';
                 e.currentTarget.style.transform = 'scale(1)';
               }}
             >
@@ -318,10 +318,10 @@ export default function WorkspacePage() {
                   style={{
                     position: 'absolute', top: '100%', left: 0, zIndex: 99999,
                     marginTop: '12px', padding: 'var(--card-pad)', display: 'flex', flexDirection: 'column', gap: '16px',
-                    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(255, 255, 255, 0.1)',
+                    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.9), 0 0 0 1px var(--color-border-subtle)',
                     width: '320px',
                     backgroundColor: '#18181b',
-                    border: '1px solid rgba(255,255,255,0.2)',
+                    border: '1px solid var(--color-text-muted)',
                     borderRadius: '24px'
                   }}
                 >
@@ -336,18 +336,18 @@ export default function WorkspacePage() {
                           display: 'flex', 
                           alignItems: 'center', 
                           justifyContent: 'center', 
-                          background: 'rgba(255,255,255,0.03)', 
-                          border: '1px solid rgba(255,255,255,0.05)', 
+                          background: 'var(--color-surface-sunken)', 
+                          border: '1px solid var(--color-border-subtle)', 
                           cursor: 'pointer', 
                           borderRadius: '12px', 
                           transition: 'all 0.2s' 
                         }}
                         onMouseEnter={(ev) => {
-                          ev.currentTarget.style.background = 'rgba(255,255,255,0.15)';
+                          ev.currentTarget.style.background = 'var(--color-border-subtle)';
                           ev.currentTarget.style.transform = 'scale(1.15)';
                         }}
                         onMouseLeave={(ev) => {
-                          ev.currentTarget.style.background = 'rgba(255,255,255,0.03)';
+                          ev.currentTarget.style.background = 'var(--color-surface-sunken)';
                           ev.currentTarget.style.transform = 'scale(1)';
                         }}
                       >
@@ -356,7 +356,7 @@ export default function WorkspacePage() {
                     ))}
                   </div>
 
-                  <div style={{ height: '1px', background: 'rgba(255,255,255,0.1)', margin: '4px 0' }} />
+                  <div style={{ height: '1px', background: 'var(--color-border-subtle)', margin: '4px 0' }} />
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '4px' }}>
                     <p style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Qualquer Emoji</p>
@@ -430,7 +430,7 @@ export default function WorkspacePage() {
                     onClick={() => applyPreset(key)}
                     style={{
                       padding: '4px 10px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 600,
-                      border: '1px solid var(--border)', background: 'rgba(255,255,255,0.05)',
+                      border: '1px solid var(--border)', background: 'var(--color-surface-sunken)',
                       color: 'var(--text-secondary)', cursor: 'pointer', whiteSpace: 'nowrap',
                       transition: 'all 0.2s'
                     }}
@@ -549,7 +549,7 @@ export default function WorkspacePage() {
                     alignItems: 'center',
                     zIndex: 20
                   }}>
-                    <div style={{ background: 'var(--accent)', color: 'white', padding: '4px 10px', borderRadius: '10px', fontSize: '0.65rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ background: 'var(--accent)', color: 'var(--color-text-on-accent)', padding: '4px 10px', borderRadius: '10px', fontSize: '0.65rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <GripVertical size={10} /> {w.colSpan}x{w.rowSpan}
                     </div>
                     <button onClick={() => removeWidget(w.id)} style={{ color: 'var(--color-danger)', padding: '4px' }}>
@@ -572,11 +572,11 @@ export default function WorkspacePage() {
                 {isEditing && (
                   <div style={{ position: 'absolute', bottom: '10px', right: '10px', display: 'flex', gap: '6px', zIndex: 20 }}>
                     {[{ label: 'L', dim: 'colSpan' as const }, { label: 'A', dim: 'rowSpan' as const }].map(({ label, dim }) => (
-                      <div key={dim} style={{ display: 'flex', alignItems: 'center', gap: '2px', background: 'rgba(0,0,0,0.6)', borderRadius: '8px', padding: '3px 5px', border: '1px solid rgba(255,255,255,0.1)' }}>
-                        <span style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.5)', fontWeight: 700, minWidth: '10px' }}>{label}</span>
-                        <button onClick={() => updateWidgetSize(w.id, dim, -1)} style={{ width: '18px', height: '18px', color: 'rgba(255,255,255,0.8)', fontSize: '0.9rem', lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.1)', borderRadius: '4px', border: 'none', cursor: 'pointer' }}>−</button>
-                        <span style={{ fontSize: '0.7rem', color: 'white', fontWeight: 700, minWidth: '14px', textAlign: 'center' }}>{dim === 'colSpan' ? w.colSpan : (w.rowSpan || 1)}</span>
-                        <button onClick={() => updateWidgetSize(w.id, dim, 1)} style={{ width: '18px', height: '18px', color: 'rgba(255,255,255,0.8)', fontSize: '0.9rem', lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.1)', borderRadius: '4px', border: 'none', cursor: 'pointer' }}>+</button>
+                      <div key={dim} style={{ display: 'flex', alignItems: 'center', gap: '2px', background: 'rgba(0,0,0,0.6)', borderRadius: '8px', padding: '3px 5px', border: '1px solid var(--color-border-subtle)' }}>
+                        <span style={{ fontSize: '0.6rem', color: 'var(--color-text-tertiary)', fontWeight: 700, minWidth: '10px' }}>{label}</span>
+                        <button onClick={() => updateWidgetSize(w.id, dim, -1)} style={{ width: '18px', height: '18px', color: 'var(--color-text-tertiary)', fontSize: '0.9rem', lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-border-subtle)', borderRadius: '4px', border: 'none', cursor: 'pointer' }}>−</button>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--color-text-primary)', fontWeight: 700, minWidth: '14px', textAlign: 'center' }}>{dim === 'colSpan' ? w.colSpan : (w.rowSpan || 1)}</span>
+                        <button onClick={() => updateWidgetSize(w.id, dim, 1)} style={{ width: '18px', height: '18px', color: 'var(--color-text-tertiary)', fontSize: '0.9rem', lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-border-subtle)', borderRadius: '4px', border: 'none', cursor: 'pointer' }}>+</button>
                       </div>
                     ))}
                   </div>
@@ -599,7 +599,7 @@ export default function WorkspacePage() {
               className="glass-card"
               style={{ width: '100%', maxWidth: '560px', padding: '36px', position: 'relative', background: 'var(--color-surface-raised)', boxShadow: '0 32px 80px rgba(0,0,0,0.6)' }}
             >
-              <button onClick={() => setIsAddModalOpen(false)} style={{ position: 'absolute', top: '24px', right: '24px', background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border)', borderRadius: '10px', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+              <button onClick={() => setIsAddModalOpen(false)} style={{ position: 'absolute', top: '24px', right: '24px', background: 'var(--color-surface-sunken)', border: '1px solid var(--border)', borderRadius: '10px', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', cursor: 'pointer' }}>
                 <X size={16} />
               </button>
 
@@ -630,7 +630,7 @@ export default function WorkspacePage() {
                       style={{
                         padding: '18px 16px', borderRadius: 'var(--radius-card)',
                         border: `1px solid ${isActive ? 'var(--border)' : 'var(--border)'}`,
-                        background: isActive ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.04)',
+                        background: isActive ? 'var(--color-surface-sunken)' : 'var(--color-surface-sunken)',
                         cursor: isActive ? 'not-allowed' : 'pointer',
                         display: 'flex', alignItems: 'center', gap: '14px',
                         textAlign: 'left', transition: 'border-color 0.2s, background 0.2s',
@@ -641,7 +641,7 @@ export default function WorkspacePage() {
                     >
                       <div style={{
                         width: '44px', height: '44px', borderRadius: '12px', flexShrink: 0,
-                        background: isActive ? 'rgba(255,255,255,0.04)' : 'color-mix(in oklab, var(--accent) 12%, transparent)',
+                        background: isActive ? 'var(--color-surface-sunken)' : 'color-mix(in oklab, var(--accent) 12%, transparent)',
                         border: `1px solid ${isActive ? 'var(--border)' : 'color-mix(in oklab, var(--accent) 25%, transparent)'}`,
                         display: 'flex', alignItems: 'center', justifyContent: 'center'
                       }}>
@@ -715,7 +715,7 @@ function StatsWidget({ colSpan, demandsCount, todayHours, isTracking, onTimerTog
         >
           <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: item.gradient, opacity: 0.5, pointerEvents: 'none' }} />
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', position: 'relative' }}>
-            <div style={{ padding: '6px', borderRadius: '10px', background: 'rgba(255,255,255,0.05)', color: item.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ padding: '6px', borderRadius: '10px', background: 'var(--color-surface-sunken)', color: item.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <item.icon size={14} className={item.id === 'timer' && isTracking ? 'animate-pulse' : ''} />
             </div>
             <p style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
@@ -785,7 +785,7 @@ function TimeTrackerWidget({ isTracking, todayHours, todayMinutes, currentSessio
           width: '60px',
           height: '60px',
           borderRadius: 'var(--radius-card)',
-          background: isTracking ? 'var(--color-success-wash)' : 'rgba(255,255,255,0.05)',
+          background: isTracking ? 'var(--color-success-wash)' : 'var(--color-surface-sunken)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -817,7 +817,7 @@ function TimeTrackerWidget({ isTracking, todayHours, todayMinutes, currentSessio
           marginTop: '16px',
           padding: '4px 12px',
           borderRadius: '10px',
-          background: 'rgba(255,255,255,0.03)',
+          background: 'var(--color-surface-sunken)',
           border: '1px solid var(--border)',
           fontSize: '0.8rem',
           color: 'var(--text-secondary)',
@@ -911,7 +911,7 @@ function PomodoroWidget() {
           </div>
           <div style={{
             display: 'flex', alignItems: 'center', gap: '4px',
-            background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)',
+            background: 'var(--color-surface-sunken)', border: '1px solid var(--border)',
             padding: '3px 9px', borderRadius: '10px'
           }}>
             <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
@@ -933,7 +933,7 @@ function PomodoroWidget() {
             </span>
           )}
         </div>
-        <div style={{ height: '4px', background: 'rgba(255,255,255,0.06)', borderRadius: '4px', overflow: 'hidden' }}>
+        <div style={{ height: '4px', background: 'var(--color-surface-sunken)', borderRadius: '4px', overflow: 'hidden' }}>
           <motion.div
             animate={{ width: `${progressToNext}%` }}
             transition={{ duration: 0.6, ease: 'easeOut' }}
@@ -950,7 +950,7 @@ function PomodoroWidget() {
             onClick={() => switchMode(m)}
             style={{
               flex: 1, padding: '7px', borderRadius: '10px', fontSize: '0.72rem', fontWeight: 700,
-              background: mode === m ? (m === 'work' ? 'var(--color-danger-wash)' : 'var(--color-success-wash)') : 'rgba(255,255,255,0.03)',
+              background: mode === m ? (m === 'work' ? 'var(--color-danger-wash)' : 'var(--color-success-wash)') : 'var(--color-surface-sunken)',
               color: mode === m ? (m === 'work' ? 'var(--color-danger)' : 'var(--color-success)') : 'var(--text-secondary)',
               border: `1px solid ${mode === m ? (m === 'work' ? 'var(--color-danger-wash)' : 'var(--color-success-wash)') : 'var(--border)'}`,
               cursor: isRunning ? 'not-allowed' : 'pointer',
@@ -966,7 +966,7 @@ function PomodoroWidget() {
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-3)' }}>
         <div style={{ position: 'relative' }}>
           <svg width="148" height="148" viewBox="0 0 148 148">
-            <circle cx="74" cy="74" r={radius} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="8" />
+            <circle cx="74" cy="74" r={radius} fill="none" stroke="var(--color-surface-sunken)" strokeWidth="8" />
             <circle
               cx="74" cy="74" r={radius}
               fill="none"
@@ -1025,7 +1025,7 @@ function PomodoroWidget() {
             title="Reiniciar"
             style={{
               width: '40px', height: '40px', borderRadius: '12px',
-              background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)',
+              background: 'var(--color-surface-sunken)', border: '1px solid var(--border)',
               color: 'var(--text-secondary)', display: 'flex', alignItems: 'center',
               justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s'
             }}
@@ -1039,7 +1039,7 @@ function PomodoroWidget() {
             style={{
               width: '58px', height: '58px', borderRadius: '18px',
               background: modeColor, border: 'none',
-              color: 'white', display: 'flex', alignItems: 'center',
+              color: 'var(--color-text-primary)', display: 'flex', alignItems: 'center',
               justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s',
               boxShadow: `0 0 24px ${tint(modeColor, 31)}`
             }}
@@ -1053,7 +1053,7 @@ function PomodoroWidget() {
             title="Pular fase"
             style={{
               width: '40px', height: '40px', borderRadius: '12px',
-              background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)',
+              background: 'var(--color-surface-sunken)', border: '1px solid var(--border)',
               color: 'var(--text-secondary)', display: 'flex', alignItems: 'center',
               justifyContent: 'center', cursor: isRunning ? 'not-allowed' : 'pointer',
               transition: 'all 0.2s', opacity: isRunning ? 0.4 : 1
@@ -1095,7 +1095,7 @@ function DemandsWidget({ demands, loading }: { demands: any[], loading: boolean 
         <h3 style={{ fontSize: '1.1rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '10px' }}>
           <CheckCircle2 size={20} color="var(--accent)" /> Minhas Demandas
         </h3>
-        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.05)', padding: '4px 10px', borderRadius: '10px' }}>
+        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', background: 'var(--color-surface-sunken)', padding: '4px 10px', borderRadius: '10px' }}>
           {demands.length} Pendentes
         </span>
       </div>
@@ -1112,7 +1112,7 @@ function DemandsWidget({ demands, loading }: { demands: any[], loading: boolean 
             style={{
               padding: '16px',
               borderRadius: 'var(--radius-card)',
-              background: 'rgba(255,255,255,0.02)',
+              background: 'var(--color-surface-sunken)',
               border: '1px solid var(--border)',
               display: 'flex',
               flexDirection: 'column',
@@ -1151,7 +1151,7 @@ function DemandsWidget({ demands, loading }: { demands: any[], loading: boolean 
             textAlign: 'center', padding: '40px 20px', color: 'var(--text-secondary)',
             fontSize: '0.85rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px'
           }}>
-            <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'rgba(255,255,255,0.03)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'var(--color-surface-sunken)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Inbox size={32} strokeWidth={1} color="var(--text-tertiary)" />
             </div>
             <div>
@@ -1266,7 +1266,7 @@ function NotesWidget() {
                 style={{
                   padding: '12px 14px',
                   borderRadius: '12px',
-                  background: 'rgba(255,255,255,0.02)',
+                  background: 'var(--color-surface-sunken)',
                   border: '1px solid var(--border)',
                   cursor: 'pointer',
                   display: 'flex',
@@ -1276,15 +1276,15 @@ function NotesWidget() {
                 }}
                 onMouseEnter={e => {
                   e.currentTarget.style.borderColor = 'color-mix(in oklab, var(--accent) 25%, transparent)';
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
+                  e.currentTarget.style.background = 'var(--color-surface-sunken)';
                 }}
                 onMouseLeave={e => {
                   e.currentTarget.style.borderColor = 'var(--border)';
-                  e.currentTarget.style.background = 'rgba(255,255,255,0.02)';
+                  e.currentTarget.style.background = 'var(--color-border-subtle)';
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                  <span style={{ fontWeight: 600, fontSize: '0.85rem', color: 'white', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <span style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {note.title || 'Sem título'}
                   </span>
                   {isPinned && <Pin size={11} color="var(--accent)" style={{ flexShrink: 0 }} />}
@@ -1333,11 +1333,11 @@ function LinksWidget() {
             href={link.url}
             target="_blank"
             rel="noopener noreferrer"
-            whileHover={{ y: -2, background: 'rgba(255,255,255,0.05)' }}
+            whileHover={{ y: -2, background: 'var(--color-surface-sunken)' }}
             style={{
               padding: '12px 16px',
               borderRadius: 'var(--radius-card)',
-              background: 'rgba(255,255,255,0.03)',
+              background: 'var(--color-surface-sunken)',
               border: '1px solid var(--border)',
               textDecoration: 'none',
               color: 'var(--text-primary)',
@@ -1391,14 +1391,14 @@ function TeamWidget({ isUserOnline, onlineUsers }: { isUserOnline: (id: string) 
           return (
             <div key={m.id} style={{ position: 'relative' }}>
               <motion.div
-                whileHover={{ background: 'rgba(255,255,255,0.04)', x: 4 }}
+                whileHover={{ background: 'var(--color-surface-sunken)', x: 4 }}
                 onClick={() => setActivePopover(activePopover === m.id ? null : m.id)}
                 style={{
                   display: 'flex', alignItems: 'center', gap: '12px',
                   padding: '10px', borderRadius: 'var(--radius-card)', cursor: 'pointer',
                   border: '1px solid transparent',
                   transition: 'all 0.2s ease',
-                  background: activePopover === m.id ? 'rgba(255,255,255,0.05)' : 'transparent'
+                  background: activePopover === m.id ? 'var(--color-surface-sunken)' : 'transparent'
                 }}
               >
                 <div style={{ position: 'relative', flexShrink: 0 }}>
@@ -1406,7 +1406,7 @@ function TeamWidget({ isUserOnline, onlineUsers }: { isUserOnline: (id: string) 
                     width: '42px', height: '42px', borderRadius: 'var(--radius-card)',
                     background: 'var(--accent)', overflow: 'hidden',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontWeight: 800, fontSize: '0.9rem', color: 'white',
+                    fontWeight: 800, fontSize: '0.9rem', color: 'var(--color-text-on-accent)',
                     border: online ? '2px solid var(--color-success)' : '2px solid transparent'
                   }}>
                     {m.avatar_url
@@ -1473,7 +1473,7 @@ function TeamWidget({ isUserOnline, onlineUsers }: { isUserOnline: (id: string) 
                         cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.85rem',
                         fontWeight: 600
                       }}
-                      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
+                      onMouseEnter={e => (e.currentTarget.style.background = 'var(--color-surface-sunken)')}
                       onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                     >
                       <User size={16} color="var(--text-secondary)" /> Ver Perfil Completo

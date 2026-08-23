@@ -80,7 +80,7 @@ export function ClientFinancials({ invoices, clients, contracts }: ClientFinanci
               width: '48px', 
               height: '48px', 
               borderRadius: '12px', 
-              background: 'rgba(255,255,255,0.05)', 
+              background: 'var(--color-surface-sunken)', 
               display: 'flex', 
               alignItems: 'center', 
               justifyContent: 'center',
@@ -100,7 +100,7 @@ export function ClientFinancials({ invoices, clients, contracts }: ClientFinanci
                   <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Total Pago</p>
                   <p style={{ fontWeight: 600, fontSize: '0.875rem' }}>{formatCurrency(stat.totalPaid)}</p>
                 </div>
-                <div style={{ borderLeft: '1px solid rgba(255,255,255,0.1)', paddingLeft: '16px' }}>
+                <div style={{ borderLeft: '1px solid var(--color-border-subtle)', paddingLeft: '16px' }}>
                   <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Assinatura</p>
                   <p style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--accent)' }}>{formatCurrency(stat.mrr)}/mês</p>
                 </div>
@@ -138,7 +138,7 @@ export function ClientFinancials({ invoices, clients, contracts }: ClientFinanci
                       display: 'inline-flex', 
                       alignItems: 'center', 
                       justifyContent: 'center', 
-                      background: idx < 3 ? 'var(--accent)' : 'rgba(255,255,255,0.05)',
+                      background: idx < 3 ? 'var(--accent)' : 'var(--color-surface-sunken)',
                       borderRadius: '50%',
                       fontSize: '0.75rem',
                       fontWeight: 700,

@@ -236,7 +236,7 @@ export function AsaasLinkDialog({
           <div style={{
             padding: "14px", borderRadius: "12px", width: "100%",
             border: `1px solid ${selected?.kind === "passthrough" ? "var(--accent)" : "var(--border)"}`,
-            background: selected?.kind === "passthrough" ? "color-mix(in oklab, var(--accent) 6%, transparent)" : "rgba(255,255,255,0.01)",
+            background: selected?.kind === "passthrough" ? "color-mix(in oklab, var(--accent) 6%, transparent)" : "var(--color-surface-sunken)",
             display: "flex", flexDirection: "column", gap: "10px",
           }}>
             <button
@@ -263,7 +263,7 @@ export function AsaasLinkDialog({
                 width: "18px", height: "18px", borderRadius: "6px", flexShrink: 0,
                 border: `1px solid ${selected?.kind === "passthrough" ? "var(--accent)" : "var(--border)"}`,
                 background: selected?.kind === "passthrough" ? "var(--accent)" : "transparent",
-                display: "flex", alignItems: "center", justifyContent: "center", color: "#fff",
+                display: "flex", alignItems: "center", justifyContent: "center", color: 'var(--color-text-primary)',
               }}>
                 {selected?.kind === "passthrough" && <Check size={12} />}
               </span>
@@ -344,7 +344,7 @@ export function AsaasLinkDialog({
         </div>
 
         {/* Tabs */}
-        <div style={{ display: "flex", gap: "4px", background: "rgba(255,255,255,0.02)", padding: "3px", borderRadius: "12px", border: "1px solid var(--border)" }}>
+        <div style={{ display: "flex", gap: "4px", background: "var(--color-surface-sunken)", padding: "3px", borderRadius: "12px", border: "1px solid var(--border)" }}>
           {TAB_DEFS.map((t) => (
             <button
               key={t.id}
@@ -406,7 +406,7 @@ export function AsaasLinkDialog({
                         style={{
                           display: "flex", justifyContent: "space-between", alignItems: "center",
                           padding: "10px 14px", borderRadius: "10px", border: `1px solid ${isSelected ? "var(--accent)" : "var(--border)"}`,
-                          background: isSelected ? "color-mix(in oklab, var(--accent) 8%, transparent)" : "rgba(255,255,255,0.02)",
+                          background: isSelected ? "color-mix(in oklab, var(--accent) 8%, transparent)" : "var(--color-surface-sunken)",
                           cursor: "pointer", textAlign: "left", color: "var(--text-primary)", transition: "all 0.15s",
                           width: "100%"
                         }}
@@ -432,7 +432,7 @@ export function AsaasLinkDialog({
                 padding: "14px",
                 borderRadius: "12px",
                 border: `1px solid ${selected?.kind === "create_invoice" ? "var(--accent)" : "var(--border)"}`,
-                background: selected?.kind === "create_invoice" ? "color-mix(in oklab, var(--accent) 4%, transparent)" : "rgba(255,255,255,0.01)",
+                background: selected?.kind === "create_invoice" ? "color-mix(in oklab, var(--accent) 4%, transparent)" : "var(--color-surface-sunken)",
                 display: "flex",
                 flexDirection: "column",
                 gap: "10px",
@@ -574,7 +574,7 @@ export function AsaasLinkDialog({
                   style={{
                     display: "flex", justifyContent: "space-between", alignItems: "center",
                     padding: "10px 14px", borderRadius: "10px", border: `1px solid ${isSelected ? "var(--accent)" : "var(--border)"}`,
-                    background: isSelected ? "color-mix(in oklab, var(--accent) 8%, transparent)" : "rgba(255,255,255,0.02)",
+                    background: isSelected ? "color-mix(in oklab, var(--accent) 8%, transparent)" : "var(--color-surface-sunken)",
                     cursor: "pointer", textAlign: "left", color: "var(--text-primary)", transition: "all 0.15s",
                   }}
                 >
@@ -610,7 +610,7 @@ export function AsaasLinkDialog({
                     }}
                     style={{
                       width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center",
-                      padding: "10px 14px", background: isSelected ? "color-mix(in oklab, var(--accent) 8%, transparent)" : "rgba(255,255,255,0.02)",
+                      padding: "10px 14px", background: isSelected ? "color-mix(in oklab, var(--accent) 8%, transparent)" : "var(--color-surface-sunken)",
                       border: "none", cursor: "pointer", textAlign: "left", color: "var(--text-primary)", transition: "all 0.15s",
                     }}
                   >

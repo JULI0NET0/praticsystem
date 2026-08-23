@@ -463,7 +463,7 @@ export default function SchedulePage() {
       return (
         <div style={{
           backgroundColor: color,
-          color: 'white',
+          color: 'var(--color-text-primary)',
           width: '100%',
           padding: '1px 8px',
           borderRadius: '4px',
@@ -607,7 +607,7 @@ export default function SchedulePage() {
                     padding: '5px 10px',
                     borderRadius: '20px',
                     background: isActive ? `${tint(cat.color, 13)}` : 'transparent',
-                    border: `1px solid ${isActive ? cat.color : 'rgba(255,255,255,0.1)'}`,
+                    border: `1px solid ${isActive ? cat.color : 'var(--color-border-subtle)'}`,
                     transition: 'all 0.2s',
                     cursor: 'pointer'
                   }}
@@ -621,7 +621,7 @@ export default function SchedulePage() {
                       lineHeight: 1,
                       padding: '2px 5px',
                       borderRadius: '10px',
-                      backgroundColor: isActive ? cat.color : 'rgba(255,255,255,0.1)',
+                      backgroundColor: isActive ? cat.color : 'var(--color-border-subtle)',
                       color: isActive ? 'white' : 'var(--text-secondary)',
                     }}>
                       {count}
@@ -667,8 +667,8 @@ export default function SchedulePage() {
                 height: '36px',
                 padding: '0 10px',
                 borderRadius: '8px',
-                border: '1px solid rgba(255,255,255,0.1)',
-                background: 'rgba(255,255,255,0.03)',
+                border: '1px solid var(--color-border-subtle)',
+                background: 'var(--color-surface-sunken)',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
@@ -818,7 +818,7 @@ export default function SchedulePage() {
                 className="glass-card agenda-popover"
                 style={{ 
                   padding: '24px', 
-                  boxShadow: '0 20px 50px rgba(0,0,0,0.45), 0 0 1px rgba(255,255,255,0.15)',
+                  boxShadow: '0 20px 50px rgba(0,0,0,0.45), 0 0 1px var(--color-border-subtle)',
                   ...popStyle 
                 }}
               >
@@ -986,7 +986,7 @@ export default function SchedulePage() {
                         />
                       </div>
 
-                      <div style={{ display: 'flex', gap: '10px', alignItems: 'center', padding: '10px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px' }}>
+                      <div style={{ display: 'flex', gap: '10px', alignItems: 'center', padding: '10px', background: 'var(--color-surface-sunken)', borderRadius: '8px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', flex: 1 }} onClick={() => setFormData({ ...formData, visibility: formData.visibility === 'public' ? 'private' : 'public' })}>
                           {formData.visibility === 'public' ? <Shield size={18} color="var(--color-success)" /> : <ShieldOff size={18} color="var(--color-danger)" />}
                           <div>
@@ -1107,7 +1107,7 @@ export default function SchedulePage() {
                   </div>
 
                   {!googleStatus?.accounts?.agenciapratic?.configured && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', paddingTop: '8px', borderTop: '1px solid var(--color-border-subtle)' }}>
                       <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
                         Para conectar o Google Agenda desta conta, clique no botão abaixo para autorizar no Google:
                       </p>

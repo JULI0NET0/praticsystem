@@ -206,7 +206,7 @@ export default function MobileMenuDrawer({ isOpen, onClose }: MobileMenuDrawerPr
                   height: '48px',
                   borderRadius: '50%',
                   backgroundColor: 'var(--accent)',
-                  color: '#fff',
+                  color: 'var(--color-text-on-accent)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -399,7 +399,7 @@ export default function MobileMenuDrawer({ isOpen, onClose }: MobileMenuDrawerPr
                       width: '44px',
                       height: '26px',
                       borderRadius: '13px',
-                      backgroundColor: resolvedTheme === 'dark' ? 'var(--accent)' : 'rgba(255,255,255,0.15)',
+                      backgroundColor: resolvedTheme === 'dark' ? 'var(--accent)' : 'var(--color-border-subtle)',
                       border: '1px solid var(--border)',
                       position: 'relative',
                       transition: 'background 0.3s'

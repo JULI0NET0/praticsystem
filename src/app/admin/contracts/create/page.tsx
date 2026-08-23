@@ -150,7 +150,7 @@ export default function CreateContractPage() {
       style={{ display: 'flex', flexDirection: 'column', gap: '32px', maxWidth: '900px', margin: '0 auto', paddingBottom: '40px' }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-        <Link href="/admin/contracts" className="btn-icon" style={{ padding: '8px', borderRadius: '12px', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Link href="/admin/contracts" className="btn-icon" style={{ padding: '8px', borderRadius: '12px', background: 'var(--color-surface-sunken)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <ArrowLeft size={20} />
         </Link>
         <div>
@@ -240,11 +240,11 @@ export default function CreateContractPage() {
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '32px', padding: '20px', background: 'rgba(255,255,255,0.02)', borderRadius: '16px', border: '1px solid var(--border)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '32px', padding: '20px', background: 'var(--color-surface-sunken)', borderRadius: '16px', border: '1px solid var(--border)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <div style={{
                 width: '40px', height: '40px', borderRadius: '10px',
-                background: formData.auto_renew ? 'var(--color-success-wash)' : 'rgba(255,255,255,0.05)',
+                background: formData.auto_renew ? 'var(--color-success-wash)' : 'var(--color-surface-sunken)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 color: formData.auto_renew ? 'var(--color-success)' : 'var(--text-secondary)',
                 transition: 'all 0.3s ease'
@@ -263,7 +263,7 @@ export default function CreateContractPage() {
               style={{
                 marginLeft: 'auto',
                 width: '56px', height: '28px', borderRadius: '100px',
-                background: formData.auto_renew ? 'var(--accent)' : 'rgba(255,255,255,0.1)',
+                background: formData.auto_renew ? 'var(--accent)' : 'var(--color-border-subtle)',
                 position: 'relative', border: 'none', cursor: 'pointer',
                 transition: 'all 0.3s ease'
               }}
@@ -288,7 +288,7 @@ export default function CreateContractPage() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px' }}>
               {invoicePreview.map((parcel, idx) => (
                 <div key={idx} style={{ 
-                  background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)', 
+                  background: 'var(--color-surface-sunken)', border: '1px solid var(--border)', 
                   borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '4px' 
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -313,7 +313,7 @@ export default function CreateContractPage() {
 
         {/* Ações */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '16px', paddingTop: '24px', borderTop: '1px solid var(--border)' }}>
-          <Link href="/admin/contracts" className="btn" style={{ background: 'rgba(255,255,255,0.05)' }}>
+          <Link href="/admin/contracts" className="btn" style={{ background: 'var(--color-surface-sunken)' }}>
             Cancelar
           </Link>
           <Spotlight as="button" type="submit" className="btn btn-accent" disabled={loading}>

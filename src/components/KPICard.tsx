@@ -49,7 +49,7 @@ export default function KPICard({ title, value, numericValue, prefix = "", subti
             width: '24px',
             height: '24px',
             borderRadius: '6px',
-            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+            backgroundColor: 'var(--color-surface-sunken)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -65,7 +65,7 @@ export default function KPICard({ title, value, numericValue, prefix = "", subti
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5, delay: 0.2 + (index * 0.1), type: "spring", stiffness: 100 }}
-          style={{ fontSize: '1.1rem', fontWeight: 700, color: '#FFFFFF', margin: 0 }}
+          style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-text-primary)', margin: 0 }}
         >
           {numericValue !== undefined ? displayValue : value}
         </motion.h3>

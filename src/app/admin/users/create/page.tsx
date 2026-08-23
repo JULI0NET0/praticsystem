@@ -118,7 +118,7 @@ export default function CreateUserPage() {
       style={{ display: 'flex', flexDirection: 'column', gap: '32px', maxWidth: '800px', margin: '0 auto' }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-        <Link href="/admin/users" className="btn-icon" style={{ padding: '8px', borderRadius: '12px', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Link href="/admin/users" className="btn-icon" style={{ padding: '8px', borderRadius: '12px', background: 'var(--color-surface-sunken)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <ArrowLeft size={20} />
         </Link>
         <div>
@@ -147,7 +147,7 @@ export default function CreateUserPage() {
               onClick={() => setFormData({ ...formData, avatarUrl: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80" })} // Simula upload
               style={{
                 position: 'absolute', bottom: '-8px', right: '-8px',
-                background: 'var(--accent)', color: 'white', border: '2px solid var(--bg-primary)',
+                background: 'var(--accent)', color: 'var(--color-text-on-accent)', border: '2px solid var(--bg-primary)',
                 width: '32px', height: '32px', borderRadius: '10px',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer'
               }}
@@ -301,7 +301,7 @@ export default function CreateUserPage() {
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '16px', marginTop: '16px' }}>
-          <Link href="/admin/users" className="btn" style={{ background: 'rgba(255,255,255,0.05)' }}>
+          <Link href="/admin/users" className="btn" style={{ background: 'var(--color-surface-sunken)' }}>
             Cancelar
           </Link>
           <Spotlight as="button" type="submit" className="btn btn-accent" disabled={loading}>

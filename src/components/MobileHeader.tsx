@@ -83,7 +83,7 @@ export default function MobileHeader() {
             height: '36px',
             borderRadius: '50%',
             backgroundColor: 'var(--accent)',
-            color: '#fff',
+            color: 'var(--color-text-on-accent)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',

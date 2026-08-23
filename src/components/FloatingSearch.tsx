@@ -179,7 +179,7 @@ export default function FloatingSearch() {
               background: 'var(--glass-bg)',
               borderRadius: '20px',
               border: '1px solid var(--border)',
-              boxShadow: '0 24px 64px rgba(0,0,0,0.6), inset 0 1px 1px rgba(255,255,255,0.08)',
+              boxShadow: '0 24px 64px rgba(0,0,0,0.6), inset 0 1px 1px var(--color-border-subtle)',
               overflow: 'hidden',
               maxHeight: '70vh',
               display: 'flex', flexDirection: 'column',
@@ -207,7 +207,7 @@ export default function FloatingSearch() {
               <button
                 onClick={close}
                 style={{
-                  background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)',
+                  background: 'var(--color-surface-sunken)', border: '1px solid var(--border)',
                   borderRadius: '8px', padding: '3px 8px',
                   fontSize: '0.7rem', color: 'var(--text-secondary)',
                   cursor: 'pointer', flexShrink: 0,
@@ -252,7 +252,7 @@ export default function FloatingSearch() {
                           >
                             <div style={{
                               width: '30px', height: '30px', borderRadius: '8px',
-                              backgroundColor: 'rgba(255,255,255,0.05)',
+                              backgroundColor: 'var(--color-surface-sunken)',
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
                               color: 'var(--accent)', flexShrink: 0,
                             }}>

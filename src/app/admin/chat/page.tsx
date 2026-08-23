@@ -16,7 +16,7 @@ function PageUnreadBadge({ count }: { count: number }) {
   return (
     <div style={{
       minWidth: '20px', height: '20px', borderRadius: '10px',
-      background: 'var(--color-danger)', color: 'white',
+      background: 'var(--color-danger)', color: 'var(--color-text-on-danger)',
       fontSize: '0.65rem', fontWeight: 800,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       padding: '0 5px', flexShrink: 0,
@@ -270,7 +270,7 @@ export default function ChatPage() {
         borderRight: isMobile ? 'none' : '1px solid var(--border)',
         display: isMobile && mobileChatOpen ? 'none' : 'flex',
         flexDirection: 'column',
-        background: 'rgba(255,255,255,0.01)',
+        background: 'var(--color-surface-sunken)',
       }}>
         <div style={{ padding: '24px 20px 16px' }}>
           <h2 style={{ fontSize: '1.3rem', fontWeight: 800, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -281,7 +281,7 @@ export default function ChatPage() {
             <input
               type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
               placeholder="Buscar membro..."
-              style={{ width: '100%', padding: '8px 12px 8px 34px', borderRadius: '10px', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', color: 'var(--text-primary)', outline: 'none', fontSize: '0.8rem' }}
+              style={{ width: '100%', padding: '8px 12px 8px 34px', borderRadius: '10px', background: 'var(--color-surface-sunken)', border: '1px solid var(--border)', color: 'var(--text-primary)', outline: 'none', fontSize: '0.8rem' }}
             />
           </div>
         </div>
@@ -311,7 +311,7 @@ export default function ChatPage() {
                 style={{ width: '100%', padding: '10px 12px', borderRadius: '12px', border: 'none', background: isActive ? 'color-mix(in oklab, var(--accent) 10%, transparent)' : 'transparent', color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', marginBottom: '2px', transition: 'all 0.15s' }}
               >
                 <div style={{ position: 'relative', flexShrink: 0 }}>
-                  <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--accent)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700, overflow: 'hidden' }}>
+                  <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--accent)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-on-accent)', fontWeight: 700, overflow: 'hidden' }}>
                     {user.avatar_url
                       ? <img src={user.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
                       : user.name.substring(0, 2).toUpperCase()}
@@ -332,7 +332,7 @@ export default function ChatPage() {
       {/* Área Principal — oculta no mobile enquanto sidebar está visível */}
       <div style={{ flex: 1, display: isMobile && !mobileChatOpen ? 'none' : 'flex', flexDirection: 'column', minWidth: 0 }}>
         {/* Header */}
-        <div style={{ padding: isMobile ? '12px 16px' : '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', background: 'rgba(255,255,255,0.01)' }}>
+        <div style={{ padding: isMobile ? '12px 16px' : '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', background: 'var(--color-surface-sunken)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '10px' : '14px' }}>
             {isMobile && (
               <button
@@ -355,7 +355,7 @@ export default function ChatPage() {
             ) : activeMember && (
               <>
                 <div style={{ position: 'relative' }}>
-                  <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700 }}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-on-accent)', fontWeight: 700 }}>
                     {activeMember.avatar_url
                       ? <img src={activeMember.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} alt="" />
                       : activeMember.name.substring(0, 2).toUpperCase()}
@@ -440,7 +440,7 @@ export default function ChatPage() {
                     onMouseEnter={e => (e.currentTarget.style.background = 'color-mix(in oklab, var(--accent) 10%, transparent)')}
                     onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                   >
-                    <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.65rem', fontWeight: 700 }}>
+                    <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-on-accent)', fontSize: '0.65rem', fontWeight: 700 }}>
                       {u.name.substring(0, 2).toUpperCase()}
                     </div>
                     <div>
@@ -464,12 +464,12 @@ export default function ChatPage() {
               placeholder={isConnected ? "Escreva sua mensagem... (@ para mencionar)" : "Conectando..."}
               rows={1}
               disabled={!isConnected}
-              style={{ flex: 1, background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', borderRadius: '14px', padding: '12px 16px', color: 'white', outline: 'none', fontSize: '0.88rem', resize: 'none', lineHeight: 1.4, maxHeight: '120px', fontFamily: 'inherit', opacity: isConnected ? 1 : 0.5 }}
+              style={{ flex: 1, background: 'var(--color-surface-sunken)', border: '1px solid var(--border)', borderRadius: '14px', padding: '12px 16px', color: 'var(--color-text-primary)', outline: 'none', fontSize: '0.88rem', resize: 'none', lineHeight: 1.4, maxHeight: '120px', fontFamily: 'inherit', opacity: isConnected ? 1 : 0.5 }}
             />
             <button
               type="submit"
               disabled={!isConnected || !message.trim()}
-              style={{ width: '44px', height: '44px', borderRadius: '14px', background: isConnected && message.trim() ? 'var(--accent)' : 'rgba(255,255,255,0.05)', border: 'none', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: isConnected && message.trim() ? 'pointer' : 'default', transition: 'all 0.2s', flexShrink: 0 }}
+              style={{ width: '44px', height: '44px', borderRadius: '14px', background: isConnected && message.trim() ? 'var(--accent)' : 'var(--color-surface-sunken)', border: 'none', color: 'var(--color-text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: isConnected && message.trim() ? 'pointer' : 'default', transition: 'all 0.2s', flexShrink: 0 }}
             >
               <Send size={18} />
             </button>

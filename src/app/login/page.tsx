@@ -86,7 +86,7 @@ export default function LoginPage() {
       backgroundColor: 'var(--color-surface-canvas)',
       // Halo único no topo — o único gesto de cor suave que o
       // sistema permite (design-system §8). Antes usava o acento
-      // aposentado var(--accent) direto.
+      // aposentado (o burnt orange antigo) cravado em hex.
       backgroundImage:
         'radial-gradient(circle at 50% -20%, var(--color-terracotta-200), transparent 60%)',
       padding: '24px'
@@ -158,7 +158,7 @@ export default function LoginPage() {
               style={{ width: '100%', marginTop: '8px', padding: '14px', fontSize: '1rem', display: 'flex', justifyContent: 'center', gap: '8px', opacity: isLoading ? 0.7 : 1 }}
             >
               {isLoading ? (
-                <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }} style={{ width: '20px', height: '20px', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%' }} />
+                <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }} style={{ width: '20px', height: '20px', border: '2px solid var(--color-text-tertiary)', borderTopColor: '#fff', borderRadius: '50%' }} />
               ) : (
                 <>Entrar no Workspace <ArrowRight size={18} /></>
               )}

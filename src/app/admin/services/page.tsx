@@ -139,7 +139,7 @@ export default function ServicesPage() {
         {/* Table Toolbar */}
         <div style={{
           padding: '20px 24px',
-          borderBottom: '1px solid rgba(255,255,255,0.05)',
+          borderBottom: '1px solid var(--color-border-subtle)',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
@@ -163,7 +163,7 @@ export default function ServicesPage() {
                     padding: '6px 14px',
                     borderRadius: '20px',
                     fontSize: '0.875rem',
-                    backgroundColor: categoryFilter === cat ? 'var(--accent)' : 'rgba(255,255,255,0.05)',
+                    backgroundColor: categoryFilter === cat ? 'var(--accent)' : 'var(--color-surface-sunken)',
                     color: categoryFilter === cat ? 'white' : 'var(--text-secondary)',
                     border: 'none',
                     cursor: 'pointer',
@@ -222,9 +222,9 @@ export default function ServicesPage() {
                           fontSize: '0.75rem',
                           padding: '4px 10px',
                           borderRadius: '6px',
-                          backgroundColor: 'rgba(255,255,255,0.05)',
+                          backgroundColor: 'var(--color-surface-sunken)',
                           color: 'var(--text-secondary)',
-                          border: '1px solid rgba(255,255,255,0.08)'
+                          border: '1px solid var(--color-border-subtle)'
                         }}>
                           {service.category}
                         </span>
@@ -267,7 +267,7 @@ export default function ServicesPage() {
                             borderRadius: '8px',
                             backgroundColor: 'var(--accent)',
                             border: 'none',
-                            color: 'white',
+                            color: 'var(--color-text-on-accent)',
                             fontSize: '0.8rem',
                             fontWeight: 600,
                             cursor: 'pointer'
@@ -311,7 +311,7 @@ export default function ServicesPage() {
             <div className="mobile-stack" style={{ display: 'flex', gap: '48px' }}>
               {/* Coluna Esquerda: Configurações */}
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '32px' }}>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--accent)', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '12px' }}>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--accent)', borderBottom: '1px solid var(--color-border-subtle)', paddingBottom: '12px' }}>
                   Configurações do Catálogo
                 </h3>
 
@@ -392,7 +392,7 @@ export default function ServicesPage() {
 
                   <div style={{ padding: '24px', background: 'color-mix(in oklab, var(--accent) 5%, transparent)', borderRadius: '20px', border: '1px solid color-mix(in oklab, var(--accent) 10%, transparent)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-                      <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
+                      <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-on-accent)' }}>
                         <Share2 size={16} />
                       </div>
                       <p style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
@@ -442,9 +442,9 @@ export default function ServicesPage() {
                                 borderRadius: '10px',
                                 fontSize: '0.75rem',
                                 fontWeight: 700,
-                                background: editingService.default_capture_frequency === opt ? 'var(--accent)' : 'rgba(255,255,255,0.03)',
+                                background: editingService.default_capture_frequency === opt ? 'var(--accent)' : 'var(--color-surface-sunken)',
                                 color: editingService.default_capture_frequency === opt ? 'white' : 'var(--text-secondary)',
-                                border: '1px solid rgba(255,255,255,0.05)',
+                                border: '1px solid var(--color-border-subtle)',
                                 cursor: 'pointer',
                                 transition: 'all 0.2s'
                               }}
@@ -466,7 +466,7 @@ export default function ServicesPage() {
                   <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                     Visão Interna de Lançamentos
                   </h3>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.05)', padding: '4px 10px', borderRadius: '10px' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', background: 'var(--color-surface-sunken)', padding: '4px 10px', borderRadius: '10px' }}>
                     {getServiceMetrics(editingService.id).clientCount} ativos
                   </span>
                 </div>
@@ -477,7 +477,7 @@ export default function ServicesPage() {
                       <div key={c.id} style={{
                         padding: '16px',
                         borderRadius: '16px',
-                        background: 'rgba(255,255,255,0.02)',
+                        background: 'var(--color-surface-sunken)',
                         border: '1px solid var(--border)',
                         display: 'flex',
                         justifyContent: 'space-between',
@@ -498,7 +498,7 @@ export default function ServicesPage() {
                       </div>
                     ))
                   ) : (
-                    <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.01)', borderRadius: '16px', border: '1px dashed var(--border)' }}>
+                    <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)', background: 'var(--color-surface-sunken)', borderRadius: '16px', border: '1px dashed var(--border)' }}>
                       Nenhum lançamento ativo para este serviço.
                     </div>
                   )}

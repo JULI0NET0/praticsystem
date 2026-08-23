@@ -194,7 +194,7 @@ export default function LoginPage() {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              background: rememberMe ? 'var(--accent)' : 'rgba(255, 255, 255, 0.05)',
+              background: rememberMe ? 'var(--accent)' : 'var(--color-surface-sunken)',
               transition: 'all 0.2s ease',
               boxShadow: rememberMe ? '0 0 10px color-mix(in oklab, var(--accent) 30%, transparent)' : 'none'
             }}>

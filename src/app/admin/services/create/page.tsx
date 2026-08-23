@@ -48,7 +48,7 @@ export default function CreateServicePage() {
       style={{ display: 'flex', flexDirection: 'column', gap: '32px', maxWidth: '800px', margin: '0 auto', paddingBottom: '40px' }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-        <Link href="/admin/services" className="btn-icon" style={{ padding: '8px', borderRadius: '12px', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Link href="/admin/services" className="btn-icon" style={{ padding: '8px', borderRadius: '12px', background: 'var(--color-surface-sunken)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <ArrowLeft size={20} />
         </Link>
         <div>
@@ -153,7 +153,7 @@ export default function CreateServicePage() {
               style={{
                 padding: '16px', borderRadius: '16px', border: '1px solid',
                 borderColor: formData.is_recurring ? 'var(--accent)' : 'var(--border)',
-                background: formData.is_recurring ? 'color-mix(in oklab, var(--accent) 5%, transparent)' : 'rgba(255,255,255,0.02)',
+                background: formData.is_recurring ? 'color-mix(in oklab, var(--accent) 5%, transparent)' : 'var(--color-surface-sunken)',
                 color: formData.is_recurring ? 'white' : 'var(--text-secondary)',
                 display: 'flex', flexDirection: 'column', gap: '8px', textAlign: 'left', cursor: 'pointer', transition: 'all 0.2s'
               }}
@@ -167,7 +167,7 @@ export default function CreateServicePage() {
               style={{
                 padding: '16px', borderRadius: '16px', border: '1px solid',
                 borderColor: !formData.is_recurring ? 'var(--accent)' : 'var(--border)',
-                background: !formData.is_recurring ? 'color-mix(in oklab, var(--accent) 5%, transparent)' : 'rgba(255,255,255,0.02)',
+                background: !formData.is_recurring ? 'color-mix(in oklab, var(--accent) 5%, transparent)' : 'var(--color-surface-sunken)',
                 color: !formData.is_recurring ? 'white' : 'var(--text-secondary)',
                 display: 'flex', flexDirection: 'column', gap: '8px', textAlign: 'left', cursor: 'pointer', transition: 'all 0.2s'
               }}
@@ -180,7 +180,7 @@ export default function CreateServicePage() {
 
         {/* Detalhes de Assinatura (apenas se recorrente) */}
         {formData.is_recurring && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', padding: '20px', background: 'rgba(255,255,255,0.02)', borderRadius: '16px', border: '1px solid var(--border)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', padding: '20px', background: 'var(--color-surface-sunken)', borderRadius: '16px', border: '1px solid var(--border)' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Ciclo de Faturamento</label>
               <select
@@ -213,7 +213,7 @@ export default function CreateServicePage() {
           gap: '20px'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
+            <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-on-accent)' }}>
               <Share2 size={16} />
             </div>
             <p style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
@@ -268,9 +268,9 @@ export default function CreateServicePage() {
                       borderRadius: '10px',
                       fontSize: '0.75rem',
                       fontWeight: 700,
-                      background: formData.default_capture_frequency === opt ? 'var(--accent)' : 'rgba(255,255,255,0.03)',
+                      background: formData.default_capture_frequency === opt ? 'var(--accent)' : 'var(--color-surface-sunken)',
                       color: formData.default_capture_frequency === opt ? 'white' : 'var(--text-secondary)',
-                      border: '1px solid rgba(255,255,255,0.05)',
+                      border: '1px solid var(--color-border-subtle)',
                       cursor: 'pointer',
                       transition: 'all 0.2s'
                     }}
@@ -285,7 +285,7 @@ export default function CreateServicePage() {
 
         {/* Ações */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '16px', paddingTop: '24px', borderTop: '1px solid var(--border)' }}>
-          <Link href="/admin/services" className="btn" style={{ background: 'rgba(255,255,255,0.05)' }}>
+          <Link href="/admin/services" className="btn" style={{ background: 'var(--color-surface-sunken)' }}>
             Cancelar
           </Link>
           <Spotlight as="button" type="submit" className="btn btn-accent">

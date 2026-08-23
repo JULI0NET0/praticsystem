@@ -132,7 +132,7 @@ export function ExpenseLinkDialog({
           </div>
 
           {selection.size > 0 && (
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", borderRadius: "10px", background: "rgba(255,255,255,0.02)", border: "1px solid var(--border)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", borderRadius: "10px", background: "var(--color-surface-sunken)", border: "1px solid var(--border)" }}>
               <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)", fontWeight: 600 }}>
                 {selection.size} selecionada(s)
               </span>
@@ -158,7 +158,7 @@ export function ExpenseLinkDialog({
                     display: "flex", justifyContent: "space-between", alignItems: "center",
                     padding: "10px 14px", borderRadius: "10px",
                     border: `1px solid ${selected ? "var(--accent)" : "var(--border)"}`,
-                    background: selected ? "color-mix(in oklab, var(--accent) 8%, transparent)" : "rgba(255,255,255,0.02)",
+                    background: selected ? "color-mix(in oklab, var(--accent) 8%, transparent)" : "var(--color-surface-sunken)",
                     cursor: "pointer", textAlign: "left", color: "var(--text-primary)", transition: "all 0.15s",
                   }}
                 >

@@ -457,7 +457,7 @@ export default function ContractDetailsModal({ isOpen, onClose, onRenew, contrac
                 maxWidth: isMobile ? '100%' : '900px',
                 backgroundColor: '#111111',
                 borderRadius: isMobile ? '24px 24px 0 0' : '24px',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
+                border: '1px solid var(--color-border-subtle)',
                 boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
                 overflow: 'hidden',
                 maxHeight: isMobile ? '92dvh' : '90vh',
@@ -467,7 +467,7 @@ export default function ContractDetailsModal({ isOpen, onClose, onRenew, contrac
               }}
             >
               {/* Header */}
-              <div style={{ padding: '24px', borderBottom: '1px solid rgba(255, 255, 255, 0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ padding: '24px', borderBottom: '1px solid var(--color-border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                   <div style={{
                     width: '48px',
@@ -482,7 +482,7 @@ export default function ContractDetailsModal({ isOpen, onClose, onRenew, contrac
                     <FileText size={24} />
                   </div>
                   <div style={{ maxWidth: isMobile ? 'calc(100vw - 120px)' : '60vw', overflow: 'hidden' }}>
-                    <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'white', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+                    <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-text-primary)', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
                       Contrato {docNum}
                     </h2>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px', flexWrap: 'wrap' }}>
@@ -494,7 +494,7 @@ export default function ContractDetailsModal({ isOpen, onClose, onRenew, contrac
                         style={{
                           display: 'flex', alignItems: 'center', gap: '4px',
                           padding: '2px 8px', borderRadius: '6px',
-                          backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+                          backgroundColor: 'var(--color-surface-sunken)', border: '1px solid var(--color-border-subtle)',
                           cursor: 'pointer', color: 'var(--text-secondary)', transition: 'all 0.2s'
                         }}
                         title="Clique para copiar ID"
@@ -511,7 +511,7 @@ export default function ContractDetailsModal({ isOpen, onClose, onRenew, contrac
                     </div>
                   </div>
                 </div>
-                <button onClick={onClose} style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.05)', border: 'none', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <button onClick={onClose} style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: 'var(--color-surface-sunken)', border: 'none', color: 'var(--color-text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <X size={20} />
                 </button>
               </div>
@@ -523,29 +523,29 @@ export default function ContractDetailsModal({ isOpen, onClose, onRenew, contrac
                   <>
                     {/* Top Info Grid */}
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
-                      <div className="glass-card" style={{ padding: '16px', backgroundColor: 'rgba(255,255,255,0.02)' }}>
+                      <div className="glass-card" style={{ padding: '16px', backgroundColor: 'var(--color-surface-sunken)' }}>
                         <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Status do Contrato</p>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           {contract.status === 'active' ? <CheckCircle2 size={16} color="#22C55E" /> : <AlertCircle size={16} color="#F59E0B" />}
-                          <span style={{ fontWeight: 600, color: 'white' }}>
+                          <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>
                             {contract.status === 'active' ? 'Ativo' : contract.status === 'expiring' ? 'A Vencer' : 'Expirado'}
                           </span>
                         </div>
                       </div>
-                      <div className="glass-card" style={{ padding: '16px', backgroundColor: 'rgba(255,255,255,0.02)' }}>
+                      <div className="glass-card" style={{ padding: '16px', backgroundColor: 'var(--color-surface-sunken)' }}>
                         <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Valor Mensal</p>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <DollarSign size={16} color="var(--accent)" />
-                          <span style={{ fontWeight: 700, color: 'white', fontSize: '1.1rem' }}>
+                          <span style={{ fontWeight: 700, color: 'var(--color-text-primary)', fontSize: '1.1rem' }}>
                             R$ {contract.value.toLocaleString('pt-BR')}
                           </span>
                         </div>
                       </div>
-                      <div className="glass-card" style={{ padding: '16px', backgroundColor: 'rgba(255,255,255,0.02)' }}>
+                      <div className="glass-card" style={{ padding: '16px', backgroundColor: 'var(--color-surface-sunken)' }}>
                         <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Data de Encerramento</p>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <Clock size={16} color="var(--text-secondary)" />
-                          <span style={{ fontWeight: 600, color: 'white' }}>
+                          <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>
                             {contract.end_date ? new Date(contract.end_date + 'T12:00:00').toLocaleDateString('pt-BR') : 'Indeterminado'}
                           </span>
                         </div>
@@ -555,11 +555,11 @@ export default function ContractDetailsModal({ isOpen, onClose, onRenew, contrac
                     {/* Service & Document Details */}
                     <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(300px, 1fr))', gap: isMobile ? '16px' : '32px' }}>
                       <div>
-                        <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'white', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <CheckCircle2 size={18} color="var(--accent)" /> Escopo do Serviço
                         </h3>
-                        <div style={{ backgroundColor: 'rgba(255,255,255,0.03)', padding: '20px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                          <p style={{ fontWeight: 600, color: 'white', marginBottom: '4px' }}>{service?.name}</p>
+                        <div style={{ backgroundColor: 'var(--color-surface-sunken)', padding: '20px', borderRadius: '16px', border: '1px solid var(--color-border-subtle)' }}>
+                          <p style={{ fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '4px' }}>{service?.name}</p>
                           <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
                             {service?.description}
                           </p>
@@ -567,7 +567,7 @@ export default function ContractDetailsModal({ isOpen, onClose, onRenew, contrac
                             <span style={{ fontSize: '0.75rem', backgroundColor: 'color-mix(in oklab, var(--accent) 10%, transparent)', color: 'var(--accent)', padding: '4px 10px', borderRadius: '100px', fontWeight: 500 }}>
                               Recorrente
                             </span>
-                            <span style={{ fontSize: '0.75rem', backgroundColor: 'rgba(255, 255, 255, 0.05)', color: 'var(--text-secondary)', padding: '4px 10px', borderRadius: '100px', fontWeight: 500 }}>
+                            <span style={{ fontSize: '0.75rem', backgroundColor: 'var(--color-surface-sunken)', color: 'var(--text-secondary)', padding: '4px 10px', borderRadius: '100px', fontWeight: 500 }}>
                               {service?.category}
                             </span>
                           </div>
@@ -575,14 +575,14 @@ export default function ContractDetailsModal({ isOpen, onClose, onRenew, contrac
                       </div>
 
                       <div>
-                        <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'white', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <FileText size={18} color="var(--accent)" /> Documento e Assinatura
                         </h3>
-                        <div style={{ backgroundColor: 'rgba(255,255,255,0.03)', padding: '20px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                        <div style={{ backgroundColor: 'var(--color-surface-sunken)', padding: '20px', borderRadius: '16px', border: '1px solid var(--color-border-subtle)', display: 'flex', flexDirection: 'column', gap: '24px' }}>
                           
                           {/* Status Pipeline */}
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative' }}>
-                            <div style={{ position: 'absolute', top: '50%', left: '10%', right: '10%', height: '2px', backgroundColor: 'rgba(255,255,255,0.1)', zIndex: 0 }} />
+                            <div style={{ position: 'absolute', top: '50%', left: '10%', right: '10%', height: '2px', backgroundColor: 'var(--color-border-subtle)', zIndex: 0 }} />
                             
                             {(['pending', 'generated', 'sent', 'signed'] as const).map((step, idx) => {
                               const labels = { pending: 'Pendente', generated: 'Emitido', sent: 'Enviado', signed: 'Assinado' };
@@ -593,7 +593,7 @@ export default function ContractDetailsModal({ isOpen, onClose, onRenew, contrac
                                   <div style={{ 
                                     width: '24px', height: '24px', borderRadius: '50%', 
                                     backgroundColor: isPast ? 'var(--accent)' : '#111', 
-                                    border: `2px solid ${isPast ? 'var(--accent)' : 'rgba(255,255,255,0.2)'}`,
+                                    border: `2px solid ${isPast ? 'var(--accent)' : 'var(--color-text-muted)'}`,
                                     display: 'flex', alignItems: 'center', justifyContent: 'center'
                                   }}>
                                     {isPast && <CheckCircle2 size={14} color="white" />}
@@ -606,13 +606,13 @@ export default function ContractDetailsModal({ isOpen, onClose, onRenew, contrac
                             })}
                           </div>
 
-                          <div style={{ height: '1px', background: 'rgba(255,255,255,0.1)' }} />
+                          <div style={{ height: '1px', background: 'var(--color-border-subtle)' }} />
 
                           {/* Ações */}
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                               <div>
-                                <p style={{ fontWeight: 600, color: 'white', fontSize: '0.9rem' }}>1. Emitir Contrato</p>
+                                <p style={{ fontWeight: 600, color: 'var(--color-text-primary)', fontSize: '0.9rem' }}>1. Emitir Contrato</p>
                                 <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                                   {contract.document_content ? 'Editado e salvo' : 'Modelo Padrão'}
                                 </p>
@@ -624,7 +624,7 @@ export default function ContractDetailsModal({ isOpen, onClose, onRenew, contrac
 
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                <div>
-                                 <p style={{ fontWeight: 600, color: 'white', fontSize: '0.9rem' }}>2. Exportar</p>
+                                 <p style={{ fontWeight: 600, color: 'var(--color-text-primary)', fontSize: '0.9rem' }}>2. Exportar</p>
                                  <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Para enviar via Autentique</p>
                                </div>
                                <button 
@@ -635,7 +635,7 @@ export default function ContractDetailsModal({ isOpen, onClose, onRenew, contrac
                                >
                                  {exporting ? (
                                    <>
-                                     <span style={{ display: 'inline-block', width: '12px', height: '12px', border: '2px solid rgba(255,255,255,0.2)', borderTopColor: 'white', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                                     <span style={{ display: 'inline-block', width: '12px', height: '12px', border: '2px solid var(--color-text-muted)', borderTopColor: 'white', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
                                      Exportando...
                                    </>
                                  ) : (
@@ -646,11 +646,11 @@ export default function ContractDetailsModal({ isOpen, onClose, onRenew, contrac
                                </button>
                              </div>
 
-                             <div style={{ height: '1px', background: 'rgba(255,255,255,0.05)' }} />
+                             <div style={{ height: '1px', background: 'var(--color-surface-sunken)' }} />
 
                              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                <div>
-                                 <p style={{ fontWeight: 600, color: 'white', fontSize: '0.9rem' }}>3. Assinatura Digital</p>
+                                 <p style={{ fontWeight: 600, color: 'var(--color-text-primary)', fontSize: '0.9rem' }}>3. Assinatura Digital</p>
                                  <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                                    {contract.signed_document_url ? 'Contrato assinado em arquivo' : 'Recebeu assinado? Marque ou anexe a cópia'}
                                  </p>
@@ -712,7 +712,7 @@ export default function ContractDetailsModal({ isOpen, onClose, onRenew, contrac
                     <div style={{ padding: '16px 20px', borderRadius: '16px', border: '1px solid color-mix(in oklab, var(--accent) 30%, transparent)', background: 'color-mix(in oklab, var(--accent) 6%, transparent)' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div>
-                          <p style={{ fontWeight: 600, color: 'white', fontSize: '0.9rem', marginBottom: '2px' }}>Prorrogar Contrato</p>
+                          <p style={{ fontWeight: 600, color: 'var(--color-text-primary)', fontSize: '0.9rem', marginBottom: '2px' }}>Prorrogar Contrato</p>
                           <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Adiciona meses e gera novas faturas automaticamente</p>
                         </div>
                         {!showRenewPanel && (
@@ -745,15 +745,15 @@ export default function ContractDetailsModal({ isOpen, onClose, onRenew, contrac
 
                     {/* Financial History */}
                     <div>
-                      <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'white', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <DollarSign size={18} color="var(--accent)" /> Histórico Financeiro
                       </h3>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         {invoices.length > 0 ? (
                           invoices.map(invoice => (
-                            <div key={invoice.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '12px' }}>
+                            <div key={invoice.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', backgroundColor: 'var(--color-surface-sunken)', borderRadius: '12px' }}>
                               <div>
-                                <p style={{ fontSize: '0.875rem', fontWeight: 500, color: 'white' }}>Venc. {new Date(invoice.due_date + 'T12:00:00').toLocaleDateString('pt-BR')}</p>
+                                <p style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--color-text-primary)' }}>Venc. {new Date(invoice.due_date + 'T12:00:00').toLocaleDateString('pt-BR')}</p>
                                 <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{invoice.status === 'paid' ? 'Pago' : 'Pendente'}</p>
                               </div>
                               <p style={{ fontWeight: 600, color: invoice.status === 'paid' ? '#22C55E' : 'var(--accent)' }}>

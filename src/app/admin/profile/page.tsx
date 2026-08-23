@@ -186,7 +186,7 @@ export default function ProfilePage() {
                   width: '140px', height: '140px', borderRadius: '50%',
                   background: 'var(--accent)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: '#fff', boxShadow: '0 0 30px color-mix(in oklab, var(--accent) 30%, transparent)',
+                  color: 'var(--color-text-on-accent)', boxShadow: '0 0 30px color-mix(in oklab, var(--accent) 30%, transparent)',
                   cursor: 'pointer', position: 'relative', overflow: 'hidden'
                 }}
               >

@@ -312,7 +312,7 @@ export function DespesasList({ expenses, expenseEntries, users, asaasTransaction
                   <td>
                     <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                       <span className={`badge ${expense.status === "active" ? "badge-success" : ""}`}
-                        style={expense.status !== "active" ? { color: "var(--text-tertiary)", background: "rgba(255,255,255,0.04)" } : {}}>
+                        style={expense.status !== "active" ? { color: "var(--text-tertiary)", background: "var(--color-surface-sunken)" } : {}}>
                         {expense.status === "active" ? "Ativa" : "Inativa"}
                       </span>
                       {entries.length > 0 && (
@@ -409,7 +409,7 @@ export function DespesasList({ expenses, expenseEntries, users, asaasTransaction
             <div className="mobile-card-row">
               <span>Status</span>
               <span className={`badge ${expense.status === "active" ? "badge-success" : ""}`}
-                style={expense.status !== "active" ? { color: "var(--text-tertiary)", background: "rgba(255,255,255,0.04)" } : {}}>
+                style={expense.status !== "active" ? { color: "var(--text-tertiary)", background: "var(--color-surface-sunken)" } : {}}>
                 {expense.status === "active" ? "Ativa" : "Inativa"}
               </span>
             </div>
@@ -516,7 +516,7 @@ export function DespesasList({ expenses, expenseEntries, users, asaasTransaction
                     { label: "Pago", value: formatCurrency(totalPago), suffix: ` (${paidCount})`, color: "var(--color-success)" },
                     { label: "Pendente", value: formatCurrency(totalPendente), suffix: ` (${pendingCount})`, color: "var(--color-warning)" },
                   ].map((item) => (
-                    <div key={item.label} style={{ padding: "10px 12px", background: "rgba(255,255,255,0.02)", border: "1px solid var(--border)", borderRadius: "10px", textAlign: "center" }}>
+                    <div key={item.label} style={{ padding: "10px 12px", background: "var(--color-surface-sunken)", border: "1px solid var(--border)", borderRadius: "10px", textAlign: "center" }}>
                       <p style={{ fontSize: "0.7rem", color: "var(--text-secondary)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "4px" }}>{item.label}</p>
                       <p style={{ fontWeight: 800, color: item.color, fontSize: "0.9rem" }}>{item.value}<span style={{ fontWeight: 500, fontSize: "0.72rem", color: "var(--text-tertiary)" }}>{item.suffix}</span></p>
                     </div>
@@ -546,7 +546,7 @@ export function DespesasList({ expenses, expenseEntries, users, asaasTransaction
                       return (
                         <div
                           key={entry.id}
-                          style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "12px", padding: "10px 14px", borderRadius: "10px", background: "rgba(255,255,255,0.02)", border: "1px solid var(--border)" }}
+                          style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "12px", padding: "10px 14px", borderRadius: "10px", background: "var(--color-surface-sunken)", border: "1px solid var(--border)" }}
                         >
                           {/* Linha principal */}
                           <div style={{ flex: 1, minWidth: 0 }}>
@@ -607,7 +607,7 @@ export function DespesasList({ expenses, expenseEntries, users, asaasTransaction
                                   </div>
                                 ))}
                                 {remaining > 0 && (
-                                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.72rem", fontWeight: 700, borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "4px", marginTop: "2px" }}>
+                                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.72rem", fontWeight: 700, borderTop: "1px solid var(--color-border-subtle)", paddingTop: "4px", marginTop: "2px" }}>
                                     <span style={{ color: "var(--text-secondary)" }}>Saldo em aberto</span>
                                     <span style={{ color: "var(--color-danger)" }}>{formatCurrency(remaining)}</span>
                                   </div>

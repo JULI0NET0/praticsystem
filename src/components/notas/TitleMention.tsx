@@ -123,7 +123,7 @@ export default function TitleMention({
           outline: 'none',
           fontSize: 'clamp(1.4rem, 3.5vw, 2rem)',
           fontWeight: 700,
-          color: 'white',
+          color: 'var(--color-text-primary)',
           padding: 0,
           fontFamily: 'inherit',
         }}
@@ -167,7 +167,7 @@ export default function TitleMention({
                   borderRadius: '8px',
                   border: 'none',
                   background: idx === selectedIndex ? 'color-mix(in oklab, var(--accent) 15%, transparent)' : 'transparent',
-                  color: 'white',
+                  color: 'var(--color-text-primary)',
                   cursor: 'pointer',
                   textAlign: 'left',
                 }}

@@ -47,7 +47,7 @@ export default function RevenueChart() {
               <YAxis stroke="var(--color-text-secondary)" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `R$${val/1000}k`} />
               <Tooltip 
                 contentStyle={{ backgroundColor: '#1C1C1C', borderColor: '#282828', borderRadius: '8px' }}
-                itemStyle={{ color: '#FFFFFF' }}
+                itemStyle={{ color: 'var(--color-text-primary)' }}
                 formatter={(value: any) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value))}
               />
               <Area 

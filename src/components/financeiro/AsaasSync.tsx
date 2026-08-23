@@ -475,7 +475,7 @@ export function AsaasSync({
           {
             label: "Saldo Disponível", value: balance?.availableBalance ?? null,
             color: balance?.availableBalance != null ? (balance.availableBalance >= 0 ? "var(--color-success)" : "var(--color-danger)") : "var(--color-info)",
-            bg: balance?.availableBalance != null ? (balance.availableBalance >= 0 ? "var(--color-success-wash)" : "var(--color-danger-wash)") : "rgba(255,255,255,0.02)",
+            bg: balance?.availableBalance != null ? (balance.availableBalance >= 0 ? "var(--color-success-wash)" : "var(--color-danger-wash)") : "var(--color-surface-sunken)",
             border: balance?.availableBalance != null ? (balance.availableBalance >= 0 ? "var(--color-success-wash)" : "var(--color-danger-wash)") : "var(--border)",
           },
         ].map((card) => (
@@ -578,7 +578,7 @@ export function AsaasSync({
             {opt.label}
           </button>
         ))}
-        <div style={{ display: "flex", gap: "2px", background: "rgba(255,255,255,0.02)", padding: "2px", borderRadius: "8px", border: "1px solid var(--border)" }}>
+        <div style={{ display: "flex", gap: "2px", background: "var(--color-surface-sunken)", padding: "2px", borderRadius: "8px", border: "1px solid var(--border)" }}>
           {[{ id: "flat" as const, label: "Lista" }, { id: "grouped" as const, label: "Por cobrança" }].map((opt) => (
             <button key={opt.id} onClick={() => setViewMode(opt.id)}
               className={`btn ${viewMode === opt.id ? "btn-accent" : "btn-secondary"}`}
@@ -673,7 +673,7 @@ export function AsaasSync({
                 <div style={{ display: "flex", flexDirection: "column" }}>
                   {/* Emitido no sistema (invoice) */}
                   {group.paymentInvoice && (
-                    <div style={{ padding: "10px 20px", display: "flex", alignItems: "center", gap: "12px", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                    <div style={{ padding: "10px 20px", display: "flex", alignItems: "center", gap: "12px", borderBottom: "1px solid var(--color-border-subtle)" }}>
                       <Building2 size={13} color="#A78BFA" />
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <p style={{ fontSize: "0.85rem", fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
@@ -691,7 +691,7 @@ export function AsaasSync({
 
                   {/* Payment txn (from sync-clients, already linked to invoice) */}
                   {group.paymentTxn && (
-                    <div style={{ padding: "10px 20px", display: "flex", alignItems: "center", gap: "12px", borderBottom: "1px solid rgba(255,255,255,0.04)", background: "var(--color-success-wash)" }}>
+                    <div style={{ padding: "10px 20px", display: "flex", alignItems: "center", gap: "12px", borderBottom: "1px solid var(--color-border-subtle)", background: "var(--color-success-wash)" }}>
                       <CheckCircle2 size={13} color="var(--color-success)" />
                       <p style={{ flex: 1, fontSize: "0.85rem", fontWeight: 600 }}>{group.paymentTxn.description || "Pagamento"}</p>
                       <span style={{ fontSize: "0.8rem", color: "var(--color-success)", fontWeight: 700 }}>+ {formatCurrency(Number(group.paymentTxn.value))}</span>
@@ -704,7 +704,7 @@ export function AsaasSync({
                     const isConfirmedInDb = !!group.bankConfirmationTxn.confirms_asaas_transaction_id;
                     const canMarkConfirmation = group.isAutoReconciled && !isConfirmedInDb && group.paymentTxn;
                     return (
-                      <div style={{ padding: "10px 20px", display: "flex", alignItems: "center", gap: "12px", borderBottom: "1px solid rgba(255,255,255,0.04)", opacity: isConfirmedInDb ? 0.6 : 1 }}>
+                      <div style={{ padding: "10px 20px", display: "flex", alignItems: "center", gap: "12px", borderBottom: "1px solid var(--color-border-subtle)", opacity: isConfirmedInDb ? 0.6 : 1 }}>
                         {isConfirmedInDb
                           ? <CheckCircle2 size={13} color="var(--color-info)" />
                           : <button style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "inline-flex" }} onClick={() => { setLinkDialogDefaultCategory(undefined); setLinkDialogTxn(group.bankConfirmationTxn); }}>
@@ -738,7 +738,7 @@ export function AsaasSync({
 
                   {/* Fee rows */}
                   {group.feeTxns.map(({ txn, category }) => (
-                    <div key={txn.id} style={{ padding: "10px 20px", display: "flex", alignItems: "center", gap: "12px", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                    <div key={txn.id} style={{ padding: "10px 20px", display: "flex", alignItems: "center", gap: "12px", borderBottom: "1px solid var(--color-border-subtle)" }}>
                       {txn.expense_entry_id
                         ? <CheckCircle2 size={13} color="var(--color-success)" />
                         : <AlertCircle size={13} color="var(--color-warning)" />
@@ -1182,7 +1182,7 @@ export function AsaasSync({
 
               {/* Vinculado a despesa */}
               {dEntry && (
-                <div style={{ padding: "12px 16px", borderRadius: "12px", background: "rgba(255,255,255,0.02)", border: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: "8px" }}>
+                <div style={{ padding: "12px 16px", borderRadius: "12px", background: "var(--color-surface-sunken)", border: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: "8px" }}>
                   <p style={{ fontSize: "0.7rem", color: "var(--text-secondary)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>Despesa vinculada</p>
                   <p style={{ fontWeight: 700 }}>{dEntry.description}</p>
                   {dGroup && <p style={{ fontSize: "0.8rem", color: "var(--text-tertiary)" }}>{dGroup.description}</p>}
@@ -1208,7 +1208,7 @@ export function AsaasSync({
                           )}
                         </div>
                       ))}
-                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", fontWeight: 700, borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "4px", marginTop: "2px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", fontWeight: 700, borderTop: "1px solid var(--color-border-subtle)", paddingTop: "4px", marginTop: "2px" }}>
                         <span>Total pago</span>
                         <span style={{ color: totalPaid >= Number(dEntry.amount) ? "var(--color-success)" : "var(--color-warning)" }}>
                           {formatCurrency(totalPaid)} / {formatCurrency(Number(dEntry.amount))}
@@ -1227,7 +1227,7 @@ export function AsaasSync({
 
               {/* Vinculado a fatura */}
               {dInvoice && dClient && (
-                <div style={{ padding: "12px 16px", borderRadius: "12px", background: "rgba(255,255,255,0.02)", border: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: "6px" }}>
+                <div style={{ padding: "12px 16px", borderRadius: "12px", background: "var(--color-surface-sunken)", border: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: "6px" }}>
                   <p style={{ fontSize: "0.7rem", color: "var(--text-secondary)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>Fatura vinculada</p>
                   <p style={{ fontWeight: 700 }}>{dClient.nome_fantasia || dClient.name}</p>
                   <p style={{ fontSize: "0.8rem", color: "var(--text-tertiary)" }}>{dInvoice.description}</p>
@@ -1312,14 +1312,14 @@ export function AsaasSync({
               </div>
 
               {/* Metadados do Asaas */}
-              <div style={{ padding: "4px 16px", borderRadius: "12px", background: "rgba(255,255,255,0.02)", border: "1px solid var(--border)" }}>
+              <div style={{ padding: "4px 16px", borderRadius: "12px", background: "var(--color-surface-sunken)", border: "1px solid var(--border)" }}>
                 {meta.map((row, idx) => (
                   <div
                     key={row.label}
                     style={{
                       display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px",
                       padding: "9px 0",
-                      borderTop: idx === 0 ? "none" : "1px solid rgba(255,255,255,0.05)",
+                      borderTop: idx === 0 ? "none" : "1px solid var(--color-border-subtle)",
                     }}
                   >
                     <span style={{ fontSize: "0.76rem", color: "var(--text-tertiary)", fontWeight: 600, flexShrink: 0 }}>{row.label}</span>
@@ -1329,7 +1329,7 @@ export function AsaasSync({
               </div>
 
               {/* Vínculo financeiro (saída/entrada) — somente leitura aqui */}
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px", padding: "10px 14px", borderRadius: "10px", background: "rgba(255,255,255,0.02)", border: "1px solid var(--border)" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px", padding: "10px 14px", borderRadius: "10px", background: "var(--color-surface-sunken)", border: "1px solid var(--border)" }}>
                 <span style={{ fontSize: "0.78rem", color: "var(--text-secondary)", fontWeight: 600 }}>Vínculo financeiro</span>
                 {fin ? (
                   <span style={{ fontSize: "0.82rem", fontWeight: 700, color: fin.color, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "240px" }}>
@@ -1389,7 +1389,7 @@ export function AsaasSync({
                     return (
                       <div style={{ marginTop: "8px" }}>
                         {rows.map((r, idx) => (
-                          <div key={r.label} style={{ display: "flex", justifyContent: "space-between", gap: "16px", padding: "7px 0", borderTop: idx === 0 ? "none" : "1px solid rgba(255,255,255,0.05)" }}>
+                          <div key={r.label} style={{ display: "flex", justifyContent: "space-between", gap: "16px", padding: "7px 0", borderTop: idx === 0 ? "none" : "1px solid var(--color-border-subtle)" }}>
                             <span style={{ fontSize: "0.76rem", color: "var(--text-tertiary)", fontWeight: 600, flexShrink: 0 }}>{r.label}</span>
                             <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)", fontWeight: 600, textAlign: "right", wordBreak: "break-word" }}>{r.value}</span>
                           </div>
@@ -1495,14 +1495,14 @@ export function AsaasSync({
                     })}
                     style={{
                       display: "flex", alignItems: "center", gap: "12px", padding: "12px 14px",
-                      background: sel ? "var(--color-success-wash)" : "rgba(255,255,255,0.02)",
+                      background: sel ? "var(--color-success-wash)" : "var(--color-surface-sunken)",
                       border: `1px solid ${sel ? "var(--color-success-wash)" : "var(--border)"}`,
                       borderRadius: "12px", cursor: "pointer", textAlign: "left", transition: "all 0.15s",
                     }}
                   >
                     <div style={{
                       width: "20px", height: "20px", borderRadius: "6px", flexShrink: 0,
-                      background: sel ? "var(--color-success)" : "rgba(255,255,255,0.08)",
+                      background: sel ? "var(--color-success)" : "var(--color-border-subtle)",
                       border: `2px solid ${sel ? "var(--color-success)" : "var(--border)"}`,
                       display: "flex", alignItems: "center", justifyContent: "center",
                     }}>

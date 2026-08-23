@@ -15,7 +15,7 @@ import { NoteCardData } from '@/components/notas/NoteCard';
 const BlockEditor = dynamic(() => import('@/components/notas/BlockEditor'), {
   ssr: false,
   loading: () => (
-    <div style={{ padding: '24px 0', color: 'rgba(255,255,255,0.2)', fontSize: '0.95rem' }}>
+    <div style={{ padding: '24px 0', color: 'var(--color-text-muted)', fontSize: '0.95rem' }}>
       Carregando editor...
     </div>
   ),
@@ -204,7 +204,7 @@ export default function InlineNoteEditor({ clientId, noteId, onClose, onSaved }:
           onChange={(title, m) => { setMentions(m); update({ title }); }}
           placeholder="Título da nota..."
         />
-        <div style={{ height: '1px', background: 'rgba(255,255,255,0.07)' }} />
+        <div style={{ height: '1px', background: 'var(--color-border-subtle)' }} />
 
         {/* Body */}
         <BlockEditor
@@ -225,7 +225,7 @@ export default function InlineNoteEditor({ clientId, noteId, onClose, onSaved }:
             type="date"
             value={state.date}
             onChange={e => update({ date: e.target.value })}
-            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: '8px', padding: '6px 10px', color: 'white', fontSize: '0.85rem', outline: 'none' }}
+            style={{ background: 'var(--color-surface-sunken)', border: '1px solid var(--border)', borderRadius: '8px', padding: '6px 10px', color: 'var(--color-text-primary)', fontSize: '0.85rem', outline: 'none' }}
           />
         </div>
 
@@ -249,9 +249,9 @@ export default function InlineNoteEditor({ clientId, noteId, onClose, onSaved }:
                 onChange={e => setNewSubject(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && addSubject()}
                 placeholder="+ Assunto"
-                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: '8px', padding: '4px 8px', color: 'white', fontSize: '0.8rem', outline: 'none', width: '110px' }}
+                style={{ background: 'var(--color-surface-sunken)', border: '1px solid var(--border)', borderRadius: '8px', padding: '4px 8px', color: 'var(--color-text-primary)', fontSize: '0.8rem', outline: 'none', width: '110px' }}
               />
-              <button onClick={addSubject} style={{ background: 'var(--accent)', border: 'none', borderRadius: '8px', padding: '4px 8px', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+              <button onClick={addSubject} style={{ background: 'var(--accent)', border: 'none', borderRadius: '8px', padding: '4px 8px', color: 'var(--color-text-on-accent)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
                 <Plus size={13} />
               </button>
             </div>

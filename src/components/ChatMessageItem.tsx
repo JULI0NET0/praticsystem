@@ -53,7 +53,7 @@ function Avatar({ name, avatarUrl, size, fontSize }: { name: string; avatarUrl?:
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        color: 'white',
+        color: 'var(--color-text-on-accent)',
         fontSize,
         fontWeight: 700,
       }}
@@ -111,7 +111,7 @@ export function ChatMessageItem({ message, isOwnMessage, showHeader, compact = f
           style={{
             padding,
             borderRadius: isOwnMessage ? '14px 14px 3px 14px' : '14px 14px 14px 3px',
-            background: isOwnMessage ? 'var(--accent)' : 'rgba(255,255,255,0.06)',
+            background: isOwnMessage ? 'var(--accent)' : 'var(--color-surface-sunken)',
             color: isOwnMessage ? 'white' : 'var(--text-primary)',
             fontSize,
             lineHeight: 1.45,

@@ -193,7 +193,7 @@ export default function ContractsPage() {
                   cursor: 'pointer',
                   transition: 'all 0.2s',
                   border: datePreset === preset.id ? '1px solid var(--accent)' : '1px solid var(--border)',
-                  background: datePreset === preset.id ? 'color-mix(in oklab, var(--accent) 15%, transparent)' : 'rgba(255,255,255,0.02)',
+                  background: datePreset === preset.id ? 'color-mix(in oklab, var(--accent) 15%, transparent)' : 'var(--color-surface-sunken)',
                   color: datePreset === preset.id ? 'var(--accent)' : 'var(--text-secondary)'
                 }}
               >
@@ -207,7 +207,7 @@ export default function ContractsPage() {
             </Link>
           </div>
           {(datePreset === 'custom' || dateRange.start || dateRange.end) && (
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: '8px 16px', borderRadius: '14px', border: '1px solid var(--border)' }}>
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', background: 'var(--color-surface-sunken)', padding: '8px 16px', borderRadius: '14px', border: '1px solid var(--border)' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                 <span style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)', fontWeight: 700, textTransform: 'uppercase' }}>Início</span>
                 <input
@@ -220,7 +220,7 @@ export default function ContractsPage() {
                   }}
                 />
               </div>
-              <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)' }} />
+              <div style={{ width: '1px', height: '24px', background: 'var(--color-border-subtle)' }} />
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                 <span style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)', fontWeight: 700, textTransform: 'uppercase' }}>Fim</span>
                 <input
@@ -391,7 +391,7 @@ export default function ContractsPage() {
                                   contract.document_status === 'signed' ? 'var(--color-success-wash)' : 
                                   contract.document_status === 'sent' ? 'rgba(59, 130, 246, 0.1)' : 
                                   contract.document_status === 'generated' ? 'rgba(168, 85, 247, 0.1)' : 
-                                  'rgba(255, 255, 255, 0.05)',
+                                  'var(--color-surface-sunken)',
                                 color: 
                                   contract.document_status === 'signed' ? 'var(--color-success)' : 
                                   contract.document_status === 'sent' ? '#3B82F6' : 
@@ -486,7 +486,7 @@ export default function ContractsPage() {
                           fontSize: '0.65rem', padding: '2px 8px',
                           backgroundColor: contract.document_status === 'signed' ? 'var(--color-success-wash)' : 
                             contract.document_status === 'sent' ? 'rgba(59, 130, 246, 0.1)' : 
-                            contract.document_status === 'generated' ? 'rgba(168, 85, 247, 0.1)' : 'rgba(255, 255, 255, 0.05)',
+                            contract.document_status === 'generated' ? 'rgba(168, 85, 247, 0.1)' : 'var(--color-surface-sunken)',
                           color: contract.document_status === 'signed' ? 'var(--color-success)' : 
                             contract.document_status === 'sent' ? '#3B82F6' : 
                             contract.document_status === 'generated' ? '#A855F7' : 'var(--text-secondary)'
@@ -570,7 +570,7 @@ export default function ContractsPage() {
               <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Liberação de acesso ao portal do cliente e coleta de credenciais.</p>
             </div>
             <div>
-              <div style={{ position: 'absolute', left: '-7px', width: '12px', height: '12px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.2)' }}></div>
+              <div style={{ position: 'absolute', left: '-7px', width: '12px', height: '12px', borderRadius: '50%', backgroundColor: 'var(--color-text-muted)' }}></div>
               <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>Entrega Recorrente</div>
               <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Vínculo com o Workspace para gestão de demandas semanais.</p>
             </div>
@@ -607,7 +607,7 @@ export default function ContractsPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <button
                   className="btn"
-                  style={{ backgroundColor: 'var(--color-danger)', color: 'white', width: '100%' }}
+                  style={{ backgroundColor: 'var(--color-danger)', color: 'var(--color-text-on-danger)', width: '100%' }}
                   onClick={handleDeleteContract}
                   disabled={isDeleting}
                 >

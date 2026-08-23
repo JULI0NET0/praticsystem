@@ -20,7 +20,7 @@ import CustomModal from '@/components/CustomModal';
 const BlockEditor = dynamic(() => import('@/components/notas/BlockEditor'), {
   ssr: false,
   loading: () => (
-    <div style={{ padding: '32px 0', color: 'rgba(255,255,255,0.25)', fontSize: '1rem' }}>
+    <div style={{ padding: '32px 0', color: 'var(--color-text-tertiary)', fontSize: '1rem' }}>
       Carregando editor...
     </div>
   ),
@@ -451,7 +451,7 @@ export default function NotaDetailPage() {
               <span style={{
                 fontSize: '0.85rem',
                 fontWeight: 600,
-                color: 'white',
+                color: 'var(--color-text-primary)',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap',
@@ -481,7 +481,7 @@ export default function NotaDetailPage() {
               )}
               <button
                 onClick={() => setShowMetadata(prev => !prev)}
-                style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', padding: '5px 12px' }}
+                style={{ background: 'var(--color-surface-sunken)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', padding: '5px 12px' }}
                 title={showMetadata ? "Ocultar informações da nota" : "Mostrar informações da nota"}
               >
                 {showMetadata ? <><ChevronUp size={13} /> Ocultar Info</> : <><ChevronDown size={13} /> Mostrar Info</>}
@@ -489,7 +489,7 @@ export default function NotaDetailPage() {
               <button
                 onClick={handleExport}
                 disabled={exporting}
-                style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border)', borderRadius: '8px', cursor: exporting ? 'wait' : 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', padding: '5px 12px', opacity: exporting ? 0.6 : 1 }}
+                style={{ background: 'var(--color-surface-sunken)', border: '1px solid var(--border)', borderRadius: '8px', cursor: exporting ? 'wait' : 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', padding: '5px 12px', opacity: exporting ? 0.6 : 1 }}
               >
                 {exporting
                   ? <><motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}><Loader2 size={13} /></motion.div> Gerando PDF...</>
@@ -498,7 +498,7 @@ export default function NotaDetailPage() {
               </button>
               <button
                 onClick={handleExportMarkdown}
-                style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', padding: '5px 12px' }}
+                style={{ background: 'var(--color-surface-sunken)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', padding: '5px 12px' }}
                 title="Exportar como Markdown (.md)"
               >
                 <FileDown size={13} /> Exportar MD
@@ -536,7 +536,7 @@ export default function NotaDetailPage() {
                   gridTemplateColumns: isMobile ? '1fr' : isOwner ? 'repeat(4, 1fr)' : 'repeat(3, 1fr)',
                   gap: '16px',
                   paddingBottom: '20px',
-                  borderBottom: '1px solid rgba(255,255,255,0.07)',
+                  borderBottom: '1px solid var(--color-border-subtle)',
                   marginBottom: '8px'
                 }}>
                   {/* Date */}
@@ -546,7 +546,7 @@ export default function NotaDetailPage() {
                       value={note.date ?? new Date().toISOString().split('T')[0]}
                       onChange={e => updateNote({ date: e.target.value })}
                       disabled={!canEdit}
-                      style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: '8px', padding: '7px 10px', color: 'white', fontSize: '0.85rem', outline: 'none' }}
+                      style={{ width: '100%', background: 'var(--color-surface-sunken)', border: '1px solid var(--border)', borderRadius: '8px', padding: '7px 10px', color: 'var(--color-text-primary)', fontSize: '0.85rem', outline: 'none' }}
                     />
                   </SideSection>
 
@@ -571,9 +571,9 @@ export default function NotaDetailPage() {
                           onChange={e => setNewSubject(e.target.value)}
                           onKeyDown={e => e.key === 'Enter' && addSubject()}
                           placeholder="Novo assunto..."
-                          style={{ flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: '8px', padding: '6px 10px', color: 'white', fontSize: '0.8rem', outline: 'none' }}
+                          style={{ flex: 1, background: 'var(--color-surface-sunken)', border: '1px solid var(--border)', borderRadius: '8px', padding: '6px 10px', color: 'var(--color-text-primary)', fontSize: '0.8rem', outline: 'none' }}
                         />
-                        <button onClick={addSubject} style={{ background: 'var(--accent)', border: 'none', borderRadius: '8px', padding: '6px 10px', color: 'white', cursor: 'pointer' }}>
+                        <button onClick={addSubject} style={{ background: 'var(--accent)', border: 'none', borderRadius: '8px', padding: '6px 10px', color: 'var(--color-text-on-accent)', cursor: 'pointer' }}>
                           <Plus size={14} />
                         </button>
                       </div>
@@ -591,7 +591,7 @@ export default function NotaDetailPage() {
                             padding: '6px 8px', borderRadius: '8px', border: '1px solid',
                             fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
                             borderColor: note.share_all ? 'var(--accent)' : 'var(--border)',
-                            background: note.share_all ? 'color-mix(in oklab, var(--accent) 15%, transparent)' : 'rgba(255,255,255,0.04)',
+                            background: note.share_all ? 'color-mix(in oklab, var(--accent) 15%, transparent)' : 'var(--color-surface-sunken)',
                             color: note.share_all ? 'var(--accent)' : 'var(--text-secondary)',
                           }}
                         >
@@ -603,8 +603,8 @@ export default function NotaDetailPage() {
                             flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
                             padding: '6px 8px', borderRadius: '8px', border: '1px solid',
                             fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
-                            borderColor: !note.share_all && (note.shared_with ?? []).length === 0 ? 'rgba(255,255,255,0.15)' : 'var(--border)',
-                            background: !note.share_all && (note.shared_with ?? []).length === 0 ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.04)',
+                            borderColor: !note.share_all && (note.shared_with ?? []).length === 0 ? 'var(--color-border-subtle)' : 'var(--border)',
+                            background: !note.share_all && (note.shared_with ?? []).length === 0 ? 'var(--color-border-subtle)' : 'var(--color-surface-sunken)',
                             color: !note.share_all && (note.shared_with ?? []).length === 0 ? 'white' : 'var(--text-secondary)',
                           }}
                         >
@@ -641,7 +641,7 @@ export default function NotaDetailPage() {
                       <select
                         value={note.client_id ?? ''}
                         onChange={e => updateNote({ client_id: e.target.value || undefined, pin_to_client: false })}
-                        style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: '8px', padding: '7px 10px', color: note.client_id ? 'white' : 'var(--text-secondary)', fontSize: '0.85rem', outline: 'none', cursor: 'pointer' }}
+                        style={{ width: '100%', background: 'var(--color-surface-sunken)', border: '1px solid var(--border)', borderRadius: '8px', padding: '7px 10px', color: note.client_id ? 'white' : 'var(--text-secondary)', fontSize: '0.85rem', outline: 'none', cursor: 'pointer' }}
                       >
                         <option value="">Nenhum cliente</option>
                         {clients.map((c, idx) => {
@@ -660,7 +660,7 @@ export default function NotaDetailPage() {
                     )}
 
                     {note.client_id && canEdit && (
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px', cursor: 'pointer', padding: '6px 8px', borderRadius: '8px', border: '1px solid', transition: 'all 0.15s', borderColor: note.pin_to_client ? 'color-mix(in oklab, var(--accent) 35%, transparent)' : 'var(--border)', background: note.pin_to_client ? 'color-mix(in oklab, var(--accent) 8%, transparent)' : 'rgba(255,255,255,0.02)' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px', cursor: 'pointer', padding: '6px 8px', borderRadius: '8px', border: '1px solid', transition: 'all 0.15s', borderColor: note.pin_to_client ? 'color-mix(in oklab, var(--accent) 35%, transparent)' : 'var(--border)', background: note.pin_to_client ? 'color-mix(in oklab, var(--accent) 8%, transparent)' : 'var(--color-surface-sunken)' }}>
                         <BookmarkCheck size={14} color={note.pin_to_client ? 'var(--accent)' : 'var(--text-secondary)'} style={{ flexShrink: 0 }} />
                         <span style={{ fontSize: '0.75rem', fontWeight: 600, color: note.pin_to_client ? 'var(--accent)' : 'white' }}>
                           Incluir no cadastro

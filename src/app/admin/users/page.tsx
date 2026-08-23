@@ -186,7 +186,7 @@ export default function UsersPage() {
         </div>
         <div className="mobile-stack" style={{ display: 'flex', gap: '12px' }}>
           <Link href="/admin/users/roles">
-            <Spotlight as="button" className="btn" style={{ background: 'rgba(255, 255, 255, 0.05)', minHeight: '44px' }}>Gerenciar Cargos</Spotlight>
+            <Spotlight as="button" className="btn" style={{ background: 'var(--color-surface-sunken)', minHeight: '44px' }}>Gerenciar Cargos</Spotlight>
           </Link>
           <Link href="/admin/users/create">
             <Spotlight as="button" className="btn btn-accent" style={{ minHeight: '44px' }}><Plus size={18} /> Criar Novo Usuário</Spotlight>
@@ -311,7 +311,7 @@ export default function UsersPage() {
                               style={{
                                 width: '32px', height: '32px', borderRadius: '8px',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                background: 'rgba(255, 255, 255, 0.05)', color: 'var(--text-secondary)',
+                                background: 'var(--color-surface-sunken)', color: 'var(--text-secondary)',
                                 border: '1px solid var(--border)'
                               }}
                             >
@@ -325,7 +325,7 @@ export default function UsersPage() {
                               style={{
                                 width: '32px', height: '32px', borderRadius: '8px',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                background: 'rgba(255, 255, 255, 0.05)', color: 'var(--text-secondary)',
+                                background: 'var(--color-surface-sunken)', color: 'var(--text-secondary)',
                                 border: '1px solid var(--border)'
                               }}
                             >
@@ -352,7 +352,7 @@ export default function UsersPage() {
                                 style={{
                                   width: '32px', height: '32px', borderRadius: '8px',
                                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                  background: 'rgba(255, 255, 255, 0.05)', color: 'var(--text-secondary)',
+                                  background: 'var(--color-surface-sunken)', color: 'var(--text-secondary)',
                                   border: '1px solid var(--border)'
                                 }}
                               >
@@ -433,7 +433,7 @@ export default function UsersPage() {
                         style={{
                           width: '32px', height: '32px', borderRadius: '8px', flexShrink: 0,
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          background: 'rgba(255,255,255,0.05)', color: 'var(--text-secondary)',
+                          background: 'var(--color-surface-sunken)', color: 'var(--text-secondary)',
                           border: '1px solid var(--border)'
                         }}
                       >
@@ -482,7 +482,7 @@ export default function UsersPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <button
                   className="btn"
-                  style={{ backgroundColor: 'var(--color-danger)', color: 'white', width: '100%' }}
+                  style={{ backgroundColor: 'var(--color-danger)', color: 'var(--color-text-on-danger)', width: '100%' }}
                   onClick={handleDeleteUser}
                   disabled={isProcessing}
                 >

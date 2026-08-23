@@ -66,7 +66,7 @@ export default function SearchInput({
             inputRef.current?.focus();
           }}
           style={{
-            background: 'rgba(255, 255, 255, 0.05)',
+            background: 'var(--color-surface-sunken)',
             border: '1px solid var(--border)',
             borderRadius: '50%',
             width: '24px',
@@ -84,7 +84,7 @@ export default function SearchInput({
             e.currentTarget.style.borderColor = 'var(--color-danger-wash)';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+            e.currentTarget.style.background = 'var(--color-surface-sunken)';
             e.currentTarget.style.color = 'var(--text-secondary)';
             e.currentTarget.style.borderColor = 'var(--border)';
           }}
@@ -95,7 +95,7 @@ export default function SearchInput({
         <div
           className="hide-mobile"
           style={{
-            background: 'rgba(255,255,255,0.05)',
+            background: 'var(--color-surface-sunken)',
             padding: '2px 8px',
             borderRadius: '100px',
             fontSize: '0.7rem',

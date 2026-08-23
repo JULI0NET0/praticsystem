@@ -63,7 +63,7 @@ export default function ClientSidebar() {
               top: activeTooltip.top,
               transform: 'translateY(-50%)',
               background: 'var(--color-surface-raised)',
-              border: '1px solid rgba(255, 255, 255, 0.15)',
+              border: '1px solid var(--color-border-subtle)',
               boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
               padding: '8px 16px',
               borderRadius: '14px',
@@ -74,7 +74,7 @@ export default function ClientSidebar() {
               whiteSpace: 'nowrap'
             }}
           >
-            <span style={{ color: '#FFFFFF', fontSize: '0.875rem', fontWeight: 600, letterSpacing: '0.02em' }}>
+            <span style={{ color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: 600, letterSpacing: '0.02em' }}>
               {activeTooltip.label}
             </span>
           </motion.div>
@@ -181,7 +181,7 @@ export default function ClientSidebar() {
           }}
           style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: isExpanded ? '8px' : '0', justifyContent: isExpanded ? 'flex-start' : 'center', position: 'relative' }}
         >
-          <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: '#fff', flexShrink: 0 }}>JD</div>
+          <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: 'var(--color-text-on-accent)', flexShrink: 0 }}>JD</div>
           <AnimatePresence initial={false}>
             {isExpanded && (
               <motion.div

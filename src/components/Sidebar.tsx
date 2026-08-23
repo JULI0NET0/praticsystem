@@ -313,7 +313,7 @@ export default function Sidebar() {
             onClick={() => setShowUserSwitcher(!showUserSwitcher)}
             style={{
               width: '32px', height: '32px', borderRadius: '50%',
-              backgroundColor: 'var(--accent)', color: '#fff',
+              backgroundColor: 'var(--accent)', color: 'var(--color-text-on-accent)',
               display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600, fontSize: '0.875rem',
               flexShrink: 0,
               position: 'relative',
@@ -396,7 +396,7 @@ export default function Sidebar() {
                 {localNotifications.filter(n => !n.read).length > 0 && (
                   <div style={{
                     position: 'absolute', top: -6, right: -6,
-                    backgroundColor: 'var(--accent)', color: 'white',
+                    backgroundColor: 'var(--accent)', color: 'var(--color-text-on-accent)',
                     fontSize: '0.6rem', fontWeight: 800, width: '16px', height: '16px',
                     borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
                     border: '2px solid var(--bg-secondary)'

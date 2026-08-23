@@ -197,7 +197,7 @@ export default function ManagementPage() {
                 onClick={() => setPeriod(p)}
                 style={{
                   padding: '6px 16px', borderRadius: '10px', border: 'none',
-                  background: period === p ? 'var(--accent)' : 'rgba(255,255,255,0.05)',
+                  background: period === p ? 'var(--accent)' : 'var(--color-surface-sunken)',
                   color: period === p ? 'white' : 'var(--text-secondary)',
                   fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer'
                 }}
@@ -220,7 +220,7 @@ export default function ManagementPage() {
                 transition={{ delay: i * 0.05 }}
                 style={{
                   padding: '20px', borderRadius: '16px',
-                  background: stat.isOnline ? 'var(--color-success-wash)' : 'rgba(255,255,255,0.02)',
+                  background: stat.isOnline ? 'var(--color-success-wash)' : 'var(--color-surface-sunken)',
                   border: `1px solid ${stat.isOnline ? 'var(--color-success-wash)' : 'var(--border)'}`,
                   display: 'flex', gap: '16px', alignItems: 'center'
                 }}
@@ -229,7 +229,7 @@ export default function ManagementPage() {
                   <div style={{
                     width: '48px', height: '48px', borderRadius: '50%',
                     background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: 'white', fontWeight: 700, fontSize: '1rem'
+                    color: 'var(--color-text-on-accent)', fontWeight: 700, fontSize: '1rem'
                   }}>
                     {stat.avatar_url
                       ? <img src={stat.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
@@ -296,12 +296,12 @@ export default function ManagementPage() {
             </thead>
             <tbody>
               {userStats.map(stat => (
-                <tr key={stat.user_id} style={{ background: 'rgba(255,255,255,0.02)', borderRadius: '12px' }}>
+                <tr key={stat.user_id} style={{ background: 'var(--color-surface-sunken)', borderRadius: '12px' }}>
                   <td style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <div style={{
                       width: '32px', height: '32px', borderRadius: '50%', background: 'var(--accent)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: 'white', fontSize: '0.75rem', fontWeight: 700
+                      color: 'var(--color-text-on-accent)', fontSize: '0.75rem', fontWeight: 700
                     }}>
                       {stat.name.substring(0, 2).toUpperCase()}
                     </div>

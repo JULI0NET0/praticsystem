@@ -95,7 +95,7 @@ export default function NoteCard({
         {/* Title row */}
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
           <h3 style={{
-            fontWeight: 600, fontSize: '0.95rem', color: 'white',
+            fontWeight: 600, fontSize: '0.95rem', color: 'var(--color-text-primary)',
             lineHeight: 1.4, margin: 0, flex: 1,
             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
           }}>
@@ -122,7 +122,7 @@ export default function NoteCard({
             {preview}
           </p>
         ) : (
-          <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.2)', margin: 0, flex: 1, fontStyle: 'italic' }}>
+          <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', margin: 0, flex: 1, fontStyle: 'italic' }}>
             Nota vazia
           </p>
         )}
@@ -147,7 +147,7 @@ export default function NoteCard({
         <div style={{
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           marginTop: 'auto', paddingTop: '8px',
-          borderTop: '1px solid rgba(255,255,255,0.05)',
+          borderTop: '1px solid var(--color-border-subtle)',
         }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>

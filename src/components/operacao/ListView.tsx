@@ -215,7 +215,7 @@ function ChannelChip({ label, active, onClick }: { label: string; active: boolea
         fontSize: "0.74rem",
         fontWeight: 700,
         cursor: "pointer",
-        background: active ? "var(--accent)" : "rgba(255,255,255,0.04)",
+        background: active ? "var(--accent)" : "var(--color-surface-sunken)",
         color: active ? "#fff" : "var(--text-secondary)",
         border: `1px solid ${active ? "var(--accent)" : "var(--border)"}`,
       }}

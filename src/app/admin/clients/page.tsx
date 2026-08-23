@@ -251,7 +251,7 @@ export default function ClientsPage() {
                         <td style={{ paddingLeft: '24px' }}>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <p style={{ fontWeight: 600, fontSize: '0.95rem', color: 'white' }}>
+                              <p style={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--color-text-primary)' }}>
                                 {client.nome_fantasia || client.name}
                               </p>
                               <span style={{
@@ -298,7 +298,7 @@ export default function ClientsPage() {
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <div style={{
                               width: '24px', height: '24px', borderRadius: '50%',
-                              background: (demandsCount[client.id] || 0) > 0 ? 'color-mix(in oklab, var(--accent) 20%, transparent)' : 'rgba(255,255,255,0.05)',
+                              background: (demandsCount[client.id] || 0) > 0 ? 'color-mix(in oklab, var(--accent) 20%, transparent)' : 'var(--color-surface-sunken)',
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
                               fontSize: '0.75rem', fontWeight: 600, color: (demandsCount[client.id] || 0) > 0 ? 'var(--accent)' : 'var(--text-secondary)'
                             }}>
@@ -454,7 +454,7 @@ export default function ClientsPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   {asaasResult.customer ? (
                     <>
-                      <div style={{ padding: '14px', borderRadius: '10px', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)' }}>
+                      <div style={{ padding: '14px', borderRadius: '10px', background: 'var(--color-surface-sunken)', border: '1px solid var(--border)' }}>
                         <p style={{ fontWeight: 600, marginBottom: '4px' }}>{asaasResult.customer.name}</p>
                         <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                           {asaasResult.customer.email} · {asaasResult.customer.mobilePhone || asaasResult.customer.phone || '—'}
@@ -476,7 +476,7 @@ export default function ClientsPage() {
                               <div key={p.id} style={{
                                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                                 padding: '8px 12px', borderRadius: '8px',
-                                background: 'rgba(255,255,255,0.03)',
+                                background: 'var(--color-surface-sunken)',
                                 fontSize: '0.8rem',
                               }}>
                                 <span style={{ color: 'var(--text-secondary)' }}>{p.dueDate}</span>

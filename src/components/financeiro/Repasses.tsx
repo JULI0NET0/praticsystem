@@ -248,7 +248,7 @@ export function Repasses({ asaasTransactions, clients, startDate, endDate, onSet
                       const offsets = creditOffsets(t);
                       const noOffset = !isDebit && !offsets;
                       return (
-                        <div key={t.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", padding: "10px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                        <div key={t.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", padding: "10px 0", borderBottom: "1px solid var(--color-border-subtle)" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
                             <span style={{ color: isDebit ? "var(--color-warning)" : "var(--color-success)", flexShrink: 0 }}>
                               {isDebit ? <ArrowUpRight size={16} /> : <ArrowDownLeft size={16} />}
@@ -276,7 +276,7 @@ export function Repasses({ asaasTransactions, clients, startDate, endDate, onSet
                                 style={{
                                   display: "flex", alignItems: "center", justifyContent: "center", width: "26px", height: "26px",
                                   borderRadius: "8px", border: `1px solid ${offsets ? "var(--border)" : "rgba(96,165,250,0.4)"}`,
-                                  background: offsets ? "rgba(255,255,255,0.03)" : "rgba(96,165,250,0.12)",
+                                  background: offsets ? "var(--color-surface-sunken)" : "rgba(96,165,250,0.12)",
                                   color: offsets ? "var(--text-tertiary)" : "var(--color-info)", cursor: "pointer",
                                 }}
                               >
@@ -412,7 +412,7 @@ function PickerDialog({ isOpen, onClose, transactions, clients, startDate, endDa
             disabled={selected.size === 0 || saving}
             style={{
               display: "flex", alignItems: "center", gap: "8px", padding: "10px 18px", borderRadius: "12px",
-              border: "none", background: selected.size === 0 ? "rgba(255,255,255,0.06)" : "var(--accent)",
+              border: "none", background: selected.size === 0 ? "var(--color-surface-sunken)" : "var(--accent)",
               color: selected.size === 0 ? "var(--text-tertiary)" : "#fff", fontWeight: 700, fontSize: "0.85rem",
               cursor: selected.size === 0 || saving ? "not-allowed" : "pointer",
             }}
@@ -423,7 +423,7 @@ function PickerDialog({ isOpen, onClose, transactions, clients, startDate, endDa
       }
     >
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 12px", background: "rgba(255,255,255,0.03)", border: "1px solid var(--border)", borderRadius: "12px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 12px", background: "var(--color-surface-sunken)", border: "1px solid var(--border)", borderRadius: "12px" }}>
           <Search size={16} color="var(--text-tertiary)" />
           <input
             value={search}
@@ -453,7 +453,7 @@ function PickerDialog({ isOpen, onClose, transactions, clients, startDate, endDa
                   style={{
                     display: "flex", alignItems: "center", gap: "10px", padding: "10px 12px", borderRadius: "12px",
                     border: `1px solid ${isSel ? "var(--accent)" : "var(--border)"}`,
-                    background: isSel ? "color-mix(in oklab, var(--accent) 8%, transparent)" : "rgba(255,255,255,0.02)",
+                    background: isSel ? "color-mix(in oklab, var(--accent) 8%, transparent)" : "var(--color-surface-sunken)",
                   }}
                 >
                   <button
@@ -462,7 +462,7 @@ function PickerDialog({ isOpen, onClose, transactions, clients, startDate, endDa
                       width: "20px", height: "20px", borderRadius: "6px", flexShrink: 0, cursor: "pointer",
                       border: `1px solid ${isSel ? "var(--accent)" : "var(--border)"}`,
                       background: isSel ? "var(--accent)" : "transparent",
-                      display: "flex", alignItems: "center", justifyContent: "center", color: "#fff",
+                      display: "flex", alignItems: "center", justifyContent: "center", color: 'var(--color-text-primary)',
                     }}
                   >
                     {isSel && <Check size={13} />}

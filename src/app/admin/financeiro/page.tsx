@@ -498,7 +498,7 @@ export default function FinanceiroPage() {
       />
 
       {/* Tabs */}
-      <div style={{ display: "flex", gap: "4px", background: "rgba(255,255,255,0.02)", padding: "4px", borderRadius: "16px", border: "1px solid var(--border)", overflowX: "auto" }}>
+      <div style={{ display: "flex", gap: "4px", background: "var(--color-surface-sunken)", padding: "4px", borderRadius: "16px", border: "1px solid var(--border)", overflowX: "auto" }}>
         {TABS.map((t) => (
           <button
             key={t.id}
@@ -547,7 +547,7 @@ export default function FinanceiroPage() {
                       {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(item.value)}
                     </span>
                   </div>
-                  <div style={{ height: "8px", background: "rgba(255,255,255,0.04)", borderRadius: "8px", overflow: "hidden" }}>
+                  <div style={{ height: "8px", background: "var(--color-surface-sunken)", borderRadius: "8px", overflow: "hidden" }}>
                     <div
                       style={{
                         height: "100%",
@@ -588,7 +588,7 @@ export default function FinanceiroPage() {
                         <span style={{ fontSize: "0.7rem", color: "var(--text-tertiary)", marginLeft: "6px" }}>({((val / total) * 100).toFixed(0)}%)</span>
                       </span>
                     </div>
-                    <div style={{ height: "6px", background: "rgba(255,255,255,0.04)", borderRadius: "6px", overflow: "hidden" }}>
+                    <div style={{ height: "6px", background: "var(--color-surface-sunken)", borderRadius: "6px", overflow: "hidden" }}>
                       <div style={{ height: "100%", width: `${(val / total) * 100}%`, background: catColors[cat] || "var(--text-secondary)", borderRadius: "6px", transition: "width 0.5s ease" }} />
                     </div>
                   </div>
@@ -602,7 +602,7 @@ export default function FinanceiroPage() {
             <h4 style={{ fontWeight: 800, fontSize: "1rem", marginBottom: "16px" }}>Despesas Fixas — Próximos vencimentos</h4>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "12px" }}>
               {expenses.filter((e) => e.status === "active" && e.recurrence === "monthly").slice(0, 8).map((e) => (
-                <div key={e.id} style={{ padding: "14px 16px", background: "rgba(255,255,255,0.02)", border: "1px solid var(--border)", borderRadius: "14px" }}>
+                <div key={e.id} style={{ padding: "14px 16px", background: "var(--color-surface-sunken)", border: "1px solid var(--border)", borderRadius: "14px" }}>
                   <p style={{ fontSize: "0.8rem", fontWeight: 700, marginBottom: "4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.description}</p>
                   <p style={{ fontSize: "1.1rem", fontWeight: 800, color: "var(--color-danger)" }}>
                     {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(e.amount))}

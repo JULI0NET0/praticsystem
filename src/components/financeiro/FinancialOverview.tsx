@@ -59,7 +59,7 @@ export function FinancialOverview({ invoices, contracts }: FinancialOverviewProp
                   animate={{ height: `${(data.value / maxValue) * 180}px` }}
                   style={{ 
                     width: '40%', 
-                    background: index === monthlyData.length - 1 ? 'var(--accent)' : 'rgba(255,255,255,0.05)',
+                    background: index === monthlyData.length - 1 ? 'var(--accent)' : 'var(--color-surface-sunken)',
                     borderRadius: '6px 6px 0 0',
                     transition: 'all 0.3s ease',
                     position: 'relative',
@@ -97,7 +97,7 @@ export function FinancialOverview({ invoices, contracts }: FinancialOverviewProp
                 .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())
                 .slice(0, 4)
                 .map((invoice, idx) => (
-                  <div key={idx} style={{ padding: '12px', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div key={idx} style={{ padding: '12px', background: 'var(--color-surface-sunken)', borderRadius: '12px', border: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
                       <p style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>{invoice.description.slice(0, 20)}...</p>
                       <p style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>{new Date(`${invoice.due_date}T12:00:00`).toLocaleDateString('pt-BR')}</p>

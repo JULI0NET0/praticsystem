@@ -402,7 +402,7 @@ export function DespesasVariaveis({
                                                   </div>
                                                 ))}
                                                 {remaining > 0 && (
-                                                  <div style={{ display: "flex", justifyContent: "space-between", gap: "8px", fontSize: "0.68rem", fontWeight: 700, borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "3px", marginTop: "1px", whiteSpace: "nowrap" }}>
+                                                  <div style={{ display: "flex", justifyContent: "space-between", gap: "8px", fontSize: "0.68rem", fontWeight: 700, borderTop: "1px solid var(--color-border-subtle)", paddingTop: "3px", marginTop: "1px", whiteSpace: "nowrap" }}>
                                                     <span style={{ color: "var(--text-secondary)" }}>Em aberto</span>
                                                     <span style={{ color: "var(--color-danger)" }}>{formatCurrency(remaining)}</span>
                                                   </div>

@@ -380,7 +380,7 @@ export default function CreateClientPage() {
                 style={{
                   fontSize: 'clamp(1.75rem, 8vw, 2.5rem)',
                   fontWeight: 600,
-                  color: '#FFFFFF',
+                  color: 'var(--color-text-primary)',
                   marginBottom: '40px',
                   textAlign: 'center',
                   letterSpacing: '-0.5px',
@@ -486,7 +486,7 @@ export default function CreateClientPage() {
                       flex: 1,
                       height: '4px',
                       borderRadius: '2px',
-                      backgroundColor: 'rgba(255,255,255,0.1)',
+                      backgroundColor: 'var(--color-border-subtle)',
                       position: 'relative',
                       overflow: 'hidden'
                     }}>
@@ -532,7 +532,7 @@ export default function CreateClientPage() {
                               borderRadius: '8px',
                               fontSize: '0.875rem',
                               fontWeight: 500,
-                              background: formData.tipo_pessoa === "PJ" ? 'rgba(255,255,255,0.1)' : 'transparent',
+                              background: formData.tipo_pessoa === "PJ" ? 'var(--color-border-subtle)' : 'transparent',
                               color: formData.tipo_pessoa === "PJ" ? 'var(--text-primary)' : 'var(--text-secondary)',
                               transition: 'all 0.2s'
                             }}
@@ -544,7 +544,7 @@ export default function CreateClientPage() {
                               borderRadius: '8px',
                               fontSize: '0.875rem',
                               fontWeight: 500,
-                              background: formData.tipo_pessoa === "PF" ? 'rgba(255,255,255,0.1)' : 'transparent',
+                              background: formData.tipo_pessoa === "PF" ? 'var(--color-border-subtle)' : 'transparent',
                               color: formData.tipo_pessoa === "PF" ? 'var(--text-primary)' : 'var(--text-secondary)',
                               transition: 'all 0.2s'
                             }}
@@ -914,8 +914,8 @@ export default function CreateClientPage() {
 
                           return (
                             <div key={rede.id} style={{
-                              background: isActive ? 'rgba(255,255,255,0.05)' : 'transparent',
-                              border: isActive ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(255,255,255,0.05)',
+                              background: isActive ? 'var(--color-surface-sunken)' : 'transparent',
+                              border: isActive ? '1px solid var(--color-border-subtle)' : '1px solid var(--color-surface-sunken)',
                               borderRadius: '16px',
                               overflow: 'hidden',
                               transition: 'all 0.3s'
@@ -937,9 +937,9 @@ export default function CreateClientPage() {
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                   <div style={{
                                     width: '32px', height: '32px', borderRadius: '10px',
-                                    backgroundColor: isActive ? rede.color : 'rgba(255,255,255,0.05)',
+                                    backgroundColor: isActive ? rede.color : 'var(--color-surface-sunken)',
                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    color: isActive ? '#FFF' : 'rgba(255,255,255,0.3)',
+                                    color: isActive ? '#FFF' : 'var(--color-text-tertiary)',
                                     transition: 'all 0.3s'
                                   }}>
                                     <rede.icon size={18} />
@@ -949,7 +949,7 @@ export default function CreateClientPage() {
                                 <div style={{
                                   width: '24px', height: '24px',
                                   borderRadius: '50%',
-                                  background: isActive ? 'var(--accent)' : 'rgba(255,255,255,0.1)',
+                                  background: isActive ? 'var(--accent)' : 'var(--color-border-subtle)',
                                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                                   transform: isActive ? 'rotate(45deg)' : 'rotate(0deg)',
                                   transition: 'transform 0.3s'
@@ -967,7 +967,7 @@ export default function CreateClientPage() {
                                     transition={{ duration: 0.3 }}
                                   >
                                     <div style={{ padding: '0 20px 20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                                      <div style={{ width: '100%', height: '1px', background: 'rgba(255,255,255,0.05)', marginBottom: '4px' }} />
+                                      <div style={{ width: '100%', height: '1px', background: 'var(--color-surface-sunken)', marginBottom: '4px' }} />
 
                                       <div className="onboarding-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                                         <div style={{ position: 'relative' }}>

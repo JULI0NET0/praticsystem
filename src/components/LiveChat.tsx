@@ -18,7 +18,7 @@ function UnreadBadge({ count }: { count: number }) {
   return (
     <div style={{
       minWidth: '18px', height: '18px', borderRadius: '9px',
-      background: 'var(--color-danger)', color: 'white',
+      background: 'var(--color-danger)', color: 'var(--color-text-on-danger)',
       fontSize: '0.6rem', fontWeight: 800,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       padding: '0 4px', flexShrink: 0,
@@ -249,7 +249,7 @@ export default function LiveChat() {
             style={{
               width: '52px', height: '52px', borderRadius: '16px',
               background: 'linear-gradient(135deg, var(--accent), var(--accent))',
-              color: 'white', border: 'none',
+              color: 'var(--color-text-primary)', border: 'none',
               boxShadow: '0 6px 20px color-mix(in oklab, var(--accent) 35%, transparent)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               cursor: 'pointer', position: 'relative',
@@ -261,7 +261,7 @@ export default function LiveChat() {
                 position: 'absolute', top: '-6px', right: '-6px',
                 minWidth: '20px', height: '20px', borderRadius: '10px',
                 background: totalUnread > 0 ? 'var(--color-danger)' : 'var(--color-success)',
-                color: 'white', fontSize: '0.6rem', fontWeight: 800,
+                color: 'var(--color-text-on-danger)', fontSize: '0.6rem', fontWeight: 800,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 padding: '0 5px', border: '2px solid var(--bg-primary)',
               }}>
@@ -294,7 +294,7 @@ export default function LiveChat() {
             {showSidebar && (
               <div style={{
                 width: '220px', minWidth: '220px', borderRight: '1px solid var(--border)',
-                display: 'flex', flexDirection: 'column', background: 'rgba(255,255,255,0.015)',
+                display: 'flex', flexDirection: 'column', background: 'var(--color-surface-sunken)',
               }}>
                 <div style={{
                   padding: '12px', borderBottom: '1px solid var(--border)',
@@ -364,7 +364,7 @@ export default function LiveChat() {
                           <div style={{
                             width: '28px', height: '28px', borderRadius: '50%',
                             background: 'var(--accent)', fontSize: '0.7rem',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-on-accent)', fontWeight: 700,
                             overflow: 'hidden',
                           }}>
                             {user.avatar_url
@@ -408,7 +408,7 @@ export default function LiveChat() {
                     ? <Hash size={16} color="var(--accent)" />
                     : activeMember && (
                       <div style={{ position: 'relative' }}>
-                        <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.65rem', fontWeight: 700, overflow: 'hidden' }}>
+                        <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-on-accent)', fontSize: '0.65rem', fontWeight: 700, overflow: 'hidden' }}>
                           {activeMember.avatar_url
                             ? <img src={activeMember.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
                             : activeMember.name.substring(0, 2).toUpperCase()}
@@ -487,7 +487,7 @@ export default function LiveChat() {
                           onMouseEnter={e => (e.currentTarget.style.background = 'color-mix(in oklab, var(--accent) 10%, transparent)')}
                           onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                         >
-                          <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.55rem', fontWeight: 700 }}>
+                          <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-on-accent)', fontSize: '0.55rem', fontWeight: 700 }}>
                             {u.name.substring(0, 2).toUpperCase()}
                           </div>
                           <span style={{ flex: 1 }}>{u.name}</span>
@@ -506,8 +506,8 @@ export default function LiveChat() {
                   placeholder={isConnected ? "Mensagem... (@ para mencionar)" : "Conectando..."}
                   disabled={!isConnected}
                   style={{
-                    flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)',
-                    borderRadius: '10px', padding: '8px 14px', color: 'white', outline: 'none', fontSize: '0.82rem',
+                    flex: 1, background: 'var(--color-surface-sunken)', border: '1px solid var(--border)',
+                    borderRadius: '10px', padding: '8px 14px', color: 'var(--color-text-primary)', outline: 'none', fontSize: '0.82rem',
                     opacity: isConnected ? 1 : 0.5,
                   }}
                 />
@@ -516,8 +516,8 @@ export default function LiveChat() {
                   disabled={!isConnected || !message.trim()}
                   style={{
                     width: '36px', height: '36px', borderRadius: '10px',
-                    background: isConnected && message.trim() ? 'var(--accent)' : 'rgba(255,255,255,0.05)',
-                    border: 'none', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: isConnected && message.trim() ? 'var(--accent)' : 'var(--color-surface-sunken)',
+                    border: 'none', color: 'var(--color-text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                     cursor: isConnected && message.trim() ? 'pointer' : 'default', flexShrink: 0,
                     transition: 'background 0.2s',
                   }}
