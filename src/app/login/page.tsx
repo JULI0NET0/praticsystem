@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { useTheme } from "next-themes";
 import { Lock, User, LogIn, ArrowRight } from "lucide-react";
 import ThemeLogo from "@/components/ThemeLogo";
 import Spotlight from "@/components/Spotlight";
@@ -10,10 +11,16 @@ import { supabase } from "@/lib/supabase";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const brandName = "Agência Prátic"; // Pode ser trazido de um config ou banco
 
@@ -79,6 +86,8 @@ export default function LoginPage() {
 
   return (
     <div style={{
+      position: 'relative',
+      overflow: 'hidden',
       minHeight: '100vh',
       display: 'flex',
       alignItems: 'center',
@@ -91,6 +100,17 @@ export default function LoginPage() {
         'radial-gradient(circle at 50% -20%, var(--color-terracotta-200), transparent 60%)',
       padding: '24px'
     }}>
+      {mounted && (
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          backgroundImage: `url(${resolvedTheme === 'dark' ? '/wallpaper-dark.webp' : '/wallpaper-light.webp'})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          opacity: 0.05,
+          pointerEvents: 'none'
+        }} />
+      )}
       <motion.div
         initial={{ opacity: 0, y: 30, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}

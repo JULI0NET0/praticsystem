@@ -5,6 +5,7 @@ import { Search, Plus, MoreHorizontal, User, X, Building2, Mail, Phone, Shield, 
 import Spotlight from "@/components/Spotlight";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { supabase } from "@/lib/supabase";
 import { Client } from "@/types/database";
 import SearchInput from "@/components/ui/SearchInput";
@@ -26,6 +27,7 @@ export default function ClientsPage() {
   const [clients, setClients] = useState<any[]>([]);
   const [demandsCount, setDemandsCount] = useState<Record<string, number>>({});
   const [activeServices, setActiveServices] = useState<Record<string, string>>({});
+  const [hoveredService, setHoveredService] = useState<{ text: string; x: number; y: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const { showToast } = useToast();
 
@@ -279,20 +281,72 @@ export default function ClientsPage() {
                           <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>{client.phone}</p>
                         </td>
                         <td>
-                          {activeServices[client.id] ? (
-                            <span style={{
-                              display: 'inline-block',
-                              padding: '3px 8px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 600,
-                              background: 'rgba(59, 130, 246, 0.12)', color: 'var(--color-info)',
-                              border: '1px solid rgba(59, 130, 246, 0.2)', whiteSpace: 'nowrap'
-                            }}>
-                              {activeServices[client.id].replace('Gestão de Redes Sociais', 'G. Redes')}
-                            </span>
-                          ) : (
-                            <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-                              {client.servico_interesse || '-'}
-                            </p>
-                          )}
+                          {(() => {
+                            const raw = activeServices[client.id] || client.servico_interesse;
+                            if (!raw) {
+                              return (
+                                <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>-</p>
+                              );
+                            }
+                            const isContractService = Boolean(activeServices[client.id]);
+                            const formatted = raw.replace('Gestão de Redes Sociais', 'G. Redes');
+                            const isLong = formatted.length > 25;
+                            const displayText = isLong ? `${formatted.slice(0, 25)}...` : formatted;
+
+                            if (isContractService) {
+                              return (
+                                <span
+                                  onMouseEnter={(e) => {
+                                    if (isLong) {
+                                      const rect = e.currentTarget.getBoundingClientRect();
+                                      setHoveredService({
+                                        text: formatted,
+                                        x: rect.left + rect.width / 2,
+                                        y: rect.top,
+                                      });
+                                    }
+                                  }}
+                                  onMouseLeave={() => setHoveredService(null)}
+                                  title={isLong ? formatted : undefined}
+                                  style={{
+                                    display: 'inline-block',
+                                    padding: '3px 8px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 600,
+                                    background: 'rgba(59, 130, 246, 0.12)', color: 'var(--color-info)',
+                                    border: '1px solid rgba(59, 130, 246, 0.2)', whiteSpace: 'nowrap',
+                                    cursor: isLong ? 'help' : 'pointer',
+                                    transition: 'all 0.15s ease'
+                                  }}
+                                >
+                                  {displayText}
+                                </span>
+                              );
+                            }
+
+                            return (
+                              <p
+                                onMouseEnter={(e) => {
+                                  if (isLong) {
+                                    const rect = e.currentTarget.getBoundingClientRect();
+                                    setHoveredService({
+                                      text: formatted,
+                                      x: rect.left + rect.width / 2,
+                                      y: rect.top,
+                                    });
+                                  }
+                                }}
+                                onMouseLeave={() => setHoveredService(null)}
+                                title={isLong ? formatted : undefined}
+                                style={{
+                                  fontSize: '0.875rem',
+                                  color: 'var(--text-secondary)',
+                                  whiteSpace: 'nowrap',
+                                  cursor: isLong ? 'help' : 'default',
+                                }}
+                              >
+                                {displayText}
+                              </p>
+                            );
+                          })()}
                         </td>
                         <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -369,15 +423,25 @@ export default function ClientsPage() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                       <span>{client.contact_name}</span>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        {activeServices[client.id] && (
-                          <span style={{
-                            padding: '2px 7px', borderRadius: '5px', fontSize: '0.68rem', fontWeight: 600,
-                            background: 'rgba(59, 130, 246, 0.12)', color: 'var(--color-info)',
-                            border: '1px solid rgba(59, 130, 246, 0.2)'
-                          }}>
-                            {activeServices[client.id].replace('Gestão de Redes Sociais', 'G. Redes')}
-                          </span>
-                        )}
+                        {activeServices[client.id] && (() => {
+                          const formatted = activeServices[client.id].replace('Gestão de Redes Sociais', 'G. Redes');
+                          const isLong = formatted.length > 25;
+                          const displayText = isLong ? `${formatted.slice(0, 25)}...` : formatted;
+                          return (
+                            <span
+                              title={formatted}
+                              style={{
+                                padding: '2px 7px', borderRadius: '5px', fontSize: '0.68rem', fontWeight: 600,
+                                background: 'rgba(59, 130, 246, 0.12)', color: 'var(--color-info)',
+                                border: '1px solid rgba(59, 130, 246, 0.2)',
+                                whiteSpace: 'nowrap',
+                                display: 'inline-block'
+                              }}
+                            >
+                              {displayText}
+                            </span>
+                          );
+                        })()}
                         {(demandsCount[client.id] || 0) > 0 && (
                           <span style={{ color: 'var(--accent)', fontWeight: 600 }}>
                             {demandsCount[client.id]} demandas
@@ -523,6 +587,55 @@ export default function ClientsPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Tooltip de Serviço (Portal — não sofre corte por overflow de tabela) */}
+      {hoveredService && typeof document !== "undefined" && createPortal(
+        <AnimatePresence>
+          <motion.div
+            initial={{ opacity: 0, y: 4, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.12 }}
+            style={{
+              position: "fixed",
+              left: hoveredService.x,
+              top: hoveredService.y - 8,
+              transform: "translate(-50%, -100%)",
+              zIndex: 99999,
+              background: "rgba(15, 23, 42, 0.95)",
+              color: "#f8fafc",
+              border: "1px solid rgba(255, 255, 255, 0.15)",
+              borderRadius: "8px",
+              padding: "6px 12px",
+              fontSize: "0.75rem",
+              fontWeight: 600,
+              boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.3)",
+              pointerEvents: "none",
+              whiteSpace: "normal",
+              maxWidth: "320px",
+              textAlign: "center",
+              backdropFilter: "blur(12px)",
+              lineHeight: 1.35,
+            }}
+          >
+            {hoveredService.text}
+            <div
+              style={{
+                position: "absolute",
+                bottom: "-4px",
+                left: "50%",
+                transform: "translateX(-50%) rotate(45deg)",
+                width: "8px",
+                height: "8px",
+                background: "rgba(15, 23, 42, 0.95)",
+                borderRight: "1px solid rgba(255, 255, 255, 0.15)",
+                borderBottom: "1px solid rgba(255, 255, 255, 0.15)",
+              }}
+            />
+          </motion.div>
+        </AnimatePresence>,
+        document.body
+      )}
     </motion.div>
   );
 }

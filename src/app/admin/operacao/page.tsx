@@ -33,10 +33,10 @@ export default function OperacaoOverviewPage() {
         >
           Espaço
         </span>
-        <h1 style={{ fontSize: "1.9rem", fontWeight: 900, margin: 0, letterSpacing: "-0.02em" }}>
+        <h1 style={{ fontSize: "clamp(1.4rem, 4vw, 2rem)", fontWeight: 700, margin: 0, letterSpacing: "-0.02em", lineHeight: 1.2, color: "var(--color-text-primary)" }}>
           {space.name}
         </h1>
-        <p style={{ color: "var(--text-secondary)", margin: 0, fontSize: "0.9rem" }}>
+        <p style={{ color: "var(--color-text-secondary)", margin: "4px 0 0", fontSize: "0.9rem" }}>
           {space.areas.length} áreas · {totalTasks} tarefas ativas · réplica da operação da agência
         </p>
       </header>

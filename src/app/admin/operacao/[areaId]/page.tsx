@@ -36,7 +36,7 @@ export default function AreaPage() {
         </Link>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <OperacaoIcon name={area.icon} size={24} color="var(--accent)" />
-          <h1 style={{ fontSize: "1.6rem", fontWeight: 900, margin: 0 }}>{area.name}</h1>
+          <h1 style={{ fontSize: "clamp(1.4rem, 4vw, 1.75rem)", fontWeight: 700, margin: 0, letterSpacing: "-0.02em", lineHeight: 1.2, color: "var(--color-text-primary)" }}>{area.name}</h1>
         </div>
       </div>
 

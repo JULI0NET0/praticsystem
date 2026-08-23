@@ -320,6 +320,17 @@ export default function OnboardingPage() {
               overflow: 'hidden'
             }}
           >
+            {/* Textura de fundo bem sutil */}
+            <div style={{
+              position: 'absolute',
+              inset: 0,
+              backgroundImage: 'url(/wallpaper-dark.webp)',
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              opacity: 0.08,
+              pointerEvents: 'none'
+            }} />
+
             {/* Grid animado ao fundo */}
             <div style={{
               position: 'absolute',

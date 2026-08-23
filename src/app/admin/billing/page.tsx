@@ -103,8 +103,8 @@ export default function BillingPage() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
-          <h1 style={{ fontSize: '2.5rem', fontWeight: 800, letterSpacing: '-0.02em', marginBottom: '8px' }}>Financeiro</h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem' }}>Controle de faturamentos e saúde financeira da agência.</p>
+          <h1 style={{ fontSize: 'clamp(1.4rem, 4vw, 2rem)', fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1.2, color: 'var(--color-text-primary)', marginBottom: '4px' }}>Financeiro</h1>
+          <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.9rem', margin: '4px 0 0' }}>Controle de faturamentos e saúde financeira da agência.</p>
         </div>
         <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center', background: 'var(--color-surface-sunken)', padding: '10px 20px', borderRadius: '16px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-glow)' }}>

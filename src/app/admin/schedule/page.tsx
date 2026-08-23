@@ -647,81 +647,54 @@ export default function SchedulePage() {
             do título. */}
         <div style={{
           display: 'flex',
-          flexDirection: 'column',
-          gap: '12px',
-          padding: isMobile ? '0 8px 12px' : '0 16px 16px',
-          borderBottom: 'var(--glass-border)',
-          marginBottom: isMobile ? '8px' : '16px',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: '16px',
+          flexWrap: 'wrap',
+          padding: isMobile ? '0 12px 14px' : '0 20px 16px',
+          borderBottom: '1px solid var(--color-border-subtle)',
+          marginBottom: isMobile ? '10px' : '14px',
         }}>
-          <h1 style={{
-            fontFamily: 'var(--font-serif)',
-            fontSize: 'var(--text-h1)',
-            fontWeight: 500,
-            letterSpacing: '-0.01em',
-            lineHeight: 1.15,
-            color: 'var(--color-text-primary)',
-            margin: 0,
-          }}>Agenda</h1>
+          <div>
+            <h1 style={{
+              fontSize: 'clamp(1.4rem, 3.5vw, 1.85rem)',
+              fontWeight: 700,
+              letterSpacing: '-0.02em',
+              lineHeight: 1.2,
+              color: 'var(--color-text-primary)',
+              margin: 0,
+            }}>
+              Agenda
+            </h1>
+            <p style={{
+              fontSize: '0.8125rem',
+              color: 'var(--color-text-secondary)',
+              margin: '3px 0 0',
+            }}>
+              Compromissos, reuniões e eventos sincronizados
+            </p>
+          </div>
 
           <div style={{
             display: 'flex',
-            alignItems: 'flex-start',
-            gap: '16px',
+            alignItems: 'center',
+            gap: '8px',
             flexWrap: 'wrap',
+            flexShrink: 0,
           }}>
-
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', flex: 1, minWidth: 0 }}>
-            {CATEGORIES.map(cat => {
-              const count = eventCountByType[cat.id] ?? 0;
-              const isActive = activeFilters.includes(cat.id);
-              return (
-                <button
-                  key={cat.id}
-                  onClick={() => toggleFilter(cat.id)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '5px 10px',
-                    borderRadius: '20px',
-                    background: isActive ? `${tint(cat.color, 13)}` : 'transparent',
-                    border: `1px solid ${isActive ? cat.color : 'var(--color-border-subtle)'}`,
-                    transition: 'all 0.2s',
-                    cursor: 'pointer'
-                  }}
-                >
-                  <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: cat.color }} />
-                  <span style={{ fontSize: '0.72rem', color: isActive ? 'white' : 'var(--text-secondary)', fontWeight: 600 }}>{cat.label}</span>
-                  {count > 0 && (
-                    <span style={{
-                      fontSize: '0.62rem',
-                      fontWeight: 700,
-                      lineHeight: 1,
-                      padding: '2px 5px',
-                      borderRadius: '10px',
-                      backgroundColor: isActive ? cat.color : 'var(--color-border-subtle)',
-                      color: isActive ? 'white' : 'var(--text-secondary)',
-                    }}>
-                      {count}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0, flexWrap: 'wrap' }}>
-            <SearchInput
-              value={searchQuery}
-              onChange={setSearchQuery}
-              placeholder="Pesquisar..."
-            />
+            <div style={{ width: isMobile ? '100%' : '260px' }}>
+              <SearchInput
+                value={searchQuery}
+                onChange={setSearchQuery}
+                placeholder="Pesquisar compromisso..."
+              />
+            </div>
             <button
               onClick={handlePullFromGoogle}
               disabled={isSyncingGoogle}
               className="btn btn-secondary"
               style={{
-                height: '36px',
+                height: '38px',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
@@ -741,12 +714,10 @@ export default function SchedulePage() {
             </button>
             <button
               onClick={() => setShowGoogleModal(true)}
+              className="btn btn-secondary"
               style={{
-                height: '36px',
+                height: '38px',
                 padding: '0 10px',
-                borderRadius: '8px',
-                border: '1px solid var(--color-border-subtle)',
-                background: 'var(--color-surface-sunken)',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
@@ -787,11 +758,96 @@ export default function SchedulePage() {
                 x,
                 y
               });
-            }} style={{ height: '36px' }}>
+            }} style={{ height: '38px', display: 'flex', alignItems: 'center', gap: '6px', padding: '0 16px' }}>
               <Plus size={16} /> Novo
             </Spotlight>
           </div>
+        </div>
+
+        {/* Barra de Filtros por Assunto */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '10px',
+          padding: isMobile ? '0 12px 10px' : '0 20px 12px',
+          flexWrap: 'wrap',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px', flex: 1 }}>
+            <span style={{
+              fontSize: '0.72rem',
+              fontWeight: 600,
+              color: 'var(--color-text-secondary)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.04em',
+              marginRight: '2px',
+            }}>
+              Assuntos:
+            </span>
+            {CATEGORIES.map(cat => {
+              const count = eventCountByType[cat.id] ?? 0;
+              const isActive = activeFilters.includes(cat.id);
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => toggleFilter(cat.id)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '4px 10px',
+                    borderRadius: '20px',
+                    background: isActive ? tint(cat.color, 14) : 'var(--color-surface-sunken)',
+                    border: `1px solid ${isActive ? cat.color : 'var(--color-border-subtle)'}`,
+                    transition: 'all 0.2s',
+                    cursor: 'pointer',
+                    opacity: isActive ? 1 : 0.6,
+                  }}
+                  title={`Filtrar por ${cat.label}`}
+                >
+                  <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: cat.color, flexShrink: 0 }} />
+                  <span style={{
+                    fontSize: '0.75rem',
+                    color: 'var(--color-text-primary)',
+                    fontWeight: isActive ? 600 : 500,
+                  }}>
+                    {cat.label}
+                  </span>
+                  {count > 0 && (
+                    <span style={{
+                      fontSize: '0.65rem',
+                      fontWeight: 700,
+                      lineHeight: 1,
+                      padding: '2px 6px',
+                      borderRadius: '10px',
+                      backgroundColor: isActive ? cat.color : 'var(--color-border-subtle)',
+                      color: isActive ? '#ffffff' : 'var(--color-text-secondary)',
+                    }}>
+                      {count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
+
+          {activeFilters.length < CATEGORIES.length && (
+            <button
+              onClick={() => setActiveFilters(CATEGORIES.map(c => c.id))}
+              style={{
+                fontSize: '0.72rem',
+                color: 'var(--color-terracotta)',
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                fontWeight: 600,
+                padding: '2px 6px',
+                textDecoration: 'underline',
+              }}
+            >
+              Mostrar todos
+            </button>
+          )}
         </div>
 
         <FullCalendar

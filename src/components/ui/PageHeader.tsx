@@ -50,11 +50,11 @@ export default function PageHeader({
         )}
         <h1
           style={{
-            fontFamily: "var(--font-serif)",
+            fontFamily: "var(--font-sans)",
             fontSize: "var(--text-h1)",
-            fontWeight: 500,
-            lineHeight: 1.15,
-            letterSpacing: "-0.01em",
+            fontWeight: 700,
+            lineHeight: 1.2,
+            letterSpacing: "-0.02em",
             color: "var(--color-text-primary)",
             margin: 0,
           }}

@@ -141,11 +141,11 @@ export default function ManagementPage() {
     <div style={{ padding: '40px', maxWidth: '1400px', margin: '0 auto' }}>
       {/* Header */}
       <div style={{ marginBottom: '40px' }}>
-        <h1 style={{ fontSize: '2rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <h1 style={{ fontSize: 'clamp(1.4rem, 4vw, 2rem)', fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1.2, color: 'var(--color-text-primary)', display: 'flex', alignItems: 'center', gap: '12px' }}>
           <BarChart3 size={32} color="var(--accent)" />
           Gestão da Equipe
         </h1>
-        <p style={{ color: 'var(--text-secondary)', marginTop: '8px' }}>
+        <p style={{ color: 'var(--color-text-secondary)', marginTop: '6px', fontSize: '0.9rem' }}>
           Monitore a presença, horas trabalhadas e produtividade da equipe em tempo real.
         </p>
       </div>
