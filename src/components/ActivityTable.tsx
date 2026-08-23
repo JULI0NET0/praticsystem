@@ -27,7 +27,7 @@ export default function ActivityTable() {
   }, []);
 
   return (
-    <Spotlight className="glass-card" style={{ padding: '24px', overflow: 'hidden' }}>
+    <Spotlight className="glass-card" style={{ padding: 'var(--card-pad)', overflow: 'hidden' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <h3 style={{ fontSize: '1.125rem', fontWeight: 600 }}>Atividades Recentes</h3>
         <button style={{ color: 'var(--accent)', fontSize: '0.875rem', fontWeight: 500 }}>Ver todas</button>

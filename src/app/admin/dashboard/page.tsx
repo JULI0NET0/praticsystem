@@ -110,7 +110,7 @@ export default function DashboardPage() {
       </div>
 
       <div className="dashboard-grid-main">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
           <RevenueChart />
 
           <motion.div
@@ -121,7 +121,7 @@ export default function DashboardPage() {
             <ActivityTable />
           </motion.div>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -135,7 +135,7 @@ export default function DashboardPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.6, ease: "easeOut" }}
           >
-            <Spotlight className="glass-card" style={{ padding: '24px' }}>
+            <Spotlight className="glass-card" style={{ padding: 'var(--card-pad)' }}>
               <h3 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '24px' }}>Agenda de Hoje</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 {todayEvents.length > 0 ? todayEvents.map(event => (
@@ -147,7 +147,7 @@ export default function DashboardPage() {
                     </div>
                   </div>
                 )) : (
-                  <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', textAlign: 'center', padding: '20px' }}>
+                  <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', textAlign: 'center', padding: 'var(--card-pad)' }}>
                     Sem compromissos para hoje.
                   </p>
                 )}

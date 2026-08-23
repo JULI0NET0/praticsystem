@@ -21,7 +21,7 @@ export default function RevenueChart() {
       transition={{ duration: 0.6, delay: 0.3, ease: "easeOut" }}
       style={{ height: '100%' }}
     >
-      <Spotlight className="glass-card" style={{ padding: '24px', height: '100%' }}>
+      <Spotlight className="glass-card" style={{ padding: 'var(--card-pad)', height: '100%' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
           <h3 style={{ fontSize: '1.125rem', fontWeight: 600 }}>Evolução Financeira</h3>
           <select className="input-dark" style={{ width: 'auto', padding: '8px 12px', fontSize: '0.875rem' }}>

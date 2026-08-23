@@ -317,7 +317,7 @@ export default function WorkspacePage() {
                   className="workspace-emoji-picker"
                   style={{
                     position: 'absolute', top: '100%', left: 0, zIndex: 99999,
-                    marginTop: '12px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px',
+                    marginTop: '12px', padding: 'var(--card-pad)', display: 'flex', flexDirection: 'column', gap: '16px',
                     boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(255, 255, 255, 0.1)',
                     width: '320px',
                     backgroundColor: '#18181b',
@@ -497,7 +497,7 @@ export default function WorkspacePage() {
         display: 'grid',
         gridTemplateColumns: 'repeat(12, 1fr)',
         gridAutoRows: 'minmax(120px, auto)',
-        gap: '24px',
+        gap: 'var(--space-4)',
         position: 'relative'
       }}>
         <AnimatePresence mode="popLayout">
@@ -528,7 +528,7 @@ export default function WorkspacePage() {
             >
               <div className={`glass-card ${isEditing ? 'editing' : ''}`} style={{
                 height: '100%',
-                padding: '24px',
+                padding: 'var(--card-pad)',
                 border: isEditing ? '2px dashed var(--accent)' : '1px solid var(--border)',
                 transition: 'all 0.3s ease',
                 position: 'relative',
@@ -590,7 +590,7 @@ export default function WorkspacePage() {
       {/* Modal de Adicionar Widget */}
       <AnimatePresence>
         {isAddModalOpen && (
-          <div style={{ position: 'fixed', inset: 0, background: 'var(--color-scrim)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ position: 'fixed', inset: 0, background: 'var(--color-scrim)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'var(--card-pad)' }}>
             <motion.div
               initial={{ scale: 0.92, opacity: 0, y: 16 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -628,7 +628,7 @@ export default function WorkspacePage() {
                       whileHover={!isActive ? { y: -2, scale: 1.01 } : {}}
                       whileTap={!isActive ? { scale: 0.98 } : {}}
                       style={{
-                        padding: '18px 16px', borderRadius: '16px',
+                        padding: '18px 16px', borderRadius: 'var(--radius-card)',
                         border: `1px solid ${isActive ? 'var(--border)' : 'var(--border)'}`,
                         background: isActive ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.04)',
                         cursor: isActive ? 'not-allowed' : 'pointer',
@@ -697,7 +697,7 @@ function StatsWidget({ colSpan, demandsCount, todayHours, isTracking, onTimerTog
           style={{
             background: 'var(--card-inner-bg)',
             padding: '10px 14px',
-            borderRadius: '16px',
+            borderRadius: 'var(--radius-card)',
             border: item.id === 'timer' && isTracking ? '1px solid var(--color-success-wash)' : '1px solid var(--border)',
             position: 'relative',
             overflow: 'hidden',
@@ -784,7 +784,7 @@ function TimeTrackerWidget({ isTracking, todayHours, todayMinutes, currentSessio
         <div style={{
           width: '60px',
           height: '60px',
-          borderRadius: '20px',
+          borderRadius: 'var(--radius-card)',
           background: isTracking ? 'var(--color-success-wash)' : 'rgba(255,255,255,0.05)',
           display: 'flex',
           alignItems: 'center',
@@ -831,7 +831,7 @@ function TimeTrackerWidget({ isTracking, todayHours, todayMinutes, currentSessio
           style={{
             marginTop: '20px',
             padding: '10px 28px',
-            borderRadius: '14px',
+            borderRadius: 'var(--radius-card)',
             background: isTracking ? 'var(--color-danger-wash)' : 'var(--accent)',
             color: isTracking ? 'var(--color-danger)' : 'white',
             fontSize: '0.9rem',
@@ -963,7 +963,7 @@ function PomodoroWidget() {
       </div>
 
       {/* Circular timer */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '20px' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-3)' }}>
         <div style={{ position: 'relative' }}>
           <svg width="148" height="148" viewBox="0 0 148 148">
             <circle cx="74" cy="74" r={radius} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="8" />
@@ -1102,7 +1102,7 @@ function DemandsWidget({ demands, loading }: { demands: any[], loading: boolean 
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', overflowY: 'auto', flex: 1, paddingRight: '4px' }}>
         {loading ? (
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', padding: 'var(--space-5)' }}>
             <Loader2 size={24} className="animate-spin" color="var(--accent)" />
           </div>
         ) : demands.length > 0 ? demands.map(d => (
@@ -1111,7 +1111,7 @@ function DemandsWidget({ demands, loading }: { demands: any[], loading: boolean 
             whileHover={{ x: 4 }}
             style={{
               padding: '16px',
-              borderRadius: '16px',
+              borderRadius: 'var(--radius-card)',
               background: 'rgba(255,255,255,0.02)',
               border: '1px solid var(--border)',
               display: 'flex',
@@ -1247,11 +1247,11 @@ function NotesWidget() {
 
       <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', paddingRight: '4px' }}>
         {loading ? (
-          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', padding: '20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', padding: 'var(--card-pad)' }}>
             <Loader2 size={20} className="animate-spin" color="var(--accent)" />
           </div>
         ) : notes.length === 0 ? (
-          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%', gap: '8px', opacity: 0.5, textAlign: 'center', padding: '20px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%', gap: '8px', opacity: 0.5, textAlign: 'center', padding: 'var(--card-pad)' }}>
             <FileText size={24} />
             <span style={{ fontSize: '0.8rem' }}>Nenhuma nota encontrada</span>
           </div>
@@ -1336,7 +1336,7 @@ function LinksWidget() {
             whileHover={{ y: -2, background: 'rgba(255,255,255,0.05)' }}
             style={{
               padding: '12px 16px',
-              borderRadius: '14px',
+              borderRadius: 'var(--radius-card)',
               background: 'rgba(255,255,255,0.03)',
               border: '1px solid var(--border)',
               textDecoration: 'none',
@@ -1395,7 +1395,7 @@ function TeamWidget({ isUserOnline, onlineUsers }: { isUserOnline: (id: string) 
                 onClick={() => setActivePopover(activePopover === m.id ? null : m.id)}
                 style={{
                   display: 'flex', alignItems: 'center', gap: '12px',
-                  padding: '10px', borderRadius: '16px', cursor: 'pointer',
+                  padding: '10px', borderRadius: 'var(--radius-card)', cursor: 'pointer',
                   border: '1px solid transparent',
                   transition: 'all 0.2s ease',
                   background: activePopover === m.id ? 'rgba(255,255,255,0.05)' : 'transparent'
@@ -1403,7 +1403,7 @@ function TeamWidget({ isUserOnline, onlineUsers }: { isUserOnline: (id: string) 
               >
                 <div style={{ position: 'relative', flexShrink: 0 }}>
                   <div style={{
-                    width: '42px', height: '42px', borderRadius: '14px',
+                    width: '42px', height: '42px', borderRadius: 'var(--radius-card)',
                     background: 'var(--accent)', overflow: 'hidden',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontWeight: 800, fontSize: '0.9rem', color: 'white',
@@ -1448,7 +1448,7 @@ function TeamWidget({ isUserOnline, onlineUsers }: { isUserOnline: (id: string) 
                     style={{
                       position: 'absolute', top: '100%', left: '0', right: '0', zIndex: 50, marginTop: '8px',
                       background: 'var(--color-surface-raised)', border: '1px solid var(--border)',
-                      borderRadius: '16px', padding: '8px',
+                      borderRadius: 'var(--radius-card)', padding: '8px',
                       boxShadow: '0 10px 40px rgba(0,0,0,0.5)'
                     }}
                   >

@@ -29,7 +29,7 @@ export default function QuickAccess() {
   }, []);
 
   return (
-    <Spotlight className="glass-card" style={{ padding: '24px' }}>
+    <Spotlight className="glass-card" style={{ padding: 'var(--card-pad)' }}>
       <h3 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '24px' }}>Acesso Rápido</h3>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>

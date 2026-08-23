@@ -50,7 +50,7 @@ export function ServiceStats() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', padding: '20px' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', padding: 'var(--card-pad)' }}>
         <Loader2 size={24} color="var(--accent)" className="animate-spin" />
       </div>
     );
