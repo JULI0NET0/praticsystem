@@ -422,24 +422,27 @@ export default function NotaDetailPage() {
       {/* Layout */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%' }}>
 
-        {/* Editor Wrapper */}
-        <div className="glass-card" style={{ padding: isMobile ? '0px 20px 20px 20px' : '0px 36px 36px 36px', display: 'flex', flexDirection: 'column', gap: '20px', position: 'relative' }}>
-          
-          {/* Top bar */}
-          <div style={{
-            position: 'sticky',
-            top: isMobile ? '56px' : '0px',
-            zIndex: 50,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            gap: '12px',
-            background: 'var(--glass-bg)',
-            padding: isMobile ? '12px 20px' : '16px 36px',
-            margin: isMobile ? '0 -20px 10px -20px' : '0 -36px 10px -36px',
-            borderBottom: '1px solid var(--border)',
-            borderRadius: isMobile ? '12px 12px 0 0' : '16px 16px 0 0',
-          }}>
+        {/* Barra fixa — FORA do card.
+            Antes ela vivia dentro do .glass-card e usava margens
+            negativas de -36px para sangrar até a borda. Como o card
+            tem cantos arredondados e não pode receber overflow:hidden
+            (isso o tornaria o containing block do sticky e quebraria a
+            fixação), o conteúdo rolava por fora dos cantos — era o
+            "vazamento". Sendo irmã do card, a barra não precisa de
+            margem negativa nenhuma. */}
+        <div style={{
+          position: 'sticky',
+          top: isMobile ? 'var(--header-height)' : '0px',
+          zIndex: 50,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: '12px',
+          background: 'var(--color-surface-canvas)',
+          padding: isMobile ? '10px 0' : '12px 0',
+          borderBottom: '1px solid var(--color-border-subtle)',
+          marginBottom: '-10px',
+        }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
               <Link
                 href="/admin/notas"
@@ -512,14 +515,12 @@ export default function NotaDetailPage() {
                 </button>
               )}
             </div>
-          </div>
+        </div>
 
-          <style>{`
-            .sticky-title-container {
-              background: var(--color-surface-canvas) !important;
-              border-bottom: 1px solid var(--color-border-subtle);
-            }
-          `}</style>
+        {/* Editor Wrapper — agora irmão da barra fixa, não pai dela.
+            O <style> que existia aqui definia .sticky-title-container,
+            uma classe sem NENHUM consumidor no repo: era letra morta. */}
+        <div className="glass-card" style={{ padding: isMobile ? '16px 20px 20px' : '20px 28px 28px', display: 'flex', flexDirection: 'column', gap: '20px', position: 'relative' }}>
 
           {/* Collapsible Metadata Section */}
           <AnimatePresence initial={false}>
@@ -612,22 +613,46 @@ export default function NotaDetailPage() {
                         </button>
                       </div>
 
+                      {/* Chips horizontais em vez de uma lista vertical
+                          com checkbox: a lista empilhada esticava este
+                          card e desalinhava os outros três da faixa. */}
                       {!note.share_all && teamMembers.length > 0 && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '80px', overflowY: 'auto', paddingRight: '4px' }}>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
                           {teamMembers.map(user => {
                             const checked = (note.shared_with ?? []).includes(user.id);
+                            const initials = user.name
+                              .split(' ')
+                              .filter(Boolean)
+                              .slice(0, 2)
+                              .map((p: string) => p[0])
+                              .join('')
+                              .toUpperCase();
                             return (
-                              <label key={user.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', padding: '3px 0' }}>
-                                <input
-                                  type="checkbox"
-                                  checked={checked}
-                                  onChange={() => toggleUser(user.id)}
-                                  style={{ accentColor: 'var(--accent)', width: '13px', height: '13px', flexShrink: 0 }}
-                                />
-                                <span style={{ fontSize: '0.75rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={user.name}>
-                                  {user.name}
-                                </span>
-                              </label>
+                              <button
+                                key={user.id}
+                                type="button"
+                                onClick={() => toggleUser(user.id)}
+                                title={user.name}
+                                aria-pressed={checked}
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  width: '26px',
+                                  height: '26px',
+                                  borderRadius: 'var(--radius-full)',
+                                  fontSize: '0.65rem',
+                                  fontWeight: 700,
+                                  cursor: 'pointer',
+                                  transition: 'background 0.15s, border-color 0.15s, color 0.15s',
+                                  border: '1px solid',
+                                  borderColor: checked ? 'var(--accent)' : 'var(--color-border-default)',
+                                  background: checked ? 'var(--accent)' : 'var(--color-surface-sunken)',
+                                  color: checked ? 'var(--color-text-on-accent)' : 'var(--color-text-tertiary)',
+                                }}
+                              >
+                                {initials}
+                              </button>
                             );
                           })}
                         </div>
@@ -719,8 +744,10 @@ export default function NotaDetailPage() {
 
 function SideSection({ icon, label, children }: { icon: React.ReactNode; label: string; children: React.ReactNode }) {
   return (
-    <div className="glass-card" style={{ padding: '14px 16px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '12px', color: 'var(--text-secondary)', fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+    // height 100% para preencher a célula esticada do grid — sem isso
+    // o card não acompanha a altura da linha e os quatro desalinham.
+    <div className="glass-card" style={{ padding: '12px 14px', height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '10px', color: 'var(--color-text-tertiary)', fontSize: 'var(--text-micro)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
         {icon} {label}
       </div>
       {children}
