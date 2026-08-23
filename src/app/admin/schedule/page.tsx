@@ -1,7 +1,7 @@
 "use client";
 
 import { supabase } from "@/lib/supabase";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useCallback, useRef } from "react";
 import {
   Plus, Shield, ShieldOff, Trash2, X, CheckCircle2, Clock,
   Calendar as CalendarIcon, Info, Users, MapPin, ExternalLink, Edit2,
@@ -20,6 +20,7 @@ import Spotlight from "@/components/Spotlight";
 import SearchInput from "@/components/ui/SearchInput";
 import { GoogleIcon } from "@/components/SocialIcons";
 import { tint } from "@/lib/tint";
+import { computePosition, flip, shift, offset, size } from "@floating-ui/dom";
 
 const CATEGORIES = [
   { id: 'meeting', label: 'Reunião', color: '#3B82F6', icon: Users },
@@ -63,6 +64,10 @@ export default function SchedulePage() {
       praticlabs: { configured: boolean; email: string };
     };
   } | null>(null);
+  // x/y são coordenadas de VIEWPORT (clientX/clientY), coerentes com o
+  // `position: fixed` do popover. Antes eram relativas ao container
+  // (clientX - rect.left) e aplicadas como fixed — a defasagem da
+  // sidebar era o que jogava o popover para fora da tela na sexta.
   const [popover, setPopover] = useState<{
     isOpen: boolean;
     type: 'details' | 'form';
@@ -74,6 +79,63 @@ export default function SchedulePage() {
     x: 0,
     y: 0,
   });
+
+  const popoverRef = useRef<HTMLDivElement | null>(null);
+  // Começa no ponto do clique: mesmo antes do floating-ui responder, a
+  // posição já é aproximadamente certa. Não uso opacity para esconder
+  // porque o framer-motion anima opacity neste mesmo elemento e
+  // sobrescreveria o valor.
+  const [popStyle, setPopStyle] = useState<React.CSSProperties>({
+    position: 'fixed',
+    left: 0,
+    top: 0,
+  });
+
+  // Posicionamento via floating-ui: flip resolve a borda direita,
+  // shift mantém dentro da viewport e size limita a altura ao espaço
+  // disponível (antes a altura era um chute de 480/380px).
+  // useLayoutEffect: posiciona antes da pintura, sem flash.
+  useLayoutEffect(() => {
+    if (!popover.isOpen || isMobile) return;
+    const el = popoverRef.current;
+    if (!el) return;
+
+    const virtualEl = {
+      getBoundingClientRect: () => ({
+        width: 0,
+        height: 0,
+        x: popover.x,
+        y: popover.y,
+        top: popover.y,
+        left: popover.x,
+        right: popover.x,
+        bottom: popover.y,
+      }),
+    };
+
+    let cancelled = false;
+    computePosition(virtualEl, el, {
+      strategy: 'fixed',
+      placement: 'right-start',
+      middleware: [
+        offset(8),
+        flip({ fallbackPlacements: ['left-start', 'right-end', 'left-end'] }),
+        shift({ padding: 12 }),
+        size({
+          padding: 12,
+          apply({ availableHeight, elements }) {
+            elements.floating.style.maxHeight = `${Math.max(240, availableHeight)}px`;
+            elements.floating.style.overflowY = 'auto';
+          },
+        }),
+      ],
+    }).then(({ x, y }) => {
+      if (cancelled) return;
+      setPopStyle({ position: 'fixed', left: x, top: y });
+    });
+
+    return () => { cancelled = true; };
+  }, [popover.isOpen, popover.x, popover.y, popover.type, isMobile]);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -239,9 +301,8 @@ export default function SchedulePage() {
     let x = window.innerWidth / 2;
     let y = window.innerHeight / 2;
     if (arg.jsEvent && pageRef.current) {
-      const rect = pageRef.current.getBoundingClientRect();
-      x = arg.jsEvent.clientX - rect.left;
-      y = arg.jsEvent.clientY - rect.top;
+      x = arg.jsEvent.clientX;
+      y = arg.jsEvent.clientY;
     }
 
     const localString = toLocalISOString(arg.date);
@@ -272,9 +333,8 @@ export default function SchedulePage() {
     let x = window.innerWidth / 2;
     let y = window.innerHeight / 2;
     if (arg.jsEvent && pageRef.current) {
-      const rect = pageRef.current.getBoundingClientRect();
-      x = arg.jsEvent.clientX - rect.left;
-      y = arg.jsEvent.clientY - rect.top;
+      x = arg.jsEvent.clientX;
+      y = arg.jsEvent.clientY;
     }
 
     setFormData({
@@ -581,18 +641,36 @@ export default function SchedulePage() {
   return (
     <div id="agenda-page-container" ref={pageRef} style={{ display: 'flex', flexDirection: 'column', gap: '20px', position: 'relative' }}>
       <div className="glass-card" style={{ padding: isMobile ? '8px 0' : '16px 0', backgroundColor: 'var(--bg-secondary)' }}>
+        {/* Cabeçalho em duas linhas: título em cima, tags + ações
+            embaixo. Antes era uma row só, e o `flex: 1` do bloco de
+            tags com wrap empurrava as categorias para 3 linhas ao lado
+            do título. */}
         <div style={{
           display: 'flex',
-          alignItems: 'center',
-          gap: '16px',
-          flexWrap: 'wrap',
+          flexDirection: 'column',
+          gap: '12px',
           padding: isMobile ? '0 8px 12px' : '0 16px 16px',
           borderBottom: 'var(--glass-border)',
           marginBottom: isMobile ? '8px' : '16px',
         }}>
-          <h1 style={{ fontSize: '2rem', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)', flexShrink: 0 }}>Agenda</h1>
+          <h1 style={{
+            fontFamily: 'var(--font-serif)',
+            fontSize: 'var(--text-h1)',
+            fontWeight: 500,
+            letterSpacing: '-0.01em',
+            lineHeight: 1.15,
+            color: 'var(--color-text-primary)',
+            margin: 0,
+          }}>Agenda</h1>
 
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', flex: 1 }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '16px',
+            flexWrap: 'wrap',
+          }}>
+
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', flex: 1, minWidth: 0 }}>
             {CATEGORIES.map(cat => {
               const count = eventCountByType[cat.id] ?? 0;
               const isActive = activeFilters.includes(cat.id);
@@ -690,9 +768,8 @@ export default function SchedulePage() {
               let x = window.innerWidth / 2;
               let y = window.innerHeight / 2;
               if (e && e.clientX && pageRef.current) {
-                const rect = pageRef.current.getBoundingClientRect();
-                x = e.clientX - rect.left;
-                y = e.clientY - rect.top;
+                x = e.clientX;
+                y = e.clientY;
               }
               setSelectedEvent(null);
               setFormData({
@@ -713,6 +790,7 @@ export default function SchedulePage() {
             }} style={{ height: '36px' }}>
               <Plus size={16} /> Novo
             </Spotlight>
+          </div>
           </div>
         </div>
 
@@ -763,10 +841,11 @@ export default function SchedulePage() {
 
       <AnimatePresence>
         {popover.isOpen && (() => {
-          const popoverWidth = 380;
           const isMobilePopover = isMobile;
-          
-          const popStyle: React.CSSProperties = isMobilePopover ? {
+
+          // No mobile é um modal centrado; no desktop quem posiciona é
+          // o floating-ui (ver o useEffect lá em cima).
+          const resolvedStyle: React.CSSProperties = isMobilePopover ? {
             position: 'fixed',
             top: '50%',
             left: '50%',
@@ -774,29 +853,11 @@ export default function SchedulePage() {
             width: '90%',
             maxWidth: '400px',
             zIndex: 1000,
-          } : (() => {
-            const popoverHeight = popover.type === 'form' ? 480 : 380; 
-
-            let left = popover.x + 15;
-            let top = popover.y + 15;
-            
-            if (typeof window !== 'undefined') {
-              if (left + popoverWidth > window.innerWidth) {
-                left = Math.max(12, popover.x - popoverWidth - 15);
-              }
-              if (top + popoverHeight > window.innerHeight) {
-                top = Math.max(12, popover.y - popoverHeight - 15);
-              }
-            }
-            
-            return {
-              position: 'fixed',
-              left: `${left}px`,
-              top: `${top}px`,
-              width: `${popoverWidth}px`,
-              zIndex: 1000,
-            };
-          })();
+          } : {
+            width: '380px',
+            zIndex: 1000,
+            ...popStyle,
+          };
 
           return (
             <>
@@ -815,11 +876,12 @@ export default function SchedulePage() {
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ duration: 0.15 }}
+                ref={popoverRef}
                 className="glass-card agenda-popover"
-                style={{ 
-                  padding: '24px', 
-                  boxShadow: '0 20px 50px rgba(0,0,0,0.45), 0 0 1px var(--color-border-subtle)',
-                  ...popStyle 
+                style={{
+                  padding: 'var(--card-pad)',
+                  boxShadow: 'var(--shadow-lg)',
+                  ...resolvedStyle
                 }}
               >
                 {popover.type === 'details' && selectedEvent ? (
