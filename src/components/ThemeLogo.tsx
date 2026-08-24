@@ -31,7 +31,7 @@ export default function ThemeLogo({
   }
 
   const fullLogo = resolvedTheme === 'light' ? '/logo-horizontal-preta.png' : '/logo-horizontal-branca.png';
-  const symbolLogo = resolvedTheme === 'light' ? '/simbolo-preto.png' : '/simbolo-branco.png';
+  const symbolLogo = resolvedTheme === 'light' ? '/SIMBOLO-PRETO.png' : '/SIMBOLO-BRANCO.png';
   const logoSrc = isCollapsed ? symbolLogo : fullLogo;
 
   const alignmentMap = {
