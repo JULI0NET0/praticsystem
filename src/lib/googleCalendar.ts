@@ -154,10 +154,11 @@ export interface GoogleCalendarEvent {
 }
 
 function toEventResource({ title, date, description }: GoogleEventInput) {
-  const start = new Date(date);
+  const parsed = new Date(date);
+  const start = isNaN(parsed.getTime()) ? new Date() : parsed;
   const end = new Date(start.getTime() + 60 * 60 * 1000);
   return {
-    summary: title,
+    summary: title || '(Sem título)',
     description: description || undefined,
     start: { dateTime: start.toISOString() },
     end: { dateTime: end.toISOString() },

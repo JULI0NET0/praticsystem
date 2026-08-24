@@ -213,7 +213,7 @@ export async function POST(req: NextRequest) {
 
     const { data: existing } = await supabase
       .from('agenda_events')
-      .select('google_event_id, google_account')
+      .select('id, title, date, description, type, google_event_id, google_account, visibility')
       .eq('id', eventId)
       .maybeSingle();
 
@@ -226,7 +226,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true });
     }
 
-    let targetAccount = CATEGORY_GOOGLE_ACCOUNT[type] || 'agenciapratic';
+    const resolvedType = type || existing?.type || 'meeting';
+    let targetAccount = CATEGORY_GOOGLE_ACCOUNT[resolvedType] || 'agenciapratic';
     if (!isAccountConfigured(targetAccount) && isAccountConfigured('agenciapratic')) {
       targetAccount = 'agenciapratic';
     }
@@ -241,7 +242,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const eventInput = { title, date, description };
+    const eventInput = {
+      title: title || existing?.title || '(Sem título)',
+      date: date || existing?.date || new Date().toISOString(),
+      description: description !== undefined ? description : (existing?.description || ''),
+    };
 
     // Se a categoria mudou para um grupo pertencente a outra conta, remove da anterior
     if (existing?.google_event_id && existing?.google_account && existing.google_account !== targetAccount) {
@@ -253,7 +258,21 @@ export async function POST(req: NextRequest) {
     let googleEventId = existing?.google_account === targetAccount ? existing.google_event_id : null;
 
     if (googleEventId) {
-      await updateEvent(targetAccount, googleEventId, eventInput);
+      try {
+        await updateEvent(targetAccount, googleEventId, eventInput);
+      } catch (patchErr: unknown) {
+        const errorMsg = patchErr instanceof Error ? patchErr.message : String(patchErr);
+        // Se o evento foi removido ou não existe mais no Google, recria
+        if (errorMsg.includes('404') || errorMsg.includes('410') || errorMsg.includes('Not Found')) {
+          googleEventId = await insertEvent(targetAccount, eventInput);
+          await supabase
+            .from('agenda_events')
+            .update({ google_event_id: googleEventId, google_account: targetAccount })
+            .eq('id', eventId);
+        } else {
+          throw patchErr;
+        }
+      }
     } else {
       googleEventId = await insertEvent(targetAccount, eventInput);
       await supabase

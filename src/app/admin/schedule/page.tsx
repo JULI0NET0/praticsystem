@@ -364,18 +364,29 @@ export default function SchedulePage() {
     }
 
     try {
+      const newDate = event.start.toISOString();
       const { error } = await supabase
         .from('agenda_events')
-        .update({ date: event.start.toISOString() })
+        .update({ date: newDate })
         .eq('id', event.id);
 
       if (error) throw error;
       showToast("Compromisso reagendado!", "success");
       fetchEvents();
-    } catch (err) {
+
+      // Sincroniza a nova data com o Google Calendar se for visível
+      if (event.extendedProps?.visibility !== 'private') {
+        await syncToGoogleCalendar(event.id, 'update', {
+          title: event.title,
+          type: event.extendedProps?.type || 'meeting',
+          date: newDate,
+          description: event.extendedProps?.description || '',
+        });
+      }
+    } catch (err: any) {
       console.error("Erro ao mover evento:", err);
       arg.revert();
-      showToast("Erro ao reagendar", "error");
+      showToast(err?.message || "Erro ao reagendar", "error");
     }
   };
 
