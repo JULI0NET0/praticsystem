@@ -160,6 +160,7 @@ export interface GoogleEventInput {
   title: string;
   date: string;
   description?: string;
+  allDay?: boolean;
 }
 
 export interface GoogleCalendarEvent {
@@ -172,15 +173,26 @@ export interface GoogleCalendarEvent {
   updated?: string;
 }
 
-function toEventResource({ title, date, description }: GoogleEventInput) {
+function toEventResource({ title, date, description, allDay }: GoogleEventInput) {
   const parsed = new Date(date);
   const start = isNaN(parsed.getTime()) ? new Date() : parsed;
   const end = new Date(start.getTime() + 60 * 60 * 1000);
+
+  if (allDay) {
+    const yyyyMmDd = start.toISOString().split('T')[0];
+    return {
+      summary: title || '(Sem título)',
+      description: description || undefined,
+      start: { date: yyyyMmDd, dateTime: null },
+      end: { date: yyyyMmDd, dateTime: null },
+    };
+  }
+
   return {
     summary: title || '(Sem título)',
     description: description || undefined,
-    start: { dateTime: start.toISOString() },
-    end: { dateTime: end.toISOString() },
+    start: { dateTime: start.toISOString(), date: null },
+    end: { dateTime: end.toISOString(), date: null },
   };
 }
 

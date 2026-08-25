@@ -261,15 +261,16 @@ export async function POST(req: NextRequest) {
       try {
         await updateEvent(targetAccount, googleEventId, eventInput);
       } catch (patchErr: unknown) {
-        const errorMsg = patchErr instanceof Error ? patchErr.message : String(patchErr);
-        // Se o evento foi removido ou não existe mais no Google, recria
-        if (errorMsg.includes('404') || errorMsg.includes('410') || errorMsg.includes('Not Found')) {
+        console.warn('Falha ao atualizar evento no Google Agenda, recriando como novo:', patchErr);
+        // Se a atualização falhar (evento deletado no Google, conflito de formato ou 404/400), recria
+        try {
           googleEventId = await insertEvent(targetAccount, eventInput);
           await supabase
             .from('agenda_events')
             .update({ google_event_id: googleEventId, google_account: targetAccount })
             .eq('id', eventId);
-        } else {
+        } catch (insertErr) {
+          console.error('Falha também ao recriar evento no Google Agenda:', insertErr);
           throw patchErr;
         }
       }
