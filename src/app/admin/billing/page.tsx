@@ -7,6 +7,7 @@ import { FinancialOverview } from "@/components/financeiro/FinancialOverview";
 import { InvoicesList } from "@/components/financeiro/InvoicesList";
 import { RecurringRevenue } from "@/components/financeiro/RecurringRevenue";
 import { ClientFinancials } from "@/components/financeiro/ClientFinancials";
+import RoleGuard from "@/components/auth/RoleGuard";
 
 export default function BillingPage() {
   const [invoices, setInvoices] = useState<any[]>([]);
@@ -100,7 +101,8 @@ export default function BillingPage() {
   ] as const;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+    <RoleGuard>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
           <h1 style={{ fontSize: 'clamp(1.4rem, 4vw, 2rem)', fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1.2, color: 'var(--color-text-primary)', marginBottom: '4px' }}>Financeiro</h1>
@@ -207,6 +209,7 @@ export default function BillingPage() {
         )}
       </div>
     </div>
+    </RoleGuard>
   );
 }
 

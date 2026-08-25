@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { User as AuthUser } from '@supabase/supabase-js';
+import { isManagementRole, canViewFinancials } from '@/lib/permissions';
 
 export interface UserProfile {
   id: string;
@@ -31,6 +32,8 @@ interface AuthContextType {
   currentUser: UserProfile | null;
   users: UserProfile[];
   loading: boolean;
+  isManagement: boolean;
+  canViewFinancials: boolean;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -130,8 +133,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (session?.user) await fetchUserProfile(session.user);
   };
 
+  const isManagement = isManagementRole(currentUser?.role);
+  const canViewFin = canViewFinancials(currentUser);
+
   return (
-    <AuthContext.Provider value={{ currentUser, users, loading, logout, refreshProfile }}>
+    <AuthContext.Provider value={{
+      currentUser,
+      users,
+      loading,
+      isManagement,
+      canViewFinancials: canViewFin,
+      logout,
+      refreshProfile
+    }}>
       {children}
     </AuthContext.Provider>
   );

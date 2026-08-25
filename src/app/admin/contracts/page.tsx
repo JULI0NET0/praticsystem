@@ -10,6 +10,7 @@ import Link from "next/link";
 import Spotlight from "@/components/Spotlight";
 import SearchInput from "@/components/ui/SearchInput";
 import { useToast } from "@/components/CustomToast";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function ContractsPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -24,6 +25,7 @@ export default function ContractsPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [loading, setLoading] = useState(true);
   const { showToast } = useToast();
+  const { canViewFinancials } = useAuth();
   const [dateRange, setDateRange] = useState({
     start: "",
     end: ""
@@ -244,39 +246,78 @@ export default function ContractsPage() {
         gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
         gap: '16px'
       }}>
-        <KPICard
-          title="MRR do Período"
-          value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(mrrTotal)}
-          numericValue={mrrTotal}
-          prefix="R$ "
-          subtitle="Receita Recorrente no intervalo"
-          icon={<TrendingUp size={24} />}
-          index={0}
-        />
-        <KPICard
-          title="Contratos Ativos"
-          value={activeContractsCount.toString()}
-          numericValue={activeContractsCount}
-          subtitle="Total em vigência global"
-          icon={<CheckCircle2 size={24} />}
-          index={1}
-        />
-        <KPICard
-          title="A Vencer"
-          value={expiringSoon.toString()}
-          numericValue={expiringSoon}
-          subtitle="Expirações próximas"
-          icon={<AlertCircle size={24} />}
-          index={2}
-        />
-        <KPICard
-          title="Faturas no Período"
-          value={rangeInvoices.length.toString()}
-          numericValue={rangeInvoices.length}
-          subtitle={`${pendingInvoicesCount} pendentes no intervalo`}
-          icon={<DollarSign size={24} />}
-          index={3}
-        />
+        {canViewFinancials ? (
+          <>
+            <KPICard
+              title="MRR do Período"
+              value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(mrrTotal)}
+              numericValue={mrrTotal}
+              prefix="R$ "
+              subtitle="Receita Recorrente no intervalo"
+              icon={<TrendingUp size={24} />}
+              index={0}
+            />
+            <KPICard
+              title="Contratos Ativos"
+              value={activeContractsCount.toString()}
+              numericValue={activeContractsCount}
+              subtitle="Total em vigência global"
+              icon={<CheckCircle2 size={24} />}
+              index={1}
+            />
+            <KPICard
+              title="A Vencer"
+              value={expiringSoon.toString()}
+              numericValue={expiringSoon}
+              subtitle="Expirações próximas"
+              icon={<AlertCircle size={24} />}
+              index={2}
+            />
+            <KPICard
+              title="Faturas no Período"
+              value={rangeInvoices.length.toString()}
+              numericValue={rangeInvoices.length}
+              subtitle={`${pendingInvoicesCount} pendentes no intervalo`}
+              icon={<DollarSign size={24} />}
+              index={3}
+            />
+          </>
+        ) : (
+          <>
+            <KPICard
+              title="Total de Contratos"
+              value={contracts.length.toString()}
+              numericValue={contracts.length}
+              subtitle="Contratos cadastrados"
+              icon={<FileText size={24} />}
+              index={0}
+            />
+            <KPICard
+              title="Contratos Ativos"
+              value={activeContractsCount.toString()}
+              numericValue={activeContractsCount}
+              subtitle="Total em vigência global"
+              icon={<CheckCircle2 size={24} />}
+              index={1}
+            />
+            <KPICard
+              title="A Vencer"
+              value={expiringSoon.toString()}
+              numericValue={expiringSoon}
+              subtitle="Expirações próximas"
+              icon={<AlertCircle size={24} />}
+              index={2}
+            />
+            <KPICard
+              title="Encerrados"
+              value={contracts.filter(c => c.status === 'expired').length.toString()}
+              numericValue={contracts.filter(c => c.status === 'expired').length}
+              subtitle="Contratos finalizados"
+              icon={<Calendar size={24} />}
+              index={3}
+            />
+          </>
+        )}
       </div>
 
       {/* Table Section */}
@@ -316,7 +357,7 @@ export default function ContractsPage() {
                   <th>Cliente</th>
                   <th>Serviço / Plano</th>
                   <th>Início / Fim</th>
-                  <th>Valor Mensal</th>
+                  {canViewFinancials && <th>Valor Mensal</th>}
                   <th>Status</th>
                   <th style={{ textAlign: 'right' }}>Ações</th>
                 </tr>
@@ -370,11 +411,13 @@ export default function ContractsPage() {
                             </div>
                           </div>
                         </td>
-                        <td>
-                          <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
-                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(contract.value)}
-                          </span>
-                        </td>
+                        {canViewFinancials && (
+                          <td>
+                            <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
+                              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(contract.value)}
+                            </span>
+                          </td>
+                        )}
                         <td>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                             <span className={`badge ${contract.status === 'active' ? 'badge-success' :
@@ -501,7 +544,9 @@ export default function ContractsPage() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                       <p>Início: {new Date(contract.start_date).toLocaleDateString('pt-BR')}</p>
-                      <p>Valor: <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(contract.value)}</span></p>
+                      {canViewFinancials && (
+                        <p>Valor: <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(contract.value)}</span></p>
+                      )}
                     </div>
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <button className="btn-icon" style={{ backgroundColor: 'var(--card-inner-bg)' }}>

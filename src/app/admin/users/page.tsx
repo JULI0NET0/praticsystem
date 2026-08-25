@@ -10,6 +10,7 @@ import Link from "next/link";
 import SearchInput from "@/components/ui/SearchInput";
 import { useToast } from "@/components/CustomToast";
 import DialogShell from "@/components/DialogShell";
+import RoleGuard from "@/components/auth/RoleGuard";
 
 export default function UsersPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -173,12 +174,13 @@ export default function UsersPage() {
   });
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-      style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}
-    >
+    <RoleGuard>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}
+      >
       <div className="mobile-stack" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px' }}>
         <div>
           <h1 style={{ fontSize: 'clamp(1.5rem, 4vw, 2rem)', fontWeight: 700, marginBottom: '8px' }}>Gestão de Equipe</h1>
@@ -646,5 +648,6 @@ export default function UsersPage() {
         )}
       </AnimatePresence>
     </motion.div>
+    </RoleGuard>
   );
 }

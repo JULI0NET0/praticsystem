@@ -8,6 +8,7 @@ import DialogShell from "@/components/DialogShell";
 import { ServiceStats } from "@/components/ServiceStats";
 import SearchInput from "@/components/ui/SearchInput";
 import { useToast } from "@/components/CustomToast";
+import RoleGuard from "@/components/auth/RoleGuard";
 
 export default function ServicesPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -102,7 +103,8 @@ export default function ServicesPage() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', paddingBottom: '40px' }}>
+    <RoleGuard>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', paddingBottom: '40px' }}>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
@@ -527,5 +529,6 @@ export default function ServicesPage() {
         )}
       </DialogShell>
     </div>
+    </RoleGuard>
   );
 }

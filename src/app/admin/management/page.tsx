@@ -10,6 +10,7 @@ import {
   Circle, Timer, BarChart3, TrendingUp
 } from "lucide-react";
 import { tint } from "@/lib/tint";
+import RoleGuard from "@/components/auth/RoleGuard";
 
 interface TimeLogEntry {
   id: string;
@@ -129,16 +130,9 @@ export default function ManagementPage() {
     { label: 'Sessões Hoje', value: timeLogs.filter(l => l.start_time >= getDateRange('today')).length.toString(), icon: Activity, color: 'var(--color-warning)', sub: 'registros de trabalho' },
   ];
 
-  if (!currentUser || !['admin', 'board'].includes(currentUser.role)) {
-    return (
-      <div style={{ padding: '60px', textAlign: 'center' }}>
-        <p style={{ color: 'var(--text-secondary)' }}>Acesso restrito a administradores.</p>
-      </div>
-    );
-  }
-
   return (
-    <div style={{ padding: '40px', maxWidth: '1400px', margin: '0 auto' }}>
+    <RoleGuard>
+      <div style={{ padding: '40px', maxWidth: '1400px', margin: '0 auto' }}>
       {/* Header */}
       <div style={{ marginBottom: '40px' }}>
         <h1 style={{ fontSize: 'clamp(1.4rem, 4vw, 2rem)', fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1.2, color: 'var(--color-text-primary)', display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -332,5 +326,6 @@ export default function ManagementPage() {
         </div>
       </div>
     </div>
+    </RoleGuard>
   );
 }

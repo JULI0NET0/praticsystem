@@ -7,6 +7,7 @@ import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/components/CustomToast";
+import { useAuth } from "@/hooks/useAuth";
 import { CONTRACT_TEMPLATE, CONTRACT_TEMPLATE_DEVELOPMENT, CONTRACT_TEMPLATE_IA, CONTRACT_TEMPLATE_ARTES, CONTRACT_TEMPLATE_AUDIOVISUAL } from "@/lib/contractTemplate";
 
 interface ContractDetailsModalProps {
@@ -67,6 +68,7 @@ function escreverValorPorExtenso(valor: number): string {
 
 export default function ContractDetailsModal({ isOpen, onClose, onRenew, contract, client, service, invoices }: ContractDetailsModalProps) {
   const { showToast } = useToast();
+  const { canViewFinancials } = useAuth();
   const [isEditingDoc, setIsEditingDoc] = useState(false);
   const [docContent, setDocContent] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -532,15 +534,27 @@ export default function ContractDetailsModal({ isOpen, onClose, onRenew, contrac
                           </span>
                         </div>
                       </div>
-                      <div className="glass-card" style={{ padding: '16px', backgroundColor: 'var(--color-surface-sunken)' }}>
-                        <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Valor Mensal</p>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <DollarSign size={16} color="var(--accent)" />
-                          <span style={{ fontWeight: 700, color: 'var(--color-text-primary)', fontSize: '1.1rem' }}>
-                            R$ {contract.value.toLocaleString('pt-BR')}
-                          </span>
+                      {canViewFinancials ? (
+                        <div className="glass-card" style={{ padding: '16px', backgroundColor: 'var(--color-surface-sunken)' }}>
+                          <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Valor Mensal</p>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <DollarSign size={16} color="var(--accent)" />
+                            <span style={{ fontWeight: 700, color: 'var(--color-text-primary)', fontSize: '1.1rem' }}>
+                              R$ {contract.value.toLocaleString('pt-BR')}
+                            </span>
+                          </div>
                         </div>
-                      </div>
+                      ) : (
+                        <div className="glass-card" style={{ padding: '16px', backgroundColor: 'var(--color-surface-sunken)' }}>
+                          <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Frequência</p>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <Calendar size={16} color="var(--accent)" />
+                            <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>
+                              {contract.billing_cycle === 'monthly' ? 'Mensal' : contract.billing_cycle === 'one_time' ? 'Pontual' : 'Recorrente'}
+                            </span>
+                          </div>
+                        </div>
+                      )}
                       <div className="glass-card" style={{ padding: '16px', backgroundColor: 'var(--color-surface-sunken)' }}>
                         <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Data de Encerramento</p>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -708,64 +722,68 @@ export default function ContractDetailsModal({ isOpen, onClose, onRenew, contrac
                        </div>
                     </div>
 
-                    {/* Renewal Panel — sempre visível */}
-                    <div style={{ padding: '16px 20px', borderRadius: '16px', border: '1px solid color-mix(in oklab, var(--accent) 30%, transparent)', background: 'color-mix(in oklab, var(--accent) 6%, transparent)' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div>
-                          <p style={{ fontWeight: 600, color: 'var(--color-text-primary)', fontSize: '0.9rem', marginBottom: '2px' }}>Prorrogar Contrato</p>
-                          <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Adiciona meses e gera novas faturas automaticamente</p>
-                        </div>
-                        {!showRenewPanel && (
-                          <button className="btn btn-accent btn-sm" onClick={() => setShowRenewPanel(true)} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <RefreshCw size={14} /> Prorrogar
-                          </button>
-                        )}
-                      </div>
-                      {showRenewPanel && (
-                        <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                          <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>Quantos meses?</label>
-                          <input
-                            type="number"
-                            min={1}
-                            max={24}
-                            value={renewMonths}
-                            onChange={(e) => setRenewMonths(Math.max(1, parseInt(e.target.value) || 1))}
-                            className="input-dark"
-                            style={{ width: '80px', padding: '6px 12px', fontSize: '0.9rem' }}
-                          />
-                          <button className="btn btn-accent btn-sm" onClick={handleRenew} disabled={isRenewing}>
-                            {isRenewing ? 'Salvando...' : 'Confirmar'}
-                          </button>
-                          <button className="btn btn-secondary btn-sm" onClick={() => setShowRenewPanel(false)} disabled={isRenewing}>
-                            Cancelar
-                          </button>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Financial History */}
-                    <div>
-                      <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <DollarSign size={18} color="var(--accent)" /> Histórico Financeiro
-                      </h3>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        {invoices.length > 0 ? (
-                          invoices.map(invoice => (
-                            <div key={invoice.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', backgroundColor: 'var(--color-surface-sunken)', borderRadius: '12px' }}>
-                              <div>
-                                <p style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--color-text-primary)' }}>Venc. {new Date(invoice.due_date + 'T12:00:00').toLocaleDateString('pt-BR')}</p>
-                                <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{invoice.status === 'paid' ? 'Pago' : 'Pendente'}</p>
-                              </div>
-                              <p style={{ fontWeight: 600, color: invoice.status === 'paid' ? '#22C55E' : 'var(--accent)' }}>
-                                R$ {invoice.amount.toLocaleString('pt-BR')}
-                              </p>
+                    {/* Renewal Panel & Financial History — Apenas para gestão com acesso financeiro */}
+                    {canViewFinancials && (
+                      <>
+                        <div style={{ padding: '16px 20px', borderRadius: '16px', border: '1px solid color-mix(in oklab, var(--accent) 30%, transparent)', background: 'color-mix(in oklab, var(--accent) 6%, transparent)' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                              <p style={{ fontWeight: 600, color: 'var(--color-text-primary)', fontSize: '0.9rem', marginBottom: '2px' }}>Prorrogar Contrato</p>
+                              <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Adiciona meses e gera novas faturas automaticamente</p>
                             </div>
-                          ))
-                        ) : (
-                          <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>Nenhuma fatura encontrada.</p>
-                        )}
-                      </div>
-                    </div>
+                            {!showRenewPanel && (
+                              <button className="btn btn-accent btn-sm" onClick={() => setShowRenewPanel(true)} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <RefreshCw size={14} /> Prorrogar
+                              </button>
+                            )}
+                          </div>
+                          {showRenewPanel && (
+                            <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                              <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>Quantos meses?</label>
+                              <input
+                                type="number"
+                                min={1}
+                                max={24}
+                                value={renewMonths}
+                                onChange={(e) => setRenewMonths(Math.max(1, parseInt(e.target.value) || 1))}
+                                className="input-dark"
+                                style={{ width: '80px', padding: '6px 12px', fontSize: '0.9rem' }}
+                              />
+                              <button className="btn btn-accent btn-sm" onClick={handleRenew} disabled={isRenewing}>
+                                {isRenewing ? 'Salvando...' : 'Confirmar'}
+                              </button>
+                              <button className="btn btn-secondary btn-sm" onClick={() => setShowRenewPanel(false)} disabled={isRenewing}>
+                                Cancelar
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Financial History */}
+                        <div>
+                          <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <DollarSign size={18} color="var(--accent)" /> Histórico Financeiro
+                          </h3>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            {invoices.length > 0 ? (
+                              invoices.map(invoice => (
+                                <div key={invoice.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', backgroundColor: 'var(--color-surface-sunken)', borderRadius: '12px' }}>
+                                  <div>
+                                    <p style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--color-text-primary)' }}>Venc. {new Date(invoice.due_date + 'T12:00:00').toLocaleDateString('pt-BR')}</p>
+                                    <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{invoice.status === 'paid' ? 'Pago' : 'Pendente'}</p>
+                                  </div>
+                                  <p style={{ fontWeight: 600, color: invoice.status === 'paid' ? '#22C55E' : 'var(--accent)' }}>
+                                    R$ {invoice.amount.toLocaleString('pt-BR')}
+                                  </p>
+                                </div>
+                              ))
+                            ) : (
+                              <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>Nenhuma fatura encontrada.</p>
+                            )}
+                          </div>
+                        </div>
+                      </>
+                    )}
 
                   </>
                 ) : (

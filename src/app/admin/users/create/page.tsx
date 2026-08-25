@@ -13,6 +13,7 @@ import { formatPhone } from "@/utils/masks";
 import { useToast } from "@/components/CustomToast";
 import CustomModal from "@/components/CustomModal";
 import Combobox from "@/components/ui/Combobox";
+import RoleGuard from "@/components/auth/RoleGuard";
 
 export default function CreateUserPage() {
   const router = useRouter();
@@ -112,8 +113,9 @@ export default function CreateUserPage() {
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
+    <RoleGuard>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
       style={{ display: 'flex', flexDirection: 'column', gap: '32px', maxWidth: '800px', margin: '0 auto' }}
@@ -310,5 +312,6 @@ export default function CreateUserPage() {
         </div>
       </form>
     </motion.div>
+    </RoleGuard>
   );
 }

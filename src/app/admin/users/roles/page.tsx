@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/components/CustomToast";
+import RoleGuard from "@/components/auth/RoleGuard";
 
 const AVAILABLE_PERMISSIONS = [
   { id: 'all', name: 'Acesso Total', description: 'Permite acesso a todas as áreas do sistema', category: 'Geral' },
@@ -127,8 +128,9 @@ export default function RolesPage() {
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
+    <RoleGuard>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
       style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}
@@ -302,5 +304,6 @@ export default function RolesPage() {
 
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </motion.div>
+    </RoleGuard>
   );
 }

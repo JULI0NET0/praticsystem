@@ -11,6 +11,7 @@ import { FluxoCaixa } from "@/components/financeiro/FluxoCaixa";
 import { AsaasSync } from "@/components/financeiro/AsaasSync";
 import { DespesasVariaveis } from "@/components/financeiro/DespesasVariaveis";
 import { Repasses } from "@/components/financeiro/Repasses";
+import RoleGuard from "@/components/auth/RoleGuard";
 import type { Expense, ExpenseEntry, AsaasTransaction, Invoice } from "@/types/database";
 
 type Tab = "dashboard" | "despesas" | "lancamentos" | "fluxo" | "asaas" | "variaveis" | "repasses";
@@ -481,9 +482,10 @@ export default function FinanceiroPage() {
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "32px" }}>
-      {/* KPIs + date controls (always visible) */}
-      <FinancialKPIs
+    <RoleGuard>
+      <div style={{ display: "flex", flexDirection: "column", gap: "32px" }}>
+        {/* KPIs + date controls (always visible) */}
+        <FinancialKPIs
         faturamentoPrevisto={faturamentoPrevisto}
         faturamentoRealizado={faturamentoRealizado}
         faturamentoItems={faturamentoItems}
@@ -715,5 +717,6 @@ export default function FinanceiroPage() {
         />
       )}
     </div>
+    </RoleGuard>
   );
 }
