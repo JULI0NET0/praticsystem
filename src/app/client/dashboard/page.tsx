@@ -8,6 +8,7 @@ import Spotlight from "@/components/Spotlight";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { useSearchParams } from "next/navigation";
+import { tint } from "@/lib/tint";
 
 export default function ClientDashboardWrapper() {
   return (
@@ -54,7 +55,7 @@ function ClientDashboard() {
         
         const { data: demandsData } = await supabase
           .from('demands')
-          .select('*')
+          .select('*, demand_statuses(label, color, category)')
           .eq('client_id', client.id)
           .order('created_at', { ascending: false });
 
@@ -67,8 +68,11 @@ function ClientDashboard() {
     }
   };
 
-  const pendingDemands = demands.filter(d => d.status !== 'completed').length;
-  const completedDemands = demands.filter(d => d.status === 'completed').length;
+  // Categoria do status (não o slug) — os status são personalizáveis pela agência
+  const isDone = (d: { status_category?: string; status?: string }) =>
+    d.status_category === 'fechado' || d.status === 'completed';
+  const pendingDemands = demands.filter(d => !isDone(d)).length;
+  const completedDemands = demands.filter(d => isDone(d)).length;
 
   if (loading) {
     return (
@@ -155,14 +159,21 @@ function ClientDashboard() {
             {demands.length > 0 ? demands.slice(0, 3).map((demand, idx) => (
               <Spotlight key={demand.id} className="glass-card" style={{ padding: '20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>{demand.type}</span>
-                  <span className={`badge ${demand.status === 'completed' ? 'badge-success' : 'badge-warning'}`}>
-                    {demand.status === 'completed' ? 'Finalizado' : 'Em Produção'}
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>{demand.type || 'Demanda'}</span>
+                  <span style={{
+                    fontSize: '0.72rem', fontWeight: 700, padding: '4px 10px', borderRadius: '8px',
+                    whiteSpace: 'nowrap',
+                    color: demand.demand_statuses?.color || 'var(--text-secondary)',
+                    background: tint(demand.demand_statuses?.color, 12),
+                    border: `1px solid ${tint(demand.demand_statuses?.color, 22)}`,
+                    textTransform: 'uppercase'
+                  }}>
+                    {demand.demand_statuses?.label || (isDone(demand) ? 'Finalizado' : 'Em aberto')}
                   </span>
                 </div>
                 <h4 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '8px' }}>{demand.title}</h4>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
-                  <span>Previsão de Entrega: <strong>{demand.due_date ? new Date(demand.due_date).toLocaleDateString('pt-BR') : 'A definir'}</strong></span>
+                  <span>Previsão de Entrega: <strong>{demand.due_date ? new Date(`${demand.due_date}T00:00:00`).toLocaleDateString('pt-BR') : 'A definir'}</strong></span>
                 </div>
               </Spotlight>
             )) : (

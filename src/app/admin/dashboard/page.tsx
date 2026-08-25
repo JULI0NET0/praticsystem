@@ -33,7 +33,8 @@ export default function DashboardPage() {
       const [invoicesRes, contractsRes, demandsRes, eventsRes] = await Promise.all([
         supabase.from('invoices').select('amount').eq('status', 'paid'), // Simplifying for MRR
         supabase.from('contracts').select('value').eq('status', 'active'),
-        supabase.from('demands').select('id').eq('status', 'in_production'),
+        // Categoria em vez do slug: os status são personalizáveis em /admin/demandas
+        supabase.from('demands').select('id').eq('status_category', 'ativo'),
         supabase.from('agenda_events').select('*').eq('date', today).limit(3)
       ]);
 

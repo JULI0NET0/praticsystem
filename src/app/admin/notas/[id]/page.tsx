@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, Calendar, Tag, Users, Building2,
   X, Plus, Loader2, Check, Share2, Trash2, UserCircle,
-  BookmarkCheck, User, Printer, FileDown, ChevronDown, ChevronUp,
+  BookmarkCheck, User, Printer, FileDown, ChevronDown, ChevronUp, Sparkles,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
@@ -16,6 +16,8 @@ import { Note, Client } from '@/types/database';
 import { useToast } from '@/components/CustomToast';
 import TitleMention, { Mention } from '@/components/notas/TitleMention';
 import CustomModal from '@/components/CustomModal';
+import { organizeMeetingNotes } from '@/lib/notesAudio';
+import { markdownToTiptapJson } from '@/lib/markdownToTiptapJson';
 
 const BlockEditor = dynamic(() => import('@/components/notas/BlockEditor'), {
   ssr: false,
@@ -45,6 +47,8 @@ export default function NotaDetailPage() {
     share_all: false,
     pin_to_client: false,
     client_id: undefined,
+    raw_transcript: null,
+    last_organized_at: null,
   });
   const [mentions, setMentions] = useState<Mention[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,6 +60,8 @@ export default function NotaDetailPage() {
   const [isMobile, setIsMobile] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isReorganizeModalOpen, setIsReorganizeModalOpen] = useState(false);
+  const [reorganizing, setReorganizing] = useState(false);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -89,6 +95,8 @@ export default function NotaDetailPage() {
         share_all: data.share_all ?? false,
         pin_to_client: data.pin_to_client ?? false,
         client_id: data.client_id ?? undefined,
+        raw_transcript: data.raw_transcript ?? null,
+        last_organized_at: data.last_organized_at ?? null,
       });
       setIsOwner(data.user_id === currentUser?.id);
     }
@@ -177,6 +185,29 @@ export default function NotaDetailPage() {
   };
 
   const canEdit = isOwner || (note.share_all) || (note.shared_with ?? []).includes(currentUser?.id ?? '');
+
+  const handleReorganize = async () => {
+    if (!note.raw_transcript) return;
+    setIsReorganizeModalOpen(false);
+    setReorganizing(true);
+    try {
+      const markdown = await organizeMeetingNotes(note.raw_transcript);
+      const newContent = markdownToTiptapJson(markdown);
+      const last_organized_at = new Date().toISOString();
+      const { error } = await supabase
+        .from('notes')
+        .update({ content: newContent, last_organized_at })
+        .eq('id', id);
+      if (error) throw error;
+      setNote(prev => ({ ...prev, content: newContent, last_organized_at }));
+      showToast('Nota reorganizada com IA', 'success');
+    } catch (err: any) {
+      console.error('Erro ao reorganizar nota:', err);
+      showToast('Erro ao reorganizar: ' + (err.message || ''), 'error');
+    } finally {
+      setReorganizing(false);
+    }
+  };
 
   const handleExport = async () => {
     const editorEl = document.querySelector('.block-editor-content');
@@ -489,6 +520,19 @@ export default function NotaDetailPage() {
               >
                 {showMetadata ? <><ChevronUp size={13} /> Ocultar Info</> : <><ChevronDown size={13} /> Mostrar Info</>}
               </button>
+              {note.raw_transcript && canEdit && (
+                <button
+                  onClick={() => setIsReorganizeModalOpen(true)}
+                  disabled={reorganizing}
+                  style={{ background: 'var(--color-surface-sunken)', border: '1px solid var(--border)', borderRadius: '8px', cursor: reorganizing ? 'wait' : 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', padding: '5px 12px', opacity: reorganizing ? 0.6 : 1 }}
+                  title="Gera novamente as notas organizadas a partir da transcrição original, sem re-transcrever o áudio"
+                >
+                  {reorganizing
+                    ? <><motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}><Loader2 size={13} /></motion.div> Reorganizando...</>
+                    : <><Sparkles size={13} /> Reorganizar com IA</>
+                  }
+                </button>
+              )}
               <button
                 onClick={handleExport}
                 disabled={exporting}
@@ -736,6 +780,17 @@ export default function NotaDetailPage() {
         message="Tem certeza que deseja excluir esta nota permanentemente? Esta ação não pode ser desfeita."
         type="confirm"
         confirmText="Excluir"
+        cancelText="Cancelar"
+      />
+
+      <CustomModal
+        isOpen={isReorganizeModalOpen}
+        onClose={() => setIsReorganizeModalOpen(false)}
+        onConfirm={handleReorganize}
+        title="Reorganizar com IA"
+        message="Isso vai substituir o conteúdo atual da nota pela versão reorganizada pela IA a partir da transcrição original. Qualquer edição manual feita depois da última organização será perdida. Deseja continuar?"
+        type="confirm"
+        confirmText="Reorganizar"
         cancelText="Cancelar"
       />
     </motion.div>

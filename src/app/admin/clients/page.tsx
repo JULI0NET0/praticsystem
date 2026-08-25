@@ -53,15 +53,18 @@ export default function ClientsPage() {
       if (data) {
         setClients(data);
 
-        // Buscar contagem de demandas ativas para cada cliente
+        // Buscar contagem de demandas ativas para cada cliente.
+        // Filtra pela CATEGORIA do status, não pelo slug: os status são
+        // personalizáveis em /admin/demandas e 'completed' é só um deles.
         const { data: demandsData } = await supabase
           .from('demands')
-          .select('client_id, status')
-          .neq('status', 'completed');
+          .select('client_id, status_category')
+          .neq('status_category', 'fechado');
 
         if (demandsData) {
           const counts: Record<string, number> = {};
           demandsData.forEach(d => {
+            if (!d.client_id) return; // demandas internas não contam por cliente
             counts[d.client_id] = (counts[d.client_id] || 0) + 1;
           });
           setDemandsCount(counts);

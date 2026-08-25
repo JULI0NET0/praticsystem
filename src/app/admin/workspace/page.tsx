@@ -94,11 +94,15 @@ export default function WorkspacePage() {
   const fetchWorkspaceData = async () => {
     try {
       setLoadingDemands(true);
-      const { data, error } = await supabase
+      // Demandas em aberto onde sou responsável — assignee_ids é um array
+      // (uma demanda pode ter vários responsáveis) e assign_all_team marca
+      // as que são do time inteiro.
+      const { data } = await supabase
         .from('demands')
-        .select('*')
-        .eq('assigned_to', currentUser?.id)
-        .order('created_at', { ascending: false })
+        .select('*, demand_statuses(label, color)')
+        .neq('status_category', 'fechado')
+        .or(`assignee_ids.cs.{${currentUser?.id}},assign_all_team.eq.true`)
+        .order('due_date', { ascending: true, nullsFirst: false })
         .limit(5);
 
       if (data) setDemands(data);
@@ -1106,8 +1110,9 @@ function DemandsWidget({ demands, loading }: { demands: any[], loading: boolean 
             <Loader2 size={24} className="animate-spin" color="var(--accent)" />
           </div>
         ) : demands.length > 0 ? demands.map(d => (
-          <motion.div
+          <motion.a
             key={d.id}
+            href={`/admin/demandas?d=${d.id}`}
             whileHover={{ x: 4 }}
             style={{
               padding: '16px',
@@ -1118,21 +1123,24 @@ function DemandsWidget({ demands, loading }: { demands: any[], loading: boolean 
               flexDirection: 'column',
               gap: '8px',
               cursor: 'pointer',
+              textDecoration: 'none',
               transition: 'all 0.2s ease'
             }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
               <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>{d.title}</span>
+              {/* Rótulo e cor vêm da tabela demand_statuses (status personalizáveis) */}
               <span style={{
                 fontSize: '0.65rem',
                 fontWeight: 800,
                 padding: '3px 8px',
                 borderRadius: '6px',
-                background: d.status === 'in_production' ? 'rgba(59, 130, 246, 0.15)' : 'var(--color-warning-wash)',
-                color: d.status === 'in_production' ? '#3B82F6' : 'var(--color-warning)',
+                whiteSpace: 'nowrap',
+                background: tint(d.demand_statuses?.color, 12),
+                color: d.demand_statuses?.color || 'var(--text-secondary)',
                 textTransform: 'uppercase'
               }}>
-                {d.status === 'in_production' ? 'Em Produção' : 'Pendente'}
+                {d.demand_statuses?.label || 'Pendente'}
               </span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -1145,7 +1153,7 @@ function DemandsWidget({ demands, loading }: { demands: any[], loading: boolean 
                 <span style={{ textTransform: 'capitalize' }}>{d.type || 'Geral'}</span>
               </div>
             </div>
-          </motion.div>
+          </motion.a>
         )) : (
           <div style={{
             textAlign: 'center', padding: '40px 20px', color: 'var(--text-secondary)',

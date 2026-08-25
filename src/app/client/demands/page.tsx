@@ -6,6 +6,8 @@ import { Clock, CheckCircle2, AlertCircle, Search, Filter, Loader2 } from "lucid
 import Spotlight from "@/components/Spotlight";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
+import { tint } from "@/lib/tint";
+import { richTextToPlain } from "@/lib/richText";
 
 export default function ClientDemands() {
   const { currentUser } = useAuth();
@@ -32,7 +34,7 @@ export default function ClientDemands() {
       if (client) {
         const { data } = await supabase
           .from('demands')
-          .select('*')
+          .select('*, demand_statuses(label, color, category)')
           .eq('client_id', client.id)
           .order('created_at', { ascending: false });
 
@@ -45,10 +47,14 @@ export default function ClientDemands() {
     }
   };
 
+  // Categoria do status (não o slug) — os status são personalizáveis pela agência
+  const isDone = (d: { status_category?: string; status?: string }) =>
+    d.status_category === 'fechado' || d.status === 'completed';
+
   const filteredDemands = demands.filter(d => {
     if (filter === "all") return true;
-    if (filter === "pending") return d.status !== 'completed';
-    if (filter === "completed") return d.status === 'completed';
+    if (filter === "pending") return !isDone(d);
+    if (filter === "completed") return isDone(d);
     return true;
   });
 
@@ -102,31 +108,45 @@ export default function ClientDemands() {
                   fontSize: '0.75rem', fontWeight: 600, padding: '4px 10px', borderRadius: '8px',
                   backgroundColor: 'var(--color-surface-sunken)', color: 'var(--text-secondary)',
                   textTransform: 'uppercase'
-                }}>{demand.type}</span>
-                <span className={`badge ${demand.status === 'completed' ? 'badge-success' :
-                    demand.status === 'pending' ? 'badge-warning' : 'badge-accent'
-                  }`}>
-                  {demand.status === 'completed' ? 'Concluído' : demand.status === 'pending' ? 'Pendente' : 'Em Produção'}
+                }}>{demand.type || 'Demanda'}</span>
+                <span style={{
+                  fontSize: '0.72rem', fontWeight: 700, padding: '4px 10px', borderRadius: '8px',
+                  whiteSpace: 'nowrap',
+                  color: demand.demand_statuses?.color || 'var(--text-secondary)',
+                  background: tint(demand.demand_statuses?.color, 12),
+                  border: `1px solid ${tint(demand.demand_statuses?.color, 22)}`,
+                  textTransform: 'uppercase'
+                }}>
+                  {demand.demand_statuses?.label || (isDone(demand) ? 'Concluído' : 'Em aberto')}
                 </span>
               </div>
 
               <div>
                 <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '8px' }}>{demand.title}</h3>
                 <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: '1.6' }}>
-                  {demand.description || 'A agência está trabalhando nesta demanda para entregar o melhor resultado para a Acme Corp.'}
+                  {/* description é um documento TipTap (JSONB) — precisa virar texto */}
+                  {richTextToPlain(demand.description, 220) ||
+                    'A agência está trabalhando nesta demanda.'}
                 </p>
               </div>
 
               <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
                   <Clock size={16} />
-                  <span>Previsão de Entrega: <strong>{new Date(demand.due_date).toLocaleDateString('pt-BR')}</strong></span>
+                  <span>
+                    Previsão de Entrega:{' '}
+                    <strong>
+                      {demand.due_date
+                        ? new Date(`${demand.due_date}T00:00:00`).toLocaleDateString('pt-BR')
+                        : 'a definir'}
+                    </strong>
+                  </span>
                 </div>
 
                 <div style={{ height: '8px', backgroundColor: 'var(--color-surface-sunken)', borderRadius: '4px', overflow: 'hidden' }}>
                   <motion.div
                     initial={{ width: 0 }}
-                    animate={{ width: demand.status === 'completed' ? '100%' : '40%' }}
+                    animate={{ width: isDone(demand) ? '100%' : '40%' }}
                     transition={{ duration: 1, delay: 0.5 }}
                     style={{ height: '100%', background: 'var(--accent)', borderRadius: '4px' }}
                   />

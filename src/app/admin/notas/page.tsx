@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, FileText, Loader2, User, Users, Share2, Globe } from 'lucide-react';
+import { Plus, FileText, Loader2, User, Users, Share2, Globe, AudioLines } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { Note } from '@/types/database';
@@ -155,11 +155,18 @@ export default function NotasPage() {
             Suas notas pessoais e compartilhadas com o time.
           </p>
         </div>
-        <Link href="/admin/notas/create">
-          <Spotlight as="div" className="btn btn-accent">
-            <Plus size={18} /> Nova Nota
-          </Spotlight>
-        </Link>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <Link href="/admin/notas/audio">
+            <Spotlight as="div" className="btn btn-secondary">
+              <AudioLines size={18} /> Gerar da Áudio
+            </Spotlight>
+          </Link>
+          <Link href="/admin/notas/create">
+            <Spotlight as="div" className="btn btn-accent">
+              <Plus size={18} /> Nova Nota
+            </Spotlight>
+          </Link>
+        </div>
       </div>
 
       <div className="glass-card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '24px' }}>

@@ -66,16 +66,18 @@ export interface Client {
   };
 }
 
-export interface Demand {
-  id: string;
-  client_id: string;
-  title: string;
-  description?: string;
-  status: 'pending' | 'in_production' | 'review' | 'approved' | 'completed';
-  priority: 'low' | 'medium' | 'high';
-  due_date: string;
-  type: string;
-}
+// Demanda: o modelo vive em src/types/demandas.ts (área /admin/demandas).
+// Re-exportado aqui para que os consumidores antigos de `@/types/database`
+// continuem funcionando sem manter duas definições divergentes.
+export type {
+  Demand,
+  DemandStatus,
+  DemandComment,
+  DemandAttachment,
+  DemandPriority,
+  DemandScope,
+  DemandStatusCategory,
+} from './demandas';
 
 export interface Service {
   id: string;
@@ -209,6 +211,11 @@ export interface Note {
   pin_to_client: boolean; // aparece na aba Notas do cadastro do cliente
   created_at: string;
   updated_at: string;
+  // Notas geradas a partir de áudio (transcrição + organização com IA)
+  raw_transcript?: string | null;
+  audio_path?: string | null;
+  transcribed_at?: string | null;
+  last_organized_at?: string | null;
   // Joined fields
   client?: Pick<Client, 'id' | 'name' | 'nome_fantasia'>;
   author?: Pick<User, 'id' | 'name' | 'avatar_url'>;

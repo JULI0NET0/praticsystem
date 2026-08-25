@@ -380,5 +380,461 @@ CREATE POLICY "roles_delete" ON public.roles
     FOR DELETE USING (auth.uid() IS NOT NULL);
 
 
+-- =============================================================
+-- BLOCO 11: DEMANDAS DA AGÊNCIA
+-- Área /admin/demandas — demandas de cliente e internas/operacionais.
+-- A tabela `demands` já existia em produção (somente leitura em
+-- workspace / dashboard / clients / users / portal do cliente);
+-- aqui ela ganha as colunas novas SEM perder os dados existentes.
+-- =============================================================
+
+-- -------------------------------------------------------------
+-- 11.1 Status personalizáveis (globais da área)
+-- id é slug TEXT, mesmo padrão da tabela roles
+-- -------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS public.demand_statuses (
+    id         TEXT PRIMARY KEY,
+    label      TEXT NOT NULL,
+    color      TEXT NOT NULL DEFAULT '#8a8a83',
+    category   TEXT NOT NULL DEFAULT 'ativo'
+               CHECK (category IN ('nao_iniciado', 'ativo', 'fechado')),
+    position   INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Seed: estes 5 slugs são exatamente os valores que o código legado
+-- já consulta em demands.status — não renomear.
+INSERT INTO public.demand_statuses (id, label, color, category, position) VALUES
+    ('pending',       'A fazer',      '#8a8a83', 'nao_iniciado', 0),
+    ('in_production', 'Em produção',  '#d97757', 'ativo',        1),
+    ('review',        'Em revisão',   '#c2833a', 'ativo',        2),
+    ('approved',      'Aprovado',     '#5b7f5b', 'ativo',        3),
+    ('completed',     'Concluído',    '#6a7f8f', 'fechado',      4)
+ON CONFLICT (id) DO NOTHING;
+
+ALTER TABLE public.demand_statuses ENABLE ROW LEVEL SECURITY;
+
+-- Leitura pública: o portal do cliente precisa resolver o rótulo do status
+DROP POLICY IF EXISTS "demand_statuses_select" ON public.demand_statuses;
+CREATE POLICY "demand_statuses_select" ON public.demand_statuses
+    FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "demand_statuses_insert" ON public.demand_statuses;
+CREATE POLICY "demand_statuses_insert" ON public.demand_statuses
+    FOR INSERT WITH CHECK (EXISTS (SELECT 1 FROM public.users u WHERE u.id = auth.uid()));
+
+DROP POLICY IF EXISTS "demand_statuses_update" ON public.demand_statuses;
+CREATE POLICY "demand_statuses_update" ON public.demand_statuses
+    FOR UPDATE USING (EXISTS (SELECT 1 FROM public.users u WHERE u.id = auth.uid()));
+
+DROP POLICY IF EXISTS "demand_statuses_delete" ON public.demand_statuses;
+CREATE POLICY "demand_statuses_delete" ON public.demand_statuses
+    FOR DELETE USING (EXISTS (SELECT 1 FROM public.users u WHERE u.id = auth.uid()));
+
+
+-- -------------------------------------------------------------
+-- 11.2 Demandas
+-- client_id NULL = demanda interna/operacional
+-- -------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS public.demands (
+    id              UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    title           TEXT NOT NULL DEFAULT '',
+    description     JSONB,
+    client_id       UUID REFERENCES public.clients(id) ON DELETE SET NULL,
+    scope           TEXT NOT NULL DEFAULT 'internal' CHECK (scope IN ('client', 'internal')),
+    status          TEXT NOT NULL DEFAULT 'pending',
+    status_category TEXT NOT NULL DEFAULT 'nao_iniciado',
+    priority        TEXT NOT NULL DEFAULT 'none'
+                    CHECK (priority IN ('none', 'low', 'medium', 'high', 'urgent')),
+    assignee_ids    UUID[] NOT NULL DEFAULT '{}',
+    assigned_to     UUID,
+    assign_all_team BOOLEAN NOT NULL DEFAULT false,
+    created_by      UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+    start_date      DATE,
+    due_date        DATE,
+    due_time        TIME,
+    position        DOUBLE PRECISION NOT NULL DEFAULT 0,
+    completed_at    TIMESTAMPTZ,
+    type            TEXT,
+    created_at      TIMESTAMPTZ DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Remove TODA constraint CHECK antiga de `demands` antes de mexer nos dados.
+-- A instância de produção tem CHECKs herdados em status e priority; se eles
+-- ficarem, criar um status personalizado ou usar priority='none' quebra.
+-- As CHECKs que queremos manter são recriadas mais abaixo.
+DO $$
+DECLARE con RECORD;
+BEGIN
+    FOR con IN
+        SELECT conname FROM pg_constraint
+        WHERE conrelid = 'public.demands'::regclass AND contype = 'c'
+    LOOP
+        EXECUTE format('ALTER TABLE public.demands DROP CONSTRAINT %I', con.conname);
+    END LOOP;
+END $$;
+
+-- Garante colunas em instâncias antigas (a tabela já existe em produção)
+ALTER TABLE public.demands ADD COLUMN IF NOT EXISTS description     JSONB;
+
+-- Em produção `description` nasceu TEXT. Converte para JSONB preservando o
+-- conteúdo: o texto vira um parágrafo no formato TipTap que o editor entende.
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'demands'
+          AND column_name = 'description' AND data_type <> 'jsonb'
+    ) THEN
+        ALTER TABLE public.demands
+            ALTER COLUMN description TYPE JSONB
+            USING CASE
+                WHEN description IS NULL OR btrim(description::text) = '' THEN NULL
+                ELSE jsonb_build_object(
+                    'type', 'doc',
+                    'content', jsonb_build_array(jsonb_build_object(
+                        'type', 'paragraph',
+                        'content', jsonb_build_array(jsonb_build_object(
+                            'type', 'text', 'text', description::text))))
+                )
+            END;
+    END IF;
+END $$;
+-- Colunas do modelo legado: existem em produção, mas não numa base zerada
+-- que já tivesse a tabela por outro caminho. Todas idempotentes.
+ALTER TABLE public.demands ADD COLUMN IF NOT EXISTS title           TEXT NOT NULL DEFAULT '';
+ALTER TABLE public.demands ADD COLUMN IF NOT EXISTS client_id       UUID REFERENCES public.clients(id) ON DELETE SET NULL;
+ALTER TABLE public.demands ADD COLUMN IF NOT EXISTS status          TEXT NOT NULL DEFAULT 'pending';
+ALTER TABLE public.demands ADD COLUMN IF NOT EXISTS priority        TEXT NOT NULL DEFAULT 'none';
+ALTER TABLE public.demands ADD COLUMN IF NOT EXISTS due_date        DATE;
+ALTER TABLE public.demands ADD COLUMN IF NOT EXISTS type            TEXT;
+ALTER TABLE public.demands ADD COLUMN IF NOT EXISTS created_at      TIMESTAMPTZ DEFAULT NOW();
+
+ALTER TABLE public.demands ADD COLUMN IF NOT EXISTS scope           TEXT NOT NULL DEFAULT 'internal';
+ALTER TABLE public.demands ADD COLUMN IF NOT EXISTS status_category TEXT NOT NULL DEFAULT 'nao_iniciado';
+ALTER TABLE public.demands ADD COLUMN IF NOT EXISTS assignee_ids    UUID[] NOT NULL DEFAULT '{}';
+ALTER TABLE public.demands ADD COLUMN IF NOT EXISTS assigned_to     UUID;
+ALTER TABLE public.demands ADD COLUMN IF NOT EXISTS assign_all_team BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE public.demands ADD COLUMN IF NOT EXISTS created_by      UUID REFERENCES auth.users(id) ON DELETE SET NULL;
+ALTER TABLE public.demands ADD COLUMN IF NOT EXISTS start_date      DATE;
+ALTER TABLE public.demands ADD COLUMN IF NOT EXISTS due_time        TIME;
+ALTER TABLE public.demands ADD COLUMN IF NOT EXISTS position        DOUBLE PRECISION NOT NULL DEFAULT 0;
+ALTER TABLE public.demands ADD COLUMN IF NOT EXISTS completed_at    TIMESTAMPTZ;
+ALTER TABLE public.demands ADD COLUMN IF NOT EXISTS updated_at      TIMESTAMPTZ DEFAULT NOW();
+
+-- Ajusta as colunas herdadas do modelo legado, que foram criadas com tipos e
+-- obrigatoriedades incompatíveis com a área de Demandas:
+--   client_id NOT NULL  -> demanda interna (sem cliente) seria rejeitada
+--   type      NOT NULL  -> criar demanda sem tipo falharia
+--   due_date  TIMESTAMPTZ -> a UI grava e lê 'YYYY-MM-DD'
+ALTER TABLE public.demands ALTER COLUMN client_id DROP NOT NULL;
+ALTER TABLE public.demands ALTER COLUMN type      DROP NOT NULL;
+
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'demands'
+          AND column_name = 'due_date' AND data_type <> 'date'
+    ) THEN
+        ALTER TABLE public.demands
+            ALTER COLUMN due_date TYPE DATE USING due_date::date;
+    END IF;
+END $$;
+
+-- Defaults nas colunas legadas NOT NULL: sem isto, um INSERT que omita
+-- title/status/priority (ou os mande nulos) é recusado.
+ALTER TABLE public.demands ALTER COLUMN title    SET DEFAULT '';
+ALTER TABLE public.demands ALTER COLUMN status   SET DEFAULT 'pending';
+ALTER TABLE public.demands ALTER COLUMN priority SET DEFAULT 'none';
+
+
+-- Normaliza linhas legadas antes de aplicar as constraints
+UPDATE public.demands SET status = 'pending' WHERE status IS NULL OR status = '';
+UPDATE public.demands SET priority = 'none'  WHERE priority IS NULL OR priority = '';
+-- Preserva status legados que não estão no seed (ex.: 'in_progress', 'done',
+-- 'cancelled'), senão a FK abaixo rejeitaria essas linhas. A categoria é
+-- inferida pelo slug; qualquer coisa desconhecida entra como 'ativo'.
+INSERT INTO public.demand_statuses (id, label, color, category, position)
+SELECT
+    s.status,
+    initcap(replace(s.status, '_', ' ')),
+    '#8a8a83',
+    CASE
+        WHEN s.status IN ('done', 'completed', 'cancelled', 'archived') THEN 'fechado'
+        WHEN s.status IN ('pending', 'backlog', 'todo')                 THEN 'nao_iniciado'
+        ELSE 'ativo'
+    END,
+    90 + row_number() OVER (ORDER BY s.status)
+FROM (SELECT DISTINCT status FROM public.demands WHERE status IS NOT NULL AND status <> '') s
+ON CONFLICT (id) DO NOTHING;
+
+-- Migra o responsável legado (coluna singular) para o array
+UPDATE public.demands
+SET assignee_ids = ARRAY[assigned_to]
+WHERE assigned_to IS NOT NULL AND assignee_ids = '{}';
+
+-- Recria só as constraints que queremos (as antigas foram removidas acima).
+-- ON UPDATE CASCADE: renomear o slug de um status leva as demandas junto.
+ALTER TABLE public.demands DROP CONSTRAINT IF EXISTS demands_status_fkey;
+ALTER TABLE public.demands
+    ADD CONSTRAINT demands_status_fkey
+    FOREIGN KEY (status) REFERENCES public.demand_statuses(id) ON UPDATE CASCADE;
+
+ALTER TABLE public.demands
+    ADD CONSTRAINT demands_priority_check
+    CHECK (priority IN ('none', 'low', 'medium', 'high', 'urgent'));
+
+ALTER TABLE public.demands
+    ADD CONSTRAINT demands_scope_check CHECK (scope IN ('client', 'internal'));
+
+ALTER TABLE public.demands
+    ADD CONSTRAINT demands_status_category_check
+    CHECK (status_category IN ('nao_iniciado', 'ativo', 'fechado'));
+
+CREATE INDEX IF NOT EXISTS demands_client_id_idx  ON public.demands (client_id);
+CREATE INDEX IF NOT EXISTS demands_status_idx     ON public.demands (status);
+CREATE INDEX IF NOT EXISTS demands_due_date_idx   ON public.demands (due_date);
+CREATE INDEX IF NOT EXISTS demands_assignees_idx  ON public.demands USING GIN (assignee_ids);
+
+
+-- -------------------------------------------------------------
+-- 11.3 Trigger: mantém as colunas derivadas em sincronia
+-- É isto que preserva os 6 pontos de leitura legados
+-- (status/assigned_to) sem que a UI precise saber deles.
+-- -------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION public.demands_sync_derived()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+DECLARE
+    cat TEXT;
+BEGIN
+    SELECT s.category INTO cat FROM public.demand_statuses s WHERE s.id = NEW.status;
+    NEW.status_category := COALESCE(cat, 'ativo');
+
+    IF NEW.status_category = 'fechado' THEN
+        NEW.completed_at := COALESCE(NEW.completed_at, NOW());
+    ELSE
+        NEW.completed_at := NULL;
+    END IF;
+
+    NEW.assigned_to := NEW.assignee_ids[1];
+    NEW.scope := CASE WHEN NEW.client_id IS NULL THEN 'internal' ELSE 'client' END;
+    NEW.updated_at := NOW();
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS demands_sync_derived ON public.demands;
+CREATE TRIGGER demands_sync_derived
+    BEFORE INSERT OR UPDATE ON public.demands
+    FOR EACH ROW EXECUTE FUNCTION public.demands_sync_derived();
+
+-- Reprocessa as linhas existentes uma vez (dispara a trigger)
+UPDATE public.demands SET title = title;
+
+
+-- -------------------------------------------------------------
+-- 11.4 Comentários
+-- -------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS public.demand_comments (
+    id         UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    demand_id  UUID NOT NULL REFERENCES public.demands(id) ON DELETE CASCADE,
+    user_id    UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    body       TEXT NOT NULL DEFAULT '',
+    edited     BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS demand_comments_demand_idx ON public.demand_comments (demand_id, created_at);
+
+DROP TRIGGER IF EXISTS demand_comments_set_updated_at ON public.demand_comments;
+CREATE TRIGGER demand_comments_set_updated_at
+    BEFORE UPDATE ON public.demand_comments
+    FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+
+-- -------------------------------------------------------------
+-- 11.5 Anexos (da demanda ou de um comentário)
+-- -------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS public.demand_attachments (
+    id         UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    demand_id  UUID NOT NULL REFERENCES public.demands(id) ON DELETE CASCADE,
+    comment_id UUID REFERENCES public.demand_comments(id) ON DELETE CASCADE,
+    user_id    UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+    name       TEXT NOT NULL DEFAULT '',
+    file_path  TEXT NOT NULL,
+    file_type  TEXT,
+    size       BIGINT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS demand_attachments_demand_idx  ON public.demand_attachments (demand_id);
+CREATE INDEX IF NOT EXISTS demand_attachments_comment_idx ON public.demand_attachments (comment_id);
+
+
+-- -------------------------------------------------------------
+-- 11.6 RLS
+-- ATENÇÃO: `demands` é lida pelo portal do cliente com o MESMO
+-- client anon da equipe. Uma policy `auth.uid() IS NOT NULL`
+-- vazaria demandas internas e de outros clientes.
+-- -------------------------------------------------------------
+
+-- Membro da equipe = existe linha correspondente em public.users
+CREATE OR REPLACE FUNCTION public.is_team_member()
+RETURNS BOOLEAN LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+    SELECT EXISTS (SELECT 1 FROM public.users u WHERE u.id = auth.uid());
+$$;
+
+-- Demandas visíveis para o usuário logado (equipe: todas; cliente: as suas)
+CREATE OR REPLACE FUNCTION public.can_see_demand(d_client_id UUID)
+RETURNS BOOLEAN LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+    SELECT public.is_team_member()
+        OR (d_client_id IS NOT NULL AND d_client_id IN (
+                SELECT c.id FROM public.clients c
+                WHERE c.id = auth.uid() OR c.portal_email = (auth.jwt() ->> 'email')
+           ));
+$$;
+
+ALTER TABLE public.demands ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "demands_select" ON public.demands;
+CREATE POLICY "demands_select" ON public.demands
+    FOR SELECT USING (public.can_see_demand(client_id));
+
+DROP POLICY IF EXISTS "demands_insert" ON public.demands;
+CREATE POLICY "demands_insert" ON public.demands
+    FOR INSERT WITH CHECK (public.is_team_member());
+
+DROP POLICY IF EXISTS "demands_update" ON public.demands;
+CREATE POLICY "demands_update" ON public.demands
+    FOR UPDATE USING (public.is_team_member());
+
+DROP POLICY IF EXISTS "demands_delete" ON public.demands;
+CREATE POLICY "demands_delete" ON public.demands
+    FOR DELETE USING (public.is_team_member());
+
+ALTER TABLE public.demand_comments ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "demand_comments_select" ON public.demand_comments;
+CREATE POLICY "demand_comments_select" ON public.demand_comments
+    FOR SELECT USING (
+        EXISTS (SELECT 1 FROM public.demands d
+                WHERE d.id = demand_id AND public.can_see_demand(d.client_id))
+    );
+
+DROP POLICY IF EXISTS "demand_comments_insert" ON public.demand_comments;
+CREATE POLICY "demand_comments_insert" ON public.demand_comments
+    FOR INSERT WITH CHECK (user_id = auth.uid() AND public.is_team_member());
+
+DROP POLICY IF EXISTS "demand_comments_update" ON public.demand_comments;
+CREATE POLICY "demand_comments_update" ON public.demand_comments
+    FOR UPDATE USING (user_id = auth.uid());
+
+DROP POLICY IF EXISTS "demand_comments_delete" ON public.demand_comments;
+CREATE POLICY "demand_comments_delete" ON public.demand_comments
+    FOR DELETE USING (user_id = auth.uid());
+
+ALTER TABLE public.demand_attachments ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "demand_attachments_select" ON public.demand_attachments;
+CREATE POLICY "demand_attachments_select" ON public.demand_attachments
+    FOR SELECT USING (
+        EXISTS (SELECT 1 FROM public.demands d
+                WHERE d.id = demand_id AND public.can_see_demand(d.client_id))
+    );
+
+DROP POLICY IF EXISTS "demand_attachments_insert" ON public.demand_attachments;
+CREATE POLICY "demand_attachments_insert" ON public.demand_attachments
+    FOR INSERT WITH CHECK (public.is_team_member());
+
+DROP POLICY IF EXISTS "demand_attachments_delete" ON public.demand_attachments;
+CREATE POLICY "demand_attachments_delete" ON public.demand_attachments
+    FOR DELETE USING (public.is_team_member());
+
+
+-- -------------------------------------------------------------
+-- 11.7 Bucket de anexos
+-- -------------------------------------------------------------
+
+-- storage.objects pertence a supabase_storage_admin: em alguns projetos o
+-- papel do SQL Editor não consegue criar policies nela. Se isso acontecer o
+-- bloco avisa e segue — o bucket e as policies podem ser criados na mão em
+-- Storage → New bucket ("demand-attachments", público) → Policies.
+DO $$
+BEGIN
+    INSERT INTO storage.buckets (id, name, public)
+    VALUES ('demand-attachments', 'demand-attachments', true)
+    ON CONFLICT (id) DO NOTHING;
+
+    DROP POLICY IF EXISTS "demand_attachments_storage_select" ON storage.objects;
+    CREATE POLICY "demand_attachments_storage_select" ON storage.objects
+        FOR SELECT USING (bucket_id = 'demand-attachments');
+
+    DROP POLICY IF EXISTS "demand_attachments_storage_insert" ON storage.objects;
+    CREATE POLICY "demand_attachments_storage_insert" ON storage.objects
+        FOR INSERT WITH CHECK (bucket_id = 'demand-attachments' AND auth.uid() IS NOT NULL);
+
+    DROP POLICY IF EXISTS "demand_attachments_storage_delete" ON storage.objects;
+    CREATE POLICY "demand_attachments_storage_delete" ON storage.objects
+        FOR DELETE USING (bucket_id = 'demand-attachments' AND auth.uid() IS NOT NULL);
+EXCEPTION WHEN insufficient_privilege THEN
+    RAISE WARNING 'Sem permissão para configurar o bucket demand-attachments. Crie-o pelo Dashboard (Storage → New bucket, público) e libere INSERT/SELECT/DELETE para usuários autenticados.';
+END $$;
+
+
+-- Atualiza o cache do schema no Supabase
+NOTIFY pgrst, 'reload schema';
+
+
+-- =============================================================
+-- BLOCO 12: NOTAS A PARTIR DE ÁUDIO (transcrição + organização IA)
+-- Extensão da tabela `notes` (BLOCO 7) — não cria tabela nova.
+-- raw_transcript é o texto bruto devolvido pelo Whisper (Groq); é
+-- persistido separado de `content` para permitir reprocessar a
+-- organização (IA) sem re-transcrever o áudio (etapa cara/lenta).
+-- =============================================================
+
+ALTER TABLE public.notes ADD COLUMN IF NOT EXISTS raw_transcript    TEXT;
+ALTER TABLE public.notes ADD COLUMN IF NOT EXISTS audio_path        TEXT;
+ALTER TABLE public.notes ADD COLUMN IF NOT EXISTS transcribed_at    TIMESTAMPTZ;
+ALTER TABLE public.notes ADD COLUMN IF NOT EXISTS last_organized_at TIMESTAMPTZ;
+
+-- -------------------------------------------------------------
+-- 12.1 Bucket de áudio de reuniões
+-- Privado (diferente de notes-attachments): o áudio pode conter
+-- conversas sensíveis de cliente. O acesso da Groq à URL usa uma
+-- signed URL de curta duração gerada no momento da transcrição
+-- (ver src/lib/notesAudio.ts), não uma URL pública.
+-- -------------------------------------------------------------
+
+DO $$
+BEGIN
+    INSERT INTO storage.buckets (id, name, public)
+    VALUES ('notes-audio', 'notes-audio', false)
+    ON CONFLICT (id) DO NOTHING;
+
+    DROP POLICY IF EXISTS "notes_audio_storage_select" ON storage.objects;
+    CREATE POLICY "notes_audio_storage_select" ON storage.objects
+        FOR SELECT USING (bucket_id = 'notes-audio' AND auth.uid() IS NOT NULL);
+
+    DROP POLICY IF EXISTS "notes_audio_storage_insert" ON storage.objects;
+    CREATE POLICY "notes_audio_storage_insert" ON storage.objects
+        FOR INSERT WITH CHECK (bucket_id = 'notes-audio' AND auth.uid() IS NOT NULL);
+
+    DROP POLICY IF EXISTS "notes_audio_storage_delete" ON storage.objects;
+    CREATE POLICY "notes_audio_storage_delete" ON storage.objects
+        FOR DELETE USING (bucket_id = 'notes-audio' AND auth.uid() IS NOT NULL);
+EXCEPTION WHEN insufficient_privilege THEN
+    RAISE WARNING 'Sem permissão para configurar o bucket notes-audio. Crie-o pelo Dashboard (Storage → New bucket, privado) e libere INSERT/SELECT/DELETE para usuários autenticados.';
+END $$;
+
+
 -- Atualiza o cache do schema no Supabase
 NOTIFY pgrst, 'reload schema';

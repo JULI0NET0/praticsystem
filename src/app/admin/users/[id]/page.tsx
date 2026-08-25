@@ -44,8 +44,11 @@ const DEMAND_STATUS_COLOR: Record<string, string> = {
   cancelled: "var(--text-tertiary)",
 };
 
-const DONE_STATUSES = ["done", "completed"];
-const ACTIVE_STATUSES = ["pending", "in_progress", "in_production", "in_review"];
+// Os status são personalizáveis em /admin/demandas: a categoria
+// (status_category) é o que classifica aberto x concluído. Os mapas acima
+// ficam só como fallback para linhas antigas sem status cadastrado.
+const isDone = (demand: { status_category?: string; status?: string }) =>
+  demand.status_category === "fechado" || ["done", "completed"].includes(demand.status ?? "");
 
 export default function UserDetailPage() {
   const { id } = useParams();
@@ -103,10 +106,11 @@ export default function UserDetailPage() {
   };
 
   const fetchDemands = async (userId: string) => {
+    // assignee_ids é array — uma demanda pode ter vários responsáveis
     const { data } = await supabase
       .from("demands")
-      .select("*")
-      .eq("assigned_to", userId)
+      .select("*, demand_statuses(label, color)")
+      .contains("assignee_ids", [userId])
       .order("created_at", { ascending: false });
     if (data) setUserDemands(data);
   };
@@ -184,8 +188,8 @@ export default function UserDetailPage() {
   }
 
   const userRole = roles.find((r) => r.id === user.role);
-  const activeDemands = userDemands.filter((d) => ACTIVE_STATUSES.includes(d.status));
-  const doneDemands = userDemands.filter((d) => DONE_STATUSES.includes(d.status));
+  const activeDemands = userDemands.filter((d) => !isDone(d));
+  const doneDemands = userDemands.filter((d) => isDone(d));
   const custoMensal = userExpenses
     .filter((e: any) => e.status === "active" && e.recurrence === "monthly")
     .reduce((s: number, e: any) => s + Number(e.amount), 0);
@@ -374,8 +378,16 @@ export default function UserDetailPage() {
                 </p>
               ) : (
                 userDemands.slice(0, 8).map((demand) => {
-                  const color = DEMAND_STATUS_COLOR[demand.status] || "var(--text-secondary)";
-                  const label = DEMAND_STATUS_LABEL[demand.status] || demand.status;
+                  // Rótulo/cor vêm de demand_statuses; os mapas antigos só
+                  // atendem linhas anteriores à área de Demandas.
+                  const color =
+                    demand.demand_statuses?.color ||
+                    DEMAND_STATUS_COLOR[demand.status] ||
+                    "var(--text-secondary)";
+                  const label =
+                    demand.demand_statuses?.label ||
+                    DEMAND_STATUS_LABEL[demand.status] ||
+                    demand.status;
                   return (
                     <div key={demand.id} style={{
                       padding: "14px 16px", borderRadius: "14px", border: "1px solid var(--border)",
