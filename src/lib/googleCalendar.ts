@@ -19,29 +19,42 @@ export const CATEGORY_GOOGLE_ACCOUNT: Record<string, GoogleAccount> = {
   payment: 'agenciapratic',
 };
 
-const REFRESH_TOKEN_BY_ACCOUNT: Record<GoogleAccount, string> = {
-  agenciapratic: process.env.GOOGLE_REFRESH_TOKEN_AGENCIAPRATIC || '',
-  praticlabs: process.env.GOOGLE_REFRESH_TOKEN_PRATICLABS || '',
-};
+function getClientId(): string {
+  return (process.env.GOOGLE_OAUTH_CLIENT_ID || '').trim();
+}
+
+function getClientSecret(): string {
+  return (process.env.GOOGLE_OAUTH_CLIENT_SECRET || '').trim();
+}
+
+function getRefreshToken(account: GoogleAccount): string {
+  if (account === 'agenciapratic') {
+    return (process.env.GOOGLE_REFRESH_TOKEN_AGENCIAPRATIC || '').trim();
+  }
+  if (account === 'praticlabs') {
+    return (process.env.GOOGLE_REFRESH_TOKEN_PRATICLABS || '').trim();
+  }
+  return '';
+}
 
 const accessTokenCache: Partial<Record<GoogleAccount, { token: string; expiresAt: number }>> = {};
 
 export function isAccountConfigured(account: GoogleAccount): boolean {
-  const refreshToken = REFRESH_TOKEN_BY_ACCOUNT[account];
-  return Boolean(GOOGLE_OAUTH_CLIENT_ID && GOOGLE_OAUTH_CLIENT_SECRET && refreshToken);
+  return Boolean(getClientId() && getClientSecret() && getRefreshToken(account));
 }
 
 export function isOAuthConfigured(): boolean {
-  return Boolean(GOOGLE_OAUTH_CLIENT_ID && GOOGLE_OAUTH_CLIENT_SECRET);
+  return Boolean(getClientId() && getClientSecret());
 }
 
 export function getGoogleAuthUrl(account: GoogleAccount, redirectUri: string): string {
-  if (!GOOGLE_OAUTH_CLIENT_ID) {
+  const clientId = getClientId();
+  if (!clientId) {
     throw new Error('GOOGLE_OAUTH_CLIENT_ID não está configurado nas variáveis de ambiente.');
   }
 
   const params = new URLSearchParams({
-    client_id: GOOGLE_OAUTH_CLIENT_ID,
+    client_id: clientId,
     redirect_uri: redirectUri,
     response_type: 'code',
     scope: 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/userinfo.email',
@@ -58,7 +71,9 @@ export async function exchangeGoogleAuthCode(code: string, redirectUri: string):
   refresh_token?: string;
   expires_in: number;
 }> {
-  if (!GOOGLE_OAUTH_CLIENT_ID || !GOOGLE_OAUTH_CLIENT_SECRET) {
+  const clientId = getClientId();
+  const clientSecret = getClientSecret();
+  if (!clientId || !clientSecret) {
     throw new Error('Credenciais GOOGLE_OAUTH_CLIENT_ID e GOOGLE_OAUTH_CLIENT_SECRET não configuradas.');
   }
 
@@ -66,8 +81,8 @@ export async function exchangeGoogleAuthCode(code: string, redirectUri: string):
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
-      client_id: GOOGLE_OAUTH_CLIENT_ID,
-      client_secret: GOOGLE_OAUTH_CLIENT_SECRET,
+      client_id: clientId,
+      client_secret: clientSecret,
       code,
       grant_type: 'authorization_code',
       redirect_uri: redirectUri,
@@ -88,8 +103,11 @@ async function getAccessToken(account: GoogleAccount): Promise<string> {
     return cached.token;
   }
 
-  const refreshToken = REFRESH_TOKEN_BY_ACCOUNT[account];
-  if (!GOOGLE_OAUTH_CLIENT_ID || !GOOGLE_OAUTH_CLIENT_SECRET || !refreshToken) {
+  const clientId = getClientId();
+  const clientSecret = getClientSecret();
+  const refreshToken = getRefreshToken(account);
+
+  if (!clientId || !clientSecret || !refreshToken) {
     throw new Error(`Credenciais do Google não configuradas para a conta "${account}". Verifique GOOGLE_REFRESH_TOKEN_${account.toUpperCase()}`);
   }
 
@@ -97,14 +115,15 @@ async function getAccessToken(account: GoogleAccount): Promise<string> {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
-      client_id: GOOGLE_OAUTH_CLIENT_ID,
-      client_secret: GOOGLE_OAUTH_CLIENT_SECRET,
+      client_id: clientId,
+      client_secret: clientSecret,
       refresh_token: refreshToken,
       grant_type: 'refresh_token',
     }),
   });
 
   if (!res.ok) {
+    delete accessTokenCache[account];
     const body = await res.text();
     throw new Error(`Falha ao renovar token do Google (${account}): ${res.status} ${body}`);
   }

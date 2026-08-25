@@ -405,9 +405,9 @@ export default function SchedulePage() {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error || `Erro ${res.status}`);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Erro ao sincronizar com Google Agenda:', err);
-      showToast('Compromisso salvo, mas falhou a sincronização com o Google Agenda', 'info');
+      showToast(err?.message ? `Google Agenda: ${err.message}` : 'Falha ao sincronizar com Google Agenda', 'info');
     }
   };
 
@@ -1235,7 +1235,21 @@ export default function SchedulePage() {
                     </span>
                   </div>
 
-                  {!googleStatus?.accounts?.agenciapratic?.configured && (
+                  {googleStatus?.accounts?.agenciapratic?.configured ? (
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '6px', borderTop: '1px solid var(--color-border-subtle)' }}>
+                      <a
+                        href="/api/agenda/google-auth?account=agenciapratic"
+                        style={{
+                          fontSize: '0.72rem',
+                          color: 'var(--color-primary)',
+                          textDecoration: 'underline',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Reconectar / Renovar Autorização
+                      </a>
+                    </div>
+                  ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', paddingTop: '8px', borderTop: '1px solid var(--color-border-subtle)' }}>
                       <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
                         Para conectar o Google Agenda desta conta, clique no botão abaixo para autorizar no Google:
