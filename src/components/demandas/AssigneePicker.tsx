@@ -1,9 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Check, Users } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useMemo } from "react";
+import { Users } from "lucide-react";
+import Combobox, { type ComboboxOption } from "@/components/ui/Combobox";
 import { useDemandas } from "./DemandasProvider";
+
+/** Opção sintética: "todo o time" vive junto dos nomes, não num toggle à parte. */
+const ALL_TEAM = "__all_team__";
 
 /** Avatar circular com iniciais como fallback — mesmo padrão de ChatMessageItem. */
 export function UserAvatar({
@@ -77,8 +80,8 @@ export function AssigneeStack({
           fontSize: "0.66rem",
           fontWeight: 700,
           color: "var(--accent)",
-          background: "color-mix(in oklab, var(--accent) 10%, transparent)",
-          border: "1px solid color-mix(in oklab, var(--accent) 22%, transparent)",
+          background: "color-mix(in oklab, var(--accent) 12%, transparent)",
+          border: "1px solid color-mix(in oklab, var(--accent) 28%, transparent)",
           whiteSpace: "nowrap",
         }}
       >
@@ -138,163 +141,73 @@ interface Props {
 
 export default function AssigneePicker({ assigneeIds, allTeam, onChange }: Props) {
   const { users } = useDemandas();
-  const [open, setOpen] = useState(false);
-  const wrapperRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!open) return;
-    const onPointerDown = (event: MouseEvent) => {
-      if (!wrapperRef.current?.contains(event.target as Node)) setOpen(false);
-    };
-    const onEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
-    };
-    document.addEventListener("mousedown", onPointerDown);
-    document.addEventListener("keydown", onEscape);
-    return () => {
-      document.removeEventListener("mousedown", onPointerDown);
-      document.removeEventListener("keydown", onEscape);
-    };
-  }, [open]);
+  const options = useMemo<ComboboxOption[]>(
+    () => [
+      {
+        value: ALL_TEAM,
+        label: "Time todo",
+        icon: <Users size={15} color="var(--accent)" />,
+        description: "Todos os membros da equipe",
+      },
+      ...users.map((user) => ({
+        value: user.id,
+        label: user.name || user.email,
+        keywords: user.email,
+        icon: (
+          <UserAvatar
+            name={user.name || user.email}
+            avatarUrl={user.avatar_url ?? user.avatarUrl}
+            size={20}
+            ring={false}
+          />
+        ),
+      })),
+    ],
+    [users],
+  );
 
-  const toggleUser = (id: string) => {
-    const next = assigneeIds.includes(id)
-      ? assigneeIds.filter((x) => x !== id)
-      : [...assigneeIds, id];
-    onChange(next, false);
+  const value = allTeam ? [ALL_TEAM] : assigneeIds;
+
+  const handleChange = (next: string[]) => {
+    const pickedTeam = next.includes(ALL_TEAM);
+    // "Time todo" é exclusivo: marcar limpa os nomes, marcar um nome o desmarca
+    if (pickedTeam && !allTeam) {
+      onChange([], true);
+      return;
+    }
+    onChange(next.filter((id) => id !== ALL_TEAM), false);
   };
 
-  const summary = allTeam
-    ? "Time todo"
-    : assigneeIds.length === 0
-      ? "Ninguém"
-      : `${assigneeIds.length} responsáve${assigneeIds.length > 1 ? "is" : "l"}`;
-
   return (
-    <div ref={wrapperRef} style={{ position: "relative" }}>
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          padding: "6px 10px",
-          borderRadius: 10,
-          border: "1px solid var(--border)",
-          background: "var(--color-surface-sunken)",
-          cursor: "pointer",
-          fontSize: "0.8rem",
-          fontWeight: 600,
-          color: "var(--text-secondary)",
-          width: "100%",
-        }}
-      >
-        {allTeam || assigneeIds.length === 0 ? (
-          <Users size={14} />
-        ) : (
-          <AssigneeStack assigneeIds={assigneeIds} size={20} max={3} />
-        )}
-        <span>{summary}</span>
-      </button>
-
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, y: -6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            className="glass-card"
-            style={{
-              position: "absolute",
-              top: "calc(100% + 6px)",
-              left: 0,
-              zIndex: 20,
-              padding: 6,
-              width: "min(280px, 90vw)",
-              maxHeight: 300,
-              overflowY: "auto",
-              display: "flex",
-              flexDirection: "column",
-              gap: 2,
-            }}
-          >
-            <PickerRow
-              label="Time todo"
-              active={allTeam}
-              onClick={() => onChange([], !allTeam)}
-              icon={<Users size={16} color="var(--accent)" />}
-            />
-            <div style={{ height: 1, background: "var(--border)", margin: "4px 0" }} />
-            {users.map((user) => (
-              <PickerRow
-                key={user.id}
-                label={user.name || user.email}
-                active={!allTeam && assigneeIds.includes(user.id)}
-                onClick={() => toggleUser(user.id)}
-                icon={
-                  <UserAvatar
-                    name={user.name || user.email}
-                    avatarUrl={user.avatar_url ?? user.avatarUrl}
-                    size={22}
-                    ring={false}
-                  />
-                }
-              />
-            ))}
-            {users.length === 0 && (
-              <span
-                style={{
-                  padding: 10,
-                  fontSize: "0.76rem",
-                  color: "var(--text-tertiary)",
-                }}
-              >
-                Nenhum membro da equipe carregado.
-              </span>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
-
-function PickerRow({
-  label,
-  active,
-  onClick,
-  icon,
-}: {
-  label: string;
-  active: boolean;
-  onClick: () => void;
-  icon: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 10,
-        padding: "7px 8px",
-        borderRadius: 8,
-        border: "none",
-        cursor: "pointer",
-        textAlign: "left",
-        background: active ? "var(--color-surface-sunken)" : "transparent",
-        color: "var(--text-primary)",
-        fontSize: "0.82rem",
-        fontWeight: 600,
-      }}
-    >
-      {icon}
-      <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>
-        {label}
-      </span>
-      {active && <Check size={15} color="var(--accent)" />}
-    </button>
+    <Combobox
+      multiple
+      value={value}
+      onChange={handleChange}
+      options={options}
+      ariaLabel="Responsáveis"
+      placeholder="Ninguém"
+      searchPlaceholder="Buscar pessoa…"
+      renderTrigger={({ selected }) => (
+        <>
+          {allTeam ? (
+            <Users size={14} color="var(--accent)" />
+          ) : selected.length ? (
+            <AssigneeStack assigneeIds={assigneeIds} size={20} max={3} />
+          ) : (
+            <Users size={14} />
+          )}
+          <span className="combobox-trigger-label">
+            {allTeam
+              ? "Time todo"
+              : selected.length === 0
+                ? "Ninguém"
+                : selected.length === 1
+                  ? selected[0].label
+                  : `${selected.length} responsáveis`}
+          </span>
+        </>
+      )}
+    />
   );
 }

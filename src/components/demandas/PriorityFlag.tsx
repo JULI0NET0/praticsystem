@@ -5,6 +5,7 @@ import { tint } from "@/lib/tint";
 import {
   PRIORITY_COLORS,
   PRIORITY_LABELS,
+  PRIORITY_SHORT,
   type DemandPriority,
 } from "@/types/demandas";
 
@@ -27,10 +28,23 @@ export function PriorityFlag({
   );
 }
 
-/** Pílula com rótulo, usada no card do Kanban e no drawer. */
-export function PriorityBadge({ priority }: { priority: DemandPriority }) {
+/**
+ * Pílula com rótulo. `urgent` vai sólida — é o único nível que deve
+ * saltar da tela; os demais usam wash reforçado sobre o pergaminho.
+ */
+export function PriorityBadge({
+  priority,
+  compact = false,
+}: {
+  priority: DemandPriority;
+  compact?: boolean;
+}) {
   if (priority === "none") return null;
+
   const color = PRIORITY_COLORS[priority];
+  const solid = priority === "urgent";
+  const label = compact ? PRIORITY_SHORT[priority] : PRIORITY_LABELS[priority];
+
   return (
     <span
       style={{
@@ -39,17 +53,17 @@ export function PriorityBadge({ priority }: { priority: DemandPriority }) {
         gap: 4,
         padding: "2px 8px",
         borderRadius: "var(--radius-badge)",
-        fontSize: "0.62rem",
+        fontSize: "0.64rem",
         fontWeight: 800,
         letterSpacing: "0.02em",
-        color,
-        background: tint(color, 10),
-        border: `1px solid ${tint(color, 20)}`,
+        color: solid ? "#fff" : color,
+        background: solid ? color : tint(color, 18),
+        border: `1px solid ${solid ? color : tint(color, 38)}`,
         whiteSpace: "nowrap",
       }}
     >
-      <Flag size={10} color={color} fill={color} />
-      {PRIORITY_LABELS[priority]}
+      <Flag size={10} color={solid ? "#fff" : color} fill={solid ? "#fff" : color} />
+      {label}
     </span>
   );
 }

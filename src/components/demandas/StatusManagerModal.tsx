@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
 import DialogShell from "@/components/DialogShell";
+import Combobox, { type ComboboxOption } from "@/components/ui/Combobox";
 import { CATEGORICAL_RAMP } from "@/lib/statusColors";
 import type { DemandStatus, DemandStatusCategory } from "@/types/demandas";
 import { useDemandas, slugifyStatus } from "./DemandasProvider";
@@ -14,6 +15,11 @@ const CATEGORY_LABELS: Record<DemandStatusCategory, string> = {
 };
 
 const CATEGORIES: DemandStatusCategory[] = ["nao_iniciado", "ativo", "fechado"];
+
+const CATEGORY_OPTIONS: ComboboxOption[] = CATEGORIES.map((category) => ({
+  value: category,
+  label: CATEGORY_LABELS[category],
+}));
 
 interface Props {
   isOpen: boolean;
@@ -136,29 +142,15 @@ export default function StatusManagerModal({ isOpen, onClose }: Props) {
                 }}
               />
 
-              <select
+              <Combobox
                 value={status.category}
-                onChange={(event) =>
-                  patch(status, { category: event.target.value as DemandStatusCategory })
+                onChange={(value) =>
+                  value && patch(status, { category: value as DemandStatusCategory })
                 }
-                aria-label={`Categoria de ${status.label}`}
-                style={{
-                  padding: "6px 8px",
-                  borderRadius: 8,
-                  border: "1px solid var(--border)",
-                  background: "var(--color-surface-raised)",
-                  color: "var(--text-primary)",
-                  fontSize: "0.78rem",
-                  fontWeight: 600,
-                  fontFamily: "inherit",
-                }}
-              >
-                {CATEGORIES.map((category) => (
-                  <option key={category} value={category}>
-                    {CATEGORY_LABELS[category]}
-                  </option>
-                ))}
-              </select>
+                options={CATEGORY_OPTIONS}
+                ariaLabel={`Categoria de ${status.label}`}
+                panelWidth={210}
+              />
 
               <span
                 title={`${inUse} demanda(s) neste status`}

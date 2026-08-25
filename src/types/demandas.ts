@@ -16,6 +16,9 @@ export type DemandScope = 'client' | 'internal';
 
 export type DemandView = 'list' | 'board';
 
+/** Como a Lista agrupa: por prazo (padrão) ou por status (espelhando o Kanban). */
+export type DemandListGroupBy = 'due' | 'status';
+
 /** Documento TipTap, mesmo formato de notes.content. */
 export type DemandDescription = Record<string, unknown> | null;
 
@@ -123,14 +126,49 @@ export const PRIORITY_LABELS: Record<DemandPriority, string> = {
   urgent: 'Urgente',
 };
 
-/** Cores literais — as pílulas fazem `${color}1A`, igual a src/lib/statusColors.ts. */
+/**
+ * Cores literais (não tokens): as pílulas derivam o wash com `tint()`.
+ * Saturadas de propósito — a rampa anterior era dessaturada demais e as
+ * quatro prioridades ficavam indistinguíveis de relance na lista.
+ * `none` continua neutro: ausência de prioridade não deve competir.
+ */
 export const PRIORITY_COLORS: Record<DemandPriority, string> = {
   none: '#8a8a83',
-  low: '#6a7f8f',
-  medium: '#c2833a',
-  high: '#d97757',
-  urgent: '#c0503a',
+  low: '#4f7fb8',
+  medium: '#c98a1e',
+  high: '#e0642f',
+  urgent: '#c0271b',
 };
+
+/** Atalho digitável no título e rótulo compacto (estilo Todoist). */
+export const PRIORITY_SHORT: Record<DemandPriority, string> = {
+  urgent: 'P1',
+  high: 'P2',
+  medium: 'P3',
+  low: 'P4',
+  none: 'P5',
+};
+
+/** 'p1' -> 'urgent'. Aceita P1..P5 e os nomes por extenso. */
+export function parsePriorityToken(token: string): DemandPriority | null {
+  const key = token.trim().toLowerCase();
+  const byShort: Record<string, DemandPriority> = {
+    p1: 'urgent',
+    p2: 'high',
+    p3: 'medium',
+    p4: 'low',
+    p5: 'none',
+  };
+  if (byShort[key]) return byShort[key];
+  const byName: Record<string, DemandPriority> = {
+    urgente: 'urgent',
+    alta: 'high',
+    media: 'medium',
+    baixa: 'low',
+    nenhuma: 'none',
+  };
+  return byName[key] ?? null;
+}
 
 export function clientLabel(client: DemandClientRef | undefined | null): string {
   if (!client) return '';

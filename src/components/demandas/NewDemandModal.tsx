@@ -1,19 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { Building2, Lock } from "lucide-react";
 import DialogShell from "@/components/DialogShell";
+import Combobox, { type ComboboxOption } from "@/components/ui/Combobox";
 import { useAuth } from "@/hooks/useAuth";
-import { parseDueDateInput, formatDueDateLabel } from "@/lib/dueDate";
+import { formatDueDateLabel } from "@/lib/dueDate";
+import { parseQuickInput, type QuickCatalogs, type QuickParseResult } from "@/lib/quickParse";
 import {
   clientLabel,
+  PRIORITY_COLORS,
   PRIORITY_LABELS,
   type Demand,
   type DemandPriority,
 } from "@/types/demandas";
 import { useDemandas } from "./DemandasProvider";
 import AssigneePicker from "./AssigneePicker";
+import QuickAddInput from "./QuickAddInput";
+import { PriorityFlag } from "./PriorityFlag";
 
 const PRIORITIES: DemandPriority[] = ["none", "low", "medium", "high", "urgent"];
+
+/** Campos que o usuário mexeu à mão — o texto do título não os sobrescreve. */
+type TouchedField = "client" | "assignees" | "priority" | "due";
 
 interface Props {
   isOpen: boolean;
@@ -32,50 +41,81 @@ export default function NewDemandModal({
   const { currentUser } = useAuth();
   const { clients, statuses, createDemand } = useDemandas();
 
-  const [title, setTitle] = useState("");
-  const [clientId, setClientId] = useState<string>("");
+  const [text, setText] = useState("");
+  const [clientId, setClientId] = useState<string | null>(null);
   const [statusId, setStatusId] = useState<string>("");
   const [priority, setPriority] = useState<DemandPriority>("none");
   const [assigneeIds, setAssigneeIds] = useState<string[]>([]);
   const [allTeam, setAllTeam] = useState(false);
-  const [dueText, setDueText] = useState("");
+  const [dueDate, setDueDate] = useState("");
+  const [dueTime, setDueTime] = useState("");
+  const [touched, setTouched] = useState<Set<TouchedField>>(new Set());
   const [saving, setSaving] = useState(false);
   const [wasOpen, setWasOpen] = useState(false);
 
   // Reabrir sempre parte do zero, com quem criou já atribuído.
-  // Ajuste durante o render (padrão do React para estado derivado de props),
-  // em vez de um efeito com setState.
+  // Ajuste durante o render (padrão do React para estado derivado de props).
   if (isOpen !== wasOpen) {
     setWasOpen(isOpen);
     if (isOpen) {
-      setTitle("");
-      setClientId(defaultClientId ?? "");
+      setText("");
+      setClientId(defaultClientId ?? null);
       setStatusId(statuses[0]?.id ?? "");
       setPriority("none");
       setAssigneeIds(currentUser ? [currentUser.id] : []);
       setAllTeam(false);
-      setDueText("");
+      setDueDate("");
+      setDueTime("");
+      setTouched(new Set());
+      setSaving(false);
     }
   }
 
-  const parsedDue = parseDueDateInput(dueText);
-  const dueHint = dueText.trim()
-    ? parsedDue
-      ? formatDueDateLabel(parsedDue).label
-      : "Não entendi essa data"
-    : "";
+  const touch = (field: TouchedField) =>
+    setTouched((current) => new Set(current).add(field));
 
-  const submit = async () => {
-    if (!title.trim() || saving) return;
+  const catalogs = useMemo<QuickCatalogs>(
+    () => ({
+      clients: clients.map((client) => ({
+        id: client.id,
+        label: clientLabel(client),
+        alias: client.name,
+      })),
+      users: [],
+    }),
+    [clients],
+  );
+
+  // Prévia ao vivo do que o título já resolve — o mesmo parser do submit
+  const parsed = useMemo(() => parseQuickInput(text, catalogs), [text, catalogs]);
+
+  /** O que foi escrito no título vence, salvo onde o usuário mexeu à mão. */
+  const resolve = (result: QuickParseResult) => ({
+    clientId: touched.has("client") ? clientId : (result.clientId ?? clientId),
+    priority: touched.has("priority") ? priority : (result.priority ?? priority),
+    assigneeIds: touched.has("assignees")
+      ? assigneeIds
+      : result.assigneeIds.length
+        ? result.assigneeIds
+        : assigneeIds,
+    dueDate: touched.has("due") ? dueDate || null : (result.dueDate ?? (dueDate || null)),
+    dueTime: touched.has("due") ? dueTime || null : (result.dueTime ?? (dueTime || null)),
+  });
+
+  const submit = async (result: QuickParseResult) => {
+    if (!result.title.trim() || saving) return;
+    const merged = resolve(result);
+
     setSaving(true);
     const created = await createDemand({
-      title,
-      client_id: clientId || null,
+      title: result.title,
+      client_id: merged.clientId,
       status: statusId || undefined,
-      priority,
-      assignee_ids: allTeam ? [] : assigneeIds,
+      priority: merged.priority,
+      assignee_ids: allTeam ? [] : merged.assigneeIds,
       assign_all_team: allTeam,
-      due_date: parsedDue,
+      due_date: merged.dueDate,
+      due_time: merged.dueTime,
     });
     setSaving(false);
 
@@ -85,12 +125,42 @@ export default function NewDemandModal({
     }
   };
 
+  const statusOptions = useMemo<ComboboxOption[]>(
+    () => statuses.map((status) => ({ value: status.id, label: status.label, color: status.color })),
+    [statuses],
+  );
+
+  const clientOptions = useMemo<ComboboxOption[]>(
+    () =>
+      clients.map((client) => ({
+        value: client.id,
+        label: clientLabel(client),
+        keywords: client.name,
+        icon: <Building2 size={14} />,
+      })),
+    [clients],
+  );
+
+  const priorityOptions = useMemo<ComboboxOption[]>(
+    () =>
+      PRIORITIES.map((option) => ({
+        value: option,
+        label: PRIORITY_LABELS[option],
+        icon: <PriorityFlag priority={option} size={13} />,
+      })),
+    [],
+  );
+
+  // O que os campos mostram: a resolução ao vivo, para o usuário ver o
+  // efeito do que digitou antes de salvar.
+  const effective = resolve(parsed);
+
   return (
     <DialogShell
       isOpen={isOpen}
       onClose={onClose}
       title="Nova demanda"
-      maxWidth="560px"
+      maxWidth="620px"
       footer={
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
           <button type="button" className="btn btn-secondary" onClick={onClose}>
@@ -99,100 +169,125 @@ export default function NewDemandModal({
           <button
             type="button"
             className="btn btn-accent"
-            onClick={submit}
-            disabled={!title.trim() || saving}
+            onClick={() => submit(parsed)}
+            disabled={!parsed.title.trim() || saving}
           >
             {saving ? "Criando…" : "Criar demanda"}
           </button>
         </div>
       }
     >
-      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-        <FormField label="Título">
-          <input
-            autoFocus
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") submit();
+      <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+        <FormField label="O que precisa ser feito?">
+          <div
+            style={{
+              padding: "10px 12px",
+              borderRadius: "var(--radius-md)",
+              border: "1px solid var(--border)",
+              background: "var(--color-surface-sunken)",
             }}
-            placeholder="O que precisa ser feito?"
-            style={inputStyle}
-          />
-        </FormField>
-
-        <FormField label="Cliente" hint="Deixe em branco para uma demanda interna/operacional.">
-          <select
-            value={clientId}
-            onChange={(event) => setClientId(event.target.value)}
-            style={inputStyle}
           >
-            <option value="">Demanda interna (sem cliente)</option>
-            {clients.map((client) => (
-              <option key={client.id} value={client.id}>
-                {clientLabel(client)}
-              </option>
-            ))}
-          </select>
+            <QuickAddInput
+              value={text}
+              onChange={setText}
+              onSubmit={submit}
+              autoFocus
+            />
+          </div>
         </FormField>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+          <FormField label="Cliente">
+            <Combobox
+              value={effective.clientId}
+              onChange={(value) => {
+                touch("client");
+                setClientId(value);
+              }}
+              options={clientOptions}
+              ariaLabel="Cliente"
+              searchPlaceholder="Buscar cliente…"
+              clearOption={{ label: "Demanda interna", icon: <Lock size={14} /> }}
+            />
+          </FormField>
+
           <FormField label="Status">
-            <select
+            <Combobox
               value={statusId}
-              onChange={(event) => setStatusId(event.target.value)}
-              style={inputStyle}
-            >
-              {statuses.map((status) => (
-                <option key={status.id} value={status.id}>
-                  {status.label}
-                </option>
-              ))}
-            </select>
+              onChange={(value) => setStatusId(value ?? "")}
+              options={statusOptions}
+              ariaLabel="Status"
+            />
           </FormField>
 
           <FormField label="Prioridade">
-            <select
-              value={priority}
-              onChange={(event) => setPriority(event.target.value as DemandPriority)}
-              style={inputStyle}
-            >
-              {PRIORITIES.map((option) => (
-                <option key={option} value={option}>
-                  {PRIORITY_LABELS[option]}
-                </option>
-              ))}
-            </select>
+            <Combobox
+              value={effective.priority}
+              onChange={(value) => {
+                touch("priority");
+                setPriority((value as DemandPriority) ?? "none");
+              }}
+              options={priorityOptions}
+              ariaLabel="Prioridade"
+              renderTrigger={({ selected }) => (
+                <>
+                  <PriorityFlag priority={effective.priority} size={13} />
+                  <span
+                    className="combobox-trigger-label"
+                    style={{ color: PRIORITY_COLORS[effective.priority] }}
+                  >
+                    {selected[0]?.label ?? PRIORITY_LABELS[effective.priority]}
+                  </span>
+                </>
+              )}
+            />
+          </FormField>
+
+          <FormField label="Responsáveis">
+            <AssigneePicker
+              assigneeIds={effective.assigneeIds}
+              allTeam={allTeam}
+              onChange={(ids, team) => {
+                touch("assignees");
+                setAssigneeIds(ids);
+                setAllTeam(team);
+              }}
+            />
           </FormField>
         </div>
 
-        <FormField label="Responsáveis">
-          <AssigneePicker
-            assigneeIds={assigneeIds}
-            allTeam={allTeam}
-            onChange={(ids, team) => {
-              setAssigneeIds(ids);
-              setAllTeam(team);
-            }}
-          />
-        </FormField>
-
         <FormField
           label="Entrega"
-          hint={dueHint || 'Escreva em texto: "hoje", "amanhã", "segunda", "03/09".'}
+          hint={
+            effective.dueDate
+              ? `Prazo: ${formatDueDateLabel(effective.dueDate).label}${
+                  effective.dueTime ? ` às ${effective.dueTime}` : ""
+                }`
+              : "Sem prazo. Dá para escrever no título: “sexta”, “amanhã”, “03/09”, “14h”."
+          }
         >
-          <input
-            value={dueText}
-            onChange={(event) => setDueText(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") submit();
-            }}
-            placeholder="hoje, amanhã, segunda-feira, 03/09…"
-            style={{
-              ...inputStyle,
-              color: parsedDue ? "var(--accent)" : "var(--text-primary)",
-            }}
-          />
+          <div style={{ display: "flex", gap: 8 }}>
+            <input
+              type="date"
+              value={effective.dueDate ?? ""}
+              onChange={(event) => {
+                touch("due");
+                setDueDate(event.target.value);
+              }}
+              aria-label="Data de entrega"
+              style={inputStyle}
+            />
+            <input
+              type="time"
+              value={effective.dueTime ?? ""}
+              onChange={(event) => {
+                touch("due");
+                setDueTime(event.target.value);
+              }}
+              aria-label="Hora de entrega"
+              style={{ ...inputStyle, maxWidth: 130 }}
+            />
+          </div>
         </FormField>
       </div>
     </DialogShell>
@@ -201,12 +296,12 @@ export default function NewDemandModal({
 
 const inputStyle: React.CSSProperties = {
   width: "100%",
-  padding: "9px 12px",
-  borderRadius: 10,
+  padding: "8px 11px",
+  borderRadius: "var(--radius-md)",
   border: "1px solid var(--border)",
   background: "var(--color-surface-sunken)",
   color: "var(--text-primary)",
-  fontSize: "0.86rem",
+  fontSize: "0.84rem",
   fontWeight: 600,
   fontFamily: "inherit",
   outline: "none",
@@ -222,10 +317,10 @@ function FormField({
   children: React.ReactNode;
 }) {
   return (
-    <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0 }}>
       <span
         style={{
-          fontSize: "0.7rem",
+          fontSize: "0.68rem",
           fontWeight: 800,
           textTransform: "uppercase",
           letterSpacing: "0.05em",
@@ -238,6 +333,6 @@ function FormField({
       {hint && (
         <span style={{ fontSize: "0.72rem", color: "var(--text-tertiary)" }}>{hint}</span>
       )}
-    </label>
+    </div>
   );
 }

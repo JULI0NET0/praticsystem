@@ -449,3 +449,385 @@ input[type='date'] {
     grid-template-columns: 1fr;
   }
 }
+
+/* ============================================================
+   COMBOBOX — dropdown único da aplicação
+   Substitui os <select> nativos, que renderizavam com o chrome do
+   sistema operacional (Windows/macOS) e destoavam da interface.
+   O painel é portalado para o body; por isso o z-index alto, acima
+   do modal de tarefa (200).
+   ============================================================ */
+
+.combobox-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
+  min-width: 0;
+  max-width: 100%;
+  height: var(--control-h);
+  padding: 0 10px;
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-sunken);
+  color: var(--color-text-primary);
+  font-family: inherit;
+  font-size: var(--text-ui);
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    border-color var(--duration-fast) var(--ease-standard),
+    background-color var(--duration-fast) var(--ease-standard);
+}
+
+.combobox-trigger:hover:not(:disabled) {
+  border-color: var(--color-border-strong);
+}
+
+.combobox-trigger[data-open] {
+  border-color: var(--color-terracotta-700);
+  background: var(--color-surface-raised);
+}
+
+.combobox-trigger:focus-visible {
+  outline: 2px solid var(--color-info);
+  outline-offset: 1px;
+}
+
+.combobox-trigger:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.combobox-trigger-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.combobox-chevron {
+  flex-shrink: 0;
+  opacity: 0.55;
+}
+
+.combobox-dot {
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+  border-radius: 50%;
+}
+
+.combobox-dot-empty {
+  background: transparent;
+  border: 1px solid var(--color-border-strong);
+}
+
+.combobox-panel {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 400;
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;
+  max-width: min(340px, calc(100vw - 24px));
+  padding: 4px;
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-raised);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+
+.combobox-search {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 8px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--color-border-subtle);
+  color: var(--color-text-tertiary);
+}
+
+.combobox-search input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  outline: none;
+  color: var(--color-text-primary);
+  font-family: inherit;
+  font-size: var(--text-ui);
+}
+
+.combobox-search button {
+  display: flex;
+  padding: 2px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+}
+
+.combobox-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  overflow-y: auto;
+}
+
+.combobox-option {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 7px 9px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-primary);
+  font-family: inherit;
+  font-size: var(--text-ui);
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+
+.combobox-option[data-active] {
+  background: var(--color-terracotta-100);
+  color: var(--color-terracotta-ink);
+}
+
+.combobox-option[data-selected] {
+  font-weight: 700;
+}
+
+.combobox-option-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.combobox-option-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.combobox-option-description {
+  font-size: var(--text-micro);
+  font-weight: 500;
+  color: var(--color-text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.combobox-check {
+  flex-shrink: 0;
+  color: var(--color-terracotta-700);
+}
+
+.combobox-empty {
+  padding: 12px 10px;
+  font-size: var(--text-ui);
+  color: var(--color-text-tertiary);
+}
+
+/* --- Menu de contexto: variações usadas pelo menu por demanda --- */
+
+.context-menu-more {
+  margin-left: auto;
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
+/* Quando há atalho E seta, o atalho não deve empurrar a seta para fora */
+.context-menu-shortcut + .context-menu-more {
+  margin-left: 6px;
+}
+
+.context-menu-item-danger {
+  color: var(--color-danger);
+}
+
+.context-menu-item-danger:hover {
+  background: var(--color-danger-wash);
+  color: var(--color-danger-ink);
+}
+
+/* Linha do menu que carrega um campo (data/hora) em vez de uma ação */
+.context-menu-item-field input {
+  margin-left: auto;
+  width: 118px;
+  padding: 3px 6px;
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-sunken);
+  color: var(--color-text-primary);
+  font-family: inherit;
+  font-size: var(--text-micro);
+  font-weight: 600;
+}
+
+.context-menu-item-field:hover {
+  background: transparent;
+  color: var(--color-text-primary);
+}
+
+/* --- Linha da lista de demandas --- */
+
+.demanda-row:hover {
+  background: var(--color-surface-sunken);
+}
+
+.demanda-row .demanda-row-grip {
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease-standard);
+}
+
+.demanda-row:hover .demanda-row-grip {
+  opacity: 1;
+}
+
+/* A prévia da descrição é a primeira a sair quando falta largura */
+@media (max-width: 900px) {
+  .demanda-row-description {
+    display: none;
+  }
+}
+
+
+/* ============================================================
+   BARRA DE FILTROS — todas as ilhas com a mesma altura, a mesma
+   espessura de borda e o mesmo peso de texto. A altura vem de um
+   token único (--control-h), que o gatilho do combobox também usa.
+   ============================================================ */
+
+:root {
+  --control-h: 34px;
+}
+
+.filter-tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: var(--control-h);
+  padding: 3px;
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-sunken);
+}
+
+.filter-tab {
+  height: 100%;
+  padding: 0 14px;
+  border: none;
+  border-radius: calc(var(--radius-md) - 3px);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-family: inherit;
+  font-size: var(--text-ui);
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
+}
+
+.filter-tab:hover:not([data-active]) {
+  color: var(--color-text-primary);
+}
+
+.filter-tab[data-active] {
+  background: var(--accent);
+  color: var(--color-text-on-accent);
+}
+
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.filter-bar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Mesma casca das ilhas do combobox, para chips e busca */
+.filter-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  height: var(--control-h);
+  padding: 0 11px;
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-sunken);
+  color: var(--color-text-secondary);
+  font-family: inherit;
+  font-size: var(--text-ui);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
+}
+
+.filter-control:hover {
+  border-color: var(--color-border-strong);
+}
+
+.filter-control[data-active] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--color-text-on-accent);
+}
+
+.filter-control-icon {
+  padding: 0;
+  width: var(--control-h);
+  justify-content: center;
+}
+
+/* A busca é uma ilha como as outras — só que elástica */
+.filter-search {
+  flex: 1 1 200px;
+  min-width: 140px;
+  max-width: 320px;
+  cursor: text;
+}
+
+.filter-search:focus-within {
+  border-color: var(--color-terracotta-700);
+  background: var(--color-surface-raised);
+}
+
+.filter-search input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  outline: none;
+  color: var(--color-text-primary);
+  font-family: inherit;
+  font-size: var(--text-ui);
+  font-weight: 600;
+}
+
+.filter-search input::placeholder {
+  color: var(--color-text-tertiary);
+  font-weight: 600;
+}

@@ -8,6 +8,7 @@ import type { Demand } from "@/types/demandas";
 import { useDemandas } from "./DemandasProvider";
 import DemandCard from "./DemandCard";
 import QuickAddRow from "./QuickAddRow";
+import DemandContextMenu, { useDemandContextMenu } from "./DemandContextMenu";
 
 interface Props {
   demands: Demand[];
@@ -25,6 +26,7 @@ interface Props {
  */
 export default function DemandKanban({ demands, onOpenDemand, onManageStatuses }: Props) {
   const { statuses, moveDemand, reorderStatuses, loading } = useDemandas();
+  const { anchor, openFor, close } = useDemandContextMenu();
 
   const [dragKind, setDragKind] = useState<"card" | "column" | null>(null);
   const [dragDemandId, setDragDemandId] = useState<string | null>(null);
@@ -199,6 +201,7 @@ export default function DemandKanban({ demands, onOpenDemand, onManageStatuses }
                     setDragDemandId(id);
                   }}
                   onDragEnd={resetDrag}
+                  onContextMenu={openFor(demand.id)}
                 />
               ))}
 
@@ -245,6 +248,10 @@ export default function DemandKanban({ demands, onOpenDemand, onManageStatuses }
         <SlidersHorizontal size={15} />
         Gerenciar status
       </button>
+
+      {anchor && (
+        <DemandContextMenu anchor={anchor} onClose={close} onOpenDetails={onOpenDemand} />
+      )}
     </div>
   );
 }

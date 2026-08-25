@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { prepareAudioChunks } from '@/lib/audioChunking';
+import { OrganizeMode, DEFAULT_ORGANIZE_MODE } from '@/lib/organizeModes';
 
 const AUDIO_BUCKET = 'notes-audio';
 const SIGNED_URL_TTL_SECONDS = 600; // 10 min — tempo pra Groq buscar o arquivo
@@ -59,15 +60,28 @@ export async function transcribeMeetingAudio(
   return transcripts.join('\n\n');
 }
 
+const GENERIC_TITLE_HEADING = /^(\d+\.\s*)?t[ií]tulo(\s+da\s+reuni[aã]o)?:?$/i;
+
 /**
- * O prompt de organização sempre abre com um heading "## 1. Título da
- * Reunião" seguido, na linha (não-vazia) seguinte, pelo título de fato.
- * Extrai esse título pra usar como notes.title; retorna '' se não achar.
+ * O prompt de organização abre com um heading de título, mas o modelo às
+ * vezes escreve o título de fato dentro do próprio heading (ex: "## Revisão
+ * do projeto X") e às vezes usa o heading só como rótulo genérico ("##
+ * Título" / "## 1. Título da Reunião"), deixando o título real na linha
+ * seguinte — depende do modo de organização escolhido. Detecta os dois
+ * formatos: se o heading já não é um rótulo genérico, usa ele direto; senão
+ * pega a próxima linha não-vazia. Extrai esse título pra usar como
+ * notes.title; retorna '' se não achar.
  */
 export function extractMeetingTitleFromMarkdown(markdown: string): string {
   const lines = markdown.split(/\r?\n/);
   const headingIdx = lines.findIndex(l => /^#{1,3}\s+/.test(l.trim()));
   if (headingIdx === -1) return '';
+
+  const headingText = lines[headingIdx].trim().replace(/^#{1,3}\s+/, '');
+  if (!GENERIC_TITLE_HEADING.test(headingText)) {
+    return headingText.replace(/[*_`]/g, '').trim();
+  }
+
   for (let i = headingIdx + 1; i < lines.length; i++) {
     const line = lines[i].trim();
     if (!line) continue;
@@ -77,11 +91,11 @@ export function extractMeetingTitleFromMarkdown(markdown: string): string {
   return '';
 }
 
-export async function organizeMeetingNotes(transcript: string): Promise<string> {
+export async function organizeMeetingNotes(transcript: string, mode: OrganizeMode = DEFAULT_ORGANIZE_MODE): Promise<string> {
   const res = await fetch('/api/notas/organize', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ transcript }),
+    body: JSON.stringify({ transcript, mode }),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'Falha ao organizar as notas.');

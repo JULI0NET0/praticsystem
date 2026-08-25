@@ -286,8 +286,8 @@ export default function Sidebar() {
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '12px',
-            padding: isExpanded ? '12px 16px' : '0',
+            gap: '8px',
+            padding: isExpanded ? '12px 12px' : '0',
             borderRadius: 'var(--radius-input)',
             border: isExpanded ? '1px solid var(--border)' : 'none',
             backgroundColor: isExpanded ? 'var(--bg-secondary)' : 'transparent',
@@ -376,10 +376,11 @@ export default function Sidebar() {
               >
                 <Link
                   href="/admin/profile"
+                  title={currentUser?.name}
                   style={{ textDecoration: 'none', display: 'block' }}
                 >
-                  <p style={{ fontSize: '0.875rem', fontWeight: 600, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    {currentUser?.name || "Usuário"} <span style={{ fontSize: '1rem' }}>{currentUser?.emoji || ""}</span>
+                  <p style={{ fontSize: '0.8125rem', fontWeight: 600, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', color: 'var(--text-primary)' }}>
+                    {currentUser?.name || "Usuário"}
                   </p>
                   <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{currentUser?.role || "Indefinido"}</p>
                 </Link>
@@ -392,7 +393,7 @@ export default function Sidebar() {
               onClick={() => setShowNotifications(!showNotifications)}
             >
               <div style={{ position: 'relative' }}>
-                <Bell size={18} color={localNotifications.some(n => !n.read) ? 'var(--accent)' : 'currentColor'} />
+                <Bell size={16} color={localNotifications.some(n => !n.read) ? 'var(--accent)' : 'currentColor'} />
                 {localNotifications.filter(n => !n.read).length > 0 && (
                   <div style={{
                     position: 'absolute', top: -6, right: -6,
@@ -467,9 +468,29 @@ export default function Sidebar() {
               </AnimatePresence>
             </div>
           )}
+          {isExpanded && mounted && (
+            <button
+              onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
+              title={resolvedTheme === 'dark' ? 'Mudar para Modo Claro' : 'Mudar para Modo Escuro'}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                padding: 0,
+                color: 'var(--text-secondary)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+                zIndex: 1,
+              }}
+            >
+              {resolvedTheme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+            </button>
+          )}
         </div>
 
-        {mounted && (
+        {mounted && !isExpanded && (
           <button
             onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
             onMouseEnter={(e) => {

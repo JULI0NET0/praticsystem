@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 import { formatPhone } from "@/utils/masks";
 import { useToast } from "@/components/CustomToast";
 import CustomModal from "@/components/CustomModal";
+import Combobox from "@/components/ui/Combobox";
 
 export default function CreateUserPage() {
   const router = useRouter();
@@ -257,17 +258,16 @@ export default function CreateUserPage() {
             <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Shield size={14} /> Cargo / Função
             </label>
-            <select
-              className="input-dark"
-              value={formData.role}
-              onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-              required
-            >
-              <option value="" disabled>Selecione um cargo</option>
-              {roles.filter(r => r.id !== 'client').map(role => (
-                <option key={role.id} value={role.id}>{role.name}</option>
-              ))}
-            </select>
+            <Combobox
+              options={roles.filter(r => r.id !== 'client').map(role => ({
+                value: role.id,
+                label: role.name,
+              }))}
+              value={formData.role || null}
+              onChange={(val) => setFormData({ ...formData, role: val || '' })}
+              placeholder="Selecione um cargo"
+              searchPlaceholder="Buscar cargo..."
+            />
           </div>
 
           {/* Frase de Status */}

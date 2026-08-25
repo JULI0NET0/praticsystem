@@ -13,6 +13,8 @@ import {
 } from "@/mocks/operacao";
 import { FIELD_MIDIA } from "@/mocks/operacao/templates";
 
+import Combobox from "@/components/ui/Combobox";
+
 export type NewTaskMode = "onboarding" | "cancelamento" | "captacao" | "post";
 
 const TITLES: Record<NewTaskMode, string> = {
@@ -109,11 +111,11 @@ export default function NewTaskModal({ list, mode, isOpen, onClose, onCreated }:
             </Field>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <Field label="Canal / Mídia">
-                <select className="input-dark" value={media} onChange={(e) => setMedia(e.target.value as MediaType)} style={{ height: 40 }}>
-                  {FIELD_MIDIA.options?.map((o) => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
-                  ))}
-                </select>
+                <Combobox
+                  options={FIELD_MIDIA.options?.map((o) => ({ value: o.value, label: o.label })) || []}
+                  value={media}
+                  onChange={(val) => val && setMedia(val as MediaType)}
+                />
               </Field>
               <Field label="Data de publicação">
                 <input className="input-dark" type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ height: 40 }} />
@@ -129,11 +131,15 @@ export default function NewTaskModal({ list, mode, isOpen, onClose, onCreated }:
         {mode === "captacao" && (
           <>
             <Field label="Tipo de captação">
-              <select className="input-dark" value={captureType} onChange={(e) => setCaptureType(Number(e.target.value))} style={{ height: 40 }}>
-                <option value={0}>Captação</option>
-                <option value={1}>Captação + Ads</option>
-                <option value={2}>Editorial</option>
-              </select>
+              <Combobox
+                options={[
+                  { value: "0", label: "Captação" },
+                  { value: "1", label: "Captação + Ads" },
+                  { value: "2", label: "Editorial" },
+                ]}
+                value={String(captureType)}
+                onChange={(val) => val !== null && setCaptureType(Number(val))}
+              />
             </Field>
             <Field label="Endereço / Local">
               <input className="input-dark" value={endereco} onChange={(e) => setEndereco(e.target.value)} placeholder="Rua, nº — cidade" style={{ height: 40 }} />

@@ -23,7 +23,7 @@ export default function AdminLayout({
         <div className="admin-main-card">
           <MobileHeader />
           <main className="admin-content-area">
-            <div className="animate-fade-in-up" style={{ maxWidth: '1400px', margin: '0 auto', width: '100%' }}>
+            <div style={{ maxWidth: '1400px', margin: '0 auto', width: '100%' }}>
               {children}
             </div>
           </main>

@@ -14,9 +14,16 @@ interface Props {
   onOpen: (id: string) => void;
   onDragStart?: (id: string) => void;
   onDragEnd?: () => void;
+  onContextMenu?: (event: React.MouseEvent) => void;
 }
 
-export default function DemandCard({ demand, onOpen, onDragStart, onDragEnd }: Props) {
+export default function DemandCard({
+  demand,
+  onOpen,
+  onDragStart,
+  onDragEnd,
+  onContextMenu,
+}: Props) {
   const { getClient, commentsOf, attachmentsOf } = useDemandas();
 
   const client = getClient(demand.client_id);
@@ -38,6 +45,7 @@ export default function DemandCard({ demand, onOpen, onDragStart, onDragEnd }: P
       onDragEnd={() => onDragEnd?.()}
       whileHover={{ y: -2 }}
       onClick={() => onOpen(demand.id)}
+      onContextMenu={onContextMenu}
       style={{
         display: "flex",
         flexDirection: "column",
@@ -51,7 +59,7 @@ export default function DemandCard({ demand, onOpen, onDragStart, onDragEnd }: P
     >
       <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
         {client ? <ClientChip label={clientLabel(client)} /> : <InternalChip />}
-        <PriorityBadge priority={demand.priority} />
+        <PriorityBadge priority={demand.priority} compact />
       </div>
 
       <span

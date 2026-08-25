@@ -23,6 +23,7 @@ export interface UserProfile {
     pomodoro_points?: number;
     pomodoro_sessions_today?: number;
     pomodoro_last_date?: string;
+    links?: { id: string; name: string; url: string; icon: string }[];
   };
 }
 

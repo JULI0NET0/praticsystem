@@ -1,3 +1,5 @@
+import { OrganizeMode } from './organizeModes';
+
 const GROQ_API_BASE = 'https://api.groq.com/openai/v1';
 
 function getGroqApiKey(): string {
@@ -46,9 +48,16 @@ export async function transcribeAudioFromUrl(audioUrl: string, opts?: { language
   return (await res.text()).trim();
 }
 
-const ORGANIZE_SYSTEM_PROMPT = `Você é um assistente que transforma a transcrição bruta de uma reunião em notas organizadas, seguindo EXATAMENTE o formato abaixo.
+// A transcrição vem sem diarização (a Groq não identifica quem fala cada
+// trecho — ver observação em transcribeAudioFromUrl), então todo prompt de
+// organização precisa dessa mesma ressalva: nunca inventar "Speaker 1/2/3",
+// só citar nome quando ele aparecer de fato na fala.
+const NO_DIARIZATION_NOTE = `A transcrição fornecida é texto corrido, sem identificação de quem fala cada trecho (o serviço de transcrição não faz diarização por áudio). Por isso: NUNCA invente ou atribua falas a "Speaker 1", "Speaker 2" etc. Só cite um participante pelo nome se esse nome for mencionado explicitamente na transcrição (por exemplo, alguém se apresentando ou sendo chamado pelo nome).`;
 
-A transcrição fornecida é texto corrido, sem identificação de quem fala cada trecho (o serviço de transcrição não faz diarização por áudio). Por isso: NUNCA invente ou atribua falas a "Speaker 1", "Speaker 2" etc. Só cite um participante pelo nome se esse nome for mencionado explicitamente na transcrição (por exemplo, alguém se apresentando ou sendo chamado pelo nome).
+const ORGANIZE_PROMPTS: Record<OrganizeMode, string> = {
+  reuniao: `Você é um assistente que transforma a transcrição bruta de uma reunião em notas organizadas, seguindo EXATAMENTE o formato abaixo.
+
+${NO_DIARIZATION_NOTE}
 
 Formato de saída (100% em Markdown):
 
@@ -80,7 +89,54 @@ IMPORTANTE:
 - O resultado final deve ser entregue 100% em Markdown.
 - Não invente nomes, fatos ou dados que não estejam na transcrição.
 - Priorize clareza, organização e precisão.
-- Foque em insights, decisões e to-dos — seja um tomador de pauta profissional.`;
+- Foque em insights, decisões e to-dos — seja um tomador de pauta profissional.`,
+
+  resumido: `Você é um assistente que resume reuniões de forma objetiva e direta, sem se alongar.
+
+${NO_DIARIZATION_NOTE}
+
+Formato de saída (100% em Markdown), curto:
+
+## Título
+Título curto e objetivo da reunião.
+
+## Resumo
+Um parágrafo de 3 a 5 linhas com o essencial: contexto, principais pontos discutidos e decisões.
+
+## Tarefas
+- [ ] **Tarefa:** descrição objetiva (liste só se houver tarefas claras na transcrição)
+
+IMPORTANTE: seja breve, não repita a transcrição literalmente, não invente nomes, fatos ou dados.`,
+
+  resumo: `Você é um assistente que resume transcrições de reunião em um resumo corrido, sem dividir em seções ou listas.
+
+${NO_DIARIZATION_NOTE}
+
+Formato de saída (100% em Markdown):
+
+## Título
+Título curto e objetivo da reunião.
+
+Logo abaixo, um resumo de 5 a 10 linhas em texto corrido (sem bullets, sem subtítulos) cobrindo o que foi discutido e as decisões tomadas.
+
+IMPORTANTE: não invente nomes, fatos ou dados que não estejam na transcrição.`,
+
+  topicos: `Você é um assistente que transforma transcrições de reunião em anotações rápidas, em formato de tópicos.
+
+${NO_DIARIZATION_NOTE}
+
+Formato de saída (100% em Markdown):
+
+## Título
+Título curto e objetivo da reunião.
+
+## Tópicos
+- Cada bullet é uma ideia, assunto ou decisão só — uma linha, direto ao ponto.
+- Sem parágrafos, sem explicações longas.
+- Marque como tarefa ("- [ ] ...") os bullets que forem uma ação/próximo passo claro.
+
+IMPORTANTE: seja telegráfico. Não invente nomes, fatos ou dados que não estejam na transcrição.`,
+};
 
 const MAX_RATE_LIMIT_RETRIES = 6;
 const DEFAULT_RETRY_WAIT_SECONDS = 12;
@@ -181,11 +237,14 @@ async function condenseIfNeeded(text: string, depth = 0): Promise<string> {
 }
 
 /**
- * Organiza uma transcrição bruta em notas estruturadas de reunião (Markdown),
- * usando um modelo hospedado na Groq. Pode ser chamada mais de uma vez sobre
- * a mesma transcrição (reprocessamento) sem custo de re-transcrição.
+ * Organiza uma transcrição bruta em notas estruturadas (Markdown), usando um
+ * modelo hospedado na Groq. `mode` escolhe o estilo de saída (reunião
+ * detalhada, resumida, só resumo ou tópicos — ver organizeModes.ts). Pode
+ * ser chamada mais de uma vez sobre a mesma transcrição (reprocessamento,
+ * inclusive trocando de modo) sem custo de re-transcrição.
  */
-export async function organizeTranscript(transcript: string): Promise<string> {
+export async function organizeTranscript(transcript: string, mode: OrganizeMode = 'reuniao'): Promise<string> {
   const condensed = await condenseIfNeeded(transcript);
-  return callGroqChat(ORGANIZE_SYSTEM_PROMPT, `Transcrição bruta da reunião:\n\n${condensed}`);
+  const systemPrompt = ORGANIZE_PROMPTS[mode] ?? ORGANIZE_PROMPTS.reuniao;
+  return callGroqChat(systemPrompt, `Transcrição bruta da reunião:\n\n${condensed}`);
 }

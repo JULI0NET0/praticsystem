@@ -1,31 +1,81 @@
 "use client";
 
-import { Building2, Lock } from "lucide-react";
-import { tint } from "@/lib/tint";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { Building2, GripVertical, Lock, MessageSquare, Paperclip } from "lucide-react";
+import { richTextToPlain } from "@/lib/richText";
 import { clientLabel, PRIORITY_COLORS, type Demand } from "@/types/demandas";
 import { useDemandas } from "./DemandasProvider";
 import { AssigneeStack } from "./AssigneePicker";
+import { PriorityBadge } from "./PriorityFlag";
 import DemandStatusPill from "./DemandStatusPill";
 import DueChip from "./DueChip";
 
 interface Props {
   demand: Demand;
   onOpen: (id: string) => void;
+  onContextMenu?: (event: React.MouseEvent) => void;
+  /** Avisa a lista para segurar a linha no lugar durante a animação. */
+  onToggleStart?: (id: string) => void;
+  onDragStart?: (id: string) => void;
+  onDragEnd?: () => void;
+  dragging?: boolean;
+  /** Falso quando o grupo que envolve a linha já mostra o status (agrupamento por status). */
+  showStatusPill?: boolean;
 }
 
-export default function DemandRow({ demand, onOpen }: Props) {
-  const { getStatus, getClient, toggleComplete } = useDemandas();
+export default function DemandRow({
+  demand,
+  onOpen,
+  onContextMenu,
+  onToggleStart,
+  onDragStart,
+  onDragEnd,
+  dragging,
+  showStatusPill = true,
+}: Props) {
+  const { getStatus, getClient, commentsOf, attachmentsOf, toggleComplete } = useDemandas();
+  const reduceMotion = useReducedMotion();
 
   const status = getStatus(demand.status);
   const client = getClient(demand.client_id);
   const done = demand.status_category === "fechado";
   const priorityColor = PRIORITY_COLORS[demand.priority];
 
+  const description = richTextToPlain(demand.description, 120);
+  const commentCount = commentsOf(demand.id).length || demand.comment_count || 0;
+  const attachmentCount = attachmentsOf(demand.id).length || demand.attachment_count || 0;
+
   return (
-    <div
+    <motion.div
+      // `layout` faz a linha deslizar até a nova posição quando ela é
+      // concluída e cai para o fim do grupo, em vez de saltar.
+      layout={reduceMotion ? false : "position"}
+      // Sai desbotando quando o filtro "ocultar concluídas" a remove da lista,
+      // em vez de desaparecer de um quadro para o outro.
+      exit={reduceMotion ? undefined : { opacity: 0, scale: 0.98 }}
+      // Transições separadas: a de layout precisa de uma mola sem repique,
+      // senão o deslocamento até o fim do grupo balança ao chegar.
+      transition={{
+        layout: { type: "spring", stiffness: 380, damping: 40, mass: 0.8 },
+        opacity: { duration: 0.18 },
+        scale: { duration: 0.18 },
+      }}
       role="button"
       tabIndex={0}
+      draggable={!!onDragStart}
+      onDragStart={(event) => {
+        // `motion.div` tipa onDragStart com o gesto de arrasto do
+        // framer-motion, mas aqui o arrasto é o nativo do HTML5 (não usamos
+        // a prop `drag`), então o evento real é um DragEvent.
+        const dragEvent = event as unknown as React.DragEvent;
+        dragEvent.dataTransfer.effectAllowed = "move";
+        // Firefox só inicia o arrasto se houver payload
+        dragEvent.dataTransfer.setData("text/plain", demand.id);
+        onDragStart?.(demand.id);
+      }}
+      onDragEnd={() => onDragEnd?.()}
       onClick={() => onOpen(demand.id)}
+      onContextMenu={onContextMenu}
       onKeyDown={(event) => {
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
@@ -35,95 +85,198 @@ export default function DemandRow({ demand, onOpen }: Props) {
       className="demanda-row"
       style={{
         display: "flex",
-        alignItems: "center",
-        gap: 10,
-        minHeight: "var(--row-h, 40px)",
-        padding: "8px 10px",
+        alignItems: "flex-start",
+        gap: 8,
+        padding: "9px 10px",
         borderRadius: 10,
         cursor: "pointer",
         borderBottom: "1px solid var(--border)",
+        opacity: dragging ? 0.4 : 1,
+        transition: "opacity 0.15s, background 0.15s",
       }}
     >
+      {onDragStart && (
+        <GripVertical
+          size={14}
+          color="var(--text-tertiary)"
+          className="demanda-row-grip"
+          style={{ marginTop: 3, flexShrink: 0, cursor: "grab" }}
+        />
+      )}
+
       {/* Checkbox redondo — cor segue a prioridade, como no Todoist */}
-      <button
-        type="button"
-        aria-label={done ? "Reabrir demanda" : "Concluir demanda"}
-        onClick={(event) => {
-          event.stopPropagation();
-          toggleComplete(demand.id);
-        }}
-        style={{
-          width: 18,
-          height: 18,
-          flexShrink: 0,
-          borderRadius: "50%",
-          border: `2px solid ${priorityColor}`,
-          background: done ? priorityColor : tint(priorityColor, 8),
-          cursor: "pointer",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: 0,
-          transition: "background 0.15s",
-        }}
-      >
-        {done && (
+      <div style={{ position: "relative", marginTop: 2, flexShrink: 0, lineHeight: 0 }}>
+        {/* Anel que expande e some ao concluir */}
+        <AnimatePresence>
+          {done && !reduceMotion && (
+            <motion.span
+              key="ring"
+              aria-hidden="true"
+              initial={{ scale: 0.6, opacity: 0.55 }}
+              animate={{ scale: 2.1, opacity: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.45, ease: "easeOut" }}
+              style={{
+                position: "absolute",
+                inset: 0,
+                borderRadius: "50%",
+                border: `2px solid ${priorityColor}`,
+                pointerEvents: "none",
+              }}
+            />
+          )}
+        </AnimatePresence>
+
+        <motion.button
+          type="button"
+          aria-label={done ? "Reabrir demanda" : "Concluir demanda"}
+          aria-pressed={done}
+          onClick={(event) => {
+            event.stopPropagation();
+            onToggleStart?.(demand.id);
+            toggleComplete(demand.id);
+          }}
+          whileTap={reduceMotion ? undefined : { scale: 0.82 }}
+          animate={{
+            backgroundColor: done ? priorityColor : "rgba(0,0,0,0)",
+            scale: 1,
+          }}
+          transition={{ type: "spring", stiffness: 500, damping: 22 }}
+          style={{
+            width: 18,
+            height: 18,
+            borderRadius: "50%",
+            border: `2px solid ${priorityColor}`,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 0,
+          }}
+        >
           <svg width="10" height="10" viewBox="0 0 12 12" aria-hidden="true">
-            <path
+            <motion.path
               d="M2 6.5L4.5 9L10 3"
               fill="none"
               stroke="var(--color-surface-raised)"
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
+              initial={false}
+              // O traço se desenha ao concluir e se apaga ao reabrir
+              animate={{ pathLength: done ? 1 : 0, opacity: done ? 1 : 0 }}
+              transition={{ duration: reduceMotion ? 0 : 0.22, ease: "easeOut" }}
             />
           </svg>
-        )}
-      </button>
-
-      {/* Título */}
-      <span
-        style={{
-          flex: 1,
-          minWidth: 0,
-          fontSize: "0.88rem",
-          fontWeight: 600,
-          color: done ? "var(--text-tertiary)" : "var(--text-primary)",
-          textDecoration: done ? "line-through" : "none",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-        }}
-      >
-        {demand.title}
-      </span>
-
-      {/* Meta — some progressivamente em telas estreitas via CSS */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-        <span className="demanda-row-client">
-          {client ? (
-            <ClientChip label={clientLabel(client)} />
-          ) : (
-            <InternalChip />
-          )}
-        </span>
-
-        <span className="demanda-row-due">
-          <DueChip dueDate={demand.due_date} dueTime={demand.due_time} />
-        </span>
-
-        <span className="demanda-row-status">
-          <DemandStatusPill status={status} size="sm" />
-        </span>
-
-        <AssigneeStack
-          assigneeIds={demand.assignee_ids ?? []}
-          allTeam={demand.assign_all_team}
-          size={22}
-          max={3}
-        />
+        </motion.button>
       </div>
-    </div>
+
+      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 4 }}>
+        {/* Linha 1: título + descrição ao centro + contadores */}
+        <div style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
+          <span
+            style={{
+              position: "relative",
+              flexShrink: 0,
+              maxWidth: "min(46ch, 55%)",
+              fontSize: "0.88rem",
+              fontWeight: 600,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            <motion.span
+              initial={false}
+              animate={{ color: done ? "var(--text-tertiary)" : "var(--text-primary)" }}
+              transition={{ duration: reduceMotion ? 0 : 0.25 }}
+            >
+              {demand.title}
+            </motion.span>
+            {/* Risco desenhado: cresce da esquerda, em vez de piscar pronto */}
+            <motion.span
+              aria-hidden="true"
+              initial={false}
+              animate={{ scaleX: done ? 1 : 0 }}
+              transition={{ duration: reduceMotion ? 0 : 0.34, ease: [0.16, 1, 0.3, 1] }}
+              style={{
+                position: "absolute",
+                left: 0,
+                right: 0,
+                top: "52%",
+                height: 1,
+                background: "var(--text-tertiary)",
+                transformOrigin: "left center",
+              }}
+            />
+          </span>
+
+          {description && (
+            <span
+              className="demanda-row-description"
+              style={{
+                flex: 1,
+                minWidth: 0,
+                fontSize: "0.78rem",
+                color: "var(--text-tertiary)",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {description}
+            </span>
+          )}
+        </div>
+
+        {/* Linha 2: os detalhes, abaixo do próprio título */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          {client ? <ClientChip label={clientLabel(client)} /> : <InternalChip />}
+          <DueChip dueDate={demand.due_date} dueTime={demand.due_time} />
+          {showStatusPill && <DemandStatusPill status={status} size="sm" />}
+          <PriorityBadge priority={demand.priority} compact />
+          <AssigneeStack
+            assigneeIds={demand.assignee_ids ?? []}
+            allTeam={demand.assign_all_team}
+            size={20}
+            max={3}
+          />
+
+          {/* Comentários e anexos ficam junto dos demais chips. Ancorados à
+              direita da linha ninguém olhava: em tela larga eles acabavam a
+              centenas de pixels do título a que se referem. */}
+          {(commentCount > 0 || attachmentCount > 0) && (
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                fontSize: "0.7rem",
+                fontWeight: 700,
+                color: "var(--text-tertiary)",
+              }}
+            >
+              {commentCount > 0 && (
+                <span
+                  title={`${commentCount} comentário(s)`}
+                  style={{ display: "inline-flex", alignItems: "center", gap: 3 }}
+                >
+                  <MessageSquare size={12} /> {commentCount}
+                </span>
+              )}
+              {attachmentCount > 0 && (
+                <span
+                  title={`${attachmentCount} anexo(s)`}
+                  style={{ display: "inline-flex", alignItems: "center", gap: 3 }}
+                >
+                  <Paperclip size={12} /> {attachmentCount}
+                </span>
+              )}
+            </span>
+          )}
+        </div>
+      </div>
+    </motion.div>
   );
 }
 
@@ -141,7 +294,7 @@ export function ClientChip({ label }: { label: string }) {
         color: "var(--text-secondary)",
         background: "var(--color-surface-sunken)",
         border: "1px solid var(--border)",
-        maxWidth: 160,
+        maxWidth: 170,
         overflow: "hidden",
         textOverflow: "ellipsis",
         whiteSpace: "nowrap",

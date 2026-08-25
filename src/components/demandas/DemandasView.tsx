@@ -5,17 +5,19 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { Plus, SlidersHorizontal } from "lucide-react";
 import PageHeader from "@/components/ui/PageHeader";
-import type { DemandView } from "@/types/demandas";
+import type { DemandListGroupBy, DemandView } from "@/types/demandas";
 import { useDemandas } from "./DemandasProvider";
 import DemandFilters from "./DemandFilters";
 import DemandViewSwitcher from "./DemandViewSwitcher";
+import DemandGroupBySwitcher from "./DemandGroupBySwitcher";
 import DemandListView from "./DemandListView";
 import DemandKanban from "./DemandKanban";
-import DemandDrawer from "./DemandDrawer";
+import DemandModal from "./DemandModal";
 import NewDemandModal from "./NewDemandModal";
 import StatusManagerModal from "./StatusManagerModal";
 
 const VIEW_STORAGE_KEY = "pratic-demandas-view";
+const GROUPBY_STORAGE_KEY = "pratic-demandas-groupby";
 
 function readStoredView(): DemandView {
   try {
@@ -27,6 +29,16 @@ function readStoredView(): DemandView {
   return "list";
 }
 
+function readStoredGroupBy(): DemandListGroupBy {
+  try {
+    const stored = window.localStorage.getItem(GROUPBY_STORAGE_KEY);
+    if (stored === "due" || stored === "status") return stored;
+  } catch {
+    // localStorage indisponível
+  }
+  return "due";
+}
+
 export default function DemandasView() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -36,6 +48,7 @@ export default function DemandasView() {
   // Ler no inicializador é seguro aqui: useSearchParams abaixo já faz esta
   // subárvore ser renderizada só no cliente, então não há hidratação a bater.
   const [view, setView] = useState<DemandView>(readStoredView);
+  const [groupBy, setGroupBy] = useState<DemandListGroupBy>(readStoredGroupBy);
   const [explicitId, setExplicitId] = useState<string | null>(null);
   const [newOpen, setNewOpen] = useState(false);
   const [statusManagerOpen, setStatusManagerOpen] = useState(false);
@@ -44,6 +57,15 @@ export default function DemandasView() {
     setView(next);
     try {
       window.localStorage.setItem(VIEW_STORAGE_KEY, next);
+    } catch {
+      // ignora
+    }
+  };
+
+  const changeGroupBy = (next: DemandListGroupBy) => {
+    setGroupBy(next);
+    try {
+      window.localStorage.setItem(GROUPBY_STORAGE_KEY, next);
     } catch {
       // ignora
     }
@@ -105,10 +127,40 @@ export default function DemandasView() {
 
       <DemandFilters />
 
-      <DemandViewSwitcher active={view} onChange={changeView} />
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+        <DemandViewSwitcher active={view} onChange={changeView} />
+
+        {view === "list" && (
+          <>
+            <DemandGroupBySwitcher active={groupBy} onChange={changeGroupBy} />
+            {groupBy === "status" && (
+              <button
+                type="button"
+                onClick={() => setStatusManagerOpen(true)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "6px 12px",
+                  borderRadius: 9,
+                  border: "1px dashed var(--border)",
+                  background: "transparent",
+                  cursor: "pointer",
+                  fontSize: "0.78rem",
+                  fontWeight: 700,
+                  color: "var(--text-tertiary)",
+                }}
+              >
+                <SlidersHorizontal size={14} />
+                Gerenciar status
+              </button>
+            )}
+          </>
+        )}
+      </div>
 
       {view === "list" ? (
-        <DemandListView demands={visibleDemands} onOpenDemand={setExplicitId} />
+        <DemandListView demands={visibleDemands} onOpenDemand={setExplicitId} groupBy={groupBy} />
       ) : (
         <DemandKanban
           demands={visibleDemands}
@@ -117,7 +169,7 @@ export default function DemandasView() {
         />
       )}
 
-      <DemandDrawer demandId={selectedId} onClose={closeDrawer} />
+      <DemandModal demandId={selectedId} onClose={closeDrawer} />
 
       <NewDemandModal
         isOpen={newOpen}

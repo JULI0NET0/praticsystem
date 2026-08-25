@@ -185,6 +185,9 @@
         .block-editor-content em { font-style: italic; }
         .block-editor-content s { text-decoration: line-through; opacity: 0.6; }
         .editor-mention { background: color-mix(in oklab, var(--accent) 18%, transparent); color: var(--accent); border-radius: 5px; padding: 1px 6px; font-weight: 600; cursor: default; display: inline-block; }
+        /* Cliente (#) usa a família de informação para não se confundir
+           com a menção a pessoa (@), que fica no acento da marca. */
+        .editor-mention-client { background: var(--color-info-wash); color: var(--color-info-ink); }
         .editor-link { color: var(--accent); text-decoration: underline; cursor: pointer; }
         .editor-link:hover { color: var(--accent); }
         .editor-image { max-width: 100%; border-radius: 10px; display: block; cursor: default; }

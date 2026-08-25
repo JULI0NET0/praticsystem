@@ -26,8 +26,10 @@ export default function DemandStatusPill({ status, size = "md" }: Props) {
         textTransform: "uppercase",
         letterSpacing: "0.03em",
         color: status.color,
-        background: tint(status.color, 10),
-        border: `1px solid ${tint(status.color, 20)}`,
+        // Wash e borda reforçados: a 10%/20% as colunas do Kanban ficavam
+        // praticamente monocromáticas sobre o pergaminho.
+        background: tint(status.color, 18),
+        border: `1px solid ${tint(status.color, 38)}`,
         whiteSpace: "nowrap",
       }}
     >

@@ -126,12 +126,12 @@ const SlashMenuList = forwardRef<any, any>((props, ref) => {
   if (!props.items.length) return null;
 
   return (
-    <div ref={containerRef} style={{ background: '#16162a', border: '1px solid var(--color-border-subtle)', borderRadius: '12px', padding: '8px', boxShadow: '0 8px 32px rgba(0,0,0,0.5)', minWidth: '220px', maxHeight: '360px', overflowY: 'auto' }}>
+    <div ref={containerRef} style={{ background: 'var(--color-surface-raised)', border: '1px solid var(--color-border-default)', borderRadius: 'var(--radius-md)', padding: '4px', boxShadow: 'var(--shadow-lg)', minWidth: '220px', maxHeight: '360px', overflowY: 'auto' }}>
       <p style={{ fontSize: '0.68rem', color: 'var(--color-text-tertiary)', padding: '2px 8px 6px', margin: 0, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Blocos</p>
       {props.items.map((item: any, index: number) => {
         const Icon = item.icon;
         return (
-          <button key={item.title} onClick={() => props.command(item)} onMouseEnter={() => setSelectedIndex(index)} style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '8px 12px', borderRadius: '8px', border: 'none', background: index === selectedIndex ? 'color-mix(in oklab, var(--accent) 15%, transparent)' : 'transparent', color: index === selectedIndex ? 'var(--accent)' : 'var(--color-surface-raised)', cursor: 'pointer', textAlign: 'left', transition: 'background 0.1s' }}>
+          <button key={item.title} onClick={() => props.command(item)} onMouseEnter={() => setSelectedIndex(index)} style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '8px 12px', borderRadius: '8px', border: 'none', background: index === selectedIndex ? 'var(--color-terracotta-100)' : 'transparent', color: index === selectedIndex ? 'var(--color-terracotta-ink)' : 'var(--color-text-primary)', cursor: 'pointer', textAlign: 'left', transition: 'background 0.1s' }}>
             <Icon size={15} style={{ flexShrink: 0, opacity: 0.85 }} />
             <div>
               <div style={{ fontSize: '0.85rem', fontWeight: 500 }}>{item.title}</div>
@@ -172,13 +172,13 @@ const MentionList = forwardRef<any, any>((props, ref) => {
       key={item.id}
       onClick={() => props.command(item)}
       onMouseEnter={() => setSelectedIndex(globalIdx)}
-      style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '7px 10px', borderRadius: '8px', border: 'none', background: globalIdx === selectedIndex ? 'color-mix(in oklab, var(--accent) 15%, transparent)' : 'transparent', color: 'var(--color-text-primary)', cursor: 'pointer', textAlign: 'left', transition: 'background 0.1s' }}
+      style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '7px 10px', borderRadius: '8px', border: 'none', background: globalIdx === selectedIndex ? 'var(--color-terracotta-100)' : 'transparent', color: 'var(--color-text-primary)', cursor: 'pointer', textAlign: 'left', transition: 'background 0.1s' }}
     >
       {item.avatar ? (
         <img src={item.avatar} alt={item.label} style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
       ) : (
-        <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: item.type === 'client' ? 'color-mix(in oklab, var(--accent) 20%, transparent)' : 'rgba(100,100,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          {item.type === 'client' ? <Building2 size={12} color="var(--accent)" /> : <User size={12} color="#8888ff" />}
+        <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: item.type === 'client' ? 'color-mix(in oklab, var(--accent) 20%, transparent)' : 'var(--color-info-wash)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          {item.type === 'client' ? <Building2 size={12} color="var(--accent)" /> : <User size={12} color="var(--color-info-ink)" />}
         </div>
       )}
       <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>{item.label}</span>
@@ -186,7 +186,7 @@ const MentionList = forwardRef<any, any>((props, ref) => {
   );
 
   return (
-    <div style={{ background: '#16162a', border: '1px solid var(--color-border-subtle)', borderRadius: '12px', padding: '8px', boxShadow: '0 8px 32px rgba(0,0,0,0.5)', minWidth: '220px', maxHeight: '300px', overflowY: 'auto' }}>
+    <div style={{ background: 'var(--color-surface-raised)', border: '1px solid var(--color-border-default)', borderRadius: 'var(--radius-md)', padding: '4px', boxShadow: 'var(--shadow-lg)', minWidth: '220px', maxHeight: '300px', overflowY: 'auto' }}>
       {clients.length > 0 && (
         <>
           <p style={{ fontSize: '0.68rem', color: 'var(--color-text-tertiary)', padding: '2px 8px 4px', margin: 0, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Clientes</p>
@@ -410,35 +410,63 @@ const SlashExtension = Extension.create({
 
 // ─── Mention extension config ──────────────────────────────────────────────
 
-const MentionConfig = MentionExtension.configure({
+/** Popup compartilhado pelos dois tipos de menção. */
+function mentionRender() {
+  let popup: ReturnType<typeof mountFloating>;
+  return {
+    onStart:   (p: any) => { popup = mountFloating(MentionList, p); popup.update(p); },
+    onUpdate:  (p: any) => popup.update(p),
+    onKeyDown: (p: any) => { if (p.event.key === 'Escape') { popup.destroy(); return true; } return (popup.renderer.ref as any)?.onKeyDown(p) ?? false; },
+    onExit:    ()       => popup.destroy(),
+  };
+}
+
+function matches(label: string, query: string): boolean {
+  return label.toLowerCase().includes(query.toLowerCase());
+}
+
+// ─── @ menciona COLABORADOR ────────────────────────────────────────────────
+// Mantém o nome 'mention' de propósito: notas antigas já têm nós desse tipo
+// gravados, e renomear a extensão faria o TipTap não reconhecê-los mais.
+// `renderText`/`renderHTML` padrão já prefixam com o char da sugestão, então
+// não é preciso `renderLabel` — que além disso está depreciado.
+const UserMentionConfig = MentionExtension.configure({
   HTMLAttributes: { class: 'editor-mention' },
-  renderLabel: ({ node }) => `@${node.attrs.label}`,
   suggestion: {
+    char: '@',
     items: async ({ query }: { query: string }): Promise<MentionItem[]> => {
-      const q = query.toLowerCase();
-      const [clientsRes, usersRes] = await Promise.all([
-        supabase.from('clients').select('id, name, nome_fantasia').order('name').limit(20),
-        supabase.from('users').select('id, name, avatar_url').order('name').limit(20),
-      ]);
-      const clients: MentionItem[] = (clientsRes.data ?? [])
-        .map((c: any) => ({ id: c.id, label: c.nome_fantasia || c.name, type: 'client' as const }))
-        .filter(c => c.label.toLowerCase().includes(q));
-      const users: MentionItem[] = (usersRes.data ?? [])
+      const { data } = await supabase
+        .from('users').select('id, name, avatar_url').order('name').limit(20);
+      return (data ?? [])
         .map((u: any) => ({ id: u.id, label: u.name, type: 'user' as const, avatar: u.avatar_url }))
-        .filter(u => u.label.toLowerCase().includes(q));
-      return [...clients, ...users].slice(0, 10);
+        .filter((u: MentionItem) => matches(u.label, query))
+        .slice(0, 10);
     },
-    render: () => {
-      let popup: ReturnType<typeof mountFloating>;
-      return {
-        onStart:   (p: any) => { popup = mountFloating(MentionList, p); popup.update(p); },
-        onUpdate:  (p: any) => popup.update(p),
-        onKeyDown: (p: any) => { if (p.event.key === 'Escape') { popup.destroy(); return true; } return (popup.renderer.ref as any)?.onKeyDown(p) ?? false; },
-        onExit:    ()       => popup.destroy(),
-      };
-    },
+    render: mentionRender,
   },
 });
+
+// ─── # menciona CLIENTE ────────────────────────────────────────────────────
+// Nome próprio para o nó, senão o TipTap recusa duas extensões homônimas.
+// `data-type` e o parseHTML derivam de `this.name`, então os dois tipos
+// convivem sem se confundir no documento.
+const ClientMentionConfig = MentionExtension
+  .extend({ name: 'clientMention' })
+  .configure({
+    HTMLAttributes: { class: 'editor-mention editor-mention-client' },
+    suggestion: {
+      char: '#',
+      items: async ({ query }: { query: string }): Promise<MentionItem[]> => {
+        const { data } = await supabase
+          .from('clients').select('id, name, nome_fantasia').order('name').limit(20);
+        return (data ?? [])
+          .map((c: any) => ({ id: c.id, label: c.nome_fantasia || c.name, type: 'client' as const }))
+          .filter((c: MentionItem) => matches(c.label, query))
+          .slice(0, 10);
+      },
+      render: mentionRender,
+    },
+  });
 
 function isDarkColor(colorStr: string): boolean {
   const trimmed = colorStr.trim().toLowerCase();
@@ -618,7 +646,8 @@ export default function BlockEditor({
       Callout,
       LinkCard,
       SlashExtension,
-      MentionConfig,
+      UserMentionConfig,
+      ClientMentionConfig,
       Highlight.configure({ multicolor: true }),
       TextStyle,
       Color,

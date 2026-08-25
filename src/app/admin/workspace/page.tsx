@@ -14,6 +14,7 @@ import {
   Zap,
   GripVertical,
   X,
+  Pencil,
   Loader2,
   Inbox,
   UserX,
@@ -1314,55 +1315,226 @@ function NotesWidget() {
   );
 }
 
-function LinksWidget() {
-  const [links, setLinks] = useState<any[]>([]);
+type WorkspaceLink = { id: string; name: string; url: string; icon: string };
 
-  useEffect(() => {
-    async function fetchLinks() {
-      setLinks([
-        { name: "Google Drive", url: "https://drive.google.com", icon: "📁" },
-        { name: "Meta Ads", url: "https://adsmanager.facebook.com", icon: "📈" },
-        { name: "Brandbook", url: "#", icon: "🎨" },
-        { name: "Manual", url: "#", icon: "📖" },
-      ]);
+const DEFAULT_LINKS: WorkspaceLink[] = [
+  { id: "default-drive", name: "Google Drive", url: "https://drive.google.com", icon: "📁" },
+  { id: "default-ads", name: "Meta Ads", url: "https://adsmanager.facebook.com", icon: "📈" },
+  { id: "default-brandbook", name: "Brandbook", url: "#", icon: "🎨" },
+  { id: "default-manual", name: "Manual", url: "#", icon: "📖" },
+];
+
+function normalizeLinkUrl(raw: string): string | null {
+  const trimmed = raw.trim();
+  if (!trimmed || trimmed === "#") return trimmed || null;
+  try {
+    new URL(trimmed);
+    return trimmed;
+  } catch {
+    try {
+      const withProtocol = `https://${trimmed}`;
+      new URL(withProtocol);
+      return withProtocol;
+    } catch {
+      return null;
     }
-    fetchLinks();
-  }, []);
+  }
+}
+
+function LinksWidget() {
+  const { currentUser } = useAuth();
+  const { showToast } = useToast();
+  const savedLinks = currentUser?.workspace_settings?.links ?? DEFAULT_LINKS;
+
+  const [isEditingLinks, setIsEditingLinks] = useState(false);
+  const [draftLinks, setDraftLinks] = useState<WorkspaceLink[]>(savedLinks);
+  const [saving, setSaving] = useState(false);
+
+  const openEditor = () => {
+    setDraftLinks(savedLinks);
+    setIsEditingLinks(true);
+  };
+
+  const updateDraft = (id: string, field: "name" | "url" | "icon", value: string) => {
+    setDraftLinks((current) => current.map((l) => (l.id === id ? { ...l, [field]: value } : l)));
+  };
+
+  const removeDraft = (id: string) => {
+    setDraftLinks((current) => current.filter((l) => l.id !== id));
+  };
+
+  const addDraft = () => {
+    setDraftLinks((current) => [...current, { id: crypto.randomUUID(), name: "", url: "", icon: "🔗" }]);
+  };
+
+  const saveLinks = async () => {
+    if (!currentUser) return;
+    const cleaned: WorkspaceLink[] = [];
+    for (const link of draftLinks) {
+      const name = link.name.trim();
+      const rawUrl = link.url.trim();
+      if (!name && !rawUrl) continue;
+      if (!name) {
+        showToast("Dê um nome para cada link", "error");
+        return;
+      }
+      const url = normalizeLinkUrl(rawUrl);
+      if (!url) {
+        showToast(`URL inválida em "${name}"`, "error");
+        return;
+      }
+      cleaned.push({ ...link, name, url, icon: link.icon.trim() || "🔗" });
+    }
+
+    setSaving(true);
+    try {
+      const { data: fresh } = await supabase
+        .from('users')
+        .select('workspace_settings')
+        .eq('id', currentUser.id)
+        .single();
+
+      const { error } = await supabase
+        .from('users')
+        .update({
+          workspace_settings: {
+            ...(fresh?.workspace_settings ?? currentUser.workspace_settings),
+            links: cleaned,
+          },
+        })
+        .eq('id', currentUser.id);
+
+      if (error) throw error;
+      setIsEditingLinks(false);
+      showToast("Links atualizados!", "success");
+    } catch (err) {
+      console.error("Erro ao salvar links:", err);
+      showToast("Erro ao salvar links", "error");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <h3 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <Star size={18} color="var(--color-warning)" /> Links Úteis
-      </h3>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px' }}>
-        {links.length > 0 ? links.map(link => (
-          <motion.a
-            key={link.name}
-            href={link.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            whileHover={{ y: -2, background: 'var(--color-surface-sunken)' }}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+        <h3 style={{ fontSize: '1.1rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '10px', margin: 0 }}>
+          <Star size={18} color="var(--color-warning)" /> Links Úteis
+        </h3>
+        {!isEditingLinks && (
+          <button
+            type="button"
+            onClick={openEditor}
+            className="btn btn-secondary"
             style={{
-              padding: '12px 16px',
-              borderRadius: 'var(--radius-card)',
-              background: 'var(--color-surface-sunken)',
-              border: '1px solid var(--border)',
-              textDecoration: 'none',
-              color: 'var(--text-primary)',
-              fontSize: '0.85rem',
-              fontWeight: 700,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px'
+              height: '28px', padding: '0 10px', borderRadius: '8px',
+              display: 'flex', alignItems: 'center', gap: '6px',
+              fontSize: '0.72rem', fontWeight: 700
             }}
           >
-            <span style={{ fontSize: '1.2rem' }}>{link.icon}</span>
-            {link.name}
-          </motion.a>
-        )) : (
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Nenhum link pinado.</p>
+            <Pencil size={12} /> Editar
+          </button>
         )}
       </div>
+
+      {!isEditingLinks ? (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px' }}>
+          {savedLinks.length > 0 ? savedLinks.map(link => (
+            <motion.a
+              key={link.id}
+              href={link.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              whileHover={{ y: -2, background: 'var(--color-surface-sunken)' }}
+              style={{
+                padding: '12px 16px',
+                borderRadius: 'var(--radius-card)',
+                background: 'var(--color-surface-sunken)',
+                border: '1px solid var(--border)',
+                textDecoration: 'none',
+                color: 'var(--text-primary)',
+                fontSize: '0.85rem',
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px'
+              }}
+            >
+              <span style={{ fontSize: '1.2rem' }}>{link.icon}</span>
+              {link.name}
+            </motion.a>
+          )) : (
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Nenhum link ainda.</p>
+          )}
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {draftLinks.map((link) => (
+            <div key={link.id} style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+              <input
+                value={link.icon}
+                onChange={(e) => updateDraft(link.id, 'icon', e.target.value)}
+                maxLength={4}
+                className="input-dark"
+                style={{ width: '38px', height: '32px', fontSize: '0.9rem', padding: '0 6px', textAlign: 'center', borderRadius: '8px', flexShrink: 0 }}
+              />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, minWidth: 0 }}>
+                <input
+                  value={link.name}
+                  onChange={(e) => updateDraft(link.id, 'name', e.target.value)}
+                  placeholder="Nome"
+                  className="input-dark"
+                  style={{ height: '28px', fontSize: '0.78rem', padding: '0 8px', borderRadius: '8px' }}
+                />
+                <input
+                  value={link.url}
+                  onChange={(e) => updateDraft(link.id, 'url', e.target.value)}
+                  placeholder="URL"
+                  className="input-dark"
+                  style={{ height: '28px', fontSize: '0.78rem', padding: '0 8px', borderRadius: '8px' }}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => removeDraft(link.id)}
+                aria-label="Remover link"
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-danger)', padding: 2, flexShrink: 0 }}
+              >
+                <X size={14} />
+              </button>
+            </div>
+          ))}
+
+          <button
+            type="button"
+            onClick={addDraft}
+            className="btn btn-secondary"
+            style={{ height: '30px', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', borderRadius: '8px', marginTop: '4px' }}
+          >
+            <Plus size={13} /> Adicionar link
+          </button>
+
+          <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
+            <button
+              type="button"
+              onClick={() => setIsEditingLinks(false)}
+              className="btn btn-secondary"
+              style={{ flex: 1, height: '32px', fontSize: '0.78rem', fontWeight: 700, borderRadius: '8px' }}
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={saveLinks}
+              disabled={saving}
+              className="btn btn-accent"
+              style={{ flex: 1, height: '32px', fontSize: '0.78rem', fontWeight: 700, borderRadius: '8px' }}
+            >
+              {saving ? 'Salvando...' : 'Salvar'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

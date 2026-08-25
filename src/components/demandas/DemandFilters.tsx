@@ -1,7 +1,19 @@
 "use client";
 
-import { Eye, EyeOff, RotateCcw, UserCircle2 } from "lucide-react";
-import SearchInput from "@/components/ui/SearchInput";
+import { useMemo } from "react";
+import {
+  Building2,
+  CircleDot,
+  Eye,
+  EyeOff,
+  RotateCcw,
+  Search,
+  UserCircle2,
+  Volume2,
+  VolumeX,
+  X,
+} from "lucide-react";
+import Combobox, { type ComboboxOption } from "@/components/ui/Combobox";
 import { useAuth } from "@/hooks/useAuth";
 import {
   clientLabel,
@@ -11,6 +23,8 @@ import {
   type DemandScope,
 } from "@/types/demandas";
 import { useDemandas } from "./DemandasProvider";
+import { UserAvatar } from "./AssigneePicker";
+import { PriorityFlag } from "./PriorityFlag";
 
 const SCOPES: { value: DemandScope | "all"; label: string }[] = [
   { value: "all", label: "Todas" },
@@ -22,157 +36,192 @@ const PRIORITIES: DemandPriority[] = ["urgent", "high", "medium", "low", "none"]
 
 export default function DemandFilters() {
   const { currentUser } = useAuth();
-  const { filters, setFilters, resetFilters, clients, users, statuses } = useDemandas();
+  const {
+    filters,
+    setFilters,
+    resetFilters,
+    clients,
+    users,
+    statuses,
+    soundEnabled,
+    setSoundEnabled,
+  } = useDemandas();
 
   const mineActive = !!currentUser && filters.assigneeId === currentUser.id;
   const isDirty = hasActiveFilter(filters);
 
+  const clientOptions = useMemo<ComboboxOption[]>(
+    () =>
+      clients.map((client) => ({
+        value: client.id,
+        label: clientLabel(client),
+        keywords: client.name,
+        icon: <Building2 size={14} />,
+      })),
+    [clients],
+  );
+
+  const userOptions = useMemo<ComboboxOption[]>(
+    () =>
+      users.map((user) => ({
+        value: user.id,
+        label: user.name || user.email,
+        keywords: user.email,
+        icon: (
+          <UserAvatar
+            name={user.name || user.email}
+            avatarUrl={user.avatar_url ?? user.avatarUrl}
+            size={20}
+            ring={false}
+          />
+        ),
+      })),
+    [users],
+  );
+
+  const statusOptions = useMemo<ComboboxOption[]>(
+    () => statuses.map((status) => ({ value: status.id, label: status.label, color: status.color })),
+    [statuses],
+  );
+
+  const priorityOptions = useMemo<ComboboxOption[]>(
+    () =>
+      PRIORITIES.map((priority) => ({
+        value: priority,
+        label: PRIORITY_LABELS[priority],
+        icon: <PriorityFlag priority={priority} size={13} />,
+      })),
+    [],
+  );
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      {/* Linha 1: escopo + busca */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-        <div
-          style={{
-            display: "inline-flex",
-            gap: 4,
-            padding: 4,
-            borderRadius: 12,
-            background: "var(--color-surface-sunken)",
-            border: "1px solid var(--border)",
-          }}
-        >
-          {SCOPES.map((scope) => {
-            const active = filters.scope === scope.value;
-            return (
-              <button
-                key={scope.value}
-                type="button"
-                onClick={() => setFilters({ scope: scope.value })}
-                aria-pressed={active}
-                style={{
-                  padding: "5px 12px",
-                  borderRadius: 9,
-                  border: "none",
-                  cursor: "pointer",
-                  fontSize: "0.76rem",
-                  fontWeight: 700,
-                  background: active ? "var(--accent)" : "transparent",
-                  color: active ? "var(--color-text-on-accent)" : "var(--text-secondary)",
-                  transition: "all 0.15s",
-                }}
-              >
-                {scope.label}
-              </button>
-            );
-          })}
-        </div>
-
-        <div style={{ flex: 1, minWidth: 200 }}>
-          <SearchInput
-            value={filters.search}
-            onChange={(value: string) => setFilters({ search: value })}
-            placeholder="Buscar por título ou cliente…"
-          />
-        </div>
+      {/* Abas do escopo, acima de tudo */}
+      <div className="filter-tabs" role="tablist" aria-label="Escopo das demandas">
+        {SCOPES.map((scope) => (
+          <button
+            key={scope.value}
+            type="button"
+            role="tab"
+            aria-selected={filters.scope === scope.value}
+            data-active={filters.scope === scope.value || undefined}
+            onClick={() => setFilters({ scope: scope.value })}
+            className="filter-tab"
+          >
+            {scope.label}
+          </button>
+        ))}
       </div>
 
-      {/* Linha 2: recortes */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-        {currentUser && (
-          <ToggleChip
-            active={mineActive}
-            onClick={() =>
-              setFilters({ assigneeId: mineActive ? null : currentUser.id })
-            }
-            icon={<UserCircle2 size={13} />}
-            label="Minhas"
+      {/* Opções — busca primeiro, todas na mesma métrica */}
+      <div className="filter-bar">
+        <label className="filter-control filter-search">
+          <Search size={14} />
+          <input
+            value={filters.search}
+            onChange={(event) => setFilters({ search: event.target.value })}
+            placeholder="Buscar demanda ou cliente…"
+            aria-label="Buscar demanda ou cliente"
           />
-        )}
+          {filters.search && (
+            <button
+              type="button"
+              onClick={() => setFilters({ search: "" })}
+              aria-label="Limpar busca"
+              style={{
+                display: "flex",
+                border: "none",
+                background: "transparent",
+                cursor: "pointer",
+                padding: 0,
+                color: "var(--text-tertiary)",
+              }}
+            >
+              <X size={13} />
+            </button>
+          )}
+        </label>
 
-        <ToggleChip
-          active={filters.hideCompleted}
-          onClick={() => setFilters({ hideCompleted: !filters.hideCompleted })}
-          icon={filters.hideCompleted ? <EyeOff size={13} /> : <Eye size={13} />}
-          label={filters.hideCompleted ? "Concluídas ocultas" : "Mostrando concluídas"}
-        />
-
-        <select
-          value={filters.clientId ?? ""}
-          onChange={(event) => setFilters({ clientId: event.target.value || null })}
-          aria-label="Filtrar por cliente"
-          style={selectStyle}
-        >
-          <option value="">Todos os clientes</option>
-          {clients.map((client) => (
-            <option key={client.id} value={client.id}>
-              {clientLabel(client)}
-            </option>
-          ))}
-        </select>
-
-        <select
-          value={filters.assigneeId ?? ""}
-          onChange={(event) => setFilters({ assigneeId: event.target.value || null })}
-          aria-label="Filtrar por responsável"
-          style={selectStyle}
-        >
-          <option value="">Todos os responsáveis</option>
-          {users.map((user) => (
-            <option key={user.id} value={user.id}>
-              {user.name || user.email}
-            </option>
-          ))}
-        </select>
-
-        <select
-          value={filters.status ?? ""}
-          onChange={(event) => setFilters({ status: event.target.value || null })}
-          aria-label="Filtrar por status"
-          style={selectStyle}
-        >
-          <option value="">Todos os status</option>
-          {statuses.map((status) => (
-            <option key={status.id} value={status.id}>
-              {status.label}
-            </option>
-          ))}
-        </select>
-
-        <select
-          value={filters.priority ?? ""}
-          onChange={(event) =>
-            setFilters({ priority: (event.target.value || null) as DemandPriority | null })
-          }
-          aria-label="Filtrar por prioridade"
-          style={selectStyle}
-        >
-          <option value="">Todas as prioridades</option>
-          {PRIORITIES.map((priority) => (
-            <option key={priority} value={priority}>
-              {PRIORITY_LABELS[priority]}
-            </option>
-          ))}
-        </select>
-
-        {isDirty && (
+        {currentUser && (
           <button
             type="button"
-            onClick={resetFilters}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 5,
-              padding: "5px 10px",
-              borderRadius: 999,
-              border: "1px solid var(--border)",
-              background: "transparent",
-              cursor: "pointer",
-              fontSize: "0.74rem",
-              fontWeight: 700,
-              color: "var(--text-tertiary)",
-            }}
+            className="filter-control"
+            data-active={mineActive || undefined}
+            aria-pressed={mineActive}
+            onClick={() => setFilters({ assigneeId: mineActive ? null : currentUser.id })}
           >
-            <RotateCcw size={12} /> Limpar
+            <UserCircle2 size={14} />
+            Minhas
+          </button>
+        )}
+
+        {/* Rótulo fixo e ícone alternando: o texto não muda de largura, então
+            a fileira não “dança” ao ligar e desligar. */}
+        <button
+          type="button"
+          className="filter-control"
+          data-active={filters.hideCompleted || undefined}
+          aria-pressed={filters.hideCompleted}
+          title={filters.hideCompleted ? "Mostrar concluídas" : "Ocultar concluídas"}
+          onClick={() => setFilters({ hideCompleted: !filters.hideCompleted })}
+        >
+          {filters.hideCompleted ? <EyeOff size={14} /> : <Eye size={14} />}
+          Concluídas
+        </button>
+
+        <Combobox
+          value={filters.clientId}
+          onChange={(value) => setFilters({ clientId: value })}
+          options={clientOptions}
+          ariaLabel="Filtrar por cliente"
+          searchPlaceholder="Buscar cliente…"
+          clearOption={{ label: "Cliente", icon: <Building2 size={14} /> }}
+        />
+
+        <Combobox
+          value={filters.assigneeId}
+          onChange={(value) => setFilters({ assigneeId: value })}
+          options={userOptions}
+          ariaLabel="Filtrar por responsável"
+          searchPlaceholder="Buscar pessoa…"
+          clearOption={{ label: "Responsáveis", icon: <UserCircle2 size={14} /> }}
+        />
+
+        <Combobox
+          value={filters.status}
+          onChange={(value) => setFilters({ status: value })}
+          options={statusOptions}
+          ariaLabel="Filtrar por status"
+          searchPlaceholder="Buscar status…"
+          clearOption={{ label: "Status", icon: <CircleDot size={14} /> }}
+        />
+
+        <Combobox
+          value={filters.priority}
+          onChange={(value) => setFilters({ priority: value as DemandPriority | null })}
+          options={priorityOptions}
+          ariaLabel="Filtrar por prioridade"
+          clearOption={{
+            label: "Prioridades",
+            icon: <PriorityFlag priority="none" size={13} />,
+          }}
+        />
+
+        <button
+          type="button"
+          className="filter-control filter-control-icon"
+          aria-pressed={soundEnabled}
+          title={soundEnabled ? "Som de conclusão ligado" : "Som de conclusão desligado"}
+          aria-label={soundEnabled ? "Desligar som de conclusão" : "Ligar som de conclusão"}
+          onClick={() => setSoundEnabled(!soundEnabled)}
+        >
+          {soundEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
+        </button>
+
+        {isDirty && (
+          <button type="button" className="filter-control" onClick={resetFilters}>
+            <RotateCcw size={13} />
+            Limpar
           </button>
         )}
       </div>
@@ -189,55 +238,5 @@ function hasActiveFilter(filters: Filters): boolean {
     filters.status !== null ||
     filters.hideCompleted ||
     filters.search.trim() !== ""
-  );
-}
-
-const selectStyle: React.CSSProperties = {
-  padding: "5px 10px",
-  borderRadius: 999,
-  border: "1px solid var(--border)",
-  background: "var(--color-surface-sunken)",
-  color: "var(--text-secondary)",
-  fontSize: "0.74rem",
-  fontWeight: 700,
-  fontFamily: "inherit",
-  cursor: "pointer",
-  maxWidth: 190,
-};
-
-function ToggleChip({
-  active,
-  onClick,
-  icon,
-  label,
-}: {
-  active: boolean;
-  onClick: () => void;
-  icon: React.ReactNode;
-  label: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 5,
-        padding: "5px 12px",
-        borderRadius: 999,
-        cursor: "pointer",
-        fontSize: "0.74rem",
-        fontWeight: 700,
-        background: active ? "var(--accent)" : "var(--color-surface-sunken)",
-        color: active ? "var(--color-text-on-accent)" : "var(--text-secondary)",
-        border: `1px solid ${active ? "var(--accent)" : "var(--border)"}`,
-        whiteSpace: "nowrap",
-      }}
-    >
-      {icon}
-      {label}
-    </button>
   );
 }

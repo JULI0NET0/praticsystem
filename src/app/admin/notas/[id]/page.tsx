@@ -18,6 +18,8 @@ import TitleMention, { Mention } from '@/components/notas/TitleMention';
 import CustomModal from '@/components/CustomModal';
 import { organizeMeetingNotes } from '@/lib/notesAudio';
 import { markdownToTiptapJson } from '@/lib/markdownToTiptapJson';
+import Combobox from '@/components/ui/Combobox';
+import { OrganizeMode, ORGANIZE_MODE_LABELS, DEFAULT_ORGANIZE_MODE } from '@/lib/organizeModes';
 
 const BlockEditor = dynamic(() => import('@/components/notas/BlockEditor'), {
   ssr: false,
@@ -62,6 +64,7 @@ export default function NotaDetailPage() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isReorganizeModalOpen, setIsReorganizeModalOpen] = useState(false);
   const [reorganizing, setReorganizing] = useState(false);
+  const [reorganizeMode, setReorganizeMode] = useState<OrganizeMode>(DEFAULT_ORGANIZE_MODE);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -70,6 +73,14 @@ export default function NotaDetailPage() {
     window.addEventListener('resize', check);
     return () => window.removeEventListener('resize', check);
   }, []);
+
+  // Reorganizar pode levar alguns minutos (a Groq tem limite de tokens/minuto
+  // no tier gratuito) — deixa visível no título da aba pra poder trocar de aba.
+  useEffect(() => {
+    const originalTitle = document.title;
+    document.title = reorganizing ? '⏳ Reorganizando... — Notas' : originalTitle;
+    return () => { document.title = originalTitle; };
+  }, [reorganizing]);
 
   useEffect(() => {
     fetchNote();
@@ -191,7 +202,7 @@ export default function NotaDetailPage() {
     setIsReorganizeModalOpen(false);
     setReorganizing(true);
     try {
-      const markdown = await organizeMeetingNotes(note.raw_transcript);
+      const markdown = await organizeMeetingNotes(note.raw_transcript, reorganizeMode);
       const newContent = markdownToTiptapJson(markdown);
       const last_organized_at = new Date().toISOString();
       const { error } = await supabase
@@ -444,33 +455,28 @@ export default function NotaDetailPage() {
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35 }}
-      style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}
-    >
-      {/* Layout */}
+    <>
+      {/* Zera o padding-top do scroll container APENAS nesta página.
+          Sem esse override, o padding-top de .admin-content-area cria um
+          espaço acima da barra sticky onde o conteúdo vaza ao rolar.
+          A tag <style> é removida automaticamente quando a rota desmonta. */}
+      <style>{`.admin-content-area { padding-top: 0 !important; }`}</style>
+
       <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%' }}>
 
-        {/* Barra fixa — FORA do card.
-            Antes ela vivia dentro do .glass-card e usava margens
-            negativas de -36px para sangrar até a borda. Como o card
-            tem cantos arredondados e não pode receber overflow:hidden
-            (isso o tornaria o containing block do sticky e quebraria a
-            fixação), o conteúdo rolava por fora dos cantos — era o
-            "vazamento". Sendo irmã do card, a barra não precisa de
-            margem negativa nenhuma. */}
+        {/* Barra fixa — com padding-top: 0 no scroll container, top: 0
+            cola a barra exatamente no topo do viewport de rolagem.
+            Nenhum espaço sobra acima dela para vazamento de conteúdo. */}
         <div style={{
           position: 'sticky',
-          top: isMobile ? 'var(--header-height)' : '0px',
+          top: 0,
           zIndex: 50,
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           gap: '12px',
           background: 'var(--color-surface-canvas)',
-          padding: isMobile ? '10px 0' : '12px 0',
+          padding: '20px 0 12px',
           borderBottom: '1px solid var(--color-border-subtle)',
           marginBottom: '-10px',
         }}>
@@ -515,23 +521,35 @@ export default function NotaDetailPage() {
               )}
               <button
                 onClick={() => setShowMetadata(prev => !prev)}
-                style={{ background: 'var(--color-surface-sunken)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', padding: '5px 12px' }}
+                style={{ background: 'var(--color-surface-sunken)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', padding: '5px 8px' }}
                 title={showMetadata ? "Ocultar informações da nota" : "Mostrar informações da nota"}
               >
-                {showMetadata ? <><ChevronUp size={13} /> Ocultar Info</> : <><ChevronDown size={13} /> Mostrar Info</>}
+                {showMetadata ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
               </button>
               {note.raw_transcript && canEdit && (
-                <button
-                  onClick={() => setIsReorganizeModalOpen(true)}
-                  disabled={reorganizing}
-                  style={{ background: 'var(--color-surface-sunken)', border: '1px solid var(--border)', borderRadius: '8px', cursor: reorganizing ? 'wait' : 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', padding: '5px 12px', opacity: reorganizing ? 0.6 : 1 }}
-                  title="Gera novamente as notas organizadas a partir da transcrição original, sem re-transcrever o áudio"
-                >
-                  {reorganizing
-                    ? <><motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}><Loader2 size={13} /></motion.div> Reorganizando...</>
-                    : <><Sparkles size={13} /> Reorganizar com IA</>
-                  }
-                </button>
+                <>
+                  <Combobox
+                    options={(Object.keys(ORGANIZE_MODE_LABELS) as OrganizeMode[]).map(m => ({
+                      value: m,
+                      label: ORGANIZE_MODE_LABELS[m],
+                    }))}
+                    value={reorganizeMode}
+                    onChange={val => val && setReorganizeMode(val as OrganizeMode)}
+                    disabled={reorganizing}
+                    placeholder="Selecione o formato"
+                  />
+                  <button
+                    onClick={() => setIsReorganizeModalOpen(true)}
+                    disabled={reorganizing}
+                    style={{ background: 'var(--color-surface-sunken)', border: '1px solid var(--border)', borderRadius: '8px', cursor: reorganizing ? 'wait' : 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', padding: '5px 12px', opacity: reorganizing ? 0.6 : 1 }}
+                    title="Gera novamente as notas organizadas a partir da transcrição original, sem re-transcrever o áudio"
+                  >
+                    {reorganizing
+                      ? <><motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}><Loader2 size={13} /></motion.div> Reorganizando...</>
+                      : <><Sparkles size={13} /> Reorganizar</>
+                    }
+                  </button>
+                </>
               )}
               <button
                 onClick={handleExport}
@@ -539,8 +557,8 @@ export default function NotaDetailPage() {
                 style={{ background: 'var(--color-surface-sunken)', border: '1px solid var(--border)', borderRadius: '8px', cursor: exporting ? 'wait' : 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', padding: '5px 12px', opacity: exporting ? 0.6 : 1 }}
               >
                 {exporting
-                  ? <><motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}><Loader2 size={13} /></motion.div> Gerando PDF...</>
-                  : <><Printer size={13} /> Exportar PDF</>
+                  ? <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}><Loader2 size={13} /></motion.div>
+                  : <><Printer size={13} /> PDF</>
                 }
               </button>
               <button
@@ -548,7 +566,7 @@ export default function NotaDetailPage() {
                 style={{ background: 'var(--color-surface-sunken)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', padding: '5px 12px' }}
                 title="Exportar como Markdown (.md)"
               >
-                <FileDown size={13} /> Exportar MD
+                <FileDown size={13} /> MD
               </button>
               {isOwner && (
                 <button
@@ -707,21 +725,22 @@ export default function NotaDetailPage() {
                   {/* Client */}
                   <SideSection icon={<Building2 size={13} />} label="Cliente vinculado">
                     {canEdit ? (
-                      <select
-                        value={note.client_id ?? ''}
-                        onChange={e => updateNote({ client_id: e.target.value || undefined, pin_to_client: false })}
-                        style={{ width: '100%', background: 'var(--color-surface-sunken)', border: '1px solid var(--border)', borderRadius: '8px', padding: '7px 10px', color: note.client_id ? 'white' : 'var(--text-secondary)', fontSize: '0.85rem', outline: 'none', cursor: 'pointer' }}
-                      >
-                        <option value="">Nenhum cliente</option>
-                        {clients.map((c, idx) => {
+                      <Combobox
+                        options={clients.map((c, idx) => {
                           const seq = (c as any).sequential_id || idx + 1;
-                          return (
-                            <option key={c.id} value={c.id}>
-                              {seq} - {c.nome_fantasia || c.name}
-                            </option>
-                          );
+                          const name = c.nome_fantasia || c.name;
+                          return {
+                            value: c.id,
+                            label: `${seq} - ${name}`,
+                            keywords: `${c.nome_fantasia || ''} ${c.name || ''}`,
+                          };
                         })}
-                      </select>
+                        value={note.client_id ?? null}
+                        onChange={val => updateNote({ client_id: val ?? undefined, pin_to_client: false })}
+                        clearOption={{ label: "Nenhum cliente" }}
+                        placeholder="Nenhum cliente"
+                        searchPlaceholder="Buscar cliente..."
+                      />
                     ) : (
                       <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: 0 }}>
                         {linkedClient ? (linkedClient.nome_fantasia || linkedClient.name) : '—'}
@@ -767,7 +786,6 @@ export default function NotaDetailPage() {
             editable={canEdit}
           />
         </div>
-      </div>
 
       {/* ── Print overlay (hidden on screen, visible on print) ─────────── */}
       <PrintOverlay note={note} linkedClient={linkedClient} />
@@ -788,12 +806,13 @@ export default function NotaDetailPage() {
         onClose={() => setIsReorganizeModalOpen(false)}
         onConfirm={handleReorganize}
         title="Reorganizar com IA"
-        message="Isso vai substituir o conteúdo atual da nota pela versão reorganizada pela IA a partir da transcrição original. Qualquer edição manual feita depois da última organização será perdida. Deseja continuar?"
+        message={`Isso vai substituir o conteúdo atual da nota por uma nova versão no formato "${ORGANIZE_MODE_LABELS[reorganizeMode]}", gerada a partir da transcrição original. Qualquer edição manual feita depois da última organização será perdida. Deseja continuar?`}
         type="confirm"
         confirmText="Reorganizar"
         cancelText="Cancelar"
       />
-    </motion.div>
+    </div>
+    </>
   );
 }
 

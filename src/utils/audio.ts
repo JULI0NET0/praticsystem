@@ -1,4 +1,4 @@
-type SoundType = 'success' | 'error' | 'info' | 'warning' | 'chat' | 'mention';
+type SoundType = 'success' | 'error' | 'info' | 'warning' | 'chat' | 'mention' | 'task_done';
 
 class SoundManager {
   private audioCtx: AudioContext | null = null;
@@ -62,6 +62,18 @@ class SoundManager {
           this.impact(ctx, t, 0.045);
           this.bell(ctx, 1318.5, t + 0.13, 0.17, 0.12);  // E6
           this.impact(ctx, t + 0.13, 0.05);
+          break;
+
+        // ──────────────────────────────────────────────
+        // TASK_DONE: "tick" curto de conclusão
+        //  • dois sinos próximos (B5 → E6) em 70 ms — rápido, não celebra
+        //  • ganho e decaimento menores que 'mention': dispara muitas vezes
+        //    seguidas ao varrer uma lista, então não pode cansar
+        // ──────────────────────────────────────────────
+        case 'task_done':
+          this.bell(ctx, 987.77, t,        0.085, 0.055);  // B5
+          this.impact(ctx, t, 0.03);
+          this.bell(ctx, 1318.5, t + 0.07, 0.075, 0.075);  // E6
           break;
       }
     } catch (err) {

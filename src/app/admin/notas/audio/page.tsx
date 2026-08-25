@@ -4,27 +4,56 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { ArrowLeft, AudioLines, Loader2, AlertTriangle, Building2, Upload } from 'lucide-react';
+import { ArrowLeft, AudioLines, Loader2, AlertTriangle, Building2, Upload, Mic, Square, Pause, Play, FileAudio } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { Client } from '@/types/database';
 import { useToast } from '@/components/CustomToast';
 import { transcribeMeetingAudio, organizeMeetingNotes, extractMeetingTitleFromMarkdown } from '@/lib/notesAudio';
 import { markdownToTiptapJson } from '@/lib/markdownToTiptapJson';
+import { useMeetingRecorder } from '@/hooks/useMeetingRecorder';
+import { OrganizeMode, ORGANIZE_MODE_LABELS, ORGANIZE_MODE_DESCRIPTIONS, DEFAULT_ORGANIZE_MODE } from '@/lib/organizeModes';
 
 type Step = 'idle' | 'transcribing' | 'organizing' | 'error';
+type Mode = 'upload' | 'record';
+
+function formatElapsed(totalSeconds: number): string {
+  const m = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
+  const s = (totalSeconds % 60).toString().padStart(2, '0');
+  return `${m}:${s}`;
+}
 
 export default function AudioNotaPage() {
   const router = useRouter();
   const { currentUser } = useAuth();
   const { showToast } = useToast();
+  const recorder = useMeetingRecorder();
 
+  const [mode, setMode] = useState<Mode>('upload');
   const [file, setFile] = useState<File | null>(null);
   const [clients, setClients] = useState<Pick<Client, 'id' | 'name' | 'nome_fantasia'>[]>([]);
   const [clientId, setClientId] = useState('');
+  const [organizeMode, setOrganizeMode] = useState<OrganizeMode>(DEFAULT_ORGANIZE_MODE);
   const [step, setStep] = useState<Step>('idle');
   const [errorMsg, setErrorMsg] = useState('');
   const [progressLabel, setProgressLabel] = useState('');
+
+  // Evita perder a gravação se a pessoa fechar/recarregar a aba sem querer.
+  useEffect(() => {
+    const isRecording = recorder.status === 'recording' || recorder.status === 'paused';
+    if (!isRecording) return;
+    const handler = (e: BeforeUnloadEvent) => { e.preventDefault(); };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [recorder.status]);
+
+  // Deixa o progresso visível no título da aba, já que o processo continua
+  // rodando normalmente mesmo se o usuário trocar de aba enquanto espera.
+  useEffect(() => {
+    const originalTitle = document.title;
+    document.title = progressLabel ? `⏳ ${progressLabel} — Notas` : originalTitle;
+    return () => { document.title = originalTitle; };
+  }, [progressLabel]);
 
   useEffect(() => {
     supabase
@@ -42,6 +71,23 @@ export default function AudioNotaPage() {
     setStep('idle');
   };
 
+  const handleStopRecording = async () => {
+    const recordedFile = await recorder.stop();
+    setFile(recordedFile);
+    setErrorMsg('');
+    setStep('idle');
+  };
+
+  const switchMode = (next: Mode) => {
+    if (isProcessing) return;
+    if (recorder.status === 'recording' || recorder.status === 'paused') return;
+    recorder.reset();
+    setFile(null);
+    setErrorMsg('');
+    setStep('idle');
+    setMode(next);
+  };
+
   const handleGenerate = async () => {
     if (!file || !currentUser) return;
     try {
@@ -53,7 +99,7 @@ export default function AudioNotaPage() {
 
       setStep('organizing');
       setProgressLabel('Organizando notas com IA...');
-      const markdown = await organizeMeetingNotes(transcript);
+      const markdown = await organizeMeetingNotes(transcript, organizeMode);
 
       const title = extractMeetingTitleFromMarkdown(markdown) || `Reunião — ${new Date().toLocaleDateString('pt-BR')}`;
       const content = markdownToTiptapJson(markdown);
@@ -105,19 +151,140 @@ export default function AudioNotaPage() {
       </div>
 
       <div className="glass-card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div style={{
+          display: 'flex', gap: '4px',
+          background: 'var(--color-surface-sunken)',
+          borderRadius: '10px', padding: '4px', alignSelf: 'flex-start',
+        }}>
+          {([
+            { key: 'upload' as const, label: 'Enviar arquivo', icon: Upload },
+            { key: 'record' as const, label: 'Gravar reunião', icon: Mic },
+          ]).map(t => (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => switchMode(t.key)}
+              disabled={isProcessing}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '6px',
+                padding: '6px 14px', borderRadius: '8px', border: 'none',
+                fontSize: '0.82rem', fontWeight: 500, cursor: isProcessing ? 'not-allowed' : 'pointer',
+                background: mode === t.key ? 'var(--accent)' : 'transparent',
+                color: mode === t.key ? 'white' : 'var(--text-secondary)',
+                transition: 'all 0.2s',
+              }}
+            >
+              <t.icon size={14} /> {t.label}
+            </button>
+          ))}
+        </div>
+
+        {mode === 'upload' ? (
+          <div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px' }}>
+              <AudioLines size={14} /> Arquivo de áudio
+            </label>
+            <input
+              type="file"
+              accept="audio/*"
+              onChange={handleFileChange}
+              disabled={isProcessing}
+              style={{ width: '100%', background: 'var(--color-surface-sunken)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px', color: 'var(--text-secondary)', fontSize: '0.85rem' }}
+            />
+            <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '8px' }}>
+              Arquivos grandes são divididos automaticamente em partes antes de transcrever.
+            </p>
+          </div>
+        ) : (
+          <div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px' }}>
+              <Mic size={14} /> Gravar reunião presencial
+            </label>
+            <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>
+              Grava pelo microfone do computador — funciona para reunião presencial, na mesma sala. Não captura o áudio de chamadas online (Zoom, Meet etc.); pra isso, envie a gravação como arquivo.
+            </p>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '16px', background: 'var(--color-surface-sunken)', borderRadius: '10px' }}>
+              {recorder.status === 'idle' || recorder.status === 'error' ? (
+                <button
+                  type="button"
+                  onClick={recorder.start}
+                  disabled={isProcessing}
+                  className="btn btn-accent"
+                  style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                >
+                  <Mic size={16} /> Iniciar gravação
+                </button>
+              ) : recorder.status === 'stopped' ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
+                  <FileAudio size={20} color="var(--accent)" />
+                  <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                    Gravação de {formatElapsed(recorder.elapsedSeconds)} pronta.
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => { recorder.reset(); setFile(null); }}
+                    disabled={isProcessing}
+                    style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: '0.8rem', cursor: 'pointer', textDecoration: 'underline' }}
+                  >
+                    Regravar
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <motion.div
+                    animate={{ opacity: recorder.status === 'recording' ? [1, 0.3, 1] : 1 }}
+                    transition={{ repeat: recorder.status === 'recording' ? Infinity : 0, duration: 1.4 }}
+                    style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#ef4444', flexShrink: 0 }}
+                  />
+                  <span style={{ fontSize: '0.95rem', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
+                    {formatElapsed(recorder.elapsedSeconds)}
+                  </span>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                    {recorder.status === 'paused' ? 'Pausado' : 'Gravando...'}
+                  </span>
+                  <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
+                    {recorder.status === 'recording' ? (
+                      <button type="button" onClick={recorder.pause} title="Pausar" style={{ background: 'var(--color-surface-canvas)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', padding: '8px', display: 'flex' }}>
+                        <Pause size={15} />
+                      </button>
+                    ) : (
+                      <button type="button" onClick={recorder.resume} title="Retomar" style={{ background: 'var(--color-surface-canvas)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', padding: '8px', display: 'flex' }}>
+                        <Play size={15} />
+                      </button>
+                    )}
+                    <button type="button" onClick={handleStopRecording} title="Parar" style={{ background: '#ef4444', border: 'none', borderRadius: '8px', cursor: 'pointer', padding: '8px', display: 'flex', color: 'white' }}>
+                      <Square size={15} />
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {recorder.errorMsg && (
+              <p style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', fontSize: '0.8rem', color: '#ef4444', marginTop: '10px' }}>
+                <AlertTriangle size={13} style={{ flexShrink: 0, marginTop: '2px' }} /> {recorder.errorMsg}
+              </p>
+            )}
+          </div>
+        )}
+
         <div>
           <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px' }}>
-            <AudioLines size={14} /> Arquivo de áudio
+            <FileAudio size={14} /> Método de transcrição
           </label>
-          <input
-            type="file"
-            accept="audio/*"
-            onChange={handleFileChange}
+          <select
+            value={organizeMode}
+            onChange={e => setOrganizeMode(e.target.value as OrganizeMode)}
             disabled={isProcessing}
-            style={{ width: '100%', background: 'var(--color-surface-sunken)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px', color: 'var(--text-secondary)', fontSize: '0.85rem' }}
-          />
+            style={{ width: '100%', background: 'var(--color-surface-sunken)', border: '1px solid var(--border)', borderRadius: '8px', padding: '9px 10px', color: 'white', fontSize: '0.85rem', outline: 'none', cursor: 'pointer' }}
+          >
+            {(Object.keys(ORGANIZE_MODE_LABELS) as OrganizeMode[]).map(m => (
+              <option key={m} value={m}>{ORGANIZE_MODE_LABELS[m]}</option>
+            ))}
+          </select>
           <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '8px' }}>
-            Arquivos grandes são divididos automaticamente em partes antes de transcrever.
+            {ORGANIZE_MODE_DESCRIPTIONS[organizeMode]}
           </p>
         </div>
 
@@ -160,6 +327,12 @@ export default function AudioNotaPage() {
             : <><Upload size={16} /> Gerar nota</>
           }
         </button>
+
+        {isProcessing && (
+          <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', textAlign: 'center' }}>
+            Reuniões longas podem levar alguns minutos. Você pode trocar de aba — o progresso continua aparecendo no título da aba e a nota é criada automaticamente quando terminar.
+          </p>
+        )}
       </div>
     </motion.div>
   );

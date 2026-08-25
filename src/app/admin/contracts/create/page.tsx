@@ -8,6 +8,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/CustomToast";
+import Combobox from "@/components/ui/Combobox";
 
 export default function CreateContractPage() {
   const router = useRouter();
@@ -171,31 +172,33 @@ export default function CreateContractPage() {
               <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <User size={14} /> Selecionar Cliente
               </label>
-              <select
-                required
-                className="input-dark"
-                value={formData.client_id} onChange={(e) => setFormData({ ...formData, client_id: e.target.value })}
-              >
-                <option value="">Selecione um cliente...</option>
-                {clients.map(client => (
-                  <option key={client.id} value={client.id}>{client.name}</option>
-                ))}
-              </select>
+              <Combobox
+                options={clients.map(client => ({
+                  value: client.id,
+                  label: client.name,
+                  keywords: client.name,
+                }))}
+                value={formData.client_id || null}
+                onChange={(val) => setFormData({ ...formData, client_id: val || '' })}
+                placeholder="Selecione um cliente..."
+                searchPlaceholder="Buscar cliente..."
+              />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Briefcase size={14} /> Selecionar Serviço / Plano
               </label>
-              <select
-                required
-                className="input-dark"
-                value={formData.service_id} onChange={(e) => setFormData({ ...formData, service_id: e.target.value })}
-              >
-                <option value="">Selecione um serviço...</option>
-                {services.map(service => (
-                  <option key={service.id} value={service.id}>{service.name} ({service.is_recurring ? 'Recorrente' : 'Avulso'})</option>
-                ))}
-              </select>
+              <Combobox
+                options={services.map(service => ({
+                  value: service.id,
+                  label: `${service.name} (${service.is_recurring ? 'Recorrente' : 'Avulso'})`,
+                  keywords: service.name,
+                }))}
+                value={formData.service_id || null}
+                onChange={(val) => setFormData({ ...formData, service_id: val || '' })}
+                placeholder="Selecione um serviço..."
+                searchPlaceholder="Buscar serviço..."
+              />
             </div>
           </div>
         </section>

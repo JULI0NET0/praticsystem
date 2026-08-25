@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarClock, Plus } from "lucide-react";
-import { parseDueDateInput, formatDueDateLabel } from "@/lib/dueDate";
+import { Plus } from "lucide-react";
 import type { Demand } from "@/types/demandas";
+import type { QuickParseResult } from "@/lib/quickParse";
 import { useDemandas } from "./DemandasProvider";
+import QuickAddInput from "./QuickAddInput";
 
 interface Props {
   /** Valores herdados do grupo/coluna onde a linha aparece. */
@@ -14,43 +15,33 @@ interface Props {
 }
 
 /**
- * Adição rápida: título + prazo escrito à mão ("amanhã", "segunda", "03/09").
- * O responsável padrão é quem está criando (regra definida em createDemand).
+ * Adição rápida: um campo só, com os atalhos do título fazendo o
+ * trabalho dos formulários (#cliente, @responsável, P1, data, hora).
+ * O responsável padrão é quem está criando (regra em createDemand).
  */
-export default function QuickAddRow({
-  defaults,
-  placeholder = "Adicionar demanda…",
-  onCreated,
-}: Props) {
+export default function QuickAddRow({ defaults, placeholder, onCreated }: Props) {
   const { createDemand, filters } = useDemandas();
-  const [title, setTitle] = useState("");
-  const [dueText, setDueText] = useState("");
+  const [value, setValue] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const parsedDue = parseDueDateInput(dueText);
-  const dueHint = dueText.trim()
-    ? parsedDue
-      ? formatDueDateLabel(parsedDue).label
-      : "não entendi"
-    : "";
-
-  const submit = async () => {
-    const trimmed = title.trim();
-    if (!trimmed || saving) return;
+  const submit = async (parsed: QuickParseResult) => {
+    if (!parsed.title.trim() || saving) return;
 
     setSaving(true);
     const created = await createDemand({
       ...defaults,
-      title: trimmed,
-      due_date: parsedDue ?? defaults?.due_date ?? null,
-      // Respeita o filtro de cliente ativo, para não criar solto
-      client_id: defaults?.client_id ?? filters.clientId ?? null,
+      title: parsed.title,
+      // O que veio escrito no título vence o padrão do grupo/coluna
+      due_date: parsed.dueDate ?? defaults?.due_date ?? null,
+      due_time: parsed.dueTime ?? null,
+      priority: parsed.priority ?? undefined,
+      client_id: parsed.clientId ?? defaults?.client_id ?? filters.clientId ?? null,
+      assignee_ids: parsed.assigneeIds.length ? parsed.assigneeIds : undefined,
     });
     setSaving(false);
 
     if (created) {
-      setTitle("");
-      setDueText("");
+      setValue("");
       onCreated?.(created);
     }
   };
@@ -59,82 +50,25 @@ export default function QuickAddRow({
     <div
       style={{
         display: "flex",
-        alignItems: "center",
+        alignItems: "flex-start",
         gap: 8,
-        padding: "6px 10px",
+        padding: "8px 10px",
         borderRadius: 10,
         border: "1px dashed var(--border)",
         background: "var(--color-surface-sunken)",
       }}
     >
-      <Plus size={15} color="var(--text-tertiary)" />
+      <Plus size={15} color="var(--text-tertiary)" style={{ marginTop: 3, flexShrink: 0 }} />
 
-      <input
-        value={title}
-        onChange={(event) => setTitle(event.target.value)}
-        onKeyDown={(event) => {
-          if (event.key === "Enter") submit();
-          if (event.key === "Escape") {
-            setTitle("");
-            setDueText("");
-          }
-        }}
-        placeholder={placeholder}
-        style={{
-          flex: 1,
-          minWidth: 0,
-          border: "none",
-          background: "transparent",
-          outline: "none",
-          fontSize: "0.85rem",
-          fontWeight: 600,
-          color: "var(--text-primary)",
-        }}
-      />
-
-      <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
-        <CalendarClock size={13} color="var(--text-tertiary)" />
-        <input
-          value={dueText}
-          onChange={(event) => setDueText(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") submit();
-          }}
-          placeholder="prazo"
-          title='Aceita "hoje", "amanhã", "segunda", "03/09"'
-          style={{
-            width: 84,
-            border: "none",
-            background: "transparent",
-            outline: "none",
-            fontSize: "0.76rem",
-            fontWeight: 600,
-            color: parsedDue ? "var(--accent)" : "var(--text-secondary)",
-          }}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <QuickAddInput
+          value={value}
+          onChange={setValue}
+          onSubmit={submit}
+          placeholder={placeholder ?? "Adicionar demanda…"}
+          showHint={value.trim().length > 0}
         />
-        {dueHint && (
-          <span
-            style={{
-              fontSize: "0.68rem",
-              fontWeight: 700,
-              color: parsedDue ? "var(--accent)" : "var(--text-tertiary)",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {dueHint}
-          </span>
-        )}
       </div>
-
-      <button
-        type="button"
-        onClick={submit}
-        disabled={!title.trim() || saving}
-        className="btn btn-sm btn-accent"
-        style={{ opacity: title.trim() ? 1 : 0.4 }}
-      >
-        Adicionar
-      </button>
     </div>
   );
 }

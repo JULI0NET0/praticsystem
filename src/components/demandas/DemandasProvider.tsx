@@ -6,12 +6,16 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
+  useSyncExternalStore,
   type ReactNode,
 } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth, type UserProfile } from "@/hooks/useAuth";
 import { useToast } from "@/components/CustomToast";
+import { playSound } from "@/utils/audio";
+import { deriveStatusFields } from "@/lib/demandState";
 import {
   EMPTY_DEMAND_FILTERS,
   PRIORITY_ORDER,
@@ -24,6 +28,38 @@ import {
 } from "@/types/demandas";
 
 const ATTACHMENTS_BUCKET = "demand-attachments";
+const SOUND_STORAGE_KEY = "pratic-demandas-som";
+
+// A preferência mora no localStorage, fora do React. useSyncExternalStore é o
+// que permite lê-la sem efeito (que a regra set-state-in-effect proíbe) e sem
+// divergência de hidratação — o servidor sempre responde `true`.
+const soundListeners = new Set<() => void>();
+
+function subscribeSound(listener: () => void): () => void {
+  soundListeners.add(listener);
+  return () => {
+    soundListeners.delete(listener);
+  };
+}
+
+function readSoundPreference(): boolean {
+  if (typeof window === "undefined") return true;
+  try {
+    const raw = window.localStorage.getItem(SOUND_STORAGE_KEY);
+    return raw === null ? true : raw === "true";
+  } catch {
+    return true;
+  }
+}
+
+function writeSoundPreference(enabled: boolean): void {
+  try {
+    window.localStorage.setItem(SOUND_STORAGE_KEY, enabled ? "on" : "off");
+  } catch {
+    // ignora
+  }
+  for (const listener of soundListeners) listener();
+}
 
 interface DemandasContextValue {
   demands: Demand[];
@@ -47,6 +83,10 @@ interface DemandasContextValue {
   deleteDemand: (id: string) => Promise<void>;
   moveDemand: (id: string, statusId: string, position?: number) => Promise<void>;
   toggleComplete: (id: string) => Promise<void>;
+
+  /** Som ao concluir. Preferência por navegador. */
+  soundEnabled: boolean;
+  setSoundEnabled: (enabled: boolean) => void;
 
   upsertStatus: (status: DemandStatus) => Promise<void>;
   deleteStatus: (id: string) => Promise<void>;
@@ -140,7 +180,23 @@ export function DemandasProvider({ children }: { children: ReactNode }) {
   const [statuses, setStatuses] = useState<DemandStatus[]>([]);
   const [clients, setClients] = useState<DemandClientRef[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filters, setFiltersState] = useState<DemandFilters>(EMPTY_DEMAND_FILTERS);
+  const [filters, setFiltersState] = useState<DemandFilters>(() => ({
+    ...EMPTY_DEMAND_FILTERS,
+    hideCompleted: true,
+    assigneeId: currentUser?.id ?? null,
+  }));
+  const soundEnabled = useSyncExternalStore(subscribeSound, readSoundPreference, () => true);
+
+  const initializedUserRef = useRef(false);
+  useEffect(() => {
+    if (currentUser?.id && !initializedUserRef.current) {
+      initializedUserRef.current = true;
+      setFiltersState((prev) => ({
+        ...prev,
+        assigneeId: prev.assigneeId ?? currentUser.id,
+      }));
+    }
+  }, [currentUser?.id]);
 
   // Detalhes carregados sob demanda ao abrir o drawer
   const [comments, setComments] = useState<Record<string, DemandComment[]>>({});
@@ -220,6 +276,10 @@ export function DemandasProvider({ children }: { children: ReactNode }) {
 
   const resetFilters = useCallback(() => setFiltersState(EMPTY_DEMAND_FILTERS), []);
 
+  const setSoundEnabled = useCallback((enabled: boolean) => {
+    writeSoundPreference(enabled);
+  }, []);
+
   const visibleDemands = useMemo(() => {
     const term = filters.search.trim().toLowerCase();
     return demands.filter((d) => {
@@ -289,8 +349,13 @@ export function DemandasProvider({ children }: { children: ReactNode }) {
       const previous = demands.find((d) => d.id === id);
       if (!previous) return;
 
+      // Localmente o patch vai enriquecido com o que a trigger derivaria, para
+      // a interface não ficar meio-atualizada durante a ida ao servidor. Para
+      // o banco segue o patch original — lá quem calcula isso é a trigger.
+      const optimistic = deriveStatusFields(patch, statuses);
+
       setDemands((list) =>
-        sortDemands(list.map((d) => (d.id === id ? { ...d, ...patch } : d))),
+        sortDemands(list.map((d) => (d.id === id ? { ...d, ...optimistic } : d))),
       );
 
       const { data, error } = await supabase
@@ -317,7 +382,7 @@ export function DemandasProvider({ children }: { children: ReactNode }) {
         );
       }
     },
-    [demands, showToast],
+    [demands, statuses, showToast],
   );
 
   const deleteDemand = useCallback(
@@ -368,9 +433,11 @@ export function DemandasProvider({ children }: { children: ReactNode }) {
         showToast("Nenhum status de conclusão configurado.", "error");
         return;
       }
+      // Só ao concluir — reabrir não faz som
+      if (soundEnabled) playSound("task_done");
       await updateDemand(id, { status: closed.id });
     },
-    [demands, statuses, updateDemand, showToast],
+    [demands, statuses, updateDemand, showToast, soundEnabled],
   );
 
   // -------------------------------------------------------------------------
@@ -665,6 +732,8 @@ export function DemandasProvider({ children }: { children: ReactNode }) {
       deleteDemand,
       moveDemand,
       toggleComplete,
+      soundEnabled,
+      setSoundEnabled,
       upsertStatus,
       deleteStatus,
       reorderStatuses,
@@ -697,6 +766,8 @@ export function DemandasProvider({ children }: { children: ReactNode }) {
       deleteDemand,
       moveDemand,
       toggleComplete,
+      soundEnabled,
+      setSoundEnabled,
       upsertStatus,
       deleteStatus,
       reorderStatuses,

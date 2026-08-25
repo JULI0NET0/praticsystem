@@ -3,19 +3,31 @@
 import { useMemo, useRef, useState } from "react";
 import { Loader2, Paperclip, Send, Trash2, X } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { splitMentions, type QuickCatalogs } from "@/lib/quickParse";
+import { clientLabel } from "@/types/demandas";
 import { useDemandas } from "./DemandasProvider";
 import { UserAvatar } from "./AssigneePicker";
 import { AttachmentChip } from "./AttachmentList";
+import MentionTextarea from "./MentionTextarea";
 
-/** Destaca @mentions, mesmo tratamento de ChatMessageItem. */
-function renderBody(body: string) {
-  return body.split(/(@\S+)/g).map((part, index) =>
-    part.startsWith("@") ? (
-      <span key={index} style={{ color: "var(--accent)", fontWeight: 700 }}>
-        {part}
-      </span>
+const MENTION_STYLE: Record<"user" | "client", React.CSSProperties> = {
+  user: { color: "var(--accent)", fontWeight: 700 },
+  client: { color: "var(--color-info-ink)", fontWeight: 700 },
+};
+
+/**
+ * Destaca `@Colaborador` e `#Cliente`. Casa contra os nomes do catálogo em vez
+ * de um `@\S+`: os nomes têm espaço, e o padrão antigo destacava só a primeira
+ * palavra de "@Julio Neto".
+ */
+function renderBody(body: string, catalogs: QuickCatalogs) {
+  return splitMentions(body, catalogs).map((segment, index) =>
+    segment.kind === "text" ? (
+      <span key={index}>{segment.value}</span>
     ) : (
-      <span key={index}>{part}</span>
+      <span key={index} style={MENTION_STYLE[segment.kind]}>
+        {segment.value}
+      </span>
     ),
   );
 }
@@ -33,8 +45,28 @@ function formatTimestamp(iso: string): string {
 
 export default function CommentThread({ demandId }: { demandId: string }) {
   const { currentUser } = useAuth();
-  const { commentsOf, attachmentsOf, addComment, deleteComment, removeAttachment, getUser } =
-    useDemandas();
+  const {
+    commentsOf,
+    attachmentsOf,
+    addComment,
+    deleteComment,
+    removeAttachment,
+    getUser,
+    users,
+    clients,
+  } = useDemandas();
+
+  const catalogs = useMemo<QuickCatalogs>(
+    () => ({
+      users: users.map((user) => ({ id: user.id, label: user.name || user.email })),
+      clients: clients.map((client) => ({
+        id: client.id,
+        label: clientLabel(client),
+        alias: client.name,
+      })),
+    }),
+    [users, clients],
+  );
 
   const [body, setBody] = useState("");
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
@@ -127,7 +159,7 @@ export default function CommentThread({ demandId }: { demandId: string }) {
                     wordBreak: "break-word",
                   }}
                 >
-                  {renderBody(comment.body)}
+                  {renderBody(comment.body, catalogs)}
                 </p>
               )}
 
@@ -155,25 +187,13 @@ export default function CommentThread({ demandId }: { demandId: string }) {
           border: "1px solid var(--border)",
         }}
       >
-        <textarea
+        <MentionTextarea
           value={body}
-          onChange={(event) => setBody(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) submit();
-          }}
-          placeholder="Escreva um comentário… (@ para mencionar, ⌘+Enter para enviar)"
-          rows={2}
-          style={{
-            width: "100%",
-            resize: "vertical",
-            border: "none",
-            background: "transparent",
-            outline: "none",
-            fontSize: "0.84rem",
-            lineHeight: 1.5,
-            color: "var(--text-primary)",
-            fontFamily: "inherit",
-          }}
+          onChange={setBody}
+          catalogs={catalogs}
+          onSubmit={submit}
+          ariaLabel="Novo comentário"
+          placeholder="Escreva um comentário… (@ colaborador, # cliente, ⌘+Enter envia)"
         />
 
         {pendingFiles.length > 0 && (

@@ -9,7 +9,6 @@ import {
   Activity,
   MessageSquare,
   NotebookPen,
-  KanbanSquare,
   ListChecks,
   type LucideIcon
 } from "lucide-react";
@@ -33,19 +32,10 @@ export const NAV_GROUPS: NavGroup[] = [
     roles: ['admin', 'board', 'social_media', 'filmmaker'],
     items: [
       { href: "/admin/workspace", label: "WorkSpace", icon: LayoutDashboard, roles: ['admin', 'board', 'social_media', 'filmmaker'] },
-      { href: "/admin/chat", label: "Chat", icon: MessageSquare, roles: ['admin', 'board', 'social_media', 'filmmaker'] },
+      { href: "/admin/demandas", label: "Demandas", icon: ListChecks, roles: ['admin', 'board', 'social_media', 'filmmaker'] },
       { href: "/admin/schedule", label: "Minha Agenda", icon: CalendarDays, roles: ['admin', 'board', 'social_media', 'filmmaker'] },
       { href: "/admin/notas", label: "Notas", icon: NotebookPen, roles: ['admin', 'board', 'social_media', 'filmmaker'] },
-    ]
-  },
-  {
-    title: "Administrativo",
-    roles: ['admin', 'board'],
-    items: [
-      { href: "/admin/financeiro", label: "Financeiro", icon: CreditCard, roles: ['admin', 'board'] },
-      { href: "/admin/registrations", label: "Cadastros", icon: FileText, roles: ['admin', 'board'] },
-      { href: "/admin/users", label: "Equipe", icon: ShieldAlert, roles: ['admin', 'board'] },
-      { href: "/admin/management", label: "Gestão", icon: Activity, roles: ['admin', 'board'] },
+      { href: "/admin/chat", label: "Chat", icon: MessageSquare, roles: ['admin', 'board', 'social_media', 'filmmaker'] },
     ]
   },
   {
@@ -54,15 +44,17 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/admin/clients", label: "Clientes", icon: Users, roles: ['admin', 'board', 'social_media'] },
       { href: "/admin/services", label: "Serviços", icon: Briefcase, roles: ['admin', 'board'] },
-      { href: "/admin/contracts", label: "Contratos", icon: FileText, roles: ['admin', 'board', 'social_media'] },
     ]
   },
   {
-    title: "Operação",
-    roles: ['admin', 'board', 'social_media', 'filmmaker'],
+    title: "Administrativa",
+    roles: ['admin', 'board', 'social_media'],
     items: [
-      { href: "/admin/demandas", label: "Demandas", icon: ListChecks, roles: ['admin', 'board', 'social_media', 'filmmaker'] },
-      { href: "/admin/operacao", label: "Operação", icon: KanbanSquare, roles: ['admin', 'board', 'social_media', 'filmmaker'] },
+      { href: "/admin/registrations", label: "Cadastros", icon: FileText, roles: ['admin', 'board'] },
+      { href: "/admin/contracts", label: "Contratos", icon: FileText, roles: ['admin', 'board', 'social_media'] },
+      { href: "/admin/users", label: "Equipe", icon: ShieldAlert, roles: ['admin', 'board'] },
+      { href: "/admin/management", label: "Gestão", icon: Activity, roles: ['admin', 'board'] },
+      { href: "/admin/financeiro", label: "Financeiro", icon: CreditCard, roles: ['admin', 'board'] },
     ]
   }
 ];
@@ -74,13 +66,13 @@ export const NAV_GROUPS: NavGroup[] = [
  */
 export const MOBILE_NAV_ITEMS: NavItem[] = [
   { href: "/admin/workspace", label: "Work", icon: LayoutDashboard, roles: ['admin', 'board', 'social_media', 'filmmaker'] },
-  { href: "/admin/clients", label: "Clientes", icon: Users, roles: ['admin', 'board', 'social_media'] },
+  { href: "/admin/demandas", label: "Demandas", icon: ListChecks, roles: ['admin', 'board', 'social_media', 'filmmaker'] },
   { href: "/admin/chat", label: "Chat", icon: MessageSquare, roles: ['admin', 'board', 'social_media', 'filmmaker'] },
   { href: "/admin/financeiro", label: "Financeiro", icon: CreditCard, roles: ['admin', 'board'] },
 ];
 
 const _workspace: NavItem = { href: "/admin/workspace", label: "Work", icon: LayoutDashboard, roles: ['admin', 'board', 'social_media', 'filmmaker'] };
-const _clients: NavItem   = { href: "/admin/clients",   label: "Clientes",   icon: Users,          roles: ['admin', 'board', 'social_media'] };
+const _demandas: NavItem  = { href: "/admin/demandas",  label: "Demandas",   icon: ListChecks,     roles: ['admin', 'board', 'social_media', 'filmmaker'] };
 const _chat: NavItem      = { href: "/admin/chat",      label: "Chat",       icon: MessageSquare,  roles: ['admin', 'board', 'social_media', 'filmmaker'] };
 const _financeiro: NavItem = { href: "/admin/financeiro", label: "Financeiro", icon: CreditCard,  roles: ['admin', 'board'] };
 const _contracts: NavItem  = { href: "/admin/contracts",  label: "Contratos",  icon: FileText,    roles: ['admin', 'board', 'social_media'] };
@@ -89,8 +81,8 @@ const _notas: NavItem      = { href: "/admin/notas",      label: "Notas",      i
 
 /** 4 atalhos fixos por papel — sem itens ausentes na bottom nav. */
 export const MOBILE_NAV_BY_ROLE: Record<string, NavItem[]> = {
-  admin:        [_workspace, _clients, _chat, _notas],
-  board:        [_workspace, _clients, _chat, _notas],
-  social_media: [_workspace, _clients, _chat, _notas],
+  admin:        [_workspace, _demandas, _chat, _notas],
+  board:        [_workspace, _demandas, _chat, _notas],
+  social_media: [_workspace, _demandas, _chat, _notas],
   filmmaker:    [_workspace, _chat, _schedule, _notas],
 };

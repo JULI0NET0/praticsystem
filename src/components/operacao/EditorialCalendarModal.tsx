@@ -7,6 +7,7 @@ import { List, MediaType, Weekday } from "@/types/operacao";
 import { useOperacao } from "./OperacaoProvider";
 import { parseMonthRef, selectEditorialDates } from "@/mocks/operacao/editorialCalendar";
 import { FIELD_MIDIA } from "@/mocks/operacao/templates";
+import Combobox from "@/components/ui/Combobox";
 
 const WEEKDAYS: { value: Weekday; label: string }[] = [
   { value: 0, label: "Dom" },
@@ -113,13 +114,11 @@ export default function EditorialCalendarModal({ list, isOpen, onClose, onGenera
             />
           </Field>
           <Field label="Canal">
-            <select className="input-dark" value={channel} onChange={(e) => setChannel(e.target.value as MediaType)} style={inputStyle}>
-              {FIELD_MIDIA.options?.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
+            <Combobox
+              options={FIELD_MIDIA.options?.map((o) => ({ value: o.value, label: o.label })) || []}
+              value={channel}
+              onChange={(val) => val && setChannel(val as MediaType)}
+            />
           </Field>
         </div>
 

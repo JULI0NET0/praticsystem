@@ -8,6 +8,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/components/CustomToast";
+import Combobox from "@/components/ui/Combobox";
 
 export default function CreateServicePage() {
   const router = useRouter();
@@ -111,16 +112,18 @@ export default function CreateServicePage() {
             <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Layers size={14} /> Categoria
             </label>
-            <select
-              className="input-dark"
-              value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-            >
-              <option value="Marketing">Marketing</option>
-              <option value="Design">Design</option>
-              <option value="Desenvolvimento">Desenvolvimento</option>
-              <option value="Conteúdo">Conteúdo</option>
-              <option value="Consultoria">Consultoria</option>
-            </select>
+            <Combobox
+              options={[
+                { value: "Marketing", label: "Marketing" },
+                { value: "Design", label: "Design" },
+                { value: "Desenvolvimento", label: "Desenvolvimento" },
+                { value: "Conteúdo", label: "Conteúdo" },
+                { value: "Consultoria", label: "Consultoria" },
+              ]}
+              value={formData.category}
+              onChange={(val) => val && setFormData({ ...formData, category: val })}
+              placeholder="Selecione a categoria"
+            />
           </div>
 
           {/* Preço Base */}
@@ -239,14 +242,14 @@ export default function CreateServicePage() {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Captação de Conteúdo</label>
-              <select
-                className="input-dark"
-                value={formData.default_content_capture ? 'sim' : 'nao'}
-                onChange={(e) => setFormData({ ...formData, default_content_capture: e.target.value === 'sim' })}
-              >
-                <option value="nao">Não incluso</option>
-                <option value="sim">Incluso no pacote</option>
-              </select>
+              <Combobox
+                options={[
+                  { value: "nao", label: "Não incluso" },
+                  { value: "sim", label: "Incluso no pacote" },
+                ]}
+                value={formData.default_content_capture ? "sim" : "nao"}
+                onChange={(val) => setFormData({ ...formData, default_content_capture: val === "sim" })}
+              />
             </div>
           </div>
 

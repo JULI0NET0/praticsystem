@@ -42,6 +42,18 @@ const toLocalISOString = (dateInput: any) => {
   return localDate.toISOString().slice(0, 16);
 };
 
+const CALENDAR_VIEW_STORAGE_KEY = "pratic-agenda-view";
+
+function readStoredCalendarView(isMobileGuess: boolean): string {
+  try {
+    const stored = window.localStorage.getItem(CALENDAR_VIEW_STORAGE_KEY);
+    if (stored) return stored;
+  } catch {
+    // localStorage indisponível (janela privada, site data bloqueado)
+  }
+  return isMobileGuess ? "listDay" : "dayGridMonth";
+}
+
 export default function SchedulePage() {
   const { currentUser } = useAuth();
   const { showToast } = useToast();
@@ -55,6 +67,7 @@ export default function SchedulePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilters, setActiveFilters] = useState<string[]>(CATEGORIES.map(c => c.id));
   const [isMobile, setIsMobile] = useState(false);
+  const [calendarView] = useState(() => readStoredCalendarView(window.innerWidth < 768));
   const [isSyncingGoogle, setIsSyncingGoogle] = useState(false);
   const [showGoogleModal, setShowGoogleModal] = useState(false);
   const [googleStatus, setGoogleStatus] = useState<{
@@ -864,7 +877,7 @@ export default function SchedulePage() {
         <FullCalendar
           ref={calendarRef}
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin]}
-          initialView={isMobile ? "listDay" : "dayGridMonth"}
+          initialView={calendarView}
           headerToolbar={{
             left: 'prev,today,next',
             center: 'title',
@@ -898,6 +911,13 @@ export default function SchedulePage() {
           dateClick={handleDateClick}
           eventClick={handleEventClick}
           eventDrop={handleEventDrop}
+          datesSet={(arg) => {
+            try {
+              window.localStorage.setItem(CALENDAR_VIEW_STORAGE_KEY, arg.view.type);
+            } catch {
+              // localStorage indisponível
+            }
+          }}
           eventContent={renderEventContent}
           nowIndicator={true}
           allDaySlot={true}
