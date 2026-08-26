@@ -16,8 +16,8 @@ const CATALOGS: QuickCatalogs = {
     { id: 'c2', label: 'Recloset Bazar', alias: 'Recloset Comercio LTDA' },
   ],
   users: [
-    { id: 'u1', label: 'Julio' },
-    { id: 'u2', label: 'Ana Paula' },
+    { id: 'u1', label: 'julioneto', alias: 'Julio' },
+    { id: 'u2', label: 'anapaula', alias: 'Ana Paula' },
   ],
 };
 
@@ -122,6 +122,15 @@ describe('splitMentions', () => {
   const split = (text: string) => splitMentions(text, CATALOGS);
 
   it('marca colaborador com @ e cliente com #', () => {
+    expect(split('Falar com @julioneto sobre #Cold Joias')).toEqual([
+      { kind: 'text', value: 'Falar com ' },
+      { kind: 'user', value: '@julioneto' },
+      { kind: 'text', value: ' sobre ' },
+      { kind: 'client', value: '#Cold Joias' },
+    ]);
+  });
+
+  it('marca colaborador usando alias (nome completo)', () => {
     expect(split('Falar com @Julio sobre #Cold Joias')).toEqual([
       { kind: 'text', value: 'Falar com ' },
       { kind: 'user', value: '@Julio' },

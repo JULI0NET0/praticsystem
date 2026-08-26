@@ -49,3 +49,49 @@ ALTER TABLE agenda_events ADD CONSTRAINT agenda_events_type_check
 -- para permitir atualizar/apagar depois (inclusive mover de conta se a categoria mudar).
 ALTER TABLE agenda_events ADD COLUMN IF NOT EXISTS google_event_id TEXT;
 ALTER TABLE agenda_events ADD COLUMN IF NOT EXISTS google_account TEXT CHECK (google_account IN ('agenciapratic','praticlabs'));
+
+-- Vínculo opcional Demandas <-> Agenda: uma demanda pode "aparecer" na
+-- agenda como um evento-espelho se receber um Assunto (mesmo vocabulário de
+-- agenda_events.type). NULL = não aparece na agenda (estado padrão / de
+-- todas as demandas existentes hoje).
+ALTER TABLE demands ADD COLUMN IF NOT EXISTS agenda_subject TEXT
+  CHECK (agenda_subject IN ('meeting','leadership_meeting','prospecting','task','demand'));
+
+-- Evento-espelho gerado a partir de uma demanda (um-para-um). ON DELETE
+-- CASCADE: apagar a demanda remove o evento correspondente na Agenda.
+ALTER TABLE agenda_events ADD COLUMN IF NOT EXISTS demand_id UUID
+  REFERENCES public.demands(id) ON DELETE CASCADE;
+CREATE UNIQUE INDEX IF NOT EXISTS agenda_events_demand_id_key
+  ON agenda_events (demand_id) WHERE demand_id IS NOT NULL;
+
+-- Novo assunto genérico "Demanda" no vocabulário da Agenda.
+ALTER TABLE agenda_events DROP CONSTRAINT IF EXISTS agenda_events_type_check;
+ALTER TABLE agenda_events ADD CONSTRAINT agenda_events_type_check
+  CHECK (type IN ('meeting','prospecting','task','social_media','ads','launch','payment','leadership_meeting','demand'));
+
+-- RLS de agenda_events só permitia o próprio assigned_to atualizar/apagar um
+-- evento. Isso quebra o vínculo com Demandas, que qualquer membro da equipe
+-- pode gerenciar (inclusive o DELETE em cascata do evento ao apagar a
+-- demanda de outra pessoa, que roda sob esse mesmo RLS). Alinha com a
+-- policy já usada em `demands` (BLOCO 11.6 de setup_database.sql): qualquer
+-- membro da equipe pode gerenciar qualquer evento, não só o dono.
+DROP POLICY IF EXISTS "agenda_update" ON public.agenda_events;
+CREATE POLICY "agenda_update" ON public.agenda_events
+    FOR UPDATE USING (public.is_team_member() OR (auth.uid())::text = (assigned_to)::text);
+
+DROP POLICY IF EXISTS "agenda_delete" ON public.agenda_events;
+CREATE POLICY "agenda_delete" ON public.agenda_events
+    FOR DELETE USING (public.is_team_member() OR (auth.uid())::text = (assigned_to)::text);
+
+NOTIFY pgrst, 'reload schema';
+
+-- Fix: o upsert do evento-espelho ("ON CONFLICT (demand_id)") não conseguia
+-- casar com o índice único acima porque ele é PARCIAL (WHERE demand_id IS
+-- NOT NULL) — o Postgres só infere ON CONFLICT por lista de colunas quando
+-- o índice não tem predicado. O predicado era desnecessário: uma constraint
+-- UNIQUE normal já trata cada NULL como distinto, então múltiplas linhas
+-- com demand_id nulo continuam permitidas sem precisar do WHERE.
+DROP INDEX IF EXISTS agenda_events_demand_id_key;
+ALTER TABLE agenda_events ADD CONSTRAINT agenda_events_demand_id_key UNIQUE (demand_id);
+
+NOTIFY pgrst, 'reload schema';

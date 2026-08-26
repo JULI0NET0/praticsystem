@@ -58,7 +58,11 @@ export default function CommentThread({ demandId }: { demandId: string }) {
 
   const catalogs = useMemo<QuickCatalogs>(
     () => ({
-      users: users.map((user) => ({ id: user.id, label: user.name || user.email })),
+      users: users.map((user) => ({
+        id: user.id,
+        label: user.username || user.name || user.email,
+        alias: user.name,
+      })),
       clients: clients.map((client) => ({
         id: client.id,
         label: clientLabel(client),
@@ -114,7 +118,7 @@ export default function CommentThread({ demandId }: { demandId: string }) {
         return (
           <div key={comment.id} style={{ display: "flex", gap: 10 }}>
             <UserAvatar
-              name={author?.name ?? "?"}
+              name={author?.username ? `@${author.username}` : (author?.name ?? "?")}
               avatarUrl={author?.avatar_url ?? author?.avatarUrl}
               size={28}
               ring={false}
@@ -122,7 +126,7 @@ export default function CommentThread({ demandId }: { demandId: string }) {
             <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--text-primary)" }}>
-                  {author?.name ?? "Usuário"}
+                  {author?.username ? `@${author.username}` : (author?.name ?? "Usuário")}
                 </span>
                 <span style={{ fontSize: "0.7rem", color: "var(--text-tertiary)" }}>
                   {formatTimestamp(comment.created_at)}

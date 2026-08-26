@@ -66,7 +66,7 @@ export default function LiveChat() {
 
   const { messages: realtimeMessages, sendMessage, isConnected } = useRealtimeChat({
     roomName,
-    username: currentUser?.name ?? '',
+    username: currentUser?.username ? `@${currentUser.username}` : (currentUser?.name ?? ''),
     userId: currentUser?.id ?? '',
     avatarUrl: currentUser?.avatar_url,
     onMessage: (msg) => {
@@ -78,9 +78,10 @@ export default function LiveChat() {
   const persistNotification = useCallback(async (msg: ChatMessage) => {
     if (!currentUser) return;
     const sender = users.find(u => u.id === msg.user.id);
+    const senderHandle = sender?.username ? `@${sender.username}` : (sender?.name ?? 'Usuário');
     await supabase.from('notifications').insert([{
       user_id: currentUser.id,
-      title: msg.user.id ? `Mensagem de ${sender?.name}` : 'Nova mensagem no Canal Geral',
+      title: msg.user.id ? `Mensagem de ${senderHandle}` : 'Nova mensagem no Canal Geral',
       message: msg.content.substring(0, 80),
       type: 'mention',
     }]);
@@ -109,10 +110,11 @@ export default function LiveChat() {
       if (data) {
         setDbMessages(data.map(m => {
           const sender = users.find(u => u.id === m.sender_id);
+          const senderName = sender?.username ? `@${sender.username}` : (sender?.name ?? 'Desconhecido');
           return {
             id: m.id,
             content: m.content,
-            user: { name: sender?.name ?? 'Desconhecido', id: m.sender_id, avatar_url: sender?.avatar_url },
+            user: { name: senderName, username: sender?.username, id: m.sender_id, avatar_url: sender?.avatar_url },
             createdAt: m.timestamp,
             ...m,
           };
@@ -193,10 +195,11 @@ export default function LiveChat() {
             u.name.toLowerCase().includes(username.toLowerCase())
           );
           if (mentioned && mentioned.id !== currentUser.id) {
+            const myHandle = currentUser.username ? `@${currentUser.username}` : currentUser.name;
             await supabase.from('notifications').insert([{
               user_id: mentioned.id,
               title: 'Menção no Chat',
-              message: `${currentUser.name} mencionou você: "${content.substring(0, 60)}"`,
+              message: `${myHandle} mencionou você: "${content.substring(0, 60)}"`,
               type: 'mention',
             }]);
           }
@@ -221,18 +224,25 @@ export default function LiveChat() {
 
     typingChannelRef.current?.send({
       type: 'broadcast', event: 'typing',
-      payload: { user_id: currentUser?.id, name: currentUser?.name },
+      payload: {
+        user_id: currentUser?.id,
+        name: currentUser?.username ? `@${currentUser.username}` : currentUser?.name,
+      },
     });
   };
 
   const insertMention = (userName: string) => {
     const lastAt = message.lastIndexOf('@');
-    setMessage(message.substring(0, lastAt) + `@${userName} `);
+    const cleanUser = userName.replace(/^@/, '');
+    setMessage(message.substring(0, lastAt) + `@${cleanUser} `);
     setShowMentions(false);
     inputRef.current?.focus();
   };
 
-  const filteredMentionUsers = teamUsers.filter(u => u.name.toLowerCase().includes(mentionFilter.toLowerCase()));
+  const filteredMentionUsers = teamUsers.filter(u =>
+    (u.username && u.username.toLowerCase().includes(mentionFilter.toLowerCase())) ||
+    u.name.toLowerCase().includes(mentionFilter.toLowerCase())
+  );
   const activeMember = activeChat === 'general' ? null : users.find(u => u.id === activeChat);
 
   if (!currentUser || !['admin', 'board', 'social_media', 'filmmaker'].includes(currentUser.role)) return null;
@@ -378,7 +388,7 @@ export default function LiveChat() {
                           }} />
                         </div>
                         <span style={{ fontWeight: userUnread > 0 ? 700 : 500, fontSize: '0.8rem', textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, color: userUnread > 0 ? 'var(--text-primary)' : undefined }}>
-                          {user.name.split(' ')[0]}
+                          {user.username ? `@${user.username}` : user.name.split(' ')[0]}
                         </span>
                         {userUnread > 0 && <UnreadBadge count={userUnread} />}
                       </button>
@@ -411,18 +421,18 @@ export default function LiveChat() {
                         <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-on-accent)', fontSize: '0.65rem', fontWeight: 700, overflow: 'hidden' }}>
                           {activeMember.avatar_url
                             ? <img src={activeMember.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
-                            : activeMember.name.substring(0, 2).toUpperCase()}
+                            : (activeMember.username || activeMember.name).substring(0, 2).toUpperCase()}
                         </div>
                         <div style={{ position: 'absolute', bottom: -1, right: -1, width: '7px', height: '7px', background: isUserOnline(activeMember.id) ? 'var(--color-success)' : 'var(--color-text-tertiary)', borderRadius: '50%', border: '2px solid var(--color-surface-raised)' }} />
                       </div>
                     )}
                   <div>
                     <h4 style={{ fontWeight: 700, fontSize: '0.85rem', lineHeight: 1.2 }}>
-                      {activeChat === 'general' ? 'Canal Geral' : activeMember?.name}
+                      {activeChat === 'general' ? 'Canal Geral' : (activeMember?.username ? `@${activeMember.username}` : activeMember?.name)}
                     </h4>
                     {activeChat !== 'general' && activeMember && (
                       <span style={{ fontSize: '0.65rem', color: isUserOnline(activeMember.id) ? 'var(--color-success)' : 'var(--color-text-tertiary)' }}>
-                        {isUserOnline(activeMember.id) ? 'Online' : 'Offline'}
+                        {activeMember.name ? `${activeMember.name} · ` : ''}{isUserOnline(activeMember.id) ? 'Online' : 'Offline'}
                       </span>
                     )}
                   </div>
@@ -488,12 +498,14 @@ export default function LiveChat() {
                           onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                         >
                           <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-on-accent)', fontSize: '0.55rem', fontWeight: 700 }}>
-                            {u.name.substring(0, 2).toUpperCase()}
+                            {(u.username || u.name).substring(0, 2).toUpperCase()}
                           </div>
-                          <span style={{ flex: 1 }}>{u.name}</span>
-                          <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>
-                            @{u.username || u.name.split(' ')[0]}
-                          </span>
+                          <span style={{ flex: 1, fontWeight: 600 }}>@{u.username || u.name.split(' ')[0]}</span>
+                          {u.name && u.username && (
+                            <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>
+                              {u.name}
+                            </span>
+                          )}
                         </button>
                       ))}
                     </motion.div>

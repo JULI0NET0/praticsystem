@@ -22,6 +22,13 @@ export type DemandListGroupBy = 'due' | 'status';
 /** Documento TipTap, mesmo formato de notes.content. */
 export type DemandDescription = Record<string, unknown> | null;
 
+/**
+ * Assunto opcional que faz a demanda aparecer na Agenda (vínculo opt-in —
+ * ver src/lib/demandAgendaSync.ts). Subconjunto do vocabulário de
+ * agenda_events.type; null = não aparece na agenda.
+ */
+export type AgendaSubject = 'meeting' | 'leadership_meeting' | 'prospecting' | 'task' | 'demand';
+
 export interface DemandStatus {
   id: string;
   label: string;
@@ -56,7 +63,26 @@ export interface Demand {
   /** Agregados trazidos na listagem, para os cards não precisarem abrir a demanda. */
   comment_count?: number;
   attachment_count?: number;
+  /** Liga a demanda a um evento-espelho na Agenda. null = não aparece na agenda. */
+  agenda_subject?: AgendaSubject | null;
+  /** Só leitura — derivado do embed de agenda_events, nunca enviado em create/update. */
+  agenda_event?: {
+    id: string;
+    google_event_id: string | null;
+    google_account: string | null;
+    status: string;
+  } | null;
+  /** Cronograma de conteúdo ao qual pertence (null = demanda avulsa). */
+  plan_id?: string | null;
+  /** Trilha dentro do cronograma: grade de posts ou agenda de captação. */
+  plan_role?: DemandPlanRole | null;
+  /** Agregados do checklist, trazidos na listagem. */
+  checklist_total?: number;
+  checklist_done?: number;
 }
+
+/** As duas trilhas de um cronograma de conteúdo. */
+export type DemandPlanRole = 'post' | 'captacao';
 
 export interface DemandComment {
   id: string;
@@ -86,6 +112,7 @@ export interface DemandClientRef {
   id: string;
   name: string;
   nome_fantasia?: string | null;
+  status?: string | null;
 }
 
 export interface DemandFilters {
@@ -173,4 +200,63 @@ export function parsePriorityToken(token: string): DemandPriority | null {
 export function clientLabel(client: DemandClientRef | undefined | null): string {
   if (!client) return '';
   return client.nome_fantasia || client.name;
+}
+
+
+// ============================================================================
+// Checklist e templates (BLOCOS 13 e 14) — as etapas dentro de uma demanda
+// ============================================================================
+
+/** Item do checklist: `group_name` é a etapa, `label` é a ação. */
+export interface DemandChecklistItem {
+  id: string;
+  demand_id: string;
+  group_name: string;
+  label: string;
+  done: boolean;
+  position: number;
+  done_at?: string | null;
+  created_at?: string;
+}
+
+export type DemandTemplateKind = 'conteudo' | 'captacao' | 'onboarding' | 'avulso';
+
+export interface DemandTemplate {
+  id: string;
+  name: string;
+  kind: DemandTemplateKind;
+  description?: string | null;
+  position: number;
+}
+
+export interface DemandTemplateItem {
+  id: string;
+  template_id: string;
+  group_name: string;
+  label: string;
+  position: number;
+}
+
+export interface ChecklistGroup {
+  name: string;
+  items: DemandChecklistItem[];
+  done: number;
+}
+
+/**
+ * Agrupa o checklist por etapa preservando a ordem de `position`.
+ * Uma tabela só guarda os dois níveis; a separação acontece aqui.
+ */
+export function groupChecklist(items: DemandChecklistItem[]): ChecklistGroup[] {
+  const groups = new Map<string, DemandChecklistItem[]>();
+  for (const item of [...items].sort((a, b) => a.position - b.position)) {
+    const list = groups.get(item.group_name) ?? [];
+    list.push(item);
+    groups.set(item.group_name, list);
+  }
+  return [...groups.entries()].map(([name, list]) => ({
+    name,
+    items: list,
+    done: list.filter((item) => item.done).length,
+  }));
 }

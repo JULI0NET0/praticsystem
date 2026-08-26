@@ -39,6 +39,15 @@ import { usePresence } from "@/hooks/usePresence";
 import { useTimeTracker } from "@/hooks/useTimeTracker";
 import { usePomodoro, WORK_MS, BREAK_MS } from "@/hooks/usePomodoro";
 import { tint } from "@/lib/tint";
+import { toISODate } from "@/lib/dueDate";
+import { getAgendaCategory } from "@/lib/agendaCategories";
+import type { DemandListGroupBy, DemandView } from "@/types/demandas";
+import DemandsWidgetImpl, {
+  readStoredView as readStoredDemandsView,
+  readStoredGroupBy as readStoredDemandsGroupBy,
+  VIEW_STORAGE_KEY as DEMANDS_VIEW_STORAGE_KEY,
+  GROUPBY_STORAGE_KEY as DEMANDS_GROUPBY_STORAGE_KEY,
+} from "@/components/workspace/DemandsWidget";
 
 // Definição dos Widgets Disponíveis
 const AVAILABLE_WIDGETS = [
@@ -49,6 +58,7 @@ const AVAILABLE_WIDGETS = [
   { id: 'notes', title: 'Notas Rápidas', icon: MessageSquare },
   { id: 'links', title: 'Links Úteis', icon: Star },
   { id: 'team', title: 'Equipe Online', icon: User },
+  { id: 'agenda', title: 'Agenda', icon: Calendar },
 ];
 
 export default function WorkspacePage() {
@@ -66,10 +76,32 @@ export default function WorkspacePage() {
   const EMOJIS = ["☀️", "🌙", "🚀", "🔥", "☕", "💻", "🎨", "📈", "🎯", "✨", "✅", "⚡", "🌟", "🛠️", "📅", "💡", "🧠", "💼", "🤝", "🌈", "🍀", "💎", "🏆", "📣", "📝", "🌍", "🍕", "🦾", "💪", "🏄", "🧘", "🚲"];
   const [demands, setDemands] = useState<any[]>([]);
   const [loadingDemands, setLoadingDemands] = useState(true);
+  const [finishedCount, setFinishedCount] = useState(0);
+  const [alertsCount, setAlertsCount] = useState(0);
+  const [demandsView, setDemandsView] = useState<DemandView>(readStoredDemandsView);
+  const [demandsGroupBy, setDemandsGroupBy] = useState<DemandListGroupBy>(readStoredDemandsGroupBy);
+
+  const changeDemandsView = (next: DemandView) => {
+    setDemandsView(next);
+    try {
+      window.localStorage.setItem(DEMANDS_VIEW_STORAGE_KEY, next);
+    } catch {
+      // localStorage indisponível
+    }
+  };
+
+  const changeDemandsGroupBy = (next: DemandListGroupBy) => {
+    setDemandsGroupBy(next);
+    try {
+      window.localStorage.setItem(DEMANDS_GROUPBY_STORAGE_KEY, next);
+    } catch {
+      // localStorage indisponível
+    }
+  };
 
   useEffect(() => {
     if (currentUser) {
-      setMyNote(`Anotações de ${currentUser.name}`);
+      setMyNote(`Anotações de ${currentUser.username ? `@${currentUser.username}` : currentUser.name}`);
       setStatus(currentUser.workspace_settings?.status || "Planejando a semana...");
 
       // Define saudação baseada na hora
@@ -78,7 +110,7 @@ export default function WorkspacePage() {
       let emoji = "☀️";
       if (hour >= 12 && hour < 18) { greet = "Boa tarde"; emoji = "⛅"; }
       else if (hour >= 18 || hour < 5) { greet = "Boa noite"; emoji = "🌙"; }
-      const firstName = currentUser.name?.split(' ')[0] || "";
+      const firstName = currentUser.username ? `@${currentUser.username}` : (currentUser.name?.split(' ')[0] || "");
       setGreeting(`${greet}, ${firstName}!`);
       if (currentUser.emoji) {
         setCurrentEmoji(currentUser.emoji);
@@ -93,20 +125,46 @@ export default function WorkspacePage() {
   }, [currentUser]);
 
   const fetchWorkspaceData = async () => {
+    if (!currentUser) return;
     try {
       setLoadingDemands(true);
       // Demandas em aberto onde sou responsável — assignee_ids é um array
       // (uma demanda pode ter vários responsáveis) e assign_all_team marca
       // as que são do time inteiro.
-      const { data } = await supabase
-        .from('demands')
-        .select('*, demand_statuses(label, color)')
-        .neq('status_category', 'fechado')
-        .or(`assignee_ids.cs.{${currentUser?.id}},assign_all_team.eq.true`)
-        .order('due_date', { ascending: true, nullsFirst: false })
-        .limit(5);
+      const assigneeFilter = `assignee_ids.cs.{${currentUser.id}},assign_all_team.eq.true`;
+      const todayISO = toISODate(new Date());
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
+      const startOfTomorrow = new Date(startOfToday);
+      startOfTomorrow.setDate(startOfTomorrow.getDate() + 1);
 
-      if (data) setDemands(data);
+      const [demandsRes, finishedRes, alertsRes] = await Promise.all([
+        supabase
+          .from('demands')
+          .select('*, demand_statuses(label, color)')
+          .neq('status_category', 'fechado')
+          .or(assigneeFilter)
+          .order('due_date', { ascending: true, nullsFirst: false })
+          .limit(5),
+        // Concluídas hoje
+        supabase
+          .from('demands')
+          .select('id', { count: 'exact', head: true })
+          .or(assigneeFilter)
+          .gte('completed_at', startOfToday.toISOString())
+          .lt('completed_at', startOfTomorrow.toISOString()),
+        // Atrasadas — mesmo cálculo do contador de "atrasada(s)" em DemandasView.tsx
+        supabase
+          .from('demands')
+          .select('id', { count: 'exact', head: true })
+          .or(assigneeFilter)
+          .neq('status_category', 'fechado')
+          .lt('due_date', todayISO),
+      ]);
+
+      if (demandsRes.data) setDemands(demandsRes.data);
+      setFinishedCount(finishedRes.count ?? 0);
+      setAlertsCount(alertsRes.count ?? 0);
     } catch (err) {
       console.error("Erro ao buscar dados do workspace:", err);
     } finally {
@@ -123,6 +181,7 @@ export default function WorkspacePage() {
       { id: 'notes', colSpan: 3, rowSpan: 2 },
       { id: 'team', colSpan: 3, rowSpan: 2 },
       { id: 'links', colSpan: 6, rowSpan: 1 },
+      { id: 'agenda', colSpan: 4, rowSpan: 2 },
     ],
     finance: [
       { id: 'stats', colSpan: 12, rowSpan: 1 },
@@ -226,6 +285,7 @@ export default function WorkspacePage() {
     pomodoro: { colSpan: 4, rowSpan: 3 },
     timetracker: { colSpan: 4, rowSpan: 2 },
     team: { colSpan: 3, rowSpan: 2 },
+    agenda: { colSpan: 4, rowSpan: 2 },
   };
 
   const addWidget = (id: string) => {
@@ -264,20 +324,10 @@ export default function WorkspacePage() {
       transition={{ duration: 0.5 }}
       style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}
     >
-      {/* Header Principal - Linha Única */}
-      <div className="workspace-header" style={{
-        position: 'relative',
-        zIndex: 999999,
-        display: 'flex',
-        alignItems: 'center',
-        gap: '16px',
-        background: 'var(--color-surface-sunken)',
-        padding: '12px 20px',
-        borderRadius: '24px',
-        border: '1px solid var(--border)',
-      }}>
+      {/* Header Principal */}
+      <div className="workspace-header">
         {/* Emoji e Saudação */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div className="workspace-greeting-group">
           <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <motion.button
               key={currentEmoji}
@@ -298,7 +348,8 @@ export default function WorkspacePage() {
                 cursor: 'pointer',
                 transition: 'all 0.2s ease',
                 padding: 0,
-                boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                flexShrink: 0
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = 'var(--color-border-subtle)';
@@ -388,21 +439,15 @@ export default function WorkspacePage() {
               )}
             </AnimatePresence>
           </div>
-          <h1 className="workspace-title" style={{ fontSize: '1.2rem', fontWeight: 800, letterSpacing: '-0.02em', margin: 0, whiteSpace: 'nowrap' }}>
+          <h1 className="workspace-title" style={{ fontSize: '1.2rem', fontWeight: 800, letterSpacing: '-0.02em', margin: 0 }}>
             {greeting}
           </h1>
         </div>
 
-        <div className="workspace-header-divider" style={{ width: '1px', height: '24px', background: 'var(--border)', margin: '0 8px' }} />
+        <div className="workspace-header-divider" />
 
         {/* Status Bar Integrada */}
-        <div className="workspace-status-bar" style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '10px',
-          flex: 1,
-          minWidth: '200px'
-        }}>
+        <div className="workspace-status-bar">
           <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--color-success)', boxShadow: '0 0 10px var(--color-success)', flexShrink: 0 }} />
           <input
             value={status}
@@ -418,7 +463,7 @@ export default function WorkspacePage() {
           )}
         </div>
 
-        <div className="workspace-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto' }}>
+        <div className="workspace-actions">
           {/* Presets de layout — visíveis apenas em modo edição */}
           <AnimatePresence>
             {isEditing && (
@@ -506,7 +551,12 @@ export default function WorkspacePage() {
         position: 'relative'
       }}>
         <AnimatePresence mode="popLayout">
-          {widgets.map((w, index) => (
+          {widgets.map((w, index) => {
+            // Kanban é largo — o widget de demandas força a largura cheia
+            // enquanto essa visão estiver ativa. Só de renderização: o
+            // colSpan salvo (e o que "Salvar" persiste) não muda.
+            const effectiveColSpan = w.id === 'demands' && demandsView === 'board' ? 12 : w.colSpan;
+            return (
             <motion.div
               layout
               key={w.id}
@@ -525,7 +575,7 @@ export default function WorkspacePage() {
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
               style={{
-                gridColumn: `span ${w.colSpan}`,
+                gridColumn: `span ${effectiveColSpan}`,
                 gridRow: `span ${w.rowSpan || 1}`,
                 position: 'relative',
                 zIndex: isEditing ? 1 : 0
@@ -564,13 +614,21 @@ export default function WorkspacePage() {
                 )}
 
                 <div style={{ opacity: isEditing ? 0.3 : 1, transition: 'opacity 0.3s', flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                  {w.id === 'stats' && <StatsWidget colSpan={w.colSpan} demandsCount={demands.length} todayHours={todayHours} isTracking={isTracking} onTimerToggle={isTracking ? clockOut : clockIn} />}
+                  {w.id === 'stats' && <StatsWidget colSpan={w.colSpan} demandsCount={demands.length} finishedCount={finishedCount} alertsCount={alertsCount} todayHours={todayHours} isTracking={isTracking} onTimerToggle={isTracking ? clockOut : clockIn} />}
                   {w.id === 'timetracker' && <TimeTrackerWidget isTracking={isTracking} todayHours={todayHours} todayMinutes={todayMinutes} currentSession={currentSession} clockIn={clockIn} clockOut={clockOut} />}
                   {w.id === 'pomodoro' && <PomodoroWidget />}
-                  {w.id === 'demands' && <DemandsWidget demands={demands} loading={loadingDemands} />}
+                  {w.id === 'demands' && (
+                    <DemandsWidgetImpl
+                      view={demandsView}
+                      onViewChange={changeDemandsView}
+                      groupBy={demandsGroupBy}
+                      onGroupByChange={changeDemandsGroupBy}
+                    />
+                  )}
                   {w.id === 'notes' && <NotesWidget />}
                   {w.id === 'links' && <LinksWidget />}
                   {w.id === 'team' && <TeamWidget isUserOnline={isUserOnline} onlineUsers={onlineUsers} />}
+                  {w.id === 'agenda' && <AgendaWidget />}
                 </div>
 
                 {/* Controles de Redimensionamento */}
@@ -588,7 +646,8 @@ export default function WorkspacePage() {
                 )}
               </div>
             </motion.div>
-          ))}
+            );
+          })}
         </AnimatePresence>
       </div>
 
@@ -624,6 +683,7 @@ export default function WorkspacePage() {
                     notes: 'Bloco de anotações rápidas',
                     links: 'Atalhos e links importantes',
                     team: 'Presença online da equipe',
+                    agenda: 'Próximos compromissos da semana',
                   };
                   return (
                     <motion.button
@@ -678,26 +738,22 @@ export default function WorkspacePage() {
 }
 
 // Sub-componentes
-function StatsWidget({ colSpan, demandsCount, todayHours, isTracking, onTimerToggle }: { colSpan: number, demandsCount: number, todayHours: string, isTracking: boolean, onTimerToggle: () => void }) {
+function StatsWidget({ colSpan, demandsCount, finishedCount, alertsCount, todayHours, isTracking, onTimerToggle }: { colSpan: number, demandsCount: number, finishedCount: number, alertsCount: number, todayHours: string, isTracking: boolean, onTimerToggle: () => void }) {
   const gridCols = colSpan > 8 ? 'repeat(4, 1fr)' : colSpan > 5 ? 'repeat(3, 1fr)' : colSpan > 2 ? 'repeat(2, 1fr)' : '1fr';
 
   const items = [
     { id: 'demands', label: "Demandas", value: demandsCount, icon: CheckCircle2, color: "var(--accent)", gradient: "linear-gradient(135deg, color-mix(in oklab, var(--accent) 20%, transparent), transparent)" },
-    { id: 'finished', label: "Finalizadas", value: "0", icon: CheckCircle2, color: "var(--color-success)", gradient: "linear-gradient(135deg, rgba(16, 185, 129, 0.2), transparent)" },
+    { id: 'finished', label: "Finalizadas", value: finishedCount, icon: CheckCircle2, color: "var(--color-success)", gradient: "linear-gradient(135deg, rgba(16, 185, 129, 0.2), transparent)" },
     { id: 'timer', label: "Tempo Hoje", value: todayHours.split(' ')[0], sub: todayHours.split(' ')[1], icon: isTracking ? Timer : Clock, color: isTracking ? "var(--color-success)" : "#3B82F6", gradient: isTracking ? "linear-gradient(135deg, var(--color-success-wash), transparent)" : "linear-gradient(135deg, rgba(59, 130, 246, 0.2), transparent)", interactive: true },
-    { id: 'alerts', label: "Alertas", value: "0", icon: Zap, color: "var(--color-danger)", gradient: "linear-gradient(135deg, var(--color-danger-wash), transparent)" }
+    { id: 'alerts', label: "Alertas", value: alertsCount, icon: Zap, color: "var(--color-danger)", gradient: "linear-gradient(135deg, var(--color-danger-wash), transparent)" }
   ];
 
   return (
-    <div style={{
-      display: 'flex',
-      flexWrap: 'wrap',
-      gap: '12px',
-      height: '100%',
-    }}>
+    <div className="stats-widget-grid">
       {items.slice(0, colSpan > 8 ? 4 : colSpan > 5 ? 3 : 2).map((item, i) => (
         <div
           key={i}
+          className="stats-widget-card"
           onClick={item.interactive ? onTimerToggle : undefined}
           style={{
             background: 'var(--card-inner-bg)',
@@ -712,8 +768,6 @@ function StatsWidget({ colSpan, demandsCount, todayHours, isTracking, onTimerTog
             cursor: item.interactive ? 'pointer' : 'default',
             transition: 'all 0.3s ease',
             boxShadow: item.id === 'timer' && isTracking ? '0 0 20px var(--color-success-wash)' : 'none',
-            flex: '1 1 100px',
-            maxWidth: '160px'
           }}
           onMouseEnter={(e) => item.interactive && (e.currentTarget.style.borderColor = 'var(--accent)')}
           onMouseLeave={(e) => item.interactive && (e.currentTarget.style.borderColor = item.id === 'timer' && isTracking ? 'var(--color-success-wash)' : 'var(--border)')}
@@ -1093,69 +1147,115 @@ function PomodoroWidget() {
   );
 }
 
-function DemandsWidget({ demands, loading }: { demands: any[], loading: boolean }) {
+/** "Hoje, 14:00" / "Amanhã, 10:00" / "Sex, 28/08 · 09:00" — janela fixa de 7
+ * dias só pro futuro, então não reaproveita os baldes de dueDate.ts (aquilo
+ * é pra due_date sem hora, com categorias tipo "atrasada" que não fazem
+ * sentido aqui). */
+function formatAgendaRowLabel(dateIso: string): string {
+  const date = new Date(dateIso);
+  const now = new Date();
+  const startOfToday = new Date(now);
+  startOfToday.setHours(0, 0, 0, 0);
+  const startOfTarget = new Date(date);
+  startOfTarget.setHours(0, 0, 0, 0);
+  const dayDiff = Math.round((startOfTarget.getTime() - startOfToday.getTime()) / 86400000);
+
+  const time = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  if (dayDiff === 0) return `Hoje, ${time}`;
+  if (dayDiff === 1) return `Amanhã, ${time}`;
+  const weekday = date.toLocaleDateString('pt-BR', { weekday: 'short' });
+  const dayMonth = date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+  return `${weekday.charAt(0).toUpperCase()}${weekday.slice(1, 3)}, ${dayMonth} · ${time}`;
+}
+
+function AgendaWidget() {
+  const { currentUser } = useAuth();
+  const [events, setEvents] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    (async () => {
+      setLoading(true);
+      try {
+        const now = new Date();
+        const end = new Date(now);
+        end.setDate(end.getDate() + 7);
+
+        const { data } = await supabase
+          .from('agenda_events')
+          .select('id, title, date, type, client_id, assigned_to, visibility, status')
+          .gte('date', now.toISOString())
+          .lt('date', end.toISOString())
+          .or(`visibility.eq.public,assigned_to.eq.${currentUser.id}`)
+          .order('date', { ascending: true })
+          .limit(8);
+
+        if (data) setEvents(data);
+      } catch (err) {
+        console.error("Erro ao buscar agenda do workspace:", err);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [currentUser]);
+
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h3 style={{ fontSize: '1.1rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <CheckCircle2 size={20} color="var(--accent)" /> Minhas Demandas
+        <h3 style={{ fontSize: '1.1rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '10px', margin: 0 }}>
+          <Calendar size={18} color="var(--accent)" /> Agenda
         </h3>
-        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', background: 'var(--color-surface-sunken)', padding: '4px 10px', borderRadius: '10px' }}>
-          {demands.length} Pendentes
-        </span>
+        <Link
+          href="/admin/schedule"
+          style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)' }}
+        >
+          Ver tudo
+        </Link>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', overflowY: 'auto', flex: 1, paddingRight: '4px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', overflowY: 'auto', flex: 1, paddingRight: '4px' }}>
         {loading ? (
           <div style={{ display: 'flex', justifyContent: 'center', padding: 'var(--space-5)' }}>
             <Loader2 size={24} className="animate-spin" color="var(--accent)" />
           </div>
-        ) : demands.length > 0 ? demands.map(d => (
-          <motion.a
-            key={d.id}
-            href={`/admin/demandas?d=${d.id}`}
-            whileHover={{ x: 4 }}
-            style={{
-              padding: '16px',
-              borderRadius: 'var(--radius-card)',
-              background: 'var(--color-surface-sunken)',
-              border: '1px solid var(--border)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '8px',
-              cursor: 'pointer',
-              textDecoration: 'none',
-              transition: 'all 0.2s ease'
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
-              <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>{d.title}</span>
-              {/* Rótulo e cor vêm da tabela demand_statuses (status personalizáveis) */}
-              <span style={{
-                fontSize: '0.65rem',
-                fontWeight: 800,
-                padding: '3px 8px',
-                borderRadius: '6px',
-                whiteSpace: 'nowrap',
-                background: tint(d.demand_statuses?.color, 12),
-                color: d.demand_statuses?.color || 'var(--text-secondary)',
-                textTransform: 'uppercase'
+        ) : events.length > 0 ? events.map(ev => {
+          const category = getAgendaCategory(ev.type);
+          const CategoryIcon = category?.icon;
+          return (
+            <Link
+              key={ev.id}
+              href="/admin/schedule"
+              style={{
+                padding: '10px 12px',
+                borderRadius: 'var(--radius-card)',
+                background: 'var(--color-surface-sunken)',
+                border: '1px solid var(--border)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                textDecoration: 'none',
+                color: 'var(--text-primary)',
+              }}
+            >
+              <div style={{
+                width: 28, height: 28, borderRadius: '8px', flexShrink: 0,
+                background: tint(category?.color || 'var(--text-tertiary)', 15),
+                display: 'flex', alignItems: 'center', justifyContent: 'center'
               }}>
-                {d.demand_statuses?.label || 'Pendente'}
-              </span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
-                <Calendar size={12} />
-                <span>{new Date(d.due_date || d.created_at).toLocaleDateString('pt-BR')}</span>
+                {CategoryIcon && <CategoryIcon size={14} color={category?.color} />}
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
-                <Activity size={12} />
-                <span style={{ textTransform: 'capitalize' }}>{d.type || 'Geral'}</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontSize: '0.85rem', fontWeight: 700, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {ev.title}
+                </p>
+                <p style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)', margin: 0 }}>
+                  {formatAgendaRowLabel(ev.date)}
+                </p>
               </div>
-            </div>
-          </motion.a>
-        )) : (
+            </Link>
+          );
+        }) : (
           <div style={{
             textAlign: 'center', padding: '40px 20px', color: 'var(--text-secondary)',
             fontSize: '0.85rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px'
@@ -1165,7 +1265,7 @@ function DemandsWidget({ demands, loading }: { demands: any[], loading: boolean 
             </div>
             <div>
               <p style={{ fontWeight: 800, color: 'var(--text-primary)', marginBottom: '4px' }}>Tudo em dia!</p>
-              <p style={{ opacity: 0.7 }}>Você não tem demandas pendentes para hoje.</p>
+              <p style={{ opacity: 0.7 }}>Nenhum evento nos próximos 7 dias.</p>
             </div>
           </div>
         )}
@@ -1590,8 +1690,8 @@ function TeamWidget({ isUserOnline, onlineUsers }: { isUserOnline: (id: string) 
                     border: online ? '2px solid var(--color-success)' : '2px solid transparent'
                   }}>
                     {m.avatar_url
-                      ? <img src={m.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
-                      : m.name.substring(0, 2).toUpperCase()}
+                      ? <img src={m.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover', imageRendering: '-webkit-optimize-contrast', backfaceVisibility: 'hidden' }} alt="" />
+                      : (m.username || m.name).substring(0, 2).toUpperCase()}
                   </div>
                   {online && (
                     <motion.div
@@ -1608,7 +1708,9 @@ function TeamWidget({ isUserOnline, onlineUsers }: { isUserOnline: (id: string) 
                 </div>
                 <div style={{ flex: 1, overflow: 'hidden' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <p style={{ fontWeight: 700, fontSize: '0.9rem', color: online ? 'var(--text-primary)' : 'var(--text-secondary)' }}>{m.name}</p>
+                    <p style={{ fontWeight: 700, fontSize: '0.9rem', color: online ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
+                      {m.username ? `@${m.username}` : m.name}
+                    </p>
                     <span style={{ fontSize: '1rem' }}>{m.emoji}</span>
                   </div>
                   <p style={{ fontSize: '0.7rem', color: online ? 'var(--color-success)' : 'var(--text-tertiary)', fontWeight: 600 }}>

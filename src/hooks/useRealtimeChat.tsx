@@ -8,6 +8,7 @@ export interface ChatMessage {
   content: string
   user: {
     name: string
+    username?: string
     id: string
     avatar_url?: string
   }

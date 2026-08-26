@@ -10,6 +10,7 @@ import {
   MessageSquare,
   NotebookPen,
   ListChecks,
+  CalendarRange,
   type LucideIcon
 } from "lucide-react";
 
@@ -33,6 +34,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/admin/workspace", label: "WorkSpace", icon: LayoutDashboard, roles: ['admin', 'board', 'social_media', 'filmmaker'] },
       { href: "/admin/demandas", label: "Demandas", icon: ListChecks, roles: ['admin', 'board', 'social_media', 'filmmaker'] },
+      { href: "/admin/cronogramas", label: "Cronogramas", icon: CalendarRange, roles: ['admin', 'board', 'social_media', 'filmmaker'] },
       { href: "/admin/schedule", label: "Minha Agenda", icon: CalendarDays, roles: ['admin', 'board', 'social_media', 'filmmaker'] },
       { href: "/admin/notas", label: "Notas", icon: NotebookPen, roles: ['admin', 'board', 'social_media', 'filmmaker'] },
       { href: "/admin/chat", label: "Chat", icon: MessageSquare, roles: ['admin', 'board', 'social_media', 'filmmaker'] },

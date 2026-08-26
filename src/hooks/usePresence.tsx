@@ -8,6 +8,7 @@ import type { RealtimeChannel } from '@supabase/supabase-js';
 export interface PresenceUser {
   user_id: string;
   name: string;
+  username?: string;
   role: string;
   avatar_url?: string;
   emoji?: string;
@@ -62,6 +63,7 @@ export function PresenceProvider({ children, currentUser }: { children: React.Re
     const trackData = {
       user_id: currentUser.id,
       name: currentUser.name,
+      username: currentUser.username,
       role: currentUser.role,
       avatar_url: currentUser.avatar_url || null,
       emoji: currentUser.emoji || null,

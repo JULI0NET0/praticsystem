@@ -6,7 +6,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   DUE_BUCKET_ORDER,
   dueBucketLabel,
-  dueDateBucket,
+  demandDueBucket,
   toISODate,
   type DueBucket,
 } from "@/lib/dueDate";
@@ -60,6 +60,8 @@ interface Props {
   demands: Demand[];
   onOpenDemand: (id: string) => void;
   groupBy: DemandListGroupBy;
+  selectedIds?: Set<string>;
+  onSelectDemand?: (id: string, event: React.MouseEvent) => void;
 }
 
 interface GroupSectionProps {
@@ -83,6 +85,8 @@ interface GroupSectionProps {
   onDragEndRow: () => void;
   dragId: string | null;
   showStatusPill: boolean;
+  selectedIds?: Set<string>;
+  onSelectDemand?: (id: string, event: React.MouseEvent) => void;
 }
 
 /**
@@ -110,6 +114,8 @@ function GroupSection({
   onDragEndRow,
   dragId,
   showStatusPill,
+  selectedIds,
+  onSelectDemand,
 }: GroupSectionProps) {
   const doneCount = list.filter((d) => d.status_category === "fechado").length;
 
@@ -226,6 +232,8 @@ function GroupSection({
                     onDragEnd={onDragEndRow}
                     dragging={dragId === demand.id}
                     showStatusPill={showStatusPill}
+                    selected={selectedIds?.has(demand.id)}
+                    onSelect={onSelectDemand}
                   />
                 ))}
               </AnimatePresence>
@@ -257,7 +265,13 @@ function GroupSection({
   );
 }
 
-export default function DemandListView({ demands, onOpenDemand, groupBy }: Props) {
+export default function DemandListView({
+  demands,
+  onOpenDemand,
+  groupBy,
+  selectedIds,
+  onSelectDemand,
+}: Props) {
   const { loading, updateDemand, demands: allDemands, statuses, moveDemand } = useDemandas();
   const { anchor, openFor, close } = useDemandContextMenu();
 
@@ -304,7 +318,12 @@ export default function DemandListView({ demands, onOpenDemand, groupBy }: Props
     const map = new Map<DueBucket, Demand[]>();
     for (const bucket of DUE_BUCKET_ORDER) map.set(bucket, []);
     for (const demand of visibleWithHeld) {
-      map.get(dueDateBucket(demand.due_date))!.push(demand);
+      const bucket = demandDueBucket(
+        demand.due_date,
+        demand.status_category === "fechado",
+        demand.completed_at,
+      );
+      map.get(bucket)!.push(demand);
     }
     for (const list of map.values()) {
       list.sort((a, b) => compareDemandsInGroup(a, b, sortAsDone));
@@ -394,6 +413,8 @@ export default function DemandListView({ demands, onOpenDemand, groupBy }: Props
               onDragEndRow={endDrag}
               dragId={dragId}
               showStatusPill
+              selectedIds={selectedIds}
+              onSelectDemand={onSelectDemand}
             />
           ))
         : statuses.map((status) => (
@@ -426,6 +447,8 @@ export default function DemandListView({ demands, onOpenDemand, groupBy }: Props
               onDragEndRow={endDrag}
               dragId={dragId}
               showStatusPill={false}
+              selectedIds={selectedIds}
+              onSelectDemand={onSelectDemand}
             />
           ))}
 

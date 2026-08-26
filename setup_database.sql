@@ -836,5 +836,242 @@ EXCEPTION WHEN insufficient_privilege THEN
 END $$;
 
 
+-- =============================================================
+-- BLOCO 13: CHECKLIST DA DEMANDA
+-- Etapas e ações dentro de uma demanda. Uma tabela só para dois
+-- níveis de exibição: `group_name` é a etapa, `label` é a ação.
+-- =============================================================
+
+CREATE TABLE IF NOT EXISTS public.demand_checklist (
+    id         UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    demand_id  UUID NOT NULL REFERENCES public.demands(id) ON DELETE CASCADE,
+    group_name TEXT NOT NULL DEFAULT '',
+    label      TEXT NOT NULL DEFAULT '',
+    done       BOOLEAN NOT NULL DEFAULT false,
+    position   INTEGER NOT NULL DEFAULT 0,
+    done_at    TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS demand_checklist_demand_idx
+    ON public.demand_checklist (demand_id, position);
+
+-- Carimba done_at junto com o done, para relatórios futuros
+CREATE OR REPLACE FUNCTION public.demand_checklist_sync_done_at()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+    IF NEW.done AND (OLD IS NULL OR NOT OLD.done) THEN
+        NEW.done_at := NOW();
+    ELSIF NOT NEW.done THEN
+        NEW.done_at := NULL;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS demand_checklist_done_at ON public.demand_checklist;
+CREATE TRIGGER demand_checklist_done_at
+    BEFORE INSERT OR UPDATE ON public.demand_checklist
+    FOR EACH ROW EXECUTE FUNCTION public.demand_checklist_sync_done_at();
+
+ALTER TABLE public.demand_checklist ENABLE ROW LEVEL SECURITY;
+
+-- Somente equipe: o checklist é processo interno ("fazer backup no Drive",
+-- "avisar o planejamento"), não deve vazar para o portal do cliente — ao
+-- contrário da demanda em si, que o cliente enxerga.
+DROP POLICY IF EXISTS "demand_checklist_select" ON public.demand_checklist;
+CREATE POLICY "demand_checklist_select" ON public.demand_checklist
+    FOR SELECT USING (public.is_team_member());
+
+DROP POLICY IF EXISTS "demand_checklist_insert" ON public.demand_checklist;
+CREATE POLICY "demand_checklist_insert" ON public.demand_checklist
+    FOR INSERT WITH CHECK (public.is_team_member());
+
+DROP POLICY IF EXISTS "demand_checklist_update" ON public.demand_checklist;
+CREATE POLICY "demand_checklist_update" ON public.demand_checklist
+    FOR UPDATE USING (public.is_team_member());
+
+DROP POLICY IF EXISTS "demand_checklist_delete" ON public.demand_checklist;
+CREATE POLICY "demand_checklist_delete" ON public.demand_checklist
+    FOR DELETE USING (public.is_team_member());
+
+
+-- =============================================================
+-- BLOCO 14: TEMPLATES DE DEMANDA
+-- Os textos das etapas viram DADOS, para mudar um passo não exigir
+-- deploy. Semeados a partir de src/mocks/operacao/templates.ts.
+-- =============================================================
+
+CREATE TABLE IF NOT EXISTS public.demand_templates (
+    id          TEXT PRIMARY KEY,
+    name        TEXT NOT NULL,
+    kind        TEXT NOT NULL DEFAULT 'avulso'
+                CHECK (kind IN ('conteudo', 'captacao', 'onboarding', 'avulso')),
+    description TEXT,
+    position    INTEGER NOT NULL DEFAULT 0,
+    created_at  TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.demand_template_items (
+    id          UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    template_id TEXT NOT NULL REFERENCES public.demand_templates(id) ON DELETE CASCADE,
+    group_name  TEXT NOT NULL DEFAULT '',
+    label       TEXT NOT NULL DEFAULT '',
+    position    INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS demand_template_items_template_idx
+    ON public.demand_template_items (template_id, position);
+
+ALTER TABLE public.demand_templates ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.demand_template_items ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "demand_templates_select" ON public.demand_templates;
+CREATE POLICY "demand_templates_select" ON public.demand_templates
+    FOR SELECT USING (public.is_team_member());
+DROP POLICY IF EXISTS "demand_templates_write" ON public.demand_templates;
+CREATE POLICY "demand_templates_write" ON public.demand_templates
+    FOR ALL USING (public.is_team_member()) WITH CHECK (public.is_team_member());
+
+DROP POLICY IF EXISTS "demand_template_items_select" ON public.demand_template_items;
+CREATE POLICY "demand_template_items_select" ON public.demand_template_items
+    FOR SELECT USING (public.is_team_member());
+DROP POLICY IF EXISTS "demand_template_items_write" ON public.demand_template_items;
+CREATE POLICY "demand_template_items_write" ON public.demand_template_items
+    FOR ALL USING (public.is_team_member()) WITH CHECK (public.is_team_member());
+
+-- ---- Seed ---------------------------------------------------
+-- Idempotente: os templates usam slug como PK e os itens só entram
+-- se aquele template ainda não tiver item nenhum, para não duplicar
+-- nem sobrescrever edições feitas depois pela equipe.
+
+INSERT INTO public.demand_templates (id, name, kind, description, position) VALUES
+    ('conteudo_padrao', 'Conteúdo — padrão', 'conteudo',
+     'Etapas de produção de um post: roteiro, revisão e agendamento.', 0),
+    ('captacao_padrao', 'Captação audiovisual', 'captacao',
+     'Planejamento, edição de vídeos e edição de fotos.', 1)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO public.demand_template_items (template_id, group_name, label, position)
+SELECT 'conteudo_padrao', g, l, p FROM (VALUES
+    ('Roteiro',              'Definir tema e etapa do funil',                       0),
+    ('Roteiro',              'Escrever o roteiro / copy do conteúdo',               1),
+    ('Roteiro',              'Levantar referências visuais e montar o moodboard',   2),
+    ('Roteiro',              'Definir a chamada para ação (CTA)',                   3),
+    ('Revisão de conteúdo',  'Revisar texto e ortografia',                          4),
+    ('Revisão de conteúdo',  'Revisar arte e identidade visual do cliente',         5),
+    ('Revisão de conteúdo',  'Enviar para aprovação do cliente',                    6),
+    ('Revisão de conteúdo',  'Aplicar os ajustes pedidos',                          7),
+    ('Agenda',               'Subir o conteúdo na plataforma de agendamento',       8),
+    ('Agenda',               'Conferir data, horário e legenda',                    9),
+    ('Agenda',               'Confirmar publicação e arquivar no Drive',           10)
+) AS t(g, l, p)
+WHERE NOT EXISTS (
+    SELECT 1 FROM public.demand_template_items WHERE template_id = 'conteudo_padrao'
+);
+
+INSERT INTO public.demand_template_items (template_id, group_name, label, position)
+SELECT 'captacao_padrao', g, l, p FROM (VALUES
+    ('Planejamento',      'Confirme a data e coloque na descrição da tarefa macro',                       0),
+    ('Planejamento',      'Defina o local da captação e coloque na descrição da tarefa macro',            1),
+    ('Planejamento',      'Defina o local da captação e coloque no calendário do Google da agência',      2),
+    ('Planejamento',      'Defina a quantidade mínima de Reels e preencha na descrição da tarefa macro',  3),
+    ('Planejamento',      'Busque referências de Reels e preencha na descrição da tarefa macro com links', 4),
+    ('Planejamento',      'Escreva os roteiros dos vídeos',                                               5),
+    ('Planejamento',      'Crie um moodboard para a captação',                                            6),
+    ('Planejamento',      'Envie o moodboard e as ideias de reels para revisão',                          7),
+    ('Edição de vídeos',  'Fazer backup do material na pasta do Drive do cliente',                        8),
+    ('Edição de vídeos',  'Editar vídeos da captação e enviar para aprovação na tarefa macro',            9),
+    ('Edição de vídeos',  'Fazer frame dos vídeos e colocar no Drive',                                   10),
+    ('Edição de vídeos',  'Avisar o planejamento responsável que as edições estão prontas',              11),
+    ('Edição de vídeos',  'Passar vídeos aprovados para a pasta pública do cliente',                     12),
+    ('Edição de fotos',   'Fazer backup do material na pasta do Drive do cliente',                       13),
+    ('Edição de fotos',   'Editar fotos da captação e enviar para aprovação na tarefa macro',            14),
+    ('Edição de fotos',   'Avisar o planejamento responsável que as edições estão prontas',              15),
+    ('Edição de fotos',   'Passar fotos aprovadas para a pasta pública do cliente',                      16)
+) AS t(g, l, p)
+WHERE NOT EXISTS (
+    SELECT 1 FROM public.demand_template_items WHERE template_id = 'captacao_padrao'
+);
+
+
+-- =============================================================
+-- BLOCO 15: CRONOGRAMAS DE CONTEÚDO
+-- Conteúdo não é demanda avulsa: o cronograma é entidade própria,
+-- sobrevive à geração e recebe anexos e resultados.
+-- =============================================================
+
+CREATE TABLE IF NOT EXISTS public.content_plans (
+    id             UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    client_id      UUID NOT NULL REFERENCES public.clients(id) ON DELETE CASCADE,
+    contract_id    UUID REFERENCES public.contracts(id) ON DELETE SET NULL,
+    title          TEXT NOT NULL DEFAULT '',
+    month_ref      TEXT NOT NULL DEFAULT '',
+    period_kind    TEXT NOT NULL DEFAULT 'month' CHECK (period_kind IN ('month', 'weeks')),
+    weeks          INTEGER NOT NULL DEFAULT 4,
+    start_date     DATE,
+    posts_per_week INTEGER NOT NULL DEFAULT 3,
+    weekdays       INTEGER[] NOT NULL DEFAULT '{1,3,5}',
+    channels       TEXT[] NOT NULL DEFAULT '{FEED}',
+    description    JSONB,
+    results        JSONB,
+    status         TEXT NOT NULL DEFAULT 'ativo'
+                   CHECK (status IN ('rascunho', 'ativo', 'concluido')),
+    created_by     UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+    created_at     TIMESTAMPTZ DEFAULT NOW(),
+    updated_at     TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS content_plans_client_idx ON public.content_plans (client_id, month_ref);
+
+DROP TRIGGER IF EXISTS content_plans_set_updated_at ON public.content_plans;
+CREATE TRIGGER content_plans_set_updated_at
+    BEFORE UPDATE ON public.content_plans
+    FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.content_plans ENABLE ROW LEVEL SECURITY;
+
+-- Planejamento é interno; o cliente vê as demandas geradas, não o plano.
+DROP POLICY IF EXISTS "content_plans_select" ON public.content_plans;
+CREATE POLICY "content_plans_select" ON public.content_plans
+    FOR SELECT USING (public.is_team_member());
+DROP POLICY IF EXISTS "content_plans_write" ON public.content_plans;
+CREATE POLICY "content_plans_write" ON public.content_plans
+    FOR ALL USING (public.is_team_member()) WITH CHECK (public.is_team_member());
+
+-- ---- Vínculo das demandas com o cronograma ------------------
+ALTER TABLE public.demands ADD COLUMN IF NOT EXISTS plan_id   UUID REFERENCES public.content_plans(id) ON DELETE SET NULL;
+ALTER TABLE public.demands ADD COLUMN IF NOT EXISTS plan_role TEXT;
+
+ALTER TABLE public.demands DROP CONSTRAINT IF EXISTS demands_plan_role_check;
+ALTER TABLE public.demands
+    ADD CONSTRAINT demands_plan_role_check
+    CHECK (plan_role IS NULL OR plan_role IN ('post', 'captacao'));
+
+CREATE INDEX IF NOT EXISTS demands_plan_idx ON public.demands (plan_id, due_date);
+
+-- ---- Anexos do cronograma -----------------------------------
+-- Reaproveita demand_attachments: a linha aponta para a demanda OU
+-- para o plano, nunca para os dois.
+ALTER TABLE public.demand_attachments ADD COLUMN IF NOT EXISTS plan_id UUID REFERENCES public.content_plans(id) ON DELETE CASCADE;
+ALTER TABLE public.demand_attachments ALTER COLUMN demand_id DROP NOT NULL;
+
+ALTER TABLE public.demand_attachments DROP CONSTRAINT IF EXISTS demand_attachments_owner_check;
+ALTER TABLE public.demand_attachments
+    ADD CONSTRAINT demand_attachments_owner_check
+    CHECK (num_nonnulls(demand_id, plan_id) = 1);
+
+CREATE INDEX IF NOT EXISTS demand_attachments_plan_idx ON public.demand_attachments (plan_id);
+
+-- As policies existentes olham só demand_id; refaz para cobrir os dois donos.
+DROP POLICY IF EXISTS "demand_attachments_select" ON public.demand_attachments;
+CREATE POLICY "demand_attachments_select" ON public.demand_attachments
+    FOR SELECT USING (
+        (plan_id IS NOT NULL AND public.is_team_member())
+        OR EXISTS (SELECT 1 FROM public.demands d
+                   WHERE d.id = demand_id AND public.can_see_demand(d.client_id))
+    );
+
+
 -- Atualiza o cache do schema no Supabase
 NOTIFY pgrst, 'reload schema';

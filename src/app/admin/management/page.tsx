@@ -24,6 +24,7 @@ interface TimeLogEntry {
 interface UserStats {
   user_id: string;
   name: string;
+  username?: string;
   avatar_url?: string;
   role: string;
   emoji?: string;
@@ -99,6 +100,7 @@ export default function ManagementPage() {
         return {
           user_id: user.id,
           name: user.name,
+          username: user.username,
           avatar_url: user.avatar_url,
           role: user.role,
           emoji: user.emoji,
@@ -227,7 +229,7 @@ export default function ManagementPage() {
                   }}>
                     {stat.avatar_url
                       ? <img src={stat.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
-                      : stat.name.substring(0, 2).toUpperCase()}
+                      : (stat.username || stat.name).replace(/^@/, '').substring(0, 2).toUpperCase()}
                   </div>
                   <div style={{
                     position: 'absolute', bottom: 0, right: 0,
@@ -238,7 +240,9 @@ export default function ManagementPage() {
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>{stat.name}</span>
+                    <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>
+                      {stat.username ? `@${stat.username}` : stat.name}
+                    </span>
                     <span>{stat.emoji}</span>
                   </div>
                   <span style={{ fontSize: '0.75rem', color: stat.isOnline ? 'var(--color-success)' : 'var(--color-text-tertiary)' }}>
@@ -297,11 +301,15 @@ export default function ManagementPage() {
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       color: 'var(--color-text-on-accent)', fontSize: '0.75rem', fontWeight: 700
                     }}>
-                      {stat.name.substring(0, 2).toUpperCase()}
+                      {(stat.username || stat.name).replace(/^@/, '').substring(0, 2).toUpperCase()}
                     </div>
                     <div>
-                      <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>{stat.name}</span>
-                      <span style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{stat.role}</span>
+                      <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>
+                        {stat.username ? `@${stat.username}` : stat.name}
+                      </span>
+                      <span style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
+                        {stat.name && stat.username ? `${stat.name} · ${stat.role}` : stat.role}
+                      </span>
                     </div>
                   </td>
                   <td style={{ padding: '14px 16px', fontWeight: 600 }}>{formatMinutes(stat.todayMinutes)}</td>

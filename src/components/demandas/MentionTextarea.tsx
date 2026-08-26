@@ -1,6 +1,8 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { computePosition, flip, offset, shift, size } from "@floating-ui/dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { Building2, User } from "lucide-react";
 import {
@@ -35,6 +37,7 @@ export default function MentionTextarea({
   ariaLabel,
 }: Props) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const [caret, setCaret] = useState(0);
   const [activeIndex, setActiveIndex] = useState(0);
 
@@ -45,10 +48,55 @@ export default function MentionTextarea({
     const pool = marker.marker === "#" ? catalogs.clients : catalogs.users;
     const query = marker.query.trim().toLowerCase();
     const matches = query
-      ? pool.filter((item) => item.label.toLowerCase().includes(query))
+      ? pool.filter(
+          (item) =>
+            item.label.toLowerCase().includes(query) ||
+            (item.alias && item.alias.toLowerCase().includes(query)),
+        )
       : pool;
-    return matches.slice(0, 6);
+    return matches.slice(0, 7);
   }, [marker, catalogs]);
+
+  // Floating UI + Portal: flip automático para cima se estiver no rodapé
+  useLayoutEffect(() => {
+    if (suggestions.length === 0) return;
+    const textarea = textareaRef.current;
+    const panel = panelRef.current;
+    if (!textarea || !panel) return;
+
+    let active = true;
+    const place = () => {
+      computePosition(textarea, panel, {
+        placement: "bottom-start",
+        middleware: [
+          offset(6),
+          flip({ fallbackPlacements: ["top-start", "bottom-end", "top-end"] }),
+          shift({ padding: 12 }),
+          size({
+            padding: 12,
+            apply({ availableHeight, rects }) {
+              Object.assign(panel.style, {
+                maxHeight: `${Math.max(160, Math.min(availableHeight, 300))}px`,
+                minWidth: `${Math.max(rects.reference.width, 240)}px`,
+              });
+            },
+          }),
+        ],
+      }).then(({ x, y }) => {
+        if (!active) return;
+        Object.assign(panel.style, { left: `${x}px`, top: `${y}px` });
+      });
+    };
+
+    place();
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+    return () => {
+      active = false;
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
+    };
+  }, [suggestions.length]);
 
   const complete = (label: string) => {
     const next = applyMarkerCompletion(value, caret, label);
@@ -121,39 +169,53 @@ export default function MentionTextarea({
         }}
       />
 
-      <AnimatePresence>
-        {suggestions.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: -4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -4 }}
-            transition={{ duration: 0.12 }}
-            className="combobox-panel"
-            style={{ position: "absolute", top: "100%", left: 0, minWidth: 240, zIndex: 30 }}
-          >
-            <div className="combobox-list">
-              {suggestions.map((item, index) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onMouseEnter={() => setActiveIndex(index)}
-                  onMouseDown={(event) => {
-                    event.preventDefault(); // não tira o foco do textarea
-                    complete(item.label);
-                  }}
-                  className="combobox-option"
-                  data-active={index === activeIndex || undefined}
-                >
-                  {marker?.marker === "#" ? <Building2 size={14} /> : <User size={14} />}
-                  <span className="combobox-option-text">
-                    <span className="combobox-option-label">{item.label}</span>
-                  </span>
-                </button>
-              ))}
-            </div>
-          </motion.div>
+      {typeof document !== "undefined" &&
+        createPortal(
+          <AnimatePresence>
+            {suggestions.length > 0 && (
+              <motion.div
+                ref={panelRef}
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.12 }}
+                className="combobox-panel"
+                style={{ position: "fixed", zIndex: 9999 }}
+              >
+                <div className="combobox-list">
+                  {suggestions.map((item, index) => {
+                    const displayLabel =
+                      marker?.marker === "@"
+                        ? `@${item.label.replace(/^@/, "")}`
+                        : item.label;
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onMouseEnter={() => setActiveIndex(index)}
+                        onMouseDown={(event) => {
+                          event.preventDefault(); // não tira o foco do textarea
+                          complete(item.label);
+                        }}
+                        className="combobox-option"
+                        data-active={index === activeIndex || undefined}
+                      >
+                        {marker?.marker === "#" ? <Building2 size={14} /> : <User size={14} />}
+                        <span className="combobox-option-text">
+                          <span className="combobox-option-label">{displayLabel}</span>
+                          {item.alias && item.alias !== item.label && (
+                            <span className="combobox-option-description">{item.alias}</span>
+                          )}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>,
+          document.body,
         )}
-      </AnimatePresence>
     </div>
   );
 }

@@ -1,8 +1,9 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Building2, GripVertical, Lock, MessageSquare, Paperclip } from "lucide-react";
+import { Building2, Calendar, GripVertical, ListChecks, Lock, MessageSquare, Paperclip } from "lucide-react";
 import { richTextToPlain } from "@/lib/richText";
+import { getAgendaCategory } from "@/lib/agendaCategories";
 import { clientLabel, PRIORITY_COLORS, type Demand } from "@/types/demandas";
 import { useDemandas } from "./DemandasProvider";
 import { AssigneeStack } from "./AssigneePicker";
@@ -21,6 +22,8 @@ interface Props {
   dragging?: boolean;
   /** Falso quando o grupo que envolve a linha já mostra o status (agrupamento por status). */
   showStatusPill?: boolean;
+  selected?: boolean;
+  onSelect?: (id: string, event: React.MouseEvent) => void;
 }
 
 export default function DemandRow({
@@ -32,6 +35,8 @@ export default function DemandRow({
   onDragEnd,
   dragging,
   showStatusPill = true,
+  selected = false,
+  onSelect,
 }: Props) {
   const { getStatus, getClient, commentsOf, attachmentsOf, toggleComplete } = useDemandas();
   const reduceMotion = useReducedMotion();
@@ -44,6 +49,10 @@ export default function DemandRow({
   const description = richTextToPlain(demand.description, 120);
   const commentCount = commentsOf(demand.id).length || demand.comment_count || 0;
   const attachmentCount = attachmentsOf(demand.id).length || demand.attachment_count || 0;
+
+  // Do checklist interessa o progresso, não o total — some quando não há etapa
+  const checklistTotal = demand.checklist_total ?? 0;
+  const checklistDone = demand.checklist_done ?? 0;
 
   return (
     <motion.div
@@ -74,7 +83,14 @@ export default function DemandRow({
         onDragStart?.(demand.id);
       }}
       onDragEnd={() => onDragEnd?.()}
-      onClick={() => onOpen(demand.id)}
+      onClick={(event) => {
+        if (event.shiftKey || event.metaKey || event.ctrlKey) {
+          event.preventDefault();
+          onSelect?.(demand.id, event);
+          return;
+        }
+        onOpen(demand.id);
+      }}
       onContextMenu={onContextMenu}
       onKeyDown={(event) => {
         if (event.key === "Enter" || event.key === " ") {
@@ -82,7 +98,7 @@ export default function DemandRow({
           onOpen(demand.id);
         }
       }}
-      className="demanda-row"
+      className={`demanda-row ${selected ? "demanda-row-selected" : ""}`}
       style={{
         display: "flex",
         alignItems: "flex-start",
@@ -90,9 +106,14 @@ export default function DemandRow({
         padding: "9px 10px",
         borderRadius: 10,
         cursor: "pointer",
-        borderBottom: "1px solid var(--border)",
+        borderBottom: selected
+          ? "1px solid color-mix(in oklab, var(--accent) 50%, transparent)"
+          : "1px solid var(--border)",
+        background: selected
+          ? "color-mix(in oklab, var(--accent) 12%, transparent)"
+          : "transparent",
         opacity: dragging ? 0.4 : 1,
-        transition: "opacity 0.15s, background 0.15s",
+        transition: "opacity 0.15s, background 0.15s, border-color 0.15s",
       }}
     >
       {onDragStart && (
@@ -174,18 +195,7 @@ export default function DemandRow({
       <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 4 }}>
         {/* Linha 1: título + descrição ao centro + contadores */}
         <div style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
-          <span
-            style={{
-              position: "relative",
-              flexShrink: 0,
-              maxWidth: "min(46ch, 55%)",
-              fontSize: "0.88rem",
-              fontWeight: 600,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-          >
+          <span className="demanda-row-title">
             <motion.span
               initial={false}
               animate={{ color: done ? "var(--text-tertiary)" : "var(--text-primary)" }}
@@ -233,6 +243,7 @@ export default function DemandRow({
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
           {client ? <ClientChip label={clientLabel(client)} /> : <InternalChip />}
           <DueChip dueDate={demand.due_date} dueTime={demand.due_time} />
+          {demand.agenda_subject && <AgendaLinkChip subject={demand.agenda_subject} />}
           {showStatusPill && <DemandStatusPill status={status} size="sm" />}
           <PriorityBadge priority={demand.priority} compact />
           <AssigneeStack
@@ -245,7 +256,7 @@ export default function DemandRow({
           {/* Comentários e anexos ficam junto dos demais chips. Ancorados à
               direita da linha ninguém olhava: em tela larga eles acabavam a
               centenas de pixels do título a que se referem. */}
-          {(commentCount > 0 || attachmentCount > 0) && (
+          {(checklistTotal > 0 || commentCount > 0 || attachmentCount > 0) && (
             <span
               style={{
                 display: "inline-flex",
@@ -256,6 +267,22 @@ export default function DemandRow({
                 color: "var(--text-tertiary)",
               }}
             >
+              {checklistTotal > 0 && (
+                <span
+                  title={`${checklistDone} de ${checklistTotal} etapas concluídas`}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 3,
+                    color:
+                      checklistDone === checklistTotal
+                        ? "var(--color-success)"
+                        : "var(--text-tertiary)",
+                  }}
+                >
+                  <ListChecks size={12} /> {checklistDone}/{checklistTotal}
+                </span>
+              )}
               {commentCount > 0 && (
                 <span
                   title={`${commentCount} comentário(s)`}
@@ -302,6 +329,33 @@ export function ClientChip({ label }: { label: string }) {
     >
       <Building2 size={11} />
       {label}
+    </span>
+  );
+}
+
+/** Sinaliza que a demanda tem um evento-espelho (opcional) na Agenda. */
+export function AgendaLinkChip({ subject }: { subject: NonNullable<Demand["agenda_subject"]> }) {
+  const category = getAgendaCategory(subject);
+  if (!category) return null;
+  return (
+    <span
+      title={`Aparece na Agenda como "${category.label}"`}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 4,
+        padding: "2px 8px",
+        borderRadius: "var(--radius-badge)",
+        fontSize: "0.68rem",
+        fontWeight: 700,
+        color: category.color,
+        background: "var(--color-surface-sunken)",
+        border: "1px solid var(--border)",
+        whiteSpace: "nowrap",
+      }}
+    >
+      <Calendar size={11} />
+      {category.label}
     </span>
   );
 }

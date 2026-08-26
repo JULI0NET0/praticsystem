@@ -5,12 +5,16 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, Keyboard } from "lucide-react";
 
 const SHORTCUTS = [
+  { label: "Busca & Ações Globais", key: "⌘ + K" },
+  { label: "Lançar Nova Demanda", key: "N" },
+  { label: "Visualização em Lista", key: "L" },
+  { label: "Visualização em Kanban", key: "K" },
+  { label: "Seleção em Intervalo", key: "Shift + Clique" },
+  { label: "Alternar Seleção", key: "⌘ + Clique" },
+  { label: "Selecionar Todas", key: "⌘ + A" },
   { label: "Alternar Sidebar", key: "⌘ + B" },
   { label: "Alternar Tema", key: "⌘ + T" },
-  { label: "Ir para Home", key: "⌘ + H" },
-  { label: "Busca Rápida", key: "⌘ + K" },
   { label: "Ver Atalhos", key: "⌘ + /" },
-  { label: "Menu de Contexto", key: "Botão Direito" },
 ];
 
 export default function ShortcutOverlay() {

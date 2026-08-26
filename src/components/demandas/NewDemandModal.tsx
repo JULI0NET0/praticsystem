@@ -1,16 +1,18 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Building2, Lock } from "lucide-react";
+import { Building2, Calendar, Lock } from "lucide-react";
 import DialogShell from "@/components/DialogShell";
 import Combobox, { type ComboboxOption } from "@/components/ui/Combobox";
 import { useAuth } from "@/hooks/useAuth";
 import { formatDueDateLabel } from "@/lib/dueDate";
+import { DEMAND_AGENDA_SUBJECTS } from "@/lib/agendaCategories";
 import { parseQuickInput, type QuickCatalogs, type QuickParseResult } from "@/lib/quickParse";
 import {
   clientLabel,
   PRIORITY_COLORS,
   PRIORITY_LABELS,
+  type AgendaSubject,
   type Demand,
   type DemandPriority,
 } from "@/types/demandas";
@@ -39,7 +41,7 @@ export default function NewDemandModal({
   defaultClientId,
 }: Props) {
   const { currentUser } = useAuth();
-  const { clients, statuses, createDemand } = useDemandas();
+  const { clients, users, statuses, createDemand } = useDemandas();
 
   const [text, setText] = useState("");
   const [clientId, setClientId] = useState<string | null>(null);
@@ -49,6 +51,9 @@ export default function NewDemandModal({
   const [allTeam, setAllTeam] = useState(false);
   const [dueDate, setDueDate] = useState("");
   const [dueTime, setDueTime] = useState("");
+  // "demand" é o padrão: toda demanda nova aparece na agenda pessoal de quem
+  // é responsável, a menos que a pessoa escolha "Não aparece na agenda".
+  const [agendaSubject, setAgendaSubject] = useState<AgendaSubject | null>("demand");
   const [touched, setTouched] = useState<Set<TouchedField>>(new Set());
   const [saving, setSaving] = useState(false);
   const [wasOpen, setWasOpen] = useState(false);
@@ -66,6 +71,7 @@ export default function NewDemandModal({
       setAllTeam(false);
       setDueDate("");
       setDueTime("");
+      setAgendaSubject("demand");
       setTouched(new Set());
       setSaving(false);
     }
@@ -81,9 +87,13 @@ export default function NewDemandModal({
         label: clientLabel(client),
         alias: client.name,
       })),
-      users: [],
+      users: users.map((user) => ({
+        id: user.id,
+        label: user.username || user.name || user.email,
+        alias: user.name,
+      })),
     }),
-    [clients],
+    [clients, users],
   );
 
   // Prévia ao vivo do que o título já resolve — o mesmo parser do submit
@@ -116,6 +126,7 @@ export default function NewDemandModal({
       assign_all_team: allTeam,
       due_date: merged.dueDate,
       due_time: merged.dueTime,
+      agenda_subject: agendaSubject,
     });
     setSaving(false);
 
@@ -131,13 +142,26 @@ export default function NewDemandModal({
   );
 
   const clientOptions = useMemo<ComboboxOption[]>(
-    () =>
-      clients.map((client) => ({
-        value: client.id,
-        label: clientLabel(client),
-        keywords: client.name,
-        icon: <Building2 size={14} />,
-      })),
+    () => {
+      const active = clients.filter((c) => !c.status || c.status === "active" || c.status === "prospect");
+      const inactive = clients.filter((c) => c.status === "inactive");
+
+      return [
+        ...active.map((client) => ({
+          value: client.id,
+          label: clientLabel(client),
+          keywords: client.name,
+          icon: <Building2 size={14} />,
+        })),
+        ...inactive.map((client) => ({
+          value: client.id,
+          label: `${clientLabel(client)} (Inativo)`,
+          description: "Cliente inativo",
+          keywords: `${client.name} inativo`,
+          icon: <Building2 size={14} style={{ opacity: 0.6 }} />,
+        })),
+      ];
+    },
     [clients],
   );
 
@@ -147,6 +171,16 @@ export default function NewDemandModal({
         value: option,
         label: PRIORITY_LABELS[option],
         icon: <PriorityFlag priority={option} size={13} />,
+      })),
+    [],
+  );
+
+  const agendaSubjectOptions = useMemo<ComboboxOption[]>(
+    () =>
+      DEMAND_AGENDA_SUBJECTS.map((subject) => ({
+        value: subject.id,
+        label: subject.label,
+        icon: <subject.icon size={14} color={subject.color} />,
       })),
     [],
   );
@@ -196,7 +230,7 @@ export default function NewDemandModal({
           </div>
         </FormField>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+        <div className="new-demand-fields-grid">
           <FormField label="Cliente">
             <Combobox
               value={effective.clientId}
@@ -252,6 +286,16 @@ export default function NewDemandModal({
                 setAssigneeIds(ids);
                 setAllTeam(team);
               }}
+            />
+          </FormField>
+
+          <FormField label="Assunto na agenda">
+            <Combobox
+              value={agendaSubject}
+              onChange={(value) => setAgendaSubject(value as AgendaSubject | null)}
+              options={agendaSubjectOptions}
+              ariaLabel="Assunto na Agenda"
+              clearOption={{ label: "Não aparece na agenda", icon: <Calendar size={14} /> }}
             />
           </FormField>
         </div>

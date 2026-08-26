@@ -40,6 +40,7 @@ function renderContent(content: string, isOwnMessage: boolean) {
 }
 
 function Avatar({ name, avatarUrl, size, fontSize }: { name: string; avatarUrl?: string; size: number; fontSize: string }) {
+  const clean = name.replace(/^@/, '');
   return (
     <div
       style={{
@@ -61,7 +62,7 @@ function Avatar({ name, avatarUrl, size, fontSize }: { name: string; avatarUrl?:
       {avatarUrl ? (
         <img src={avatarUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
       ) : (
-        name.substring(0, 2).toUpperCase()
+        (clean || '?').substring(0, 2).toUpperCase()
       )}
     </div>
   )
@@ -72,6 +73,12 @@ export function ChatMessageItem({ message, isOwnMessage, showHeader, compact = f
   const fontSize = compact ? '0.82rem' : '0.88rem'
   const avatarFontSize = compact ? '0.6rem' : '0.7rem'
   const padding = compact ? '8px 12px' : '10px 14px'
+
+  const senderHandle = message.user.username
+    ? `@${message.user.username}`
+    : message.user.name.startsWith('@')
+      ? message.user.name
+      : `@${message.user.name.split(' ')[0]}`;
 
   return (
     <div
@@ -87,7 +94,7 @@ export function ChatMessageItem({ message, isOwnMessage, showHeader, compact = f
       {!isOwnMessage && (
         showHeader
           ? <Avatar
-              name={message.user.name}
+              name={message.user.username || message.user.name}
               avatarUrl={message.user.avatar_url}
               size={avatarSize}
               fontSize={avatarFontSize}
@@ -99,7 +106,7 @@ export function ChatMessageItem({ message, isOwnMessage, showHeader, compact = f
         {showHeader && !isOwnMessage && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '3px' }}>
             <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--accent)' }}>
-              {message.user.name.split(' ')[0]}
+              {senderHandle}
             </span>
             <span style={{ fontSize: '0.6rem', color: 'var(--text-secondary)' }}>
               {formatTime(message.createdAt)}

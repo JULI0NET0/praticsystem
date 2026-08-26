@@ -72,7 +72,10 @@ export default function ChatPage() {
   }, [clearUnread]);
 
   const filteredTeam = searchQuery
-    ? teamUsers.filter(u => u.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    ? teamUsers.filter(u =>
+        (u.username && u.username.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        u.name.toLowerCase().includes(searchQuery.toLowerCase())
+      )
     : teamUsers;
 
   const roomName = activeChat === 'general'
@@ -81,7 +84,7 @@ export default function ChatPage() {
 
   const { messages: realtimeMessages, sendMessage, isConnected } = useRealtimeChat({
     roomName,
-    username: currentUser?.name ?? '',
+    username: currentUser?.username ? `@${currentUser.username}` : (currentUser?.name ?? ''),
     userId: currentUser?.id ?? '',
     avatarUrl: currentUser?.avatar_url,
     onMessage: (msg) => notify(msg, !document.hidden),
@@ -110,10 +113,11 @@ export default function ChatPage() {
       if (data) {
         setDbMessages(data.map(m => {
           const sender = users.find(u => u.id === m.sender_id);
+          const senderName = sender?.username ? `@${sender.username}` : (sender?.name ?? 'Desconhecido');
           return {
             id: m.id,
             content: m.content,
-            user: { name: sender?.name ?? 'Desconhecido', id: m.sender_id, avatar_url: sender?.avatar_url },
+            user: { name: senderName, username: sender?.username, id: m.sender_id, avatar_url: sender?.avatar_url },
             createdAt: m.timestamp,
             ...m,
           };
@@ -205,10 +209,11 @@ export default function ChatPage() {
             u.name.toLowerCase().includes(username.toLowerCase())
           );
           if (mentioned && mentioned.id !== currentUser.id) {
+            const myHandle = currentUser.username ? `@${currentUser.username}` : currentUser.name;
             await supabase.from('notifications').insert([{
               user_id: mentioned.id,
               title: 'Menção no Chat',
-              message: `${currentUser.name}: "${content.substring(0, 60)}"`,
+              message: `${myHandle}: "${content.substring(0, 60)}"`,
               type: 'mention',
             }]);
           }
@@ -238,18 +243,25 @@ export default function ChatPage() {
     }
     typingChannelRef.current?.send({
       type: 'broadcast', event: 'typing',
-      payload: { user_id: currentUser?.id, name: currentUser?.name },
+      payload: {
+        user_id: currentUser?.id,
+        name: currentUser?.username ? `@${currentUser.username}` : currentUser?.name,
+      },
     });
   };
 
   const insertMention = (userName: string) => {
     const lastAt = message.lastIndexOf('@');
-    setMessage(message.substring(0, lastAt) + `@${userName} `);
+    const cleanUser = userName.replace(/^@/, '');
+    setMessage(message.substring(0, lastAt) + `@${cleanUser} `);
     setShowMentions(false);
     inputRef.current?.focus();
   };
 
-  const filteredMentionUsers = teamUsers.filter(u => u.name.toLowerCase().includes(mentionFilter.toLowerCase()));
+  const filteredMentionUsers = teamUsers.filter(u =>
+    (u.username && u.username.toLowerCase().includes(mentionFilter.toLowerCase())) ||
+    u.name.toLowerCase().includes(mentionFilter.toLowerCase())
+  );
   const activeMember = activeChat === 'general' ? null : users.find(u => u.id === activeChat);
 
   if (!currentUser || !['admin', 'board', 'social_media', 'filmmaker'].includes(currentUser.role)) {
@@ -314,13 +326,17 @@ export default function ChatPage() {
                   <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--accent)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-on-accent)', fontWeight: 700, overflow: 'hidden' }}>
                     {user.avatar_url
                       ? <img src={user.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
-                      : user.name.substring(0, 2).toUpperCase()}
+                      : (user.username || user.name).substring(0, 2).toUpperCase()}
                   </div>
                   <div style={{ position: 'absolute', bottom: 0, right: 0, width: '10px', height: '10px', background: online ? 'var(--color-success)' : 'var(--color-text-tertiary)', borderRadius: '50%', border: '2px solid var(--bg-primary)' }} />
                 </div>
                 <div style={{ flex: 1, textAlign: 'left', overflow: 'hidden' }}>
-                  <span style={{ fontWeight: userUnread > 0 ? 800 : 600, fontSize: '0.85rem', display: 'block', color: userUnread > 0 ? 'var(--text-primary)' : undefined }}>{user.name}</span>
-                  <span style={{ fontSize: '0.65rem', color: online ? 'var(--color-success)' : 'var(--color-text-tertiary)' }}>{online ? 'Online' : 'Offline'}</span>
+                  <span style={{ fontWeight: userUnread > 0 ? 800 : 600, fontSize: '0.85rem', display: 'block', color: userUnread > 0 ? 'var(--text-primary)' : undefined }}>
+                    {user.username ? `@${user.username}` : user.name}
+                  </span>
+                  <span style={{ fontSize: '0.65rem', color: online ? 'var(--color-success)' : 'var(--color-text-tertiary)' }}>
+                    {user.name ? `${user.name} · ` : ''}{online ? 'Online' : 'Offline'}
+                  </span>
                 </div>
                 {userUnread > 0 && <PageUnreadBadge count={userUnread} />}
               </button>
@@ -358,14 +374,16 @@ export default function ChatPage() {
                   <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-on-accent)', fontWeight: 700 }}>
                     {activeMember.avatar_url
                       ? <img src={activeMember.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} alt="" />
-                      : activeMember.name.substring(0, 2).toUpperCase()}
+                      : (activeMember.username || activeMember.name).substring(0, 2).toUpperCase()}
                   </div>
                   <div style={{ position: 'absolute', bottom: 0, right: 0, width: '12px', height: '12px', background: isUserOnline(activeMember.id) ? 'var(--color-success)' : 'var(--color-text-tertiary)', borderRadius: '50%', border: '2px solid var(--bg-primary)' }} />
                 </div>
                 <div>
-                  <h3 style={{ fontWeight: 700, fontSize: '1.05rem' }}>{activeMember.name} {activeMember.emoji}</h3>
+                  <h3 style={{ fontWeight: 700, fontSize: '1.05rem' }}>
+                    {activeMember.username ? `@${activeMember.username}` : activeMember.name} {activeMember.emoji}
+                  </h3>
                   <span style={{ fontSize: '0.75rem', color: isUserOnline(activeMember.id) ? 'var(--color-success)' : 'var(--color-text-tertiary)' }}>
-                    {isUserOnline(activeMember.id) ? 'Online agora' : 'Offline'}
+                    {activeMember.name ? `${activeMember.name} · ` : ''}{isUserOnline(activeMember.id) ? 'Online agora' : 'Offline'}
                   </span>
                 </div>
               </>
@@ -441,13 +459,15 @@ export default function ChatPage() {
                     onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                   >
                     <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-on-accent)', fontSize: '0.65rem', fontWeight: 700 }}>
-                      {u.name.substring(0, 2).toUpperCase()}
+                      {(u.username || u.name).substring(0, 2).toUpperCase()}
                     </div>
                     <div>
-                      <span style={{ fontWeight: 600 }}>{u.name}</span>
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginLeft: '8px' }}>
-                        @{u.username || u.name.split(' ')[0]}
-                      </span>
+                      <span style={{ fontWeight: 600 }}>@{u.username || u.name.split(' ')[0]}</span>
+                      {u.name && u.username && (
+                        <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginLeft: '8px' }}>
+                          {u.name}
+                        </span>
+                      )}
                     </div>
                   </button>
                 ))}

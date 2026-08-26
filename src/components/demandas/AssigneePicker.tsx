@@ -20,6 +20,7 @@ export function UserAvatar({
   size?: number;
   ring?: boolean;
 }) {
+  const clean = name.replace(/^@/, "");
   return (
     <div
       title={name}
@@ -44,10 +45,16 @@ export function UserAvatar({
         <img
           src={avatarUrl}
           alt={name}
-          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            imageRendering: "-webkit-optimize-contrast",
+            backfaceVisibility: "hidden",
+          }}
         />
       ) : (
-        (name || "?").substring(0, 2).toUpperCase()
+        (clean || "?").substring(0, 2).toUpperCase()
       )}
     </div>
   );
@@ -99,10 +106,11 @@ export function AssigneeStack({
     <div style={{ display: "flex", alignItems: "center" }}>
       {shown.map((id, index) => {
         const user = getUser(id);
+        const handle = user?.username ? `@${user.username}` : (user?.name ?? "?");
         return (
           <div key={id} style={{ marginLeft: index === 0 ? 0 : -size * 0.3 }}>
             <UserAvatar
-              name={user?.name ?? "?"}
+              name={handle}
               avatarUrl={user?.avatar_url ?? user?.avatarUrl}
               size={size}
             />
@@ -150,19 +158,23 @@ export default function AssigneePicker({ assigneeIds, allTeam, onChange }: Props
         icon: <Users size={15} color="var(--accent)" />,
         description: "Todos os membros da equipe",
       },
-      ...users.map((user) => ({
-        value: user.id,
-        label: user.name || user.email,
-        keywords: user.email,
-        icon: (
-          <UserAvatar
-            name={user.name || user.email}
-            avatarUrl={user.avatar_url ?? user.avatarUrl}
-            size={20}
-            ring={false}
-          />
-        ),
-      })),
+      ...users.map((user) => {
+        const handle = user.username ? `@${user.username}` : (user.name || user.email);
+        return {
+          value: user.id,
+          label: handle,
+          description: user.name && user.username ? user.name : undefined,
+          keywords: `${user.username || ""} ${user.name || ""} ${user.email || ""}`.trim(),
+          icon: (
+            <UserAvatar
+              name={handle}
+              avatarUrl={user.avatar_url ?? user.avatarUrl}
+              size={20}
+              ring={false}
+            />
+          ),
+        };
+      }),
     ],
     [users],
   );

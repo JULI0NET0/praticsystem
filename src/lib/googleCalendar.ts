@@ -17,6 +17,9 @@ export const CATEGORY_GOOGLE_ACCOUNT: Record<string, GoogleAccount> = {
   ads: 'agenciapratic',
   launch: 'agenciapratic',
   payment: 'agenciapratic',
+  // Nunca exercitado na prática: o assunto "demand" (evento-espelho de uma
+  // demanda genérica) é sempre privado e nunca sincroniza com o Google.
+  demand: 'agenciapratic',
 };
 
 function getClientId(): string {

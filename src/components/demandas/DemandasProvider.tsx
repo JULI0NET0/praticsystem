@@ -16,6 +16,7 @@ import { useAuth, type UserProfile } from "@/hooks/useAuth";
 import { useToast } from "@/components/CustomToast";
 import { playSound } from "@/utils/audio";
 import { deriveStatusFields } from "@/lib/demandState";
+import { computeAgendaMirror, shouldSyncGoogle } from "@/lib/demandAgendaSync";
 import {
   EMPTY_DEMAND_FILTERS,
   PRIORITY_ORDER,
@@ -23,8 +24,10 @@ import {
   type DemandAttachment,
   type DemandClientRef,
   type DemandComment,
+  type DemandChecklistItem,
   type DemandFilters,
   type DemandStatus,
+  type DemandTemplate,
 } from "@/types/demandas";
 
 const ATTACHMENTS_BUCKET = "demand-attachments";
@@ -83,6 +86,10 @@ interface DemandasContextValue {
   deleteDemand: (id: string) => Promise<void>;
   moveDemand: (id: string, statusId: string, position?: number) => Promise<void>;
   toggleComplete: (id: string) => Promise<void>;
+  batchUpdateDemands: (ids: string[], patch: Partial<Demand>) => Promise<void>;
+  batchMoveDemands: (ids: string[], statusId: string) => Promise<void>;
+  batchDeleteDemands: (ids: string[]) => Promise<void>;
+  batchToggleComplete: (ids: string[], done: boolean) => Promise<void>;
 
   /** Som ao concluir. Preferência por navegador. */
   soundEnabled: boolean;
@@ -94,6 +101,16 @@ interface DemandasContextValue {
 
   loadDetails: (demandId: string) => Promise<void>;
   commentsOf: (demandId: string) => DemandComment[];
+
+  /** Checklist: as etapas dentro da demanda (BLOCO 13). */
+  checklistOf: (demandId: string) => DemandChecklistItem[];
+  toggleChecklistItem: (item: DemandChecklistItem) => Promise<void>;
+  addChecklistItem: (demandId: string, groupName: string, label: string) => Promise<void>;
+  removeChecklistItem: (item: DemandChecklistItem) => Promise<void>;
+  /** Copia os itens de um template para o checklist da demanda. */
+  applyTemplate: (demandId: string, templateId: string) => Promise<void>;
+  templates: DemandTemplate[];
+
   attachmentsOf: (demandId: string) => DemandAttachment[];
   addComment: (demandId: string, body: string, files: File[]) => Promise<void>;
   deleteComment: (comment: DemandComment) => Promise<void>;
@@ -122,6 +139,7 @@ interface DemandsSnapshot {
   demands: Demand[];
   statuses: DemandStatus[];
   clients: DemandClientRef[];
+  templates: DemandTemplate[];
 }
 
 /** PostgREST devolve agregados embutidos como `[{ count: n }]`. */
@@ -130,36 +148,93 @@ function embeddedCount(value: unknown): number {
   return 0;
 }
 
+/** PostgREST devolve o relacionamento reverso de agenda_events(demand_id) como array; no máximo 1 (UNIQUE INDEX). */
+function embeddedAgendaEvent(value: unknown): Demand["agenda_event"] {
+  if (Array.isArray(value) && value[0]) {
+    const event = value[0] as Record<string, unknown>;
+    return {
+      id: event.id as string,
+      google_event_id: (event.google_event_id as string | null) ?? null,
+      google_account: (event.google_account as string | null) ?? null,
+      status: event.status as string,
+    };
+  }
+  return null;
+}
+
 async function fetchDemandsSnapshot(): Promise<DemandsSnapshot> {
-  const [demandsRes, statusesRes, clientsRes] = await Promise.all([
+  const [demandsRes, statusesRes, clientsRes, templatesRes, checklistRes] = await Promise.all([
     // Os contadores vêm junto para que os cards mostrem "3 comentários" sem
-    // precisar abrir a demanda antes.
+    // precisar abrir a demanda antes. agenda_events(...) é o evento-espelho
+    // opcional na Agenda (ver src/lib/demandAgendaSync.ts).
     supabase
       .from("demands")
-      .select("*, demand_comments(count), demand_attachments(count)")
+      .select(
+        "*, demand_comments(count), demand_attachments(count), agenda_events(id, google_event_id, google_account, status)",
+      )
       .order("created_at", { ascending: false }),
     supabase.from("demand_statuses").select("*").order("position", { ascending: true }),
-    supabase.from("clients").select("id, name, nome_fantasia").order("name"),
+    supabase.from("clients").select("id, name, nome_fantasia, status").order("name"),
+    supabase.from("demand_templates").select("*").order("position", { ascending: true }),
+    // Só demand_id e done: o suficiente para o "3/8" da linha, sem puxar os
+    // rótulos de todas as etapas de todas as demandas.
+    supabase.from("demand_checklist").select("demand_id, done"),
   ]);
 
   if (demandsRes.error) throw demandsRes.error;
   if (statusesRes.error) throw statusesRes.error;
 
+  // Contagem por demanda, feita uma vez em vez de por linha
+  const checklistCounts = new Map<string, { total: number; done: number }>();
+  for (const row of (checklistRes.data ?? []) as { demand_id: string; done: boolean }[]) {
+    const current = checklistCounts.get(row.demand_id) ?? { total: 0, done: 0 };
+    current.total += 1;
+    if (row.done) current.done += 1;
+    checklistCounts.set(row.demand_id, current);
+  }
+
   const demands = (demandsRes.data ?? []).map((row) => {
-    const { demand_comments, demand_attachments, ...demand } = row as Record<string, unknown>;
+    const { demand_comments, demand_attachments, agenda_events, ...demand } = row as Record<
+      string,
+      unknown
+    >;
     return {
       ...(demand as unknown as Demand),
       comment_count: embeddedCount(demand_comments),
       attachment_count: embeddedCount(demand_attachments),
+      agenda_event: embeddedAgendaEvent(agenda_events),
+      checklist_total: checklistCounts.get(demand.id as string)?.total ?? 0,
+      checklist_done: checklistCounts.get(demand.id as string)?.done ?? 0,
     };
   });
 
   return {
     demands,
     statuses: (statusesRes.data ?? []) as DemandStatus[],
-    // A lista de clientes é acessória: se falhar, a área continua utilizável
+    // Lista de clientes e templates são acessórias: se falharem, a área
+    // continua utilizável, só sem o pré-preenchimento.
     clients: (clientsRes.data ?? []) as DemandClientRef[],
+    templates: (templatesRes.data ?? []) as DemandTemplate[],
   };
+}
+
+/**
+ * Dispara o push do evento-espelho para o Google Calendar reusando a mesma
+ * rota que a Agenda nativa já usa (`schedule/page.tsx`). A rota lê
+ * título/data/descrição/tipo direto da linha em agenda_events pelo `eventId`
+ * — não é preciso repassar nada além disso — e grava de volta
+ * google_event_id/google_account nessa mesma linha.
+ */
+async function pushGoogleSync(eventId: string, action: "insert" | "update" | "delete"): Promise<void> {
+  const res = await fetch("/api/agenda/google-sync", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ eventId, action }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error || `Erro ${res.status}`);
+  }
 }
 
 function sortDemands(list: Demand[]): Demand[] {
@@ -201,6 +276,8 @@ export function DemandasProvider({ children }: { children: ReactNode }) {
   // Detalhes carregados sob demanda ao abrir o drawer
   const [comments, setComments] = useState<Record<string, DemandComment[]>>({});
   const [attachments, setAttachments] = useState<Record<string, DemandAttachment[]>>({});
+  const [checklists, setChecklists] = useState<Record<string, DemandChecklistItem[]>>({});
+  const [templates, setTemplates] = useState<DemandTemplate[]>([]);
 
   // A busca é uma função pura (sem setState) para que o efeito abaixo só
   // atualize o estado dentro do callback do `.then` — e para que uma resposta
@@ -209,6 +286,7 @@ export function DemandasProvider({ children }: { children: ReactNode }) {
     setDemands(sortDemands(snapshot.demands));
     setStatuses(snapshot.statuses);
     setClients(snapshot.clients);
+    setTemplates(snapshot.templates);
     setLoading(false);
   }, []);
 
@@ -305,6 +383,92 @@ export function DemandasProvider({ children }: { children: ReactNode }) {
   // Mutações de demanda — otimista com rollback
   // -------------------------------------------------------------------------
 
+  /**
+   * Mantém o evento-espelho em agenda_events alinhado ao estado atual da
+   * demanda (ver src/lib/demandAgendaSync.ts para a regra). Roda depois que
+   * a mutação da própria demanda já teve sucesso — um erro aqui não desfaz
+   * a demanda, só avisa que a Agenda ficou fora de sincronia.
+   */
+  const syncAgendaMirror = useCallback(
+    async (demand: Demand) => {
+      const plan = computeAgendaMirror(demand);
+
+      if (plan.action === "none") return;
+
+      if (plan.action === "clear") {
+        const mirror = demand.agenda_event;
+        // Notifica o Google ANTES de apagar a linha local: a rota de sync lê
+        // google_event_id/google_account da própria linha em agenda_events.
+        if (mirror?.google_event_id) {
+          try {
+            await pushGoogleSync(mirror.id, "delete");
+          } catch (err) {
+            console.error("Erro ao remover evento do Google Agenda:", err);
+          }
+        }
+        const { error } = await supabase.from("agenda_events").delete().eq("demand_id", demand.id);
+        if (error) {
+          showToast("Não foi possível remover o vínculo com a Agenda: " + error.message, "info");
+          return;
+        }
+        setDemands((list) =>
+          list.map((d) => (d.id === demand.id ? { ...d, agenda_event: null } : d)),
+        );
+        return;
+      }
+
+      const { payload } = plan;
+      const { data: mirrored, error } = await supabase
+        .from("agenda_events")
+        .upsert({ demand_id: demand.id, ...payload }, { onConflict: "demand_id" })
+        .select("id, google_event_id, google_account, status")
+        .single();
+
+      if (error || !mirrored) {
+        showToast(
+          "Demanda salva, mas não foi possível atualizar a Agenda: " + (error?.message ?? ""),
+          "info",
+        );
+        return;
+      }
+
+      let agendaEvent = mirrored as NonNullable<Demand["agenda_event"]>;
+
+      if (shouldSyncGoogle(payload.type)) {
+        try {
+          await pushGoogleSync(mirrored.id, "update");
+          const { data: refreshed } = await supabase
+            .from("agenda_events")
+            .select("id, google_event_id, google_account, status")
+            .eq("id", mirrored.id)
+            .single();
+          if (refreshed) agendaEvent = refreshed as NonNullable<Demand["agenda_event"]>;
+        } catch (err) {
+          console.error("Erro ao sincronizar com o Google Agenda:", err);
+          showToast("Demanda salva na Agenda, mas a sincronização com o Google falhou.", "info");
+        }
+      } else if (agendaEvent.google_event_id) {
+        // O assunto mudou para um que não sincroniza mais — tira do Google e
+        // limpa os campos locais, senão fica um evento fantasma por lá.
+        try {
+          await pushGoogleSync(agendaEvent.id, "delete");
+          await supabase
+            .from("agenda_events")
+            .update({ google_event_id: null, google_account: null })
+            .eq("id", agendaEvent.id);
+          agendaEvent = { ...agendaEvent, google_event_id: null, google_account: null };
+        } catch (err) {
+          console.error("Erro ao remover sincronização com o Google Agenda:", err);
+        }
+      }
+
+      setDemands((list) =>
+        list.map((d) => (d.id === demand.id ? { ...d, agenda_event: agendaEvent } : d)),
+      );
+    },
+    [showToast],
+  );
+
   const createDemand = useCallback(
     async (input: Partial<Demand>): Promise<Demand | null> => {
       if (!currentUser) return null;
@@ -322,6 +486,11 @@ export function DemandasProvider({ children }: { children: ReactNode }) {
         due_date: input.due_date ?? null,
         due_time: input.due_time ?? null,
         position: input.position ?? Date.now(),
+        // "demand" é o padrão de toda demanda nova (aparece na agenda pessoal
+        // de quem é responsável). `undefined` = não veio no input (ex.:
+        // QuickAddRow) -> aplica o padrão; `null` explícito respeita a
+        // escolha de não vincular (ex.: usuário limpou o campo no modal).
+        agenda_subject: input.agenda_subject === undefined ? "demand" : input.agenda_subject,
       };
 
       const { data, error } = await supabase
@@ -339,9 +508,12 @@ export function DemandasProvider({ children }: { children: ReactNode }) {
       const created = data as Demand;
       setDemands((list) => sortDemands([created, ...list]));
       showToast("Demanda criada!", "success");
+      syncAgendaMirror(created).catch((err) => {
+        console.error("Erro ao sincronizar demanda com a Agenda:", err);
+      });
       return created;
     },
-    [currentUser, statuses, showToast],
+    [currentUser, statuses, showToast, syncAgendaMirror],
   );
 
   const updateDemand = useCallback(
@@ -375,19 +547,34 @@ export function DemandasProvider({ children }: { children: ReactNode }) {
 
       // A trigger recalcula status_category / assigned_to / completed_at.
       // Mesclado (e não substituído) para não perder os agregados
-      // comment_count/attachment_count, que este SELECT não traz.
+      // comment_count/attachment_count nem agenda_event, que este SELECT não traz.
       if (data) {
-        setDemands((list) =>
-          sortDemands(list.map((d) => (d.id === id ? { ...d, ...(data as Demand) } : d))),
-        );
+        const merged: Demand = { ...previous, ...optimistic, ...(data as Demand) };
+        setDemands((list) => sortDemands(list.map((d) => (d.id === id ? merged : d))));
+        syncAgendaMirror(merged).catch((err) => {
+          console.error("Erro ao sincronizar demanda com a Agenda:", err);
+        });
       }
     },
-    [demands, statuses, showToast],
+    [demands, statuses, showToast, syncAgendaMirror],
   );
 
   const deleteDemand = useCallback(
     async (id: string) => {
       const previous = demands;
+      const demand = demands.find((d) => d.id === id);
+
+      // O evento-espelho é removido em cascata pelo banco (FK ON DELETE
+      // CASCADE), mas isso não avisa o Google — precisa apagar de lá antes,
+      // enquanto a linha em agenda_events (e o google_event_id) ainda existe.
+      if (demand?.agenda_event?.google_event_id) {
+        try {
+          await pushGoogleSync(demand.agenda_event.id, "delete");
+        } catch (err) {
+          console.error("Erro ao remover evento do Google Agenda:", err);
+        }
+      }
+
       setDemands((list) => list.filter((d) => d.id !== id));
 
       const { error } = await supabase.from("demands").delete().eq("id", id);
@@ -438,6 +625,78 @@ export function DemandasProvider({ children }: { children: ReactNode }) {
       await updateDemand(id, { status: closed.id });
     },
     [demands, statuses, updateDemand, showToast, soundEnabled],
+  );
+
+  const batchUpdateDemands = useCallback(
+    async (ids: string[], patch: Partial<Demand>) => {
+      if (ids.length === 0) return;
+      const previous = demands;
+      const optimistic = deriveStatusFields(patch, statuses);
+
+      setDemands((list) =>
+        sortDemands(list.map((d) => (ids.includes(d.id) ? { ...d, ...optimistic } : d))),
+      );
+
+      const { error } = await supabase
+        .from("demands")
+        .update(patch)
+        .in("id", ids);
+
+      if (error) {
+        setDemands(previous);
+        console.error("Erro ao atualizar demandas em lote:", error);
+        showToast("Erro ao atualizar em lote: " + error.message, "error");
+        return;
+      }
+
+      showToast(`${ids.length} demanda${ids.length > 1 ? "s" : ""} atualizada${ids.length > 1 ? "s" : ""}.`, "success");
+      refresh();
+    },
+    [demands, statuses, showToast, refresh],
+  );
+
+  const batchMoveDemands = useCallback(
+    async (ids: string[], statusId: string) => {
+      await batchUpdateDemands(ids, { status: statusId });
+    },
+    [batchUpdateDemands],
+  );
+
+  const batchDeleteDemands = useCallback(
+    async (ids: string[]) => {
+      if (ids.length === 0) return;
+      const previous = demands;
+
+      setDemands((list) => list.filter((d) => !ids.includes(d.id)));
+
+      const { error } = await supabase.from("demands").delete().in("id", ids);
+      if (error) {
+        setDemands(previous);
+        showToast("Erro ao excluir demandas: " + error.message, "error");
+        return;
+      }
+      showToast(`${ids.length} demanda${ids.length > 1 ? "s" : ""} excluída${ids.length > 1 ? "s" : ""}.`, "success");
+    },
+    [demands, showToast],
+  );
+
+  const batchToggleComplete = useCallback(
+    async (ids: string[], done: boolean) => {
+      if (ids.length === 0) return;
+      const targetStatus = done
+        ? statuses.find((s) => s.category === "fechado")
+        : statuses.find((s) => s.category === "nao_iniciado") ??
+          statuses.find((s) => s.category === "ativo");
+
+      if (!targetStatus) {
+        showToast("Status de destino não encontrado.", "error");
+        return;
+      }
+
+      if (done && soundEnabled) playSound("task_done");
+      await batchUpdateDemands(ids, { status: targetStatus.id });
+    },
+    [statuses, soundEnabled, batchUpdateDemands, showToast],
   );
 
   // -------------------------------------------------------------------------
@@ -527,7 +786,7 @@ export function DemandasProvider({ children }: { children: ReactNode }) {
   // -------------------------------------------------------------------------
 
   const loadDetails = useCallback(async (demandId: string) => {
-    const [commentsRes, attachmentsRes] = await Promise.all([
+    const [commentsRes, attachmentsRes, checklistRes] = await Promise.all([
       supabase
         .from("demand_comments")
         .select("*")
@@ -538,7 +797,19 @@ export function DemandasProvider({ children }: { children: ReactNode }) {
         .select("*")
         .eq("demand_id", demandId)
         .order("created_at", { ascending: true }),
+      supabase
+        .from("demand_checklist")
+        .select("*")
+        .eq("demand_id", demandId)
+        .order("position", { ascending: true }),
     ]);
+
+    if (!checklistRes.error) {
+      setChecklists((map) => ({
+        ...map,
+        [demandId]: (checklistRes.data ?? []) as DemandChecklistItem[],
+      }));
+    }
 
     if (!commentsRes.error) {
       setComments((map) => ({ ...map, [demandId]: (commentsRes.data ?? []) as DemandComment[] }));
@@ -712,6 +983,139 @@ export function DemandasProvider({ children }: { children: ReactNode }) {
     [attachments, showToast],
   );
 
+  // -------------------------------------------------------------------------
+  // Checklist e templates
+  // -------------------------------------------------------------------------
+
+  const checklistOf = useCallback(
+    (demandId: string) => checklists[demandId] ?? [],
+    [checklists],
+  );
+
+  /** Mantém os agregados da linha em dia sem recarregar a lista inteira. */
+  const syncChecklistCounts = useCallback(
+    (demandId: string, items: DemandChecklistItem[]) => {
+      setDemands((list) =>
+        list.map((demand) =>
+          demand.id === demandId
+            ? {
+                ...demand,
+                checklist_total: items.length,
+                checklist_done: items.filter((item) => item.done).length,
+              }
+            : demand,
+        ),
+      );
+    },
+    [],
+  );
+
+  const toggleChecklistItem = useCallback(
+    async (item: DemandChecklistItem) => {
+      const next = !item.done;
+      const updated = (checklists[item.demand_id] ?? []).map((current) =>
+        current.id === item.id ? { ...current, done: next } : current,
+      );
+
+      setChecklists((map) => ({ ...map, [item.demand_id]: updated }));
+      syncChecklistCounts(item.demand_id, updated);
+
+      const { error } = await supabase
+        .from("demand_checklist")
+        .update({ done: next })
+        .eq("id", item.id);
+
+      if (error) {
+        // rollback
+        const reverted = updated.map((current) =>
+          current.id === item.id ? { ...current, done: item.done } : current,
+        );
+        setChecklists((map) => ({ ...map, [item.demand_id]: reverted }));
+        syncChecklistCounts(item.demand_id, reverted);
+        showToast("Erro ao marcar item: " + error.message, "error");
+      }
+    },
+    [checklists, syncChecklistCounts, showToast],
+  );
+
+  const addChecklistItem = useCallback(
+    async (demandId: string, groupName: string, label: string) => {
+      const current = checklists[demandId] ?? [];
+      const { data, error } = await supabase
+        .from("demand_checklist")
+        .insert({
+          demand_id: demandId,
+          group_name: groupName,
+          label: label.trim(),
+          position: current.length,
+        })
+        .select("*")
+        .single();
+
+      if (error || !data) {
+        showToast("Erro ao adicionar item: " + (error?.message ?? ""), "error");
+        return;
+      }
+
+      const next = [...current, data as DemandChecklistItem];
+      setChecklists((map) => ({ ...map, [demandId]: next }));
+      syncChecklistCounts(demandId, next);
+    },
+    [checklists, syncChecklistCounts, showToast],
+  );
+
+  const removeChecklistItem = useCallback(
+    async (item: DemandChecklistItem) => {
+      const next = (checklists[item.demand_id] ?? []).filter((current) => current.id !== item.id);
+      setChecklists((map) => ({ ...map, [item.demand_id]: next }));
+      syncChecklistCounts(item.demand_id, next);
+
+      const { error } = await supabase.from("demand_checklist").delete().eq("id", item.id);
+      if (error) {
+        showToast("Erro ao remover item: " + error.message, "error");
+        await loadDetails(item.demand_id);
+      }
+    },
+    [checklists, syncChecklistCounts, showToast, loadDetails],
+  );
+
+  const applyTemplate = useCallback(
+    async (demandId: string, templateId: string) => {
+      const { data: items, error: itemsError } = await supabase
+        .from("demand_template_items")
+        .select("group_name, label, position")
+        .eq("template_id", templateId)
+        .order("position", { ascending: true });
+
+      if (itemsError || !items?.length) {
+        showToast("Template sem itens: " + (itemsError?.message ?? ""), "error");
+        return;
+      }
+
+      // Acrescenta ao que já existe, em vez de substituir: aplicar um segundo
+      // template (conteúdo + captação) é caso de uso real.
+      const offset = (checklists[demandId] ?? []).length;
+      const rows = items.map((item, index) => ({
+        demand_id: demandId,
+        group_name: item.group_name,
+        label: item.label,
+        position: offset + index,
+      }));
+
+      const { data, error } = await supabase.from("demand_checklist").insert(rows).select("*");
+      if (error || !data) {
+        showToast("Erro ao aplicar template: " + (error?.message ?? ""), "error");
+        return;
+      }
+
+      const next = [...(checklists[demandId] ?? []), ...(data as DemandChecklistItem[])];
+      setChecklists((map) => ({ ...map, [demandId]: next }));
+      syncChecklistCounts(demandId, next);
+      showToast(`${data.length} etapas adicionadas.`, "success");
+    },
+    [checklists, syncChecklistCounts, showToast],
+  );
+
   const value = useMemo<DemandasContextValue>(
     () => ({
       demands,
@@ -732,6 +1136,10 @@ export function DemandasProvider({ children }: { children: ReactNode }) {
       deleteDemand,
       moveDemand,
       toggleComplete,
+      batchUpdateDemands,
+      batchMoveDemands,
+      batchDeleteDemands,
+      batchToggleComplete,
       soundEnabled,
       setSoundEnabled,
       upsertStatus,
@@ -739,6 +1147,12 @@ export function DemandasProvider({ children }: { children: ReactNode }) {
       reorderStatuses,
       loadDetails,
       commentsOf,
+      checklistOf,
+      toggleChecklistItem,
+      addChecklistItem,
+      removeChecklistItem,
+      applyTemplate,
+      templates,
       attachmentsOf,
       addComment,
       deleteComment,
@@ -766,6 +1180,10 @@ export function DemandasProvider({ children }: { children: ReactNode }) {
       deleteDemand,
       moveDemand,
       toggleComplete,
+      batchUpdateDemands,
+      batchMoveDemands,
+      batchDeleteDemands,
+      batchToggleComplete,
       soundEnabled,
       setSoundEnabled,
       upsertStatus,
@@ -773,6 +1191,12 @@ export function DemandasProvider({ children }: { children: ReactNode }) {
       reorderStatuses,
       loadDetails,
       commentsOf,
+      checklistOf,
+      toggleChecklistItem,
+      addChecklistItem,
+      removeChecklistItem,
+      applyTemplate,
+      templates,
       attachmentsOf,
       addComment,
       deleteComment,

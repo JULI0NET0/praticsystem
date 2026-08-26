@@ -147,7 +147,7 @@ SlashMenuList.displayName = 'SlashMenuList';
 
 // ─── Mention dropdown component ────────────────────────────────────────────
 
-interface MentionItem { id: string; label: string; type: 'client' | 'user'; avatar?: string }
+interface MentionItem { id: string; label: string; sublabel?: string; type: 'client' | 'user'; avatar?: string }
 
 const MentionList = forwardRef<any, any>((props, ref) => {
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -167,23 +167,32 @@ const MentionList = forwardRef<any, any>((props, ref) => {
   const clients = (props.items as MentionItem[]).filter(i => i.type === 'client');
   const users   = (props.items as MentionItem[]).filter(i => i.type === 'user');
 
-  const renderItem = (item: MentionItem, globalIdx: number) => (
-    <button
-      key={item.id}
-      onClick={() => props.command(item)}
-      onMouseEnter={() => setSelectedIndex(globalIdx)}
-      style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '7px 10px', borderRadius: '8px', border: 'none', background: globalIdx === selectedIndex ? 'var(--color-terracotta-100)' : 'transparent', color: 'var(--color-text-primary)', cursor: 'pointer', textAlign: 'left', transition: 'background 0.1s' }}
-    >
-      {item.avatar ? (
-        <img src={item.avatar} alt={item.label} style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-      ) : (
-        <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: item.type === 'client' ? 'color-mix(in oklab, var(--accent) 20%, transparent)' : 'var(--color-info-wash)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          {item.type === 'client' ? <Building2 size={12} color="var(--accent)" /> : <User size={12} color="var(--color-info-ink)" />}
+  const renderItem = (item: MentionItem, globalIdx: number) => {
+    const isUser = item.type === 'user';
+    const displayLabel = isUser ? `@${item.label.replace(/^@/, '')}` : item.label;
+    return (
+      <button
+        key={item.id}
+        onClick={() => props.command(item)}
+        onMouseEnter={() => setSelectedIndex(globalIdx)}
+        style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '7px 10px', borderRadius: '8px', border: 'none', background: globalIdx === selectedIndex ? 'var(--color-terracotta-100)' : 'transparent', color: 'var(--color-text-primary)', cursor: 'pointer', textAlign: 'left', transition: 'background 0.1s' }}
+      >
+        {item.avatar ? (
+          <img src={item.avatar} alt={item.label} style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+        ) : (
+          <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: item.type === 'client' ? 'color-mix(in oklab, var(--accent) 20%, transparent)' : 'var(--color-info-wash)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            {item.type === 'client' ? <Building2 size={12} color="var(--accent)" /> : <User size={12} color="var(--color-info-ink)" />}
+          </div>
+        )}
+        <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+          <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>{displayLabel}</span>
+          {item.sublabel && (
+            <span style={{ fontSize: '0.68rem', color: 'var(--color-text-tertiary)' }}>{item.sublabel}</span>
+          )}
         </div>
-      )}
-      <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>{item.label}</span>
-    </button>
-  );
+      </button>
+    );
+  };
 
   return (
     <div style={{ background: 'var(--color-surface-raised)', border: '1px solid var(--color-border-default)', borderRadius: 'var(--radius-md)', padding: '4px', boxShadow: 'var(--shadow-lg)', minWidth: '220px', maxHeight: '300px', overflowY: 'auto' }}>
@@ -436,10 +445,16 @@ const UserMentionConfig = MentionExtension.configure({
     char: '@',
     items: async ({ query }: { query: string }): Promise<MentionItem[]> => {
       const { data } = await supabase
-        .from('users').select('id, name, avatar_url').order('name').limit(20);
+        .from('users').select('id, name, username, avatar_url').order('name').limit(30);
       return (data ?? [])
-        .map((u: any) => ({ id: u.id, label: u.name, type: 'user' as const, avatar: u.avatar_url }))
-        .filter((u: MentionItem) => matches(u.label, query))
+        .map((u: any) => ({
+          id: u.id,
+          label: u.username || u.name,
+          sublabel: u.username && u.name !== u.username ? u.name : undefined,
+          type: 'user' as const,
+          avatar: u.avatar_url,
+        }))
+        .filter((u: MentionItem) => matches(u.label, query) || (u.sublabel && matches(u.sublabel, query)))
         .slice(0, 10);
     },
     render: mentionRender,

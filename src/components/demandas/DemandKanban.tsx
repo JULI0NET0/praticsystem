@@ -14,6 +14,8 @@ interface Props {
   demands: Demand[];
   onOpenDemand: (id: string) => void;
   onManageStatuses: () => void;
+  selectedIds?: Set<string>;
+  onSelectDemand?: (id: string, event: React.MouseEvent) => void;
 }
 
 /**
@@ -24,7 +26,13 @@ interface Props {
  * cabeçalho (reordena as colunas). `dragKind` distingue os dois para que
  * soltar uma coluna não mova uma demanda e vice-versa.
  */
-export default function DemandKanban({ demands, onOpenDemand, onManageStatuses }: Props) {
+export default function DemandKanban({
+  demands,
+  onOpenDemand,
+  onManageStatuses,
+  selectedIds,
+  onSelectDemand,
+}: Props) {
   const { statuses, moveDemand, reorderStatuses, loading } = useDemandas();
   const { anchor, openFor, close } = useDemandContextMenu();
 
@@ -66,6 +74,7 @@ export default function DemandKanban({ demands, onOpenDemand, onManageStatuses }
 
   return (
     <div
+      className="demand-kanban-container"
       style={{
         display: "flex",
         gap: 16,
@@ -81,6 +90,7 @@ export default function DemandKanban({ demands, onOpenDemand, onManageStatuses }
         return (
           <div
             key={status.id}
+            className="demand-kanban-column"
             onDragOver={(event) => {
               event.preventDefault();
               setOverStatusId(status.id);
@@ -90,7 +100,6 @@ export default function DemandKanban({ demands, onOpenDemand, onManageStatuses }
             }
             onDrop={() => handleDrop(status.id)}
             style={{
-              width: 296,
               flexShrink: 0,
               display: "flex",
               flexDirection: "column",
@@ -202,6 +211,8 @@ export default function DemandKanban({ demands, onOpenDemand, onManageStatuses }
                   }}
                   onDragEnd={resetDrag}
                   onContextMenu={openFor(demand.id)}
+                  selected={selectedIds?.has(demand.id)}
+                  onSelect={onSelectDemand}
                 />
               ))}
 

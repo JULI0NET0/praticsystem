@@ -238,6 +238,26 @@ export function dueDateBucket(
   return 'depois';
 }
 
+/**
+ * Grupo da lista para UMA demanda específica, considerando conclusão: uma
+ * demanda concluída DENTRO do prazo não deve continuar aparecendo em
+ * "Atrasadas" só porque hoje já passou daquela data — ela foi entregue a
+ * tempo. "Atrasada" de verdade é quem segue aberta e já passou do prazo, ou
+ * quem só foi concluída DEPOIS do prazo (aí o grupo reflete o atraso real,
+ * calculado no instante da conclusão em vez de "agora").
+ */
+export function demandDueBucket(
+  dueDate: string | null | undefined,
+  isDone: boolean,
+  completedAt: string | null | undefined,
+  now: Date = new Date(),
+): DueBucket {
+  if (isDone && completedAt) {
+    return dueDateBucket(dueDate, new Date(completedAt));
+  }
+  return dueDateBucket(dueDate, now);
+}
+
 /** Formata 'HH:MM:SS' (coluna TIME do Postgres) como 'HH:MM'. */
 export function formatDueTime(time: string | null | undefined): string {
   if (!time) return '';

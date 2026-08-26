@@ -51,31 +51,48 @@ export default function DemandFilters() {
   const isDirty = hasActiveFilter(filters);
 
   const clientOptions = useMemo<ComboboxOption[]>(
-    () =>
-      clients.map((client) => ({
-        value: client.id,
-        label: clientLabel(client),
-        keywords: client.name,
-        icon: <Building2 size={14} />,
-      })),
+    () => {
+      const active = clients.filter((c) => !c.status || c.status === "active" || c.status === "prospect");
+      const inactive = clients.filter((c) => c.status === "inactive");
+
+      return [
+        ...active.map((client) => ({
+          value: client.id,
+          label: clientLabel(client),
+          keywords: client.name,
+          icon: <Building2 size={14} />,
+        })),
+        ...inactive.map((client) => ({
+          value: client.id,
+          label: `${clientLabel(client)} (Inativo)`,
+          description: "Cliente inativo",
+          keywords: `${client.name} inativo`,
+          icon: <Building2 size={14} style={{ opacity: 0.6 }} />,
+        })),
+      ];
+    },
     [clients],
   );
 
   const userOptions = useMemo<ComboboxOption[]>(
     () =>
-      users.map((user) => ({
-        value: user.id,
-        label: user.name || user.email,
-        keywords: user.email,
-        icon: (
-          <UserAvatar
-            name={user.name || user.email}
-            avatarUrl={user.avatar_url ?? user.avatarUrl}
-            size={20}
-            ring={false}
-          />
-        ),
-      })),
+      users.map((user) => {
+        const handle = user.username ? `@${user.username}` : (user.name || user.email);
+        return {
+          value: user.id,
+          label: handle,
+          description: user.name && user.username ? user.name : undefined,
+          keywords: `${user.username || ""} ${user.name || ""} ${user.email || ""}`.trim(),
+          icon: (
+            <UserAvatar
+              name={handle}
+              avatarUrl={user.avatar_url ?? user.avatarUrl}
+              size={20}
+              ring={false}
+            />
+          ),
+        };
+      }),
     [users],
   );
 

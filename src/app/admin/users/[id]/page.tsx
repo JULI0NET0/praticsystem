@@ -17,6 +17,8 @@ import {
   ChevronRight,
   FileText,
   TrendingUp,
+  X,
+  Maximize2,
 } from "lucide-react";
 import Spotlight from "@/components/Spotlight";
 import { motion, AnimatePresence } from "framer-motion";
@@ -61,6 +63,21 @@ export default function UserDetailPage() {
   const [loading, setLoading] = useState(true);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+  const [isImageFullscreen, setIsImageFullscreen] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsImageFullscreen(false);
+      }
+    };
+    if (isImageFullscreen) {
+      window.addEventListener("keydown", handleKeyDown);
+    }
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isImageFullscreen]);
 
   const [userExpenses, setUserExpenses] = useState<any[]>([]);
   const [userExpenseEntries, setUserExpenseEntries] = useState<any[]>([]);
@@ -233,18 +250,88 @@ export default function UserDetailPage() {
         <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
           {/* Card de perfil */}
           <Spotlight className="glass-card" style={{ padding: "32px", textAlign: "center" }}>
-            <div style={{
-              width: "120px", height: "120px", borderRadius: "50%", background: "var(--accent)",
-              margin: "0 auto 20px", fontSize: "3rem", fontWeight: 700,
-              display: "flex", alignItems: "center", justifyContent: "center", color: 'var(--color-text-primary)',
-              boxShadow: "0 0 30px color-mix(in oklab, var(--accent) 30%, transparent)", position: "relative",
-            }}>
-              {user.name.substring(0, 2).toUpperCase()}
-              <div style={{
-                position: "absolute", bottom: "5px", right: "5px",
-                width: "24px", height: "24px", borderRadius: "50%",
-                backgroundColor: "var(--color-success)", border: "4px solid var(--bg-secondary)",
-              }} />
+            {/* Avatar do Membro */}
+            <div style={{ position: "relative", width: "120px", height: "120px", margin: "0 auto 20px" }}>
+              <motion.div
+                whileHover={user.avatarUrl || user.avatar_url ? { scale: 1.05 } : {}}
+                whileTap={user.avatarUrl || user.avatar_url ? { scale: 0.96 } : {}}
+                onClick={() => {
+                  if (user.avatarUrl || user.avatar_url) {
+                    setIsImageFullscreen(true);
+                  }
+                }}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  borderRadius: "50%",
+                  background: "var(--accent)",
+                  fontSize: "3rem",
+                  fontWeight: 700,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "var(--color-text-on-accent)",
+                  boxShadow: "0 0 30px color-mix(in oklab, var(--accent) 30%, transparent)",
+                  position: "relative",
+                  overflow: "hidden",
+                  cursor: (user.avatarUrl || user.avatar_url) ? "pointer" : "default",
+                  border: "3px solid color-mix(in oklab, var(--accent) 30%, transparent)",
+                }}
+              >
+                {user.avatarUrl || user.avatar_url ? (
+                  <>
+                    <img
+                      src={user.avatarUrl || user.avatar_url}
+                      alt={user.name}
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                        imageRendering: "-webkit-optimize-contrast",
+                      }}
+                    />
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      whileHover={{ opacity: 1 }}
+                      transition={{ duration: 0.2 }}
+                      style={{
+                        position: "absolute",
+                        inset: 0,
+                        backgroundColor: "rgba(0, 0, 0, 0.45)",
+                        backdropFilter: "blur(2px)",
+                        WebkitBackdropFilter: "blur(2px)",
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "4px",
+                        color: "#fff",
+                      }}
+                    >
+                      <Maximize2 size={24} />
+                      <span style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                        Ver foto
+                      </span>
+                    </motion.div>
+                  </>
+                ) : (
+                  user.name.substring(0, 2).toUpperCase()
+                )}
+              </motion.div>
+
+              <div
+                style={{
+                  position: "absolute",
+                  bottom: "4px",
+                  right: "4px",
+                  width: "22px",
+                  height: "22px",
+                  borderRadius: "50%",
+                  backgroundColor: "var(--color-success)",
+                  border: "3px solid var(--bg-secondary)",
+                  zIndex: 2,
+                }}
+              />
             </div>
 
             <h3 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: "4px" }}>{user.name}</h3>
@@ -563,6 +650,133 @@ export default function UserDetailPage() {
               </div>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal de Foto em Tela Cheia */}
+      <AnimatePresence>
+        {isImageFullscreen && (user.avatarUrl || user.avatar_url) && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={() => setIsImageFullscreen(false)}
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: 9999,
+              backgroundColor: "rgba(0, 0, 0, 0.88)",
+              backdropFilter: "blur(16px)",
+              WebkitBackdropFilter: "blur(16px)",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "24px",
+              cursor: "zoom-out",
+            }}
+          >
+            {/* Botão Fechar */}
+            <motion.button
+              whileHover={{ scale: 1.1, rotate: 90 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsImageFullscreen(false);
+              }}
+              style={{
+                position: "absolute",
+                top: "24px",
+                right: "24px",
+                width: "44px",
+                height: "44px",
+                borderRadius: "50%",
+                backgroundColor: "rgba(255, 255, 255, 0.12)",
+                border: "1px solid rgba(255, 255, 255, 0.2)",
+                color: "#fff",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                transition: "background-color 0.2s",
+                boxShadow: "0 4px 20px rgba(0,0,0,0.4)",
+              }}
+              title="Fechar (Esc)"
+            >
+              <X size={22} />
+            </motion.button>
+
+            {/* Container da Imagem com Animação */}
+            <motion.div
+              initial={{ scale: 0.85, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.85, opacity: 0, y: 20 }}
+              transition={{ type: "spring", stiffness: 300, damping: 28 }}
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: "16px",
+                maxWidth: "90vw",
+                maxHeight: "85vh",
+                cursor: "default",
+              }}
+            >
+              <div
+                style={{
+                  position: "relative",
+                  borderRadius: "28px",
+                  overflow: "hidden",
+                  boxShadow: "0 25px 60px -15px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.15)",
+                  background: "var(--bg-secondary)",
+                  maxWidth: "520px",
+                  maxHeight: "520px",
+                  width: "85vw",
+                  height: "85vw",
+                }}
+              >
+                <img
+                  src={user.avatarUrl || user.avatar_url}
+                  alt={user.name}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                    imageRendering: "-webkit-optimize-contrast",
+                    display: "block",
+                  }}
+                />
+              </div>
+
+              {/* Informações do Membro */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "12px",
+                  background: "rgba(255, 255, 255, 0.08)",
+                  border: "1px solid rgba(255, 255, 255, 0.12)",
+                  padding: "8px 20px",
+                  borderRadius: "999px",
+                  backdropFilter: "blur(8px)",
+                  WebkitBackdropFilter: "blur(8px)",
+                }}
+              >
+                <span style={{ fontWeight: 700, fontSize: "1rem", color: "#fff" }}>
+                  {user.name}
+                </span>
+                <span style={{ width: "4px", height: "4px", borderRadius: "50%", background: "rgba(255,255,255,0.4)" }} />
+                <span style={{ fontSize: "0.85rem", color: "var(--accent)", fontWeight: 600 }}>
+                  {userRole?.name || user.role}
+                </span>
+              </div>
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
     </motion.div>

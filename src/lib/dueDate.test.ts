@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  demandDueBucket,
   dueDateBucket,
   formatDueDateLabel,
   fromISODate,
@@ -99,5 +100,30 @@ describe('dueDateBucket', () => {
     expect(dueDateBucket('2026-08-27', NOW)).toBe('amanha');
     expect(dueDateBucket('2026-09-02', NOW)).toBe('semana');
     expect(dueDateBucket('2026-09-30', NOW)).toBe('depois');
+  });
+});
+
+describe('demandDueBucket', () => {
+  it('demanda aberta com prazo vencido é atrasada', () => {
+    expect(demandDueBucket('2026-08-25', false, null, NOW)).toBe('atrasada');
+  });
+
+  it('demanda concluída DENTRO do prazo não é atrasada, mesmo com "hoje" já tendo passado da data', () => {
+    // Prazo era ontem (25/08), mas foi concluída no mesmo dia (25/08) — no
+    // instante da conclusão o prazo ainda não tinha vencido.
+    expect(
+      demandDueBucket('2026-08-25', true, '2026-08-25T18:00:00Z', NOW),
+    ).toBe('hoje');
+  });
+
+  it('demanda concluída DEPOIS do prazo continua atrasada', () => {
+    // Prazo era 20/08, só foi concluída em 25/08 — atrasou de verdade.
+    expect(
+      demandDueBucket('2026-08-20', true, '2026-08-25T18:00:00Z', NOW),
+    ).toBe('atrasada');
+  });
+
+  it('sem completed_at, cai no comportamento padrão (compara com "agora")', () => {
+    expect(demandDueBucket('2026-08-25', true, null, NOW)).toBe('atrasada');
   });
 });

@@ -73,8 +73,9 @@ function matchCatalog(
   let best: { item: QuickCatalogItem; consumed: number } | null = null;
 
   for (const item of catalog) {
-    for (const candidate of [item.label, item.alias]) {
-      if (!candidate) continue;
+    for (const rawCandidate of [item.label, item.alias]) {
+      if (!rawCandidate) continue;
+      const candidate = rawCandidate.replace(/^[@#]/, '');
       const needle = normalize(candidate).trim();
       if (!needle) continue;
       if (!haystack.startsWith(needle)) continue;
@@ -143,7 +144,8 @@ export function applyMarkerCompletion(
   const active = activeMarkerQuery(text, caret);
   if (!active) return { text, caret };
 
-  const head = `${text.slice(0, active.start)}${active.marker}${label} `;
+  const cleanLabel = label.replace(/^[@#]/, '');
+  const head = `${text.slice(0, active.start)}${active.marker}${cleanLabel} `;
   return { text: `${head}${text.slice(caret)}`, caret: head.length };
 }
 
@@ -239,18 +241,32 @@ export interface MentionSegment {
 /**
  * Quebra o texto em trechos, marcando `@Colaborador` e `#Cliente`.
  *
- * Casa contra os nomes do catálogo em vez de usar `@\S+`: os nomes têm espaço
- * ("@Julio Neto", "#Cold Joias") e um `\S+` destacaria só a primeira palavra.
+ * Casa contra os nomes e aliases do catálogo em vez de usar `@\S+`: os nomes podem ter espaço
+ * ("@Julio Neto", "#Cold Joias") ou ser username ("@julioneto").
  * Nomes mais longos são testados primeiro, para "Ana" não vencer "Ana Paula".
  */
 export function splitMentions(text: string, catalogs: QuickCatalogs): MentionSegment[] {
+  const userEntries = catalogs.users.flatMap((u) => {
+    const primary = u.label.replace(/^@/, '');
+    const alias = u.alias?.replace(/^@/, '');
+    return [
+      { marker: '@' as const, label: primary, kind: 'user' as const },
+      ...(alias && alias !== primary ? [{ marker: '@' as const, label: alias, kind: 'user' as const }] : []),
+    ];
+  });
+
+  const clientEntries = catalogs.clients.flatMap((c) => {
+    const primary = c.label.replace(/^#/, '');
+    const alias = c.alias?.replace(/^#/, '');
+    return [
+      { marker: '#' as const, label: primary, kind: 'client' as const },
+      ...(alias && alias !== primary ? [{ marker: '#' as const, label: alias, kind: 'client' as const }] : []),
+    ];
+  });
+
   const entries: { marker: '@' | '#'; label: string; kind: 'user' | 'client' }[] = [
-    ...catalogs.users.map((u) => ({ marker: '@' as const, label: u.label, kind: 'user' as const })),
-    ...catalogs.clients.map((c) => ({
-      marker: '#' as const,
-      label: c.label,
-      kind: 'client' as const,
-    })),
+    ...userEntries,
+    ...clientEntries,
   ].sort((a, b) => b.label.length - a.label.length);
 
   const segments: MentionSegment[] = [];

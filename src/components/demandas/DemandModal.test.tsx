@@ -47,6 +47,14 @@ vi.mock("./DemandasProvider", () => ({
     updateDemand: vi.fn(),
     deleteDemand: vi.fn(),
     loadDetails: vi.fn(),
+    // Checklist (BLOCO 13) — DemandModal renderiza <ChecklistSection>, que lê
+    // isso do contexto mesmo quando a demanda não tem nenhuma etapa ainda.
+    checklistOf: () => [],
+    toggleChecklistItem: vi.fn(),
+    addChecklistItem: vi.fn(),
+    removeChecklistItem: vi.fn(),
+    applyTemplate: vi.fn(),
+    templates: [],
   }),
 }));
 

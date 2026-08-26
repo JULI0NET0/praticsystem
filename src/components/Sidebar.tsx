@@ -324,7 +324,7 @@ export default function Sidebar() {
             {currentUser ? (
               currentUser.avatar_url ? (
                 <img src={currentUser.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
-              ) : (currentUser.name || "??").substring(0, 2).toUpperCase()
+              ) : (currentUser.username || currentUser.name || "??").replace(/^@/, '').substring(0, 2).toUpperCase()
             ) : <Loader2 size={14} className="animate-spin" />}
             {!isExpanded && (
               <div style={{ position: 'absolute', top: '-2px', right: '-2px', width: '8px', height: '8px', backgroundColor: 'var(--color-danger)', borderRadius: '50%', border: '2px solid var(--color-surface-raised)' }} />
@@ -380,7 +380,7 @@ export default function Sidebar() {
                   style={{ textDecoration: 'none', display: 'block' }}
                 >
                   <p style={{ fontSize: '0.8125rem', fontWeight: 600, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', color: 'var(--text-primary)' }}>
-                    {currentUser?.name || "Usuário"}
+                    {currentUser?.username ? `@${currentUser.username}` : (currentUser?.name || "Usuário")}
                   </p>
                   <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{currentUser?.role || "Indefinido"}</p>
                 </Link>

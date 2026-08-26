@@ -2,11 +2,15 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import Link from "next/link";
 import dynamic from "next/dynamic";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Building2,
+  Calendar,
   CalendarClock,
+  CalendarRange,
+  ListChecks,
   Lock,
   MessageSquare,
   Paperclip,
@@ -14,16 +18,21 @@ import {
   X,
 } from "lucide-react";
 import Combobox, { type ComboboxOption } from "@/components/ui/Combobox";
+import { GoogleIcon } from "@/components/SocialIcons";
+import { DEMAND_AGENDA_SUBJECTS, getAgendaCategory } from "@/lib/agendaCategories";
 import {
   clientLabel,
   PRIORITY_COLORS,
   PRIORITY_LABELS,
+  type AgendaSubject,
+  type Demand,
   type DemandPriority,
 } from "@/types/demandas";
 import { useDemandas } from "./DemandasProvider";
 import AssigneePicker from "./AssigneePicker";
 import AttachmentList from "./AttachmentList";
 import CommentThread from "./CommentThread";
+import ChecklistSection from "./ChecklistSection";
 import { PriorityFlag } from "./PriorityFlag";
 
 // TipTap não roda no servidor — mesmo tratamento de src/app/admin/notas/[id]
@@ -155,6 +164,16 @@ export default function DemandModal({ demandId, onClose }: Props) {
     [],
   );
 
+  const agendaSubjectOptions = useMemo<ComboboxOption[]>(
+    () =>
+      DEMAND_AGENDA_SUBJECTS.map((subject) => ({
+        value: subject.id,
+        label: subject.label,
+        icon: <subject.icon size={14} color={subject.color} />,
+      })),
+    [],
+  );
+
   if (typeof document === "undefined") return null;
 
   const scheduleDescriptionSave = (id: string, content: unknown) => {
@@ -209,6 +228,7 @@ export default function DemandModal({ demandId, onClose }: Props) {
             role="dialog"
             aria-modal="true"
             aria-label={demand.title}
+            className="demand-modal-container"
             initial={{ opacity: 0, scale: 0.97, y: 8 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.97, y: 8 }}
@@ -258,6 +278,30 @@ export default function DemandModal({ demandId, onClose }: Props) {
                 {demand.completed_at &&
                   ` · concluída em ${new Date(demand.completed_at).toLocaleDateString("pt-BR")}`}
               </span>
+
+              {/* Volta para o cronograma que gerou esta demanda */}
+              {demand.plan_id && (
+                <Link
+                  href={`/admin/cronogramas/${demand.plan_id}`}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 5,
+                    padding: "3px 9px",
+                    borderRadius: "var(--radius-badge)",
+                    fontSize: "0.7rem",
+                    fontWeight: 700,
+                    textDecoration: "none",
+                    color: "var(--accent)",
+                    background: "color-mix(in oklab, var(--accent) 12%, transparent)",
+                    border: "1px solid color-mix(in oklab, var(--accent) 28%, transparent)",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  <CalendarRange size={11} />
+                  {demand.plan_role === "captacao" ? "Captação" : "Cronograma"}
+                </Link>
+              )}
 
               <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 }}>
                 <button
@@ -374,11 +418,22 @@ export default function DemandModal({ demandId, onClose }: Props) {
                       })
                     }
                   />
+
+                  <Combobox
+                    value={demand.agenda_subject ?? null}
+                    onChange={(value) =>
+                      updateDemand(demand.id, { agenda_subject: value as AgendaSubject | null })
+                    }
+                    options={agendaSubjectOptions}
+                    ariaLabel="Assunto na Agenda"
+                    clearOption={{ label: "Não aparece na agenda", icon: <Calendar size={14} /> }}
+                  />
                 </div>
 
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                   {/* As três informações de data andam juntas, num bloco só */}
                   <div
+                    className="demand-modal-dates-wrap"
                     style={{
                       display: "flex",
                       alignItems: "center",
@@ -432,6 +487,10 @@ export default function DemandModal({ demandId, onClose }: Props) {
                     )}
                   />
                 </div>
+
+                {demand.agenda_subject && (
+                  <AgendaLinkStatus subject={demand.agenda_subject} agendaEvent={demand.agenda_event} />
+                )}
               </div>
 
               <Section title="Descrição">
@@ -451,6 +510,10 @@ export default function DemandModal({ demandId, onClose }: Props) {
                     onChange={(content) => scheduleDescriptionSave(demand.id, content)}
                   />
                 </div>
+              </Section>
+
+              <Section title="Checklist" icon={<ListChecks size={14} />}>
+                <ChecklistSection demandId={demand.id} />
               </Section>
 
               <Section title="Anexos" icon={<Paperclip size={14} />}>
@@ -533,6 +596,55 @@ function DateField({
         }}
       />
     </label>
+  );
+}
+
+/** Pílula que mostra o assunto vinculado à Agenda e, se aplicável, o status de sync com o Google. */
+function AgendaLinkStatus({
+  subject,
+  agendaEvent,
+}: {
+  subject: AgendaSubject;
+  agendaEvent: Demand["agenda_event"];
+}) {
+  const category = getAgendaCategory(subject);
+
+  if (!agendaEvent) {
+    return (
+      <span style={{ fontSize: "0.72rem", color: "var(--text-tertiary)" }}>
+        Defina uma data de entrega para isto aparecer na agenda.
+      </span>
+    );
+  }
+
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+        padding: "3px 9px",
+        borderRadius: "var(--radius-badge)",
+        fontSize: "0.7rem",
+        fontWeight: 700,
+        color: category?.color ?? "var(--text-secondary)",
+        background: "var(--color-surface-sunken)",
+        border: "1px solid var(--border)",
+        width: "fit-content",
+      }}
+    >
+      <Calendar size={12} />
+      {category?.label ?? "Na agenda"}
+      {agendaEvent.google_event_id && (
+        <>
+          <span aria-hidden="true" style={{ opacity: 0.5 }}>
+            ·
+          </span>
+          <GoogleIcon size={11} />
+          Sincronizado com Google
+        </>
+      )}
+    </span>
   );
 }
 

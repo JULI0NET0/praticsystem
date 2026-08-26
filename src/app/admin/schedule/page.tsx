@@ -1,10 +1,10 @@
 "use client";
 
 import { supabase } from "@/lib/supabase";
-import { useState, useEffect, useLayoutEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useCallback, useMemo, useRef } from "react";
 import {
   Plus, Shield, ShieldOff, Trash2, X, CheckCircle2, Clock,
-  Calendar as CalendarIcon, Info, Users, MapPin, ExternalLink, Edit2,
+  Calendar as CalendarIcon, Info, Users, UserCircle2, Link2, Edit2,
   RefreshCw, Check, AlertCircle, Sparkles
 } from "lucide-react";
 import FullCalendar from '@fullcalendar/react';
@@ -13,6 +13,7 @@ import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import listPlugin from '@fullcalendar/list';
 import ptBrLocale from '@fullcalendar/core/locales/pt-br';
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/components/CustomToast";
 import { motion, AnimatePresence } from "framer-motion";
@@ -21,17 +22,9 @@ import SearchInput from "@/components/ui/SearchInput";
 import { GoogleIcon } from "@/components/SocialIcons";
 import { tint } from "@/lib/tint";
 import { computePosition, flip, shift, offset, size } from "@floating-ui/dom";
-
-const CATEGORIES = [
-  { id: 'meeting', label: 'Reunião', color: '#3B82F6', icon: Users },
-  { id: 'leadership_meeting', label: 'Reunião de Liderança', color: '#14B8A6', icon: Users },
-  { id: 'prospecting', label: 'Captação', color: 'var(--color-warning)', icon: MapPin },
-  { id: 'task', label: 'Tarefa Interna', color: 'var(--color-text-secondary)', icon: CheckCircle2 },
-  { id: 'social_media', label: 'Social Media', color: '#EC4899', icon: ExternalLink },
-  { id: 'ads', label: 'Tráfego Pago', color: '#8B5CF6', icon: ExternalLink },
-  { id: 'launch', label: 'Lançamento', color: '#F97316', icon: ExternalLink },
-  { id: 'payment', label: 'Pagamento', color: 'var(--color-success)', icon: Clock },
-];
+import { AGENDA_CATEGORIES as CATEGORIES } from "@/lib/agendaCategories";
+import Combobox from "@/components/ui/Combobox";
+import { UserAvatar } from "@/components/demandas/AssigneePicker";
 
 const toLocalISOString = (dateInput: any) => {
   if (!dateInput) return '';
@@ -55,8 +48,9 @@ function readStoredCalendarView(isMobileGuess: boolean): string {
 }
 
 export default function SchedulePage() {
-  const { currentUser } = useAuth();
+  const { currentUser, users } = useAuth();
   const { showToast } = useToast();
+  const router = useRouter();
   const calendarRef = useRef<any>(null);
   const pageRef = useRef<HTMLDivElement>(null);
 
@@ -66,6 +60,7 @@ export default function SchedulePage() {
   const [clients, setClients] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilters, setActiveFilters] = useState<string[]>(CATEGORIES.map(c => c.id));
+  const [responsibleFilter, setResponsibleFilter] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [calendarView] = useState(() => readStoredCalendarView(window.innerWidth < 768));
   const [isSyncingGoogle, setIsSyncingGoogle] = useState(false);
@@ -168,7 +163,7 @@ export default function SchedulePage() {
   }, []);
 
   const fetchClients = useCallback(async () => {
-    const { data } = await supabase.from('clients').select('id, name, nome_fantasia').order('name');
+    const { data } = await supabase.from('clients').select('id, name, nome_fantasia, status').order('name');
     if (data) setClients(data);
   }, []);
 
@@ -225,7 +220,10 @@ export default function SchedulePage() {
         type: event.type,
         color: CATEGORIES.find(c => c.id === event.type)?.color || 'var(--color-text-secondary)',
         extendedProps: { ...event },
-        className: event.status === 'completed' ? 'event-completed' : ''
+        className: event.status === 'completed' ? 'event-completed' : '',
+        // Evento-espelho de uma demanda: só é editável por lá, não pelo
+        // calendário (evita reconciliar edições concorrentes).
+        editable: !event.demand_id,
       }));
 
       const allEvents = [...formattedAgendaEvents, ...invoiceEvents];
@@ -375,6 +373,11 @@ export default function SchedulePage() {
       showToast("Não é possível mover faturas pelo calendário", "info");
       return;
     }
+    if (event.extendedProps?.demand_id) {
+      arg.revert();
+      showToast("Este compromisso vem de uma demanda — edite a data por lá", "info");
+      return;
+    }
 
     try {
       const newDate = event.start.toISOString();
@@ -487,6 +490,7 @@ export default function SchedulePage() {
 
   const handleDeleteEvent = async () => {
     if (!selectedEvent || selectedEvent.id.startsWith('inv-')) return;
+    if (selectedEvent.extendedProps?.demand_id) return;
     try {
       await syncToGoogleCalendar(selectedEvent.id, 'delete');
       const { error } = await supabase
@@ -506,6 +510,7 @@ export default function SchedulePage() {
 
   const handleToggleComplete = async () => {
     if (!selectedEvent || selectedEvent.id.startsWith('inv-')) return;
+    if (selectedEvent.extendedProps?.demand_id) return;
     const nextStatus = formData.status === 'completed' ? 'scheduled' : 'completed';
     try {
       const { error } = await supabase
@@ -521,8 +526,8 @@ export default function SchedulePage() {
     }
   };
 
-  const toggleEventCompleteById = async (eventId: string, currentStatus: string) => {
-    if (eventId.startsWith('inv-')) return;
+  const toggleEventCompleteById = async (eventId: string, currentStatus: string, isDemandLinked?: boolean) => {
+    if (eventId.startsWith('inv-') || isDemandLinked) return;
     const nextStatus = currentStatus === 'completed' ? 'scheduled' : 'completed';
     try {
       const { error } = await supabase
@@ -565,6 +570,7 @@ export default function SchedulePage() {
     }
 
     const isInvoice = eventInfo.event.id.startsWith('inv-');
+    const isDemandLinked = Boolean(eventInfo.event.extendedProps?.demand_id);
 
     return (
       <div style={{
@@ -576,7 +582,7 @@ export default function SchedulePage() {
         width: '100%',
         opacity: isCompleted ? 0.5 : 1,
       }}>
-        {!isInvoice ? (
+        {!isInvoice && !isDemandLinked ? (
           <span
             onClick={(e) => {
               e.stopPropagation();
@@ -631,6 +637,21 @@ export default function SchedulePage() {
             <GoogleIcon size={11} />
           </span>
         )}
+        {isDemandLinked && (
+          <span
+            title="Vem de uma demanda"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+              opacity: 0.7,
+              color: 'var(--text-secondary)',
+            }}
+          >
+            <Link2 size={11} />
+          </span>
+        )}
         <span style={{
           fontSize: '0.72rem',
           fontWeight: 500,
@@ -646,6 +667,23 @@ export default function SchedulePage() {
     );
   };
 
+  const userOptions = useMemo(
+    () =>
+      users.map((user) => {
+        const handle = user.username ? `@${user.username}` : (user.name || user.email);
+        return {
+          value: user.id,
+          label: handle,
+          description: user.name && user.username ? user.name : undefined,
+          keywords: `${user.username || ""} ${user.name || ""} ${user.email || ""}`.trim(),
+          icon: (
+            <UserAvatar name={handle} avatarUrl={user.avatar_url ?? user.avatarUrl} size={20} ring={false} />
+          ),
+        };
+      }),
+    [users],
+  );
+
   const eventCountByType = CATEGORIES.reduce((acc, cat) => {
     acc[cat.id] = events.filter(e => e.extendedProps?.type === cat.id).length;
     return acc;
@@ -653,7 +691,8 @@ export default function SchedulePage() {
 
   const filteredEvents = events.filter(e =>
     e.title.toLowerCase().includes(searchQuery.toLowerCase()) &&
-    activeFilters.includes(e.extendedProps.type)
+    activeFilters.includes(e.extendedProps.type) &&
+    (!responsibleFilter || e.extendedProps?.assigned_to === responsibleFilter)
   );
 
   const toggleFilter = (id: string) => {
@@ -855,23 +894,56 @@ export default function SchedulePage() {
             })}
           </div>
 
-          {activeFilters.length < CATEGORIES.length && (
-            <button
-              onClick={() => setActiveFilters(CATEGORIES.map(c => c.id))}
-              style={{
-                fontSize: '0.72rem',
-                color: 'var(--color-terracotta)',
-                background: 'transparent',
-                border: 'none',
-                cursor: 'pointer',
-                fontWeight: 600,
-                padding: '2px 6px',
-                textDecoration: 'underline',
-              }}
-            >
-              Mostrar todos
-            </button>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', flexShrink: 0 }}>
+            {users.length > 0 && (
+              <Combobox
+                value={responsibleFilter}
+                onChange={setResponsibleFilter}
+                options={userOptions}
+                ariaLabel="Filtrar por responsável"
+                searchPlaceholder="Buscar pessoa…"
+                clearOption={{ label: "Responsável", icon: <UserCircle2 size={14} /> }}
+              />
+            )}
+            {currentUser && (
+              <button
+                type="button"
+                onClick={() => setResponsibleFilter(prev => prev === currentUser.id ? null : currentUser.id)}
+                className="btn btn-secondary"
+                data-active={responsibleFilter === currentUser.id || undefined}
+                style={{
+                  height: '34px',
+                  padding: '0 10px',
+                  fontSize: '0.75rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  color: responsibleFilter === currentUser.id ? 'var(--color-terracotta)' : undefined,
+                }}
+                title="Mostrar só os meus compromissos"
+              >
+                <UserCircle2 size={13} /> Minhas
+              </button>
+            )}
+
+            {activeFilters.length < CATEGORIES.length && (
+              <button
+                onClick={() => setActiveFilters(CATEGORIES.map(c => c.id))}
+                style={{
+                  fontSize: '0.72rem',
+                  color: 'var(--color-terracotta)',
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  padding: '2px 6px',
+                  textDecoration: 'underline',
+                }}
+              >
+                Mostrar todos
+              </button>
+            )}
+          </div>
         </div>
 
         <FullCalendar
@@ -1053,6 +1125,23 @@ export default function SchedulePage() {
                           </span>
                         </div>
                       )}
+                      {selectedEvent.extendedProps?.demand_id && (
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          padding: '6px 10px',
+                          background: 'var(--color-surface-sunken)',
+                          borderRadius: '8px',
+                          border: '1px solid var(--border)',
+                          marginTop: '4px'
+                        }}>
+                          <Link2 size={14} />
+                          <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 500 }}>
+                            Gerado a partir de uma demanda — edite por lá
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     {selectedEvent.extendedProps.description && (
@@ -1061,7 +1150,17 @@ export default function SchedulePage() {
                       </div>
                     )}
 
-                    {!selectedEvent.id.startsWith('inv-') && (
+                    {selectedEvent.extendedProps?.demand_id ? (
+                      <div style={{ display: 'flex', gap: '10px', borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
+                        <button
+                          onClick={() => router.push(`/admin/demandas?d=${selectedEvent.extendedProps.demand_id}`)}
+                          className="btn btn-accent"
+                          style={{ flex: 1, height: '36px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                        >
+                          <Link2 size={14} /> Abrir demanda
+                        </button>
+                      </div>
+                    ) : !selectedEvent.id.startsWith('inv-') && (
                       <div style={{ display: 'flex', gap: '10px', borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
                         <button
                           onClick={handleToggleComplete}
@@ -1119,7 +1218,13 @@ export default function SchedulePage() {
                         <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Cliente (Opcional)</label>
                         <select className="input-dark" value={formData.client_id} onChange={e => setFormData({ ...formData, client_id: e.target.value })} style={{ fontSize: '0.85rem', padding: '10px' }}>
                           <option value="">Nenhum</option>
-                          {clients.map(c => <option key={c.id} value={c.id}>{c.nome_fantasia || c.name}</option>)}
+                          {clients
+                            .filter(c => !c.status || c.status === 'active' || c.status === 'prospect' || c.id === formData.client_id)
+                            .map(c => (
+                              <option key={c.id} value={c.id}>
+                                {c.nome_fantasia || c.name}{c.status === 'inactive' ? ' (Inativo)' : ''}
+                              </option>
+                            ))}
                         </select>
                       </div>
 

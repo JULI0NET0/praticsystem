@@ -47,18 +47,62 @@ export default function ProfilePage() {
     setFormData({ ...formData, phone: formatPhone(e.target.value) });
   };
 
+  const processAvatarFile = async (file: File): Promise<Blob> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const size = Math.min(img.width, img.height);
+          const startX = (img.width - size) / 2;
+          const startY = (img.height - size) / 2;
+          const targetSize = 512;
+
+          const canvas = document.createElement('canvas');
+          canvas.width = targetSize;
+          canvas.height = targetSize;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            resolve(file);
+            return;
+          }
+
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
+          ctx.drawImage(img, startX, startY, size, size, 0, 0, targetSize, targetSize);
+
+          canvas.toBlob(
+            (blob) => {
+              if (blob) resolve(blob);
+              else resolve(file);
+            },
+            'image/jpeg',
+            0.92
+          );
+        };
+        img.onerror = () => resolve(file);
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = () => resolve(file);
+      reader.readAsDataURL(file);
+    });
+  };
+
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !currentUser) return;
 
     setUploading(true);
     try {
-      const fileExt = file.name.split('.').pop();
-      const filePath = `${currentUser.id}/${Math.random()}.${fileExt}`;
+      const processedBlob = await processAvatarFile(file);
+      const filePath = `${currentUser.id}/${Date.now()}.jpg`;
 
       const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(filePath, file);
+        .upload(filePath, processedBlob, {
+          contentType: 'image/jpeg',
+          upsert: true
+        });
 
       if (uploadError) throw uploadError;
 
@@ -74,7 +118,7 @@ export default function ProfilePage() {
       if (updateError) throw updateError;
 
       setFormData(prev => ({ ...prev, avatar_url: publicUrl }));
-      showToast("Foto de perfil atualizada!", "success");
+      showToast("Foto de perfil atualizada com alta resolução!", "success");
     } catch (err) {
       console.error("Erro ao subir foto:", err);
       showToast("Erro ao atualizar foto.", "error");
@@ -133,26 +177,17 @@ export default function ProfilePage() {
         <p style={{ color: 'var(--text-secondary)' }}>Gerencie seu perfil e preferências do sistema.</p>
       </div>
 
-      <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid var(--border)', paddingBottom: '2px' }}>
+      <div className="profile-tabs-bar">
         {TABS.map((tab) => {
           const isActive = activeTab === tab.id;
           return (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
+              className="profile-tab-btn"
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '12px 24px',
-                borderRadius: '12px 12px 0 0',
                 background: isActive ? 'color-mix(in oklab, var(--accent) 10%, transparent)' : 'transparent',
                 color: isActive ? 'var(--accent)' : 'var(--text-secondary)',
-                border: 'none',
-                cursor: 'pointer',
-                position: 'relative',
-                fontWeight: 600,
-                transition: 'all 0.2s'
               }}
             >
               <tab.icon size={18} />
@@ -178,8 +213,8 @@ export default function ProfilePage() {
 
       <div className="animate-fade-in">
         {activeTab === 'profile' && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '32px' }}>
-            <Spotlight className="glass-card" style={{ padding: '32px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
+          <div className="profile-layout-grid">
+            <Spotlight className="glass-card profile-card-spotlight" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
               <div
                 onClick={() => fileInputRef.current?.click()}
                 style={{
@@ -230,8 +265,8 @@ export default function ProfilePage() {
               </div>
             </Spotlight>
 
-            <Spotlight className="glass-card" style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+            <Spotlight className="glass-card profile-card-spotlight" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              <div className="profile-form-grid">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <label style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Nome Completo</label>
                   <input
@@ -279,8 +314,7 @@ export default function ProfilePage() {
                 <button
                   onClick={handleSave}
                   disabled={loading}
-                  className="btn btn-accent"
-                  style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 32px' }}
+                  className="btn btn-accent profile-save-btn"
                 >
                   {loading ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
                   Salvar Alterações
@@ -299,27 +333,27 @@ export default function ProfilePage() {
         />
 
         {activeTab === 'settings' && (
-          <Spotlight className="glass-card" style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '32px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Spotlight className="glass-card profile-card-spotlight" style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
               <div>
                 <h4 style={{ fontSize: '1.125rem', fontWeight: 600 }}>Notificações por E-mail</h4>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Receba atualizações sobre novos clientes e tarefas.</p>
               </div>
               <input type="checkbox" defaultChecked style={{ width: '40px', height: '20px' }} />
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
               <div>
                 <h4 style={{ fontSize: '1.125rem', fontWeight: 600 }}>Som de Notificação</h4>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Tocar aviso sonoro para novas notificações.</p>
               </div>
               <input type="checkbox" defaultChecked style={{ width: '40px', height: '20px' }} />
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
               <div>
                 <h4 style={{ fontSize: '1.125rem', fontWeight: 600 }}>Idioma do Sistema</h4>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Escolha o idioma principal da interface.</p>
               </div>
-              <select className="input-dark" style={{ width: '200px' }}>
+              <select className="input-dark" style={{ width: '200px', maxWidth: '100%' }}>
                 <option>Português (BR)</option>
                 <option>English</option>
                 <option>Español</option>
@@ -329,7 +363,7 @@ export default function ProfilePage() {
         )}
 
         {activeTab === 'security' && (
-          <Spotlight className="glass-card" style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          <Spotlight className="glass-card profile-card-spotlight" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             <h4 style={{ fontSize: '1.125rem', fontWeight: 600 }}>Alterar Senha</h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -346,7 +380,7 @@ export default function ProfilePage() {
               </div>
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '12px' }}>
-              <button className="btn btn-accent">Atualizar Senha</button>
+              <button className="btn btn-accent profile-save-btn">Atualizar Senha</button>
             </div>
           </Spotlight>
         )}
