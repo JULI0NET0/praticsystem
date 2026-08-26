@@ -23,6 +23,15 @@ export interface ContentPlan {
   posts_per_week: number;
   weekdays: Weekday[];
   channels: string[];
+  /** Nada antes desta data é gerado — define em qual ocorrência o ciclo começa. */
+  first_date?: string | null;
+  /** Formatos distribuídos round-robin entre os posts. */
+  content_types: string[];
+  /** Dias de antecedência do roteiro em relação à captação. */
+  script_lead_days: number;
+  post_title_template: string;
+  capture_title_template: string;
+  script_title_template: string;
   /** Documento TipTap, igual a demands.description. */
   description?: Record<string, unknown> | null;
   results?: Record<string, unknown> | null;
@@ -44,11 +53,33 @@ export interface ContentPlanDraft {
   postsPerWeek: number;
   weekdays: Weekday[];
   channels: string[];
+  firstDate: string;
+  contentTypes: string[];
+  scriptLeadDays: number;
+  postTitleTemplate: string;
+  captureTitleTemplate: string;
+  scriptTitleTemplate: string;
   contentTemplateId: string | null;
   captureTemplateId: string | null;
+  scriptTemplateId: string | null;
   /** Só gera a trilha de captação quando o contrato prevê. */
   includeCapture: boolean;
   captureFrequency: string | null;
+}
+
+/**
+ * Um item já resolvido do cronograma: data, formato e o nome final.
+ * É o que a prévia mostra e o que a criação grava — os dois olham para a
+ * MESMA lista, para não haver como divergirem.
+ */
+export interface ContentPlanItemDraft {
+  /** Ordem estável dentro da trilha (1, 2, 3…). */
+  n: number;
+  date: string;
+  role: 'post' | 'captacao' | 'roteiro';
+  contentType: string | null;
+  channel: string | null;
+  title: string;
 }
 
 /** Dados do contrato ativo que pré-preenchem o wizard. */

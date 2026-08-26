@@ -5,6 +5,7 @@ import {
   parseMonthRef,
   selectCaptureDates,
   selectScheduleDates,
+  shiftISODate,
   type Weekday,
 } from './contentSchedule';
 
@@ -172,5 +173,75 @@ describe('selectCaptureDates', () => {
 describe('formatMonthRef', () => {
   it('formata a competência para leitura', () => {
     expect(formatMonthRef('2026-09')).toBe('Setembro/2026');
+  });
+});
+
+describe('selectScheduleDates — notBefore', () => {
+  const base = {
+    period: { kind: 'month' as const, monthRef: '2026-09' },
+    postsPerWeek: 3,
+    weekdays: SEG_QUA_SEX,
+  };
+
+  it('corta o começo sem mexer no resto', () => {
+    const todas = selectScheduleDates(base);
+    const cortadas = selectScheduleDates({ ...base, notBefore: '2026-09-14' });
+
+    expect(cortadas.every((iso) => iso >= '2026-09-14')).toBe(true);
+    // O fim continua o mesmo — o corte é só na frente
+    expect(cortadas[cortadas.length - 1]).toBe(todas[todas.length - 1]);
+    expect(cortadas.length).toBeLessThan(todas.length);
+  });
+
+  it('data descartada não consome a cota da semana', () => {
+    // Semana de 08 a 14: seg 07 fica de fora, mas qua 09 e sex 11 entram.
+    // Se o descarte gastasse cota, a semana viria com menos itens.
+    const dates = selectScheduleDates({ ...base, postsPerWeek: 2, notBefore: '2026-09-08' });
+    const naSemana = dates.filter((iso) => iso >= '2026-09-08' && iso <= '2026-09-14');
+    expect(naSemana).toHaveLength(2);
+  });
+
+  it('data posterior ao período devolve vazio', () => {
+    expect(selectScheduleDates({ ...base, notBefore: '2026-12-01' })).toEqual([]);
+  });
+
+  it('notBefore nulo não muda nada', () => {
+    expect(selectScheduleDates({ ...base, notBefore: null })).toEqual(selectScheduleDates(base));
+  });
+
+  it('vale também no modo por semanas', () => {
+    const dates = selectScheduleDates({
+      period: { kind: 'weeks', startDate: '2026-09-07', weeks: 4 },
+      postsPerWeek: 2,
+      weekdays: [1, 4],
+      notBefore: '2026-09-17',
+    });
+    expect(dates[0]).toBe('2026-09-17');
+  });
+});
+
+describe('selectCaptureDates — notBefore', () => {
+  const period = { kind: 'month' as const, monthRef: '2026-09' };
+
+  it('não agenda captação antes da data de início', () => {
+    for (const iso of selectCaptureDates(period, '2 diárias', '2026-09-15')) {
+      expect(iso >= '2026-09-15').toBe(true);
+    }
+  });
+});
+
+describe('shiftISODate', () => {
+  it('desloca para frente e para trás', () => {
+    expect(shiftISODate('2026-09-10', -3)).toBe('2026-09-07');
+    expect(shiftISODate('2026-09-10', 5)).toBe('2026-09-15');
+  });
+
+  it('atravessa a virada de mês e de ano', () => {
+    expect(shiftISODate('2026-09-01', -1)).toBe('2026-08-31');
+    expect(shiftISODate('2027-01-01', -1)).toBe('2026-12-31');
+  });
+
+  it('data inválida volta intacta', () => {
+    expect(shiftISODate('nao-e-data', -3)).toBe('nao-e-data');
   });
 });

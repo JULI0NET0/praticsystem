@@ -365,6 +365,7 @@ export function DemandasProvider({ children }: { children: ReactNode }) {
       if (filters.clientId && d.client_id !== filters.clientId) return false;
       if (filters.status && d.status !== filters.status) return false;
       if (filters.priority && d.priority !== filters.priority) return false;
+      if (filters.contentType && d.content_type !== filters.contentType) return false;
       if (filters.hideCompleted && d.status_category === "fechado") return false;
       if (filters.assigneeId) {
         const mine = d.assignee_ids?.includes(filters.assigneeId) || d.assign_all_team;

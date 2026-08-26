@@ -1163,3 +1163,29 @@ input[type='date'] {
     justify-content: center !important;
   }
 }
+
+/* --- Linha do cronograma --- */
+
+.plan-item-row:hover {
+  background: var(--color-surface-sunken);
+}
+
+.plan-item-row .plan-item-open {
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease-standard);
+}
+
+.plan-item-row:hover .plan-item-open {
+  opacity: 1;
+}
+
+/* O título só revela que é editável ao passar o mouse */
+.plan-item-row button[title="Clique para renomear"]:hover {
+  border-color: var(--color-border-default) !important;
+  background: var(--color-surface-raised) !important;
+}
+
+/* Linha selecionada do cronograma — mesmo tratamento da lista de Demandas */
+.plan-item-row-selected:hover {
+  background: color-mix(in oklab, var(--accent) 16%, transparent);
+}

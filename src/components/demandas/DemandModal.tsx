@@ -10,6 +10,7 @@ import {
   Calendar,
   CalendarClock,
   CalendarRange,
+  Clapperboard,
   ListChecks,
   Lock,
   MessageSquare,
@@ -18,6 +19,7 @@ import {
   X,
 } from "lucide-react";
 import Combobox, { type ComboboxOption } from "@/components/ui/Combobox";
+import { CONTENT_TYPES, getContentType } from "@/lib/contentTypes";
 import { GoogleIcon } from "@/components/SocialIcons";
 import { DEMAND_AGENDA_SUBJECTS, getAgendaCategory } from "@/lib/agendaCategories";
 import {
@@ -152,6 +154,16 @@ export default function DemandModal({ demandId, onClose }: Props) {
         icon: <Building2 size={14} />,
       })),
     [clients],
+  );
+
+  const contentTypeOptions = useMemo<ComboboxOption[]>(
+    () =>
+      CONTENT_TYPES.map((type) => ({
+        value: type.id,
+        label: type.label,
+        color: type.color,
+      })),
+    [],
   );
 
   const priorityOptions = useMemo<ComboboxOption[]>(
@@ -466,6 +478,35 @@ export default function DemandModal({ demandId, onClose }: Props) {
                       onChange={(value) => updateDemand(demand.id, { due_time: value })}
                     />
                   </div>
+
+                  {/* Formato só faz sentido em conteúdo — some nas demais */}
+                  {(demand.plan_id || demand.content_type) && (
+                    <Combobox
+                      value={demand.content_type ?? null}
+                      onChange={(value) => updateDemand(demand.id, { content_type: value })}
+                      options={contentTypeOptions}
+                      ariaLabel="Formato do conteúdo"
+                      clearOption={{ label: "Sem formato", icon: <Clapperboard size={14} /> }}
+                      renderTrigger={({ selected }) => {
+                        const type = getContentType(demand.content_type);
+                        return (
+                          <>
+                            {type ? (
+                              <type.icon size={13} color={type.color} />
+                            ) : (
+                              <Clapperboard size={13} />
+                            )}
+                            <span
+                              className="combobox-trigger-label"
+                              style={type ? { color: type.color } : undefined}
+                            >
+                              {selected[0]?.label ?? "Sem formato"}
+                            </span>
+                          </>
+                        );
+                      }}
+                    />
+                  )}
 
                   <Combobox
                     value={demand.priority}

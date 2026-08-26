@@ -29,6 +29,13 @@ export interface ScheduleInput {
   period: SchedulePeriod;
   postsPerWeek: number;
   weekdays: Weekday[];
+  /**
+   * 'YYYY-MM-DD'. Nada antes desta data é gerado — é o "começar na 2ª
+   * terça", para programar um ciclo que só sai daqui a 15 dias. O corte
+   * acontece ANTES de contar quantos cabem na semana, senão a primeira
+   * janela gastaria a cota em datas descartadas.
+   */
+  notBefore?: string | null;
 }
 
 const MONTH_ABBR: Record<string, number> = {
@@ -120,13 +127,18 @@ export function selectScheduleDates(input: ScheduleInput): string[] {
   const wanted = new Set<number>(input.weekdays);
   if (wanted.size === 0 || input.postsPerWeek <= 0) return [];
 
+  const floor = input.notBefore ?? null;
   const dates: string[] = [];
+
   for (const window of weekWindows(input.period)) {
     let picked = 0;
     for (const day of window) {
       if (picked >= input.postsPerWeek) break;
       if (!wanted.has(day.getDay())) continue;
-      dates.push(toISODate(day));
+      const iso = toISODate(day);
+      // Descartado sem consumir a cota da semana
+      if (floor && iso < floor) continue;
+      dates.push(iso);
       picked += 1;
     }
   }
@@ -148,6 +160,7 @@ export function formatMonthRef(monthRef: string): string {
 export function selectCaptureDates(
   period: SchedulePeriod,
   frequencyText: string | null | undefined,
+  notBefore?: string | null,
 ): string[] {
   const perMonth = capturesPerPeriod(frequencyText);
   if (perMonth <= 0) return [];
@@ -163,7 +176,9 @@ export function selectCaptureDates(
   for (let index = 0; index < perMonth; index++) {
     const window = windows[Math.min(Math.floor(index * step), windows.length - 1)];
     // Dia útil no meio da semana, para não cair em fim de semana
-    const target = window.find((day) => day.getDay() >= 2 && day.getDay() <= 4) ?? window[0];
+    const candidates = window.filter((day) => !notBefore || toISODate(day) >= notBefore);
+    if (candidates.length === 0) continue;
+    const target = candidates.find((day) => day.getDay() >= 2 && day.getDay() <= 4) ?? candidates[0];
     const iso = toISODate(target);
     if (!dates.includes(iso)) dates.push(iso);
   }
@@ -176,4 +191,11 @@ export function capturesPerPeriod(frequencyText: string | null | undefined): num
   const match = /(\d+)/.exec(frequencyText);
   if (!match) return 1; // texto sem número mas preenchido = ao menos uma
   return Math.max(0, Math.min(Number(match[1]), 12));
+}
+
+/** Desloca 'YYYY-MM-DD' em N dias (negativo volta), no fuso local. */
+export function shiftISODate(iso: string, days: number): string {
+  const date = fromISODate(iso);
+  if (!date) return iso;
+  return toISODate(addDays(date, days));
 }

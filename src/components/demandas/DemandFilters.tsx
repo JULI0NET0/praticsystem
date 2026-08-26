@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import {
   Building2,
+  Clapperboard,
   CircleDot,
   Eye,
   EyeOff,
@@ -25,6 +26,7 @@ import {
 import { useDemandas } from "./DemandasProvider";
 import { UserAvatar } from "./AssigneePicker";
 import { PriorityFlag } from "./PriorityFlag";
+import { CONTENT_TYPES } from "@/lib/contentTypes";
 
 const SCOPES: { value: DemandScope | "all"; label: string }[] = [
   { value: "all", label: "Todas" },
@@ -107,6 +109,16 @@ export default function DemandFilters() {
         value: priority,
         label: PRIORITY_LABELS[priority],
         icon: <PriorityFlag priority={priority} size={13} />,
+      })),
+    [],
+  );
+
+  const contentTypeOptions = useMemo<ComboboxOption[]>(
+    () =>
+      CONTENT_TYPES.map((type) => ({
+        value: type.id,
+        label: type.label,
+        color: type.color,
       })),
     [],
   );
@@ -224,6 +236,14 @@ export default function DemandFilters() {
           }}
         />
 
+        <Combobox
+          value={filters.contentType}
+          onChange={(value) => setFilters({ contentType: value })}
+          options={contentTypeOptions}
+          ariaLabel="Filtrar por formato"
+          clearOption={{ label: "Formatos", icon: <Clapperboard size={14} /> }}
+        />
+
         <button
           type="button"
           className="filter-control filter-control-icon"
@@ -253,6 +273,7 @@ function hasActiveFilter(filters: Filters): boolean {
     filters.assigneeId !== null ||
     filters.priority !== null ||
     filters.status !== null ||
+    filters.contentType !== null ||
     filters.hideCompleted ||
     filters.search.trim() !== ""
   );

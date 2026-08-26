@@ -74,15 +74,17 @@ export interface Demand {
   } | null;
   /** Cronograma de conteúdo ao qual pertence (null = demanda avulsa). */
   plan_id?: string | null;
-  /** Trilha dentro do cronograma: grade de posts ou agenda de captação. */
+  /** Trilha dentro do cronograma: roteiro, captação ou post. */
   plan_role?: DemandPlanRole | null;
+  /** Formato do conteúdo (video/reels/frase/extra). O CANAL fica em `type`. */
+  content_type?: string | null;
   /** Agregados do checklist, trazidos na listagem. */
   checklist_total?: number;
   checklist_done?: number;
 }
 
-/** As duas trilhas de um cronograma de conteúdo. */
-export type DemandPlanRole = 'post' | 'captacao';
+/** As trilhas de um cronograma: roteiro alimenta a captação, que alimenta o post. */
+export type DemandPlanRole = 'post' | 'captacao' | 'roteiro';
 
 export interface DemandComment {
   id: string;
@@ -122,6 +124,8 @@ export interface DemandFilters {
   assigneeId: string | null;
   priority: DemandPriority | null;
   status: string | null;
+  /** Formato do conteúdo (video/reels/frase/extra). */
+  contentType: string | null;
   search: string;
   /** Esconde as demandas em status de categoria `fechado`. */
   hideCompleted: boolean;
@@ -133,6 +137,7 @@ export const EMPTY_DEMAND_FILTERS: DemandFilters = {
   assigneeId: null,
   priority: null,
   status: null,
+  contentType: null,
   search: '',
   hideCompleted: false,
 };

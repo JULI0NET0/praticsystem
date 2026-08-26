@@ -10,9 +10,18 @@ import { supabase } from '@/lib/supabase';
 import {
   selectCaptureDates,
   selectScheduleDates,
+  shiftISODate,
   type SchedulePeriod,
 } from '@/lib/contentSchedule';
-import type { ContentPlan, ContentPlanDraft, ContractHint } from '@/types/cronogramas';
+import { renderTitleTemplate } from '@/lib/titleTemplate';
+import { contentTypeLabel } from '@/lib/contentTypes';
+import { channelLabel } from '@/types/cronogramas';
+import type {
+  ContentPlan,
+  ContentPlanDraft,
+  ContentPlanItemDraft,
+  ContractHint,
+} from '@/types/cronogramas';
 import type { Demand } from '@/types/demandas';
 
 /** Contrato ativo do cliente, para pré-preencher o wizard. */
@@ -102,21 +111,112 @@ export function draftPeriod(draft: ContentPlanDraft): SchedulePeriod {
 export interface PlanPreview {
   postDates: string[];
   captureDates: string[];
+  scriptDates: string[];
 }
 
 /** Prévia do que será criado — roda no wizard antes de confirmar nada. */
 export function previewPlan(draft: ContentPlanDraft): PlanPreview {
   const period = draftPeriod(draft);
+  const notBefore = draft.firstDate || null;
+
+  const captureDates = draft.includeCapture
+    ? selectCaptureDates(period, draft.captureFrequency, notBefore)
+    : [];
+
+  // Um roteiro por captação, alguns dias antes. Se cair antes do início do
+  // ciclo, encosta no primeiro dia disponível — roteiro com prazo no
+  // passado nasceria atrasado.
+  const scriptDates = captureDates.map((date) => {
+    const shifted = shiftISODate(date, -Math.max(0, draft.scriptLeadDays));
+    return notBefore && shifted < notBefore ? notBefore : shifted;
+  });
+
   return {
     postDates: selectScheduleDates({
       period,
       postsPerWeek: draft.postsPerWeek,
       weekdays: draft.weekdays,
+      notBefore,
     }),
-    captureDates: draft.includeCapture
-      ? selectCaptureDates(period, draft.captureFrequency)
-      : [],
+    captureDates,
+    scriptDates,
   };
+}
+
+/**
+ * Monta a lista final de itens do cronograma, com nome já renderizado.
+ *
+ * `typeOverrides` é indexado pela data e vale só para posts: é o que o wizard
+ * grava quando você troca o formato de um item específico. Data que sai do
+ * período perde o override sozinho, sem estado obsoleto para limpar.
+ *
+ * Ordem: roteiro e captação primeiro (o processo começa neles), posts depois.
+ */
+export function resolvePlanItems(
+  draft: ContentPlanDraft,
+  clientName: string,
+  typeOverrides: Record<string, string> = {},
+): ContentPlanItemDraft[] {
+  const preview = previewPlan(draft);
+  const channels = draft.channels.length ? draft.channels : ['FEED'];
+  const types = draft.contentTypes;
+  const baseVars = { cliente: clientName, mes: draft.monthRef };
+
+  const items: ContentPlanItemDraft[] = [];
+
+  preview.scriptDates.forEach((date, index) => {
+    items.push({
+      n: index + 1,
+      date,
+      role: 'roteiro',
+      contentType: null,
+      channel: null,
+      title: renderTitleTemplate(draft.scriptTitleTemplate, {
+        ...baseVars,
+        n: index + 1,
+        data: date,
+      }),
+    });
+  });
+
+  preview.captureDates.forEach((date, index) => {
+    items.push({
+      n: index + 1,
+      date,
+      role: 'captacao',
+      contentType: null,
+      channel: null,
+      title: renderTitleTemplate(draft.captureTitleTemplate, {
+        ...baseVars,
+        n: index + 1,
+        data: date,
+      }),
+    });
+  });
+
+  preview.postDates.forEach((date, index) => {
+    // Canal e formato giram independentes: são duas dimensões, não uma
+    const channel = channels[index % channels.length];
+    const rotated = types.length ? types[index % types.length] : null;
+    const contentType = typeOverrides[date] ?? rotated;
+
+    items.push({
+      n: index + 1,
+      date,
+      role: 'post',
+      contentType,
+      channel,
+      title: renderTitleTemplate(draft.postTitleTemplate, {
+        ...baseVars,
+        n: index + 1,
+        data: date,
+        tipo: contentTypeLabel(contentType),
+        canal: channelLabel(channel),
+      }),
+    });
+  });
+
+  return items;
 }
 
 interface CreateResult {
@@ -135,11 +235,10 @@ export async function createContentPlan(
   draft: ContentPlanDraft,
   currentUserId: string,
   initialStatusId: string,
+  items: ContentPlanItemDraft[],
 ): Promise<CreateResult> {
   if (!draft.clientId) throw new Error('Selecione um cliente para o cronograma.');
-
-  const preview = previewPlan(draft);
-  if (preview.postDates.length === 0 && preview.captureDates.length === 0) {
+  if (items.length === 0) {
     throw new Error('O período escolhido não gerou nenhuma data. Revise os dias da semana.');
   }
 
@@ -153,9 +252,15 @@ export async function createContentPlan(
       period_kind: draft.periodKind,
       weeks: draft.weeks,
       start_date: draft.periodKind === 'weeks' ? draft.startDate : null,
+      first_date: draft.firstDate || null,
       posts_per_week: draft.postsPerWeek,
       weekdays: draft.weekdays,
       channels: draft.channels,
+      content_types: draft.contentTypes,
+      script_lead_days: draft.scriptLeadDays,
+      post_title_template: draft.postTitleTemplate,
+      capture_title_template: draft.captureTitleTemplate,
+      script_title_template: draft.scriptTitleTemplate,
       created_by: currentUserId,
     })
     .select('*')
@@ -164,38 +269,25 @@ export async function createContentPlan(
   if (planError || !planRow) throw planError ?? new Error('Falha ao criar o cronograma.');
   const plan = planRow as ContentPlan;
 
-  const channels = draft.channels.length ? draft.channels : ['FEED'];
-
-  const postRows = preview.postDates.map((date, index) => ({
-    title: `POST ${String(index + 1).padStart(2, '0')}`,
+  // `items` vem pronto da prévia: o que foi criado é exatamente o que a tela
+  // mostrou, sem um segundo cálculo que pudesse divergir dela.
+  const rows = items.map((item, index) => ({
+    title: item.title,
     client_id: draft.clientId,
     status: initialStatusId,
-    due_date: date,
+    due_date: item.date,
     plan_id: plan.id,
-    plan_role: 'post',
+    plan_role: item.role,
+    content_type: item.contentType,
+    type: item.role === 'captacao' ? 'CAPTACAO' : item.channel,
     created_by: currentUserId,
     assignee_ids: [] as string[],
-    // Round-robin entre os canais, para o mês não sair todo no mesmo lugar
-    type: channels[index % channels.length],
     position: index,
-  }));
-
-  const captureRows = preview.captureDates.map((date, index) => ({
-    title: `Captação ${String(index + 1).padStart(2, '0')}`,
-    client_id: draft.clientId,
-    status: initialStatusId,
-    due_date: date,
-    plan_id: plan.id,
-    plan_role: 'captacao',
-    created_by: currentUserId,
-    assignee_ids: [] as string[],
-    type: 'CAPTACAO',
-    position: postRows.length + index,
   }));
 
   const { data: demandRows, error: demandsError } = await supabase
     .from('demands')
-    .insert([...postRows, ...captureRows])
+    .insert(rows)
     .select('id, plan_role');
 
   if (demandsError || !demandRows) {
@@ -208,6 +300,7 @@ export async function createContentPlan(
   await applyTemplatesToDemands(demandRows as { id: string; plan_role: string }[], {
     post: draft.contentTemplateId,
     captacao: draft.captureTemplateId,
+    roteiro: draft.scriptTemplateId,
   });
 
   return { plan, created: demandRows.length };
@@ -255,8 +348,33 @@ async function applyTemplatesToDemands(
   await supabase.from('demand_checklist').insert(rows);
 }
 
-/** Apaga o cronograma. As demandas ficam (plan_id vira null pelo ON DELETE SET NULL). */
-export async function deleteContentPlan(id: string): Promise<void> {
+/** Quantas demandas o cronograma tem — alimenta o texto do diálogo. */
+export async function countPlanDemands(planId: string): Promise<number> {
+  const { count, error } = await supabase
+    .from('demands')
+    .select('id', { count: 'exact', head: true })
+    .eq('plan_id', planId);
+
+  if (error) return 0;
+  return count ?? 0;
+}
+
+/**
+ * Apaga o cronograma.
+ *
+ * Com `deleteDemands`, as demandas vão junto — e o CASCADE leva checklist,
+ * comentários e anexos de cada uma. Sem ele, o `ON DELETE SET NULL` do
+ * vínculo apenas as solta, e elas seguem em /admin/demandas como avulsas.
+ */
+export async function deleteContentPlan(
+  id: string,
+  options: { deleteDemands: boolean } = { deleteDemands: false },
+): Promise<void> {
+  if (options.deleteDemands) {
+    const { error: demandsError } = await supabase.from('demands').delete().eq('plan_id', id);
+    if (demandsError) throw demandsError;
+  }
+
   const { error } = await supabase.from('content_plans').delete().eq('id', id);
   if (error) throw error;
 }

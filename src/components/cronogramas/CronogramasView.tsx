@@ -3,11 +3,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { CalendarRange, Plus, Search, Video } from "lucide-react";
+import { CalendarRange, MoreHorizontal, PencilLine, Plus, Search, Trash2, Video } from "lucide-react";
 import PageHeader from "@/components/ui/PageHeader";
 import { useToast } from "@/components/CustomToast";
 import { formatMonthRef } from "@/lib/contentSchedule";
-import { fetchContentPlans } from "@/lib/contentPlans";
+import { deleteContentPlan, fetchContentPlans, updateContentPlan } from "@/lib/contentPlans";
 import { useDemandas } from "@/components/demandas/DemandasProvider";
 import {
   channelColor,
@@ -17,6 +17,7 @@ import {
 } from "@/types/cronogramas";
 import { clientLabel } from "@/types/demandas";
 import NewContentPlanModal from "./NewContentPlanModal";
+import DeletePlanDialog from "./DeletePlanDialog";
 
 export default function CronogramasView() {
   const { showToast } = useToast();
@@ -26,6 +27,10 @@ export default function CronogramasView() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [newOpen, setNewOpen] = useState(false);
+  const [menuFor, setMenuFor] = useState<string | null>(null);
+  const [renaming, setRenaming] = useState<string | null>(null);
+  const [renameDraft, setRenameDraft] = useState("");
+  const [deleting, setDeleting] = useState<ContentPlan | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -48,6 +53,37 @@ export default function CronogramasView() {
   const reload = useCallback(() => {
     fetchContentPlans().then(setPlans).catch(() => undefined);
   }, []);
+
+  const commitRename = (plan: ContentPlan) => {
+    setRenaming(null);
+    const trimmed = renameDraft.trim();
+    if (!trimmed || trimmed === plan.title) return;
+
+    setPlans((current) =>
+      current.map((item) => (item.id === plan.id ? { ...item, title: trimmed } : item)),
+    );
+    updateContentPlan(plan.id, { title: trimmed }).catch((err) => {
+      showToast("Erro ao renomear: " + ((err as Error)?.message ?? ""), "error");
+      reload();
+    });
+  };
+
+  const confirmDelete = async (deleteDemands: boolean) => {
+    if (!deleting) return;
+    const target = deleting;
+    setDeleting(null);
+    try {
+      await deleteContentPlan(target.id, { deleteDemands });
+      setPlans((current) => current.filter((item) => item.id !== target.id));
+      showToast(
+        deleteDemands ? "Cronograma e demandas excluídos." : "Cronograma excluído.",
+        "success",
+      );
+    } catch (err) {
+      showToast("Erro ao excluir: " + ((err as Error)?.message ?? ""), "error");
+      reload();
+    }
+  };
 
   /** Progresso vem das demandas em memória, sem uma consulta por cartão. */
   const progressOf = useCallback(
@@ -167,18 +203,104 @@ export default function CronogramasView() {
                   >
                     {CONTENT_PLAN_STATUS_LABELS[plan.status]}
                   </span>
+
+                  {/* O cartão é um Link: preventDefault impede a navegação */}
+                  <span style={{ position: "relative", flexShrink: 0 }}>
+                    <button
+                      type="button"
+                      aria-label={`Ações de ${plan.title}`}
+                      onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        setMenuFor((current) => (current === plan.id ? null : plan.id));
+                      }}
+                      style={{
+                        display: "flex",
+                        border: "none",
+                        background: "transparent",
+                        cursor: "pointer",
+                        padding: 2,
+                        color: "var(--text-tertiary)",
+                      }}
+                    >
+                      <MoreHorizontal size={15} />
+                    </button>
+
+                    {menuFor === plan.id && (
+                      <span
+                        className="context-menu"
+                        style={{ position: "absolute", top: "100%", right: 0, minWidth: 176 }}
+                      >
+                        <button
+                          className="context-menu-item"
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            setMenuFor(null);
+                            setRenameDraft(plan.title);
+                            setRenaming(plan.id);
+                          }}
+                        >
+                          <PencilLine size={16} />
+                          <span>Renomear</span>
+                        </button>
+                        <button
+                          className="context-menu-item context-menu-item-danger"
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            setMenuFor(null);
+                            setDeleting(plan);
+                          }}
+                        >
+                          <Trash2 size={16} />
+                          <span>Excluir</span>
+                        </button>
+                      </span>
+                    )}
+                  </span>
                 </div>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                  <span
-                    style={{
-                      fontSize: "0.95rem",
-                      fontWeight: 700,
-                      color: "var(--text-primary)",
-                    }}
-                  >
-                    {plan.title}
-                  </span>
+                  {renaming === plan.id ? (
+                    <input
+                      autoFocus
+                      value={renameDraft}
+                      onClick={(event) => event.preventDefault()}
+                      onChange={(event) => setRenameDraft(event.target.value)}
+                      onBlur={() => commitRename(plan)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          event.preventDefault();
+                          commitRename(plan);
+                        }
+                        if (event.key === "Escape") setRenaming(null);
+                      }}
+                      aria-label="Nome do cronograma"
+                      style={{
+                        width: "100%",
+                        padding: "3px 6px",
+                        borderRadius: "var(--radius-sm)",
+                        border: "1px solid var(--accent)",
+                        background: "var(--color-surface-raised)",
+                        color: "var(--text-primary)",
+                        fontSize: "0.95rem",
+                        fontWeight: 700,
+                        fontFamily: "inherit",
+                        outline: "none",
+                      }}
+                    />
+                  ) : (
+                    <span
+                      style={{
+                        fontSize: "0.95rem",
+                        fontWeight: 700,
+                        color: "var(--text-primary)",
+                      }}
+                    >
+                      {plan.title}
+                    </span>
+                  )}
                   <span style={{ fontSize: "0.78rem", color: "var(--text-secondary)" }}>
                     {clientLabel(client) || "Cliente removido"}
                   </span>
@@ -246,6 +368,14 @@ export default function CronogramasView() {
         isOpen={newOpen}
         onClose={() => setNewOpen(false)}
         onCreated={reload}
+      />
+
+      <DeletePlanDialog
+        isOpen={!!deleting}
+        planId={deleting?.id ?? null}
+        planTitle={deleting?.title ?? ""}
+        onClose={() => setDeleting(null)}
+        onConfirm={confirmDelete}
       />
     </motion.div>
   );

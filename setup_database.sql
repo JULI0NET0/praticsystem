@@ -1073,5 +1073,38 @@ CREATE POLICY "demand_attachments_select" ON public.demand_attachments
     );
 
 
+-- =============================================================
+-- BLOCO 16: AJUSTES DO CRONOGRAMA
+-- Tipo de conteúdo, trilha de roteiro, início do ciclo e os
+-- templates de nome das demandas geradas.
+-- =============================================================
+
+-- Formato do conteúdo. Independente do CANAL, que continua em
+-- demands.type (FEED/STORIES): um Reels sai no Feed E no TikTok.
+ALTER TABLE public.demands ADD COLUMN IF NOT EXISTS content_type TEXT;
+
+ALTER TABLE public.demands DROP CONSTRAINT IF EXISTS demands_content_type_check;
+ALTER TABLE public.demands
+    ADD CONSTRAINT demands_content_type_check
+    CHECK (content_type IS NULL OR content_type IN ('video', 'reels', 'frase', 'extra'));
+
+CREATE INDEX IF NOT EXISTS demands_content_type_idx ON public.demands (content_type);
+
+-- A trilha de roteiro entra junto das outras duas
+ALTER TABLE public.demands DROP CONSTRAINT IF EXISTS demands_plan_role_check;
+ALTER TABLE public.demands
+    ADD CONSTRAINT demands_plan_role_check
+    CHECK (plan_role IS NULL OR plan_role IN ('post', 'captacao', 'roteiro'));
+
+-- Configuração do cronograma
+ALTER TABLE public.content_plans ADD COLUMN IF NOT EXISTS first_date       DATE;
+ALTER TABLE public.content_plans ADD COLUMN IF NOT EXISTS content_types    TEXT[] NOT NULL DEFAULT '{}';
+ALTER TABLE public.content_plans ADD COLUMN IF NOT EXISTS script_lead_days INTEGER NOT NULL DEFAULT 3;
+
+ALTER TABLE public.content_plans ADD COLUMN IF NOT EXISTS post_title_template    TEXT NOT NULL DEFAULT 'Post {tipo} {n} — {cliente}';
+ALTER TABLE public.content_plans ADD COLUMN IF NOT EXISTS capture_title_template TEXT NOT NULL DEFAULT 'Captação {n} — {cliente}';
+ALTER TABLE public.content_plans ADD COLUMN IF NOT EXISTS script_title_template  TEXT NOT NULL DEFAULT 'Roteiro {n} — {cliente}';
+
+
 -- Atualiza o cache do schema no Supabase
 NOTIFY pgrst, 'reload schema';

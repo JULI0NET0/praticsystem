@@ -4,6 +4,8 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Building2, Calendar, GripVertical, ListChecks, Lock, MessageSquare, Paperclip } from "lucide-react";
 import { richTextToPlain } from "@/lib/richText";
 import { getAgendaCategory } from "@/lib/agendaCategories";
+import { getContentType } from "@/lib/contentTypes";
+import { tint } from "@/lib/tint";
 import { clientLabel, PRIORITY_COLORS, type Demand } from "@/types/demandas";
 import { useDemandas } from "./DemandasProvider";
 import { AssigneeStack } from "./AssigneePicker";
@@ -51,6 +53,7 @@ export default function DemandRow({
   const attachmentCount = attachmentsOf(demand.id).length || demand.attachment_count || 0;
 
   // Do checklist interessa o progresso, não o total — some quando não há etapa
+  const contentType = getContentType(demand.content_type);
   const checklistTotal = demand.checklist_total ?? 0;
   const checklistDone = demand.checklist_done ?? 0;
 
@@ -246,6 +249,27 @@ export default function DemandRow({
           {demand.agenda_subject && <AgendaLinkChip subject={demand.agenda_subject} />}
           {showStatusPill && <DemandStatusPill status={status} size="sm" />}
           <PriorityBadge priority={demand.priority} compact />
+          {contentType && (
+            <span
+              title={`Formato: ${contentType.label}`}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 4,
+                padding: "2px 8px",
+                borderRadius: "var(--radius-badge)",
+                fontSize: "0.66rem",
+                fontWeight: 700,
+                color: contentType.color,
+                background: tint(contentType.color, 14),
+                border: `1px solid ${tint(contentType.color, 32)}`,
+                whiteSpace: "nowrap",
+              }}
+            >
+              <contentType.icon size={10} />
+              {contentType.label}
+            </span>
+          )}
           <AssigneeStack
             assigneeIds={demand.assignee_ids ?? []}
             allTeam={demand.assign_all_team}
