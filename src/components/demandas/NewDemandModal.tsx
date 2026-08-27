@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Building2, Calendar, Lock } from "lucide-react";
 import DialogShell from "@/components/DialogShell";
 import Combobox, { type ComboboxOption } from "@/components/ui/Combobox";
+import DatePicker from "@/components/ui/DatePicker";
 import { useAuth } from "@/hooks/useAuth";
 import { formatDueDateLabel } from "@/lib/dueDate";
 import { DEMAND_AGENDA_SUBJECTS } from "@/lib/agendaCategories";
@@ -310,28 +311,18 @@ export default function NewDemandModal({
               : "Sem prazo. Dá para escrever no título: “sexta”, “amanhã”, “03/09”, “14h”."
           }
         >
-          <div style={{ display: "flex", gap: 8 }}>
-            <input
-              type="date"
-              value={effective.dueDate ?? ""}
-              onChange={(event) => {
-                touch("due");
-                setDueDate(event.target.value);
-              }}
-              aria-label="Data de entrega"
-              style={inputStyle}
-            />
-            <input
-              type="time"
-              value={effective.dueTime ?? ""}
-              onChange={(event) => {
-                touch("due");
-                setDueTime(event.target.value);
-              }}
-              aria-label="Hora de entrega"
-              style={{ ...inputStyle, maxWidth: 130 }}
-            />
-          </div>
+          <DatePicker
+            value={effective.dueDate ?? null}
+            timeValue={effective.dueTime ?? null}
+            onChange={(d, t) => {
+              touch("due");
+              setDueDate(d ?? "");
+              if (t !== undefined) setDueTime(t ?? "");
+            }}
+            withTime={true}
+            clearable={true}
+            placeholder="Definir prazo de entrega"
+          />
         </FormField>
       </div>
     </DialogShell>

@@ -2,82 +2,146 @@ type SoundType = 'success' | 'error' | 'info' | 'warning' | 'chat' | 'mention' |
 
 class SoundManager {
   private audioCtx: AudioContext | null = null;
+  private bufferCache: Map<string, AudioBuffer> = new Map();
+  private loadingPromises: Map<string, Promise<AudioBuffer | null>> = new Map();
+
+  constructor() {
+    if (typeof window !== "undefined") {
+      const preload = () => {
+        this.preloadSound("/sounds/task_done.wav");
+        window.removeEventListener("click", preload);
+        window.removeEventListener("keydown", preload);
+        window.removeEventListener("touchstart", preload);
+      };
+      window.addEventListener("click", preload, { once: true, passive: true });
+      window.addEventListener("keydown", preload, { once: true, passive: true });
+      window.addEventListener("touchstart", preload, { once: true, passive: true });
+
+      if (typeof window.fetch === "function") {
+        this.preloadSound("/sounds/task_done.wav").catch(() => {});
+      }
+    }
+  }
 
   private getCtx(): AudioContext | null {
-    if (typeof window === 'undefined') return null;
+    if (typeof window === "undefined") return null;
     if (!this.audioCtx) {
       const Cls = window.AudioContext || (window as any).webkitAudioContext;
       if (Cls) this.audioCtx = new Cls();
     }
-    if (this.audioCtx?.state === 'suspended') this.audioCtx.resume();
+    if (this.audioCtx?.state === "suspended") {
+      this.audioCtx.resume().catch(() => {});
+    }
     return this.audioCtx;
   }
 
-  public play(type: SoundType) {
+  private async preloadSound(url: string): Promise<AudioBuffer | null> {
+    if (typeof window === "undefined") return null;
+    if (this.bufferCache.has(url)) return this.bufferCache.get(url)!;
+    if (this.loadingPromises.has(url)) return this.loadingPromises.get(url)!;
+
+    const promise = (async () => {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) return null;
+        const arrayBuf = await res.arrayBuffer();
+        const ctx = this.getCtx();
+        if (!ctx) return null;
+        
+        // Suporte a Promise e callback para compatibilidade universal
+        const audioBuf = await new Promise<AudioBuffer>((resolve, reject) => {
+          const promiseOrVoid = ctx.decodeAudioData(arrayBuf.slice(0), resolve, reject);
+          if (promiseOrVoid && typeof (promiseOrVoid as any).then === "function") {
+            (promiseOrVoid as any).then(resolve).catch(reject);
+          }
+        });
+
+        this.bufferCache.set(url, audioBuf);
+        return audioBuf;
+      } catch (err) {
+        console.warn(`[SoundManager] Não foi possível carregar ${url}:`, err);
+        return null;
+      }
+    })();
+
+    this.loadingPromises.set(url, promise);
+    return promise;
+  }
+
+  public async play(type: SoundType) {
     try {
       const ctx = this.getCtx();
       if (!ctx) return;
+      if (ctx.state === "suspended") {
+        await ctx.resume().catch(() => {});
+      }
       const t = ctx.currentTime;
 
       switch (type) {
-        case 'success':
-          this.tone(ctx, 523.25, t,        0.08, 'sine', 0.15);
-          this.tone(ctx, 659.25, t + 0.08, 0.08, 'sine', 0.15);
-          this.tone(ctx, 783.99, t + 0.16, 0.15, 'sine', 0.2);
+        case "task_done": {
+          const soundUrl = "/sounds/task_done.wav";
+          const buffer = this.bufferCache.get(soundUrl) || (await this.preloadSound(soundUrl));
+          if (buffer && ctx) {
+            const source = ctx.createBufferSource();
+            const gainNode = ctx.createGain();
+            source.buffer = buffer;
+            gainNode.gain.setValueAtTime(0.85, ctx.currentTime);
+            source.connect(gainNode);
+            gainNode.connect(ctx.destination);
+            source.start(0);
+          } else {
+            // Fallback para HTMLAudioElement ou sintetizador
+            try {
+              const audio = new Audio(soundUrl);
+              audio.volume = 0.85;
+              audio.play().catch(() => {
+                this.bell(ctx, 987.77, t, 0.085, 0.055);
+                this.impact(ctx, t, 0.03);
+                this.bell(ctx, 1318.5, t + 0.07, 0.075, 0.075);
+              });
+            } catch {
+              this.bell(ctx, 987.77, t, 0.085, 0.055);
+              this.impact(ctx, t, 0.03);
+              this.bell(ctx, 1318.5, t + 0.07, 0.075, 0.075);
+            }
+          }
+          break;
+        }
+        case "success":
+          this.tone(ctx, 523.25, t, 0.08, "sine", 0.15);
+          this.tone(ctx, 659.25, t + 0.08, 0.08, "sine", 0.15);
+          this.tone(ctx, 783.99, t + 0.16, 0.15, "sine", 0.2);
           break;
 
-        case 'error':
-          this.tone(ctx, 220, t,        0.12, 'sawtooth', 0.15);
-          this.tone(ctx, 180, t + 0.12, 0.18, 'sawtooth', 0.2);
+        case "error":
+          this.tone(ctx, 220, t, 0.12, "sawtooth", 0.15);
+          this.tone(ctx, 180, t + 0.12, 0.18, "sawtooth", 0.2);
           break;
 
-        case 'info':
-          this.tone(ctx, 440, t,        0.08, 'sine', 0.1);
-          this.tone(ctx, 880, t + 0.08, 0.12, 'sine', 0.15);
+        case "info":
+          this.tone(ctx, 440, t, 0.08, "sine", 0.1);
+          this.tone(ctx, 880, t + 0.08, 0.12, "sine", 0.15);
           break;
 
-        case 'warning':
-          this.tone(ctx, 587.33, t,        0.1,  'triangle', 0.15);
-          this.tone(ctx, 587.33, t + 0.15, 0.15, 'triangle', 0.2);
+        case "warning":
+          this.tone(ctx, 587.33, t, 0.1, "triangle", 0.15);
+          this.tone(ctx, 587.33, t + 0.15, 0.15, "triangle", 0.2);
           break;
 
-        // ──────────────────────────────────────────────
-        // CHAT: "pop" suave tipo iMessage
-        //  • glide de frequência no ataque (caráter de sino)
-        //  • harmônicos inarmônicos (soam naturais, não sintéticos)
-        //  • burst de ruído de impacto ultra-curto (sensação física)
-        // ──────────────────────────────────────────────
-        case 'chat':
-          this.bell(ctx, 1046.5, t, 0.13, 0.13);   // C6 fundamental
+        case "chat":
+          this.bell(ctx, 1046.5, t, 0.13, 0.13);
           this.impact(ctx, t, 0.04);
           break;
 
-        // ──────────────────────────────────────────────
-        // MENTION: dois sinos ascendentes tipo Slack
-        //  • A5 → E6 com 130 ms de intervalo
-        //  • segundo sino levemente mais alto
-        // ──────────────────────────────────────────────
-        case 'mention':
-          this.bell(ctx, 880,    t,        0.15, 0.10);  // A5
+        case "mention":
+          this.bell(ctx, 880, t, 0.15, 0.1);
           this.impact(ctx, t, 0.045);
-          this.bell(ctx, 1318.5, t + 0.13, 0.17, 0.12);  // E6
+          this.bell(ctx, 1318.5, t + 0.13, 0.17, 0.12);
           this.impact(ctx, t + 0.13, 0.05);
-          break;
-
-        // ──────────────────────────────────────────────
-        // TASK_DONE: "tick" curto de conclusão
-        //  • dois sinos próximos (B5 → E6) em 70 ms — rápido, não celebra
-        //  • ganho e decaimento menores que 'mention': dispara muitas vezes
-        //    seguidas ao varrer uma lista, então não pode cansar
-        // ──────────────────────────────────────────────
-        case 'task_done':
-          this.bell(ctx, 987.77, t,        0.085, 0.055);  // B5
-          this.impact(ctx, t, 0.03);
-          this.bell(ctx, 1318.5, t + 0.07, 0.075, 0.075);  // E6
           break;
       }
     } catch (err) {
-      console.warn('Erro no SoundManager:', err);
+      console.warn("Erro no SoundManager:", err);
     }
   }
 

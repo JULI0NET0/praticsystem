@@ -14,6 +14,7 @@ import {
 import { FIELD_MIDIA } from "@/mocks/operacao/templates";
 
 import Combobox from "@/components/ui/Combobox";
+import DatePicker from "@/components/ui/DatePicker";
 
 export type NewTaskMode = "onboarding" | "cancelamento" | "captacao" | "post";
 
@@ -118,7 +119,7 @@ export default function NewTaskModal({ list, mode, isOpen, onClose, onCreated }:
                 />
               </Field>
               <Field label="Data de publicação">
-                <input className="input-dark" type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ height: 40 }} />
+                <DatePicker value={date || null} onChange={(val) => setDate(val ?? "")} withTime={false} clearable={false} />
               </Field>
             </div>
           </>

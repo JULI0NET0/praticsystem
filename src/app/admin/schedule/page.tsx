@@ -469,6 +469,10 @@ export default function SchedulePage() {
 
       if (error) throw error;
 
+      if (formData.status === 'completed' && (!selectedEvent || selectedEvent.extendedProps?.status !== 'completed')) {
+        playSound('task_done');
+      }
+
       if (formData.visibility === 'public' && savedEventId) {
         await syncToGoogleCalendar(savedEventId, selectedEvent ? 'update' : 'insert', {
           title: eventData.title,

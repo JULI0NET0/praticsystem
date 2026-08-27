@@ -11,6 +11,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/CustomToast';
 import TitleMention, { Mention } from '@/components/notas/TitleMention';
 import { NoteCardData } from '@/components/notas/NoteCard';
+import DatePicker from '@/components/ui/DatePicker';
 
 const BlockEditor = dynamic(() => import('@/components/notas/BlockEditor'), {
   ssr: false,
@@ -221,11 +222,11 @@ export default function InlineNoteEditor({ clientId, noteId, onClose, onSaved }:
           <label style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '5px' }}>
             <Calendar size={11} /> Data
           </label>
-          <input
-            type="date"
+          <DatePicker
             value={state.date}
-            onChange={e => update({ date: e.target.value })}
-            style={{ background: 'var(--color-surface-sunken)', border: '1px solid var(--border)', borderRadius: '8px', padding: '6px 10px', color: 'var(--color-text-primary)', fontSize: '0.85rem', outline: 'none' }}
+            onChange={(val) => update({ date: val ?? new Date().toISOString().split('T')[0] })}
+            withTime={false}
+            clearable={false}
           />
         </div>
 

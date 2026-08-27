@@ -106,8 +106,8 @@ export default function ServicesPage() {
     <RoleGuard>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', paddingBottom: '40px' }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div>
+      <div className="page-header">
+        <div className="page-header-info">
           <h1 style={{ fontSize: 'clamp(1.4rem, 4vw, 2rem)', fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1.2, color: 'var(--color-text-primary)', marginBottom: '4px' }}>
             Serviços
           </h1>
@@ -115,7 +115,7 @@ export default function ServicesPage() {
             Gerencie o catálogo de soluções e acompanhe a rentabilidade operacional.
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '12px' }}>
+        <div className="page-header-actions">
           <button
             onClick={() => {
               const url = `${window.location.origin}/onboarding`;
@@ -123,12 +123,12 @@ export default function ServicesPage() {
               showToast("Link de onboarding copiado!", "success");
             }}
             className="btn btn-secondary"
-            style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px' }}
+            style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
           >
-            <Copy size={20} /> Onboarding
+            <Copy size={18} /> Onboarding
           </button>
-          <Link href="/admin/services/create" className="btn btn-accent" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px', textDecoration: 'none' }}>
-            <Plus size={20} /> Novo Serviço
+          <Link href="/admin/services/create" className="btn btn-accent" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
+            <Plus size={18} /> Novo Serviço
           </Link>
         </div>
       </div>

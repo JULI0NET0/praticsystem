@@ -1,15 +1,17 @@
 "use client";
 
 import ThemeLogo from "./ThemeLogo";
-import { Search, Bell } from "lucide-react";
+import { Search, Bell, Sun, Moon } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 export default function MobileHeader() {
   const [mounted, setMounted] = useState(false);
   const { currentUser } = useAuth();
+  const { resolvedTheme, setTheme } = useTheme();
   const router = useRouter();
 
   useEffect(() => {
@@ -26,6 +28,29 @@ export default function MobileHeader() {
         gap: '8px',
         alignItems: 'center'
       }}>
+        {/* Alternador Modo Claro / Modo Escuro */}
+        <button
+          aria-label={resolvedTheme === 'dark' ? 'Mudar para Modo Claro' : 'Mudar para Modo Escuro'}
+          title={resolvedTheme === 'dark' ? 'Modo Claro' : 'Modo Escuro'}
+          onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
+          style={{
+            color: 'var(--text-secondary)',
+            width: '40px',
+            height: '40px',
+            borderRadius: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'var(--card-inner-bg)',
+            border: '1px solid var(--border)',
+            cursor: 'pointer',
+            WebkitTapHighlightColor: 'transparent',
+            transition: 'background-color 0.2s, color 0.2s'
+          }}
+        >
+          {resolvedTheme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+        </button>
+
         <button
           aria-label="Pesquisar"
           onClick={() => window.dispatchEvent(new CustomEvent('toggle-search'))}

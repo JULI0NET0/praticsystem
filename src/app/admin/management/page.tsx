@@ -134,9 +134,9 @@ export default function ManagementPage() {
 
   return (
     <RoleGuard>
-      <div style={{ padding: '40px', maxWidth: '1400px', margin: '0 auto' }}>
+      <div style={{ padding: 'clamp(12px, 3vw, 32px)', maxWidth: '1400px', margin: '0 auto' }}>
       {/* Header */}
-      <div style={{ marginBottom: '40px' }}>
+      <div style={{ marginBottom: '24px' }}>
         <h1 style={{ fontSize: 'clamp(1.4rem, 4vw, 2rem)', fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1.2, color: 'var(--color-text-primary)', display: 'flex', alignItems: 'center', gap: '12px' }}>
           <BarChart3 size={32} color="var(--accent)" />
           Gestão da Equipe
@@ -147,7 +147,7 @@ export default function ManagementPage() {
       </div>
 
       {/* KPI Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '40px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: '16px', marginBottom: '32px' }}>
         {kpis.map((kpi, i) => (
           <motion.div
             key={kpi.label}

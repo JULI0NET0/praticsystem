@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import DialogShell from "@/components/DialogShell";
+import { useConfirm } from "@/components/ConfirmProvider";
 import { AsaasLinkDialog } from "@/components/financeiro/AsaasLinkDialog";
 import { buildFaturaGroups, matchClient, extractFaturaNumber, detectFeeCategory, type FaturaGroup } from "@/lib/asaasGroups";
 import type { AsaasTransaction, ExpenseEntry, Invoice, Expense } from "@/types/database";
@@ -71,13 +72,20 @@ export function AsaasSync({
   balance,
   onRefreshBalance,
 }: AsaasSyncProps) {
+  const { confirm } = useConfirm();
   const [lastSyncResult, setLastSyncResult] = useState<{ imported: number; skipped: number } | null>(null);
   const [filterStatus, setFilterStatus] = useState<"all" | "linked" | "unlinked">("all");
   const [search, setSearch] = useState("");
   const [unlinkingId, setUnlinkingId] = useState<string | null>(null);
 
   async function handleUnlink(txnId: string) {
-    if (!confirm("Desfazer este vínculo? O lançamento volta a Pendente/Parcial conforme o restante.")) return;
+    const ok = await confirm({
+      title: "Desfazer vínculo",
+      message: "Desfazer este vínculo? O lançamento volta a Pendente/Parcial conforme o restante.",
+      variant: "warning",
+      confirmText: "Desfazer",
+    });
+    if (!ok) return;
     setUnlinkingId(txnId);
     try {
       await onUnlink(txnId);

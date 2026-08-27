@@ -170,9 +170,9 @@ CREATE TABLE IF NOT EXISTS public.asaas_transactions (
     type             TEXT CHECK (type IN ('CREDIT', 'DEBIT')),
     date             DATE,
     status           TEXT,
-    expense_entry_id UUID REFERENCES public.expense_entries(id),
-    invoice_id       UUID REFERENCES public.invoices(id),
-    client_id        UUID REFERENCES public.clients(id),
+    expense_entry_id UUID REFERENCES public.expense_entries(id) ON DELETE SET NULL,
+    invoice_id       UUID REFERENCES public.invoices(id) ON DELETE SET NULL,
+    client_id        UUID REFERENCES public.clients(id) ON DELETE SET NULL,
     transfer_id      TEXT,
     payment_id       TEXT,
     synced_at        TIMESTAMPTZ DEFAULT NOW()
@@ -255,6 +255,9 @@ ALTER TABLE public.notes ADD COLUMN IF NOT EXISTS shared_with   UUID[] DEFAULT '
 ALTER TABLE public.notes ADD COLUMN IF NOT EXISTS share_all     BOOLEAN NOT NULL DEFAULT false;
 ALTER TABLE public.notes ADD COLUMN IF NOT EXISTS pin_to_client BOOLEAN NOT NULL DEFAULT false;
 ALTER TABLE public.notes ADD COLUMN IF NOT EXISTS client_id     UUID REFERENCES public.clients(id) ON DELETE SET NULL;
+ALTER TABLE public.notes ADD COLUMN IF NOT EXISTS plan_id       UUID REFERENCES public.content_plans(id) ON DELETE SET NULL;
+ALTER TABLE public.notes ADD COLUMN IF NOT EXISTS is_script     BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE public.notes ADD COLUMN IF NOT EXISTS demand_id     UUID REFERENCES public.demands(id) ON DELETE SET NULL;
 ALTER TABLE public.notes ADD COLUMN IF NOT EXISTS updated_at    TIMESTAMPTZ DEFAULT NOW();
 
 -- Trigger: atualiza updated_at automaticamente a cada UPDATE
@@ -296,15 +299,9 @@ CREATE POLICY "notes_delete" ON public.notes
 
 
 -- =============================================================
--- BLOCO 8: RESTAURAR CLIENTES DE AMOSTRA
--- ON CONFLICT DO NOTHING — não duplica se o id já existir
+-- BLOCO 8: CLIENTES DE AMOSTRA (REMOVIDO PARA EVITAR DUPLICATAS)
+-- Clientes devem ser gerenciados pelo painel ou integração Asaas
 -- =============================================================
-
-INSERT INTO public.clients (name, nome_fantasia, cnpj, tipo_pessoa, contact_name, email, phone, status)
-VALUES
-    ('Recloset Bazar', 'Recloset Bazar', '00.000.000/0001-01', 'PJ', 'Recloset Bazar', 'recloset@placeholder.com', '00000000000', 'active'),
-    ('Cold Joias',     'Cold Joias',     '00.000.000/0001-02', 'PJ', 'Cold Joias',     'coldjoias@placeholder.com', '00000000000', 'active')
-ON CONFLICT (id) DO NOTHING;
 
 
 -- =============================================================

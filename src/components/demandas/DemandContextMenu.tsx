@@ -23,6 +23,7 @@ import {
   type DemandPriority,
 } from "@/types/demandas";
 import { useDemandas } from "./DemandasProvider";
+import { useConfirm } from "@/components/ConfirmProvider";
 
 const PRIORITIES: DemandPriority[] = ["urgent", "high", "medium", "low", "none"];
 
@@ -64,6 +65,7 @@ export default function DemandContextMenu({
   onToggleStart,
 }: Props) {
   const { getDemand, statuses, updateDemand, deleteDemand, toggleComplete } = useDemandas();
+  const { confirm } = useConfirm();
   const [panel, setPanel] = useState<Panel>("root");
   const menuRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState({ x: anchor.x, y: anchor.y });
@@ -174,11 +176,17 @@ export default function DemandContextMenu({
 
           <button
             className="context-menu-item context-menu-item-danger"
-            onClick={() => {
-              if (window.confirm(`Excluir a demanda "${demand.title}"?`)) {
+            onClick={async () => {
+              onClose();
+              const ok = await confirm({
+                title: "Excluir demanda",
+                message: `Excluir a demanda "${demand.title}"?`,
+                variant: "danger",
+                confirmText: "Excluir",
+              });
+              if (ok) {
                 deleteDemand(demand.id);
               }
-              onClose();
             }}
           >
             <Trash2 size={16} />

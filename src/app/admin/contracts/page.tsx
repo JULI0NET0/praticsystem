@@ -164,18 +164,17 @@ export default function ContractsPage() {
         service={services.find(s => s.id === selectedContract?.service_id)}
         invoices={invoices.filter(i => i.contract_id === selectedContract?.id)}
       />
-
-      <div className="mobile-stack" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px' }}>
-        <div>
+      <div className="page-header">
+        <div className="page-header-info">
           <h1 style={{ fontSize: 'clamp(1.4rem, 4vw, 2rem)', fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1.2, color: 'var(--color-text-primary)', marginBottom: '4px' }}>
             Contratos
           </h1>
-          <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.9rem', margin: '4px 0 0' }}>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', margin: '4px 0 0' }}>
             Gerencie a receita recorrente e o ciclo de vida dos seus clientes.
           </p>
         </div>
-        <div className="mobile-stack" style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
-          <div className="client-tabs-scroll" style={{ display: 'flex', gap: '6px', flexWrap: 'nowrap', alignItems: 'center', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none', maxWidth: '100%' }}>
+        <div className="page-header-actions">
+          <div className="tabs-scrollable" style={{ gap: '6px', paddingBottom: '4px', maxWidth: '100%' }}>
             {[
               { id: 'all', label: 'Tudo' },
               { id: 'this_month', label: 'Este Mês' },
@@ -208,6 +207,7 @@ export default function ContractsPage() {
               </Spotlight>
             </Link>
           </div>
+
           {(datePreset === 'custom' || dateRange.start || dateRange.end) && (
             <div style={{ display: 'flex', gap: '12px', alignItems: 'center', background: 'var(--color-surface-sunken)', padding: '8px 16px', borderRadius: '14px', border: '1px solid var(--border)' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
@@ -240,7 +240,7 @@ export default function ContractsPage() {
         </div>
       </div>
 
-      {/* ... KPIs ... */}
+      {/* KPIs */}
       <div className="dashboard-grid-kpis" style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',

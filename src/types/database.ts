@@ -216,9 +216,14 @@ export interface Note {
   audio_path?: string | null;
   transcribed_at?: string | null;
   last_organized_at?: string | null;
+  // Cronograma / Roteiro
+  plan_id?: string | null;
+  is_script?: boolean;
+  demand_id?: string | null;
   // Joined fields
   client?: Pick<Client, 'id' | 'name' | 'nome_fantasia'>;
   author?: Pick<User, 'id' | 'name' | 'avatar_url'>;
+  plan?: { id: string; title: string; month_ref: string };
 }
 
 export interface AsaasTransaction {

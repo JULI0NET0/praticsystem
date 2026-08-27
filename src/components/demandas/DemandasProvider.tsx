@@ -1225,3 +1225,7 @@ export function useDemandas(): DemandasContextValue {
   if (!ctx) throw new Error("useDemandas deve ser usado dentro de <DemandasProvider>");
   return ctx;
 }
+
+export function useOptionalDemandas(): DemandasContextValue | null {
+  return useContext(DemandasContext);
+}

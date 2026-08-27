@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Calendar, BookmarkCheck, Trash2, Pin } from 'lucide-react';
+import { Calendar, BookmarkCheck, Trash2, Pin, Clapperboard } from 'lucide-react';
 
 export interface NoteCardData {
   id: string;
@@ -12,6 +12,8 @@ export interface NoteCardData {
   updated_at?: string;
   created_at?: string;
   pin_to_client?: boolean;
+  is_script?: boolean;
+  plan_id?: string | null;
   client?: { id: string; name: string; nome_fantasia?: string } | null;
 }
 
@@ -127,9 +129,20 @@ export default function NoteCard({
           </p>
         )}
 
-        {/* Subjects */}
-        {subjects.length > 0 && (
+        {/* Subjects & Roteiro badge */}
+        {(subjects.length > 0 || note.is_script || note.plan_id) && (
           <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+            {(note.is_script || note.plan_id) && (
+              <span style={{
+                fontSize: '0.68rem', fontWeight: 700,
+                background: 'color-mix(in oklab, var(--accent) 18%, transparent)', color: 'var(--accent)',
+                padding: '2px 8px', borderRadius: '20px',
+                border: '1px solid color-mix(in oklab, var(--accent) 35%, transparent)',
+                display: 'inline-flex', alignItems: 'center', gap: '4px',
+              }}>
+                <Clapperboard size={11} /> Roteiro
+              </span>
+            )}
             {subjects.slice(0, 3).map(s => (
               <span key={s} style={{
                 fontSize: '0.68rem', fontWeight: 600,

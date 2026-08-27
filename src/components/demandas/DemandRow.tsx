@@ -245,7 +245,7 @@ export default function DemandRow({
         {/* Linha 2: os detalhes, abaixo do próprio título */}
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
           {client ? <ClientChip label={clientLabel(client)} /> : <InternalChip />}
-          <DueChip dueDate={demand.due_date} dueTime={demand.due_time} />
+          <DueChip demandId={demand.id} dueDate={demand.due_date} dueTime={demand.due_time} />
           {demand.agenda_subject && <AgendaLinkChip subject={demand.agenda_subject} />}
           {showStatusPill && <DemandStatusPill status={status} size="sm" />}
           <PriorityBadge priority={demand.priority} compact />

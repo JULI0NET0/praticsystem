@@ -16,6 +16,8 @@ import DemandModal from "./DemandModal";
 import NewDemandModal from "./NewDemandModal";
 import StatusManagerModal from "./StatusManagerModal";
 import BatchActionsBar from "./BatchActionsBar";
+import WhatsAppSummaryModal from "./WhatsAppSummaryModal";
+import { WhatsAppIcon } from "@/components/SocialIcons";
 
 const VIEW_STORAGE_KEY = "pratic-demandas-view";
 const GROUPBY_STORAGE_KEY = "pratic-demandas-groupby";
@@ -50,6 +52,7 @@ export default function DemandasView() {
   const [explicitId, setExplicitId] = useState<string | null>(null);
   const [newOpen, setNewOpen] = useState(false);
   const [statusManagerOpen, setStatusManagerOpen] = useState(false);
+  const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
 
   // Estado da seleção múltipla / em lote
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
@@ -221,6 +224,16 @@ export default function DemandasView() {
             <button
               type="button"
               className="btn btn-secondary"
+              onClick={() => setWhatsappModalOpen(true)}
+              style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
+              title="Copiar resumo formatado para o WhatsApp da equipe"
+            >
+              <WhatsAppIcon size={15} style={{ color: "#25D366" }} />
+              WhatsApp
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
               onClick={() => setStatusManagerOpen(true)}
             >
               <SlidersHorizontal size={15} /> Status
@@ -298,11 +311,18 @@ export default function DemandasView() {
         onClose={() => setStatusManagerOpen(false)}
       />
 
+      <WhatsAppSummaryModal
+        isOpen={whatsappModalOpen}
+        onClose={() => setWhatsappModalOpen(false)}
+        initialSelectedIds={Array.from(selectedIds)}
+      />
+
       <BatchActionsBar
         selectedIds={selectedIds}
         onClearSelection={handleClearSelection}
         onSelectAll={handleSelectAll}
         totalVisible={visibleDemands.length}
+        onOpenWhatsApp={() => setWhatsappModalOpen(true)}
       />
     </motion.div>
   );

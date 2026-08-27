@@ -167,7 +167,7 @@ export default function PlanItemRow({ demand, onOpen, selected = false, onSelect
             </span>
           )}
 
-          <DueChip dueDate={demand.due_date} dueTime={demand.due_time} />
+          <DueChip demandId={demand.id} dueDate={demand.due_date} dueTime={demand.due_time} />
           <DemandStatusPill status={status} size="sm" />
 
           {contentType && (

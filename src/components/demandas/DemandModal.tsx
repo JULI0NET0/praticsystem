@@ -31,6 +31,7 @@ import {
   type DemandPriority,
 } from "@/types/demandas";
 import { useDemandas } from "./DemandasProvider";
+import { useConfirm } from "@/components/ConfirmProvider";
 import AssigneePicker from "./AssigneePicker";
 import AttachmentList from "./AttachmentList";
 import CommentThread from "./CommentThread";
@@ -73,6 +74,7 @@ export default function DemandModal({ demandId, onClose }: Props) {
     deleteDemand,
     loadDetails,
   } = useDemandas();
+  const { confirm } = useConfirm();
 
   const [titleDraft, setTitleDraft] = useState("");
   // Guarda de QUAL demanda e de QUAL título o rascunho veio.
@@ -207,9 +209,15 @@ export default function DemandModal({ demandId, onClose }: Props) {
     updateDemand(demand.id, { title: trimmed });
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!demand) return;
-    if (!window.confirm(`Excluir a demanda "${demand.title}"?`)) return;
+    const ok = await confirm({
+      title: "Excluir demanda",
+      message: `Excluir a demanda "${demand.title}"?`,
+      variant: "danger",
+      confirmText: "Excluir",
+    });
+    if (!ok) return;
     deleteDemand(demand.id);
     onClose();
   };

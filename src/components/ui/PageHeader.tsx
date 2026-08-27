@@ -24,16 +24,8 @@ export default function PageHeader({
   className,
 }: PageHeaderProps) {
   return (
-    <div
-      className={cn("mobile-stack", className)}
-      style={{
-        display: "flex",
-        alignItems: "flex-start",
-        gap: 12,
-        marginBottom: "var(--space-5)",
-      }}
-    >
-      <div style={{ minWidth: 0, flex: 1 }}>
+    <div className={cn("page-header", className)}>
+      <div className="page-header-info">
         {eyebrow && (
           <div
             style={{
@@ -74,15 +66,7 @@ export default function PageHeader({
         )}
       </div>
       {actions && (
-        <div
-          style={{
-            display: "flex",
-            gap: 8,
-            flexShrink: 0,
-            flexWrap: "wrap",
-            alignItems: "center",
-          }}
-        >
+        <div className="page-header-actions">
           {actions}
         </div>
       )}

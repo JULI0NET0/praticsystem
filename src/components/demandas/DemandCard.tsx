@@ -100,7 +100,7 @@ export default function DemandCard({
           gap: 8,
         }}
       >
-        <DueChip dueDate={demand.due_date} dueTime={demand.due_time} />
+        <DueChip demandId={demand.id} dueDate={demand.due_date} dueTime={demand.due_time} />
         <AssigneeStack
           assigneeIds={demand.assignee_ids ?? []}
           allTeam={demand.assign_all_team}

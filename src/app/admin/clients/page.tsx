@@ -93,17 +93,26 @@ export default function ClientsPage() {
     }
   };
 
-  const filteredClients = clients.filter(client => {
-    const matchesSearch = client.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (client.cnpj ?? "").includes(searchTerm) ||
-      client.email?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus =
-      statusFilter === "all" ||
-      (statusFilter === "active_prospect"
-        ? client.status === "active" || client.status === "prospect"
-        : client.status === statusFilter);
-    return matchesSearch && matchesStatus;
-  });
+  const filteredClients = clients
+    .filter(client => {
+      const q = searchTerm.toLowerCase();
+      const matchesSearch =
+        client.name?.toLowerCase().includes(q) ||
+        client.nome_fantasia?.toLowerCase().includes(q) ||
+        (client.cnpj ?? "").includes(searchTerm) ||
+        client.email?.toLowerCase().includes(q);
+      const matchesStatus =
+        statusFilter === "all" ||
+        (statusFilter === "active_prospect"
+          ? client.status === "active" || client.status === "prospect"
+          : client.status === statusFilter);
+      return matchesSearch && matchesStatus;
+    })
+    .sort((a, b) => {
+      const nameA = (a.nome_fantasia || a.name || "").trim();
+      const nameB = (b.nome_fantasia || b.name || "").trim();
+      return nameA.localeCompare(nameB, 'pt-BR', { sensitivity: 'base' });
+    });
 
   const handleCreateClient = (e: React.FormEvent) => {
     e.preventDefault();
@@ -167,14 +176,14 @@ export default function ClientsPage() {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}
+      style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '16px' }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <h1 style={{ fontSize: 'clamp(1.4rem, 4vw, 2rem)', fontWeight: 700, marginBottom: '8px' }}>Gestão de Clientes</h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: 'clamp(0.8rem, 2vw, 1rem)' }}>Visualize e gerencie toda a sua carteira de clientes.</p>
+      <div className="page-header">
+        <div className="page-header-info">
+          <h1 style={{ fontSize: 'clamp(1.4rem, 4vw, 2rem)', fontWeight: 700, marginBottom: '6px' }}>Gestão de Clientes</h1>
+          <p style={{ color: 'var(--text-secondary)', fontSize: 'clamp(0.85rem, 2vw, 1rem)' }}>Visualize e gerencie toda a sua carteira de clientes.</p>
         </div>
-        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+        <div className="page-header-actions">
           <button
             onClick={() => {
               const url = `${window.location.origin}/onboarding`;

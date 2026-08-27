@@ -1,7 +1,73 @@
-/* ============================================================
-   COMPONENTES — planos e densos.
-   Sem gradiente, sem glow, sem blur, sem translateY no hover.
-   ============================================================ */
+/* ---------- Cabeçalhos de Página Responsivos ---------- */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+  width: 100%;
+}
+
+.page-header-info {
+  flex: 1 1 280px;
+  min-width: 240px;
+  max-width: 100%;
+}
+
+.page-header-info h1,
+.page-header h1 {
+  word-break: normal;
+  overflow-wrap: break-word;
+  hyphens: manual;
+}
+
+.page-header-info p,
+.page-header p {
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+
+.page-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+@media (max-width: 900px) {
+  .page-header {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 14px !important;
+  }
+
+  .page-header-info {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .page-header-actions {
+    width: 100% !important;
+    justify-content: flex-start !important;
+    gap: 8px !important;
+  }
+}
+
+/* ---------- Utilitários de Rolagem Horizontal sem Barra Visível ---------- */
+.tabs-scrollable,
+.filter-tabs-scrollable,
+.horizontal-scroll-row {
+  display: flex;
+  align-items: center;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  max-width: 100%;
+  flex-wrap: nowrap;
+}
 
 /* ---------- Botões ---------- */
 .btn {
@@ -743,6 +809,14 @@ input[type='date'] {
   border: 1px solid var(--color-border-default);
   border-radius: var(--radius-md);
   background: var(--color-surface-sunken);
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.filter-tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .filter-tab {

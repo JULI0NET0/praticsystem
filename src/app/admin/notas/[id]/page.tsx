@@ -9,6 +9,7 @@ import {
   ArrowLeft, Calendar, Tag, Users, Building2,
   X, Plus, Loader2, Check, Share2, Trash2, UserCircle,
   BookmarkCheck, User, Printer, FileDown, ChevronDown, ChevronUp, Sparkles,
+  Clapperboard, ExternalLink,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
@@ -19,6 +20,7 @@ import CustomModal from '@/components/CustomModal';
 import { organizeMeetingNotes } from '@/lib/notesAudio';
 import { markdownToTiptapJson } from '@/lib/markdownToTiptapJson';
 import Combobox from '@/components/ui/Combobox';
+import DatePicker from '@/components/ui/DatePicker';
 import { OrganizeMode, ORGANIZE_MODE_LABELS, DEFAULT_ORGANIZE_MODE } from '@/lib/organizeModes';
 
 const BlockEditor = dynamic(() => import('@/components/notas/BlockEditor'), {
@@ -30,7 +32,7 @@ const BlockEditor = dynamic(() => import('@/components/notas/BlockEditor'), {
   ),
 });
 
-type NoteState = Omit<Note, 'id' | 'created_at' | 'updated_at' | 'client' | 'author'>;
+type NoteState = Omit<Note, 'id' | 'created_at' | 'updated_at' | 'client' | 'author' | 'plan'>;
 
 export default function NotaDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -49,6 +51,9 @@ export default function NotaDetailPage() {
     share_all: false,
     pin_to_client: false,
     client_id: undefined,
+    plan_id: null,
+    is_script: false,
+    demand_id: null,
     raw_transcript: null,
     last_organized_at: null,
   });
@@ -57,6 +62,7 @@ export default function NotaDetailPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [clients, setClients] = useState<Pick<Client, 'id' | 'name' | 'nome_fantasia'>[]>([]);
+  const [contentPlans, setContentPlans] = useState<{ id: string; title: string; month_ref: string; client_id: string }[]>([]);
   const [newSubject, setNewSubject] = useState('');
   const [isOwner, setIsOwner] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -85,6 +91,7 @@ export default function NotaDetailPage() {
   useEffect(() => {
     fetchNote();
     fetchClients();
+    fetchContentPlans();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
@@ -106,6 +113,9 @@ export default function NotaDetailPage() {
         share_all: data.share_all ?? false,
         pin_to_client: data.pin_to_client ?? false,
         client_id: data.client_id ?? undefined,
+        plan_id: data.plan_id ?? null,
+        is_script: data.is_script ?? false,
+        demand_id: data.demand_id ?? null,
         raw_transcript: data.raw_transcript ?? null,
         last_organized_at: data.last_organized_at ?? null,
       });
@@ -121,6 +131,14 @@ export default function NotaDetailPage() {
       .eq('status', 'active')
       .order('name');
     if (data) setClients(data as any);
+  };
+
+  const fetchContentPlans = async () => {
+    const { data } = await supabase
+      .from('content_plans')
+      .select('id, title, month_ref, client_id')
+      .order('month_ref', { ascending: false });
+    if (data) setContentPlans(data as any);
   };
 
   const persist = useCallback(
@@ -142,6 +160,9 @@ export default function NotaDetailPage() {
           share_all: updated.share_all,
           pin_to_client: updated.pin_to_client,
           client_id: updated.client_id ?? null,
+          plan_id: updated.plan_id ?? null,
+          is_script: updated.is_script ?? false,
+          demand_id: updated.demand_id ?? null,
         })
         .eq('id', id);
       setSaving(false);
@@ -596,88 +617,115 @@ export default function NotaDetailPage() {
               >
                 <div style={{
                   display: 'grid',
-                  gridTemplateColumns: isMobile ? '1fr' : isOwner ? 'repeat(4, 1fr)' : 'repeat(3, 1fr)',
-                  gap: '16px',
+                  gridTemplateColumns: isMobile
+                    ? '1fr'
+                    : isOwner
+                      ? 'minmax(110px, 0.55fr) minmax(130px, 0.85fr) minmax(130px, 0.75fr) minmax(170px, 1.25fr) minmax(170px, 1.25fr)'
+                      : 'minmax(110px, 0.55fr) minmax(140px, 0.9fr) minmax(180px, 1.35fr) minmax(180px, 1.35fr)',
+                  gap: '12px',
                   paddingBottom: '20px',
                   borderBottom: '1px solid var(--color-border-subtle)',
                   marginBottom: '8px'
                 }}>
-                  {/* Date */}
                   <SideSection icon={<Calendar size={13} />} label="Data">
-                    <input
-                      type="date"
+                    <DatePicker
                       value={note.date ?? new Date().toISOString().split('T')[0]}
-                      onChange={e => updateNote({ date: e.target.value })}
+                      onChange={(val) => updateNote({ date: val ?? new Date().toISOString().split('T')[0] })}
                       disabled={!canEdit}
-                      style={{ width: '100%', background: 'var(--color-surface-sunken)', border: '1px solid var(--border)', borderRadius: '8px', padding: '7px 10px', color: 'var(--color-text-primary)', fontSize: '0.85rem', outline: 'none' }}
+                      withTime={false}
+                      clearable={false}
                     />
                   </SideSection>
 
-                   {/* Subjects */}
+                  {/* Subjects */}
                   <SideSection icon={<Tag size={13} />} label="Assuntos">
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: (note.subjects ?? []).filter(s => !s.startsWith('_')).length ? '6px' : 0 }}>
+                    {canEdit && (
+                      <div style={{ display: 'flex', gap: '4px', marginBottom: (note.subjects ?? []).filter(s => !s.startsWith('_')).length ? '6px' : 0 }}>
+                        <input
+                          value={newSubject}
+                          onChange={e => setNewSubject(e.target.value)}
+                          onKeyDown={e => e.key === 'Enter' && addSubject()}
+                          placeholder="Novo assunto..."
+                          style={{
+                            flex: 1,
+                            minWidth: 0,
+                            width: '100%',
+                            background: 'var(--color-surface-sunken)',
+                            border: '1px solid var(--border)',
+                            borderRadius: '8px',
+                            padding: '6px 8px',
+                            color: 'var(--color-text-primary)',
+                            fontSize: '0.78rem',
+                            outline: 'none',
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={addSubject}
+                          style={{
+                            background: 'var(--accent)',
+                            border: 'none',
+                            borderRadius: '8px',
+                            padding: '6px 9px',
+                            color: 'var(--color-text-on-accent)',
+                            cursor: 'pointer',
+                            flexShrink: 0,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <Plus size={13} />
+                        </button>
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', maxHeight: '56px', overflowY: 'auto' }}>
                       {(note.subjects ?? []).filter(s => !s.startsWith('_')).map(s => (
-                        <span key={s} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'color-mix(in oklab, var(--accent) 10%, transparent)', color: 'var(--accent)', padding: '2px 8px', borderRadius: '20px', fontSize: '0.72rem', fontWeight: 600, border: '1px solid color-mix(in oklab, var(--accent) 20%, transparent)' }}>
-                          {s}
+                        <span key={s} style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', background: 'color-mix(in oklab, var(--accent) 10%, transparent)', color: 'var(--accent)', padding: '2px 7px', borderRadius: '20px', fontSize: '0.7rem', fontWeight: 600, border: '1px solid color-mix(in oklab, var(--accent) 20%, transparent)', maxWidth: '100%' }}>
+                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s}</span>
                           {canEdit && (
-                            <button onClick={() => removeSubject(s)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: 0, display: 'flex', lineHeight: 1 }}>
+                            <button onClick={() => removeSubject(s)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: 0, display: 'flex', lineHeight: 1, flexShrink: 0 }}>
                               <X size={10} />
                             </button>
                           )}
                         </span>
                       ))}
                     </div>
-                    {canEdit && (
-                      <div style={{ display: 'flex', gap: '6px' }}>
-                        <input
-                          value={newSubject}
-                          onChange={e => setNewSubject(e.target.value)}
-                          onKeyDown={e => e.key === 'Enter' && addSubject()}
-                          placeholder="Novo assunto..."
-                          style={{ flex: 1, background: 'var(--color-surface-sunken)', border: '1px solid var(--border)', borderRadius: '8px', padding: '6px 10px', color: 'var(--color-text-primary)', fontSize: '0.8rem', outline: 'none' }}
-                        />
-                        <button onClick={addSubject} style={{ background: 'var(--accent)', border: 'none', borderRadius: '8px', padding: '6px 10px', color: 'var(--color-text-on-accent)', cursor: 'pointer' }}>
-                          <Plus size={14} />
-                        </button>
-                      </div>
-                    )}
                   </SideSection>
 
-                  {/* Share — only owner can change */}
                   {isOwner ? (
                     <SideSection icon={<Share2 size={13} />} label="Compartilhar">
-                      <div style={{ display: 'flex', gap: '6px', marginBottom: '8px' }}>
+                      <div style={{ display: 'flex', gap: '4px', marginBottom: '6px' }}>
                         <button
                           onClick={shareWithAll}
                           style={{
-                            flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
-                            padding: '6px 8px', borderRadius: '8px', border: '1px solid',
-                            fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
+                            flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px',
+                            padding: '5px 6px', borderRadius: '8px', border: '1px solid',
+                            fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
                             borderColor: note.share_all ? 'var(--accent)' : 'var(--border)',
                             background: note.share_all ? 'color-mix(in oklab, var(--accent) 15%, transparent)' : 'var(--color-surface-sunken)',
                             color: note.share_all ? 'var(--accent)' : 'var(--text-secondary)',
+                            whiteSpace: 'nowrap',
                           }}
                         >
-                          <Users size={12} /> Time
+                          <Users size={11} /> Time
                         </button>
                         <button
                           onClick={clearShare}
                           style={{
-                            flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
-                            padding: '6px 8px', borderRadius: '8px', border: '1px solid',
-                            fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
+                            flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px',
+                            padding: '5px 6px', borderRadius: '8px', border: '1px solid',
+                            fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
                             borderColor: !note.share_all && (note.shared_with ?? []).length === 0 ? 'var(--color-border-subtle)' : 'var(--border)',
                             background: !note.share_all && (note.shared_with ?? []).length === 0 ? 'var(--color-border-subtle)' : 'var(--color-surface-sunken)',
                             color: !note.share_all && (note.shared_with ?? []).length === 0 ? 'white' : 'var(--text-secondary)',
+                            whiteSpace: 'nowrap',
                           }}
                         >
-                          <User size={12} /> Só eu
+                          <User size={11} /> Só eu
                         </button>
                       </div>
 
-                      {/* Chips horizontais em vez de uma lista vertical
-                          com checkbox: a lista empilhada esticava este
-                          card e desalinhava os outros três da faixa. */}
                       {!note.share_all && teamMembers.length > 0 && (
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
                           {teamMembers.map(user => {
@@ -700,10 +748,10 @@ export default function NotaDetailPage() {
                                   display: 'inline-flex',
                                   alignItems: 'center',
                                   justifyContent: 'center',
-                                  width: '26px',
-                                  height: '26px',
+                                  width: '24px',
+                                  height: '24px',
                                   borderRadius: 'var(--radius-full)',
-                                  fontSize: '0.65rem',
+                                  fontSize: '0.62rem',
                                   fontWeight: 700,
                                   cursor: 'pointer',
                                   transition: 'background 0.15s, border-color 0.15s, color 0.15s',
@@ -722,7 +770,6 @@ export default function NotaDetailPage() {
                     </SideSection>
                   ) : null}
 
-                  {/* Client */}
                   <SideSection icon={<Building2 size={13} />} label="Cliente vinculado">
                     {canEdit ? (
                       <Combobox
@@ -748,9 +795,9 @@ export default function NotaDetailPage() {
                     )}
 
                     {note.client_id && canEdit && (
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px', cursor: 'pointer', padding: '6px 8px', borderRadius: '8px', border: '1px solid', transition: 'all 0.15s', borderColor: note.pin_to_client ? 'color-mix(in oklab, var(--accent) 35%, transparent)' : 'var(--border)', background: note.pin_to_client ? 'color-mix(in oklab, var(--accent) 8%, transparent)' : 'var(--color-surface-sunken)' }}>
-                        <BookmarkCheck size={14} color={note.pin_to_client ? 'var(--accent)' : 'var(--text-secondary)'} style={{ flexShrink: 0 }} />
-                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: note.pin_to_client ? 'var(--accent)' : 'white' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px', cursor: 'pointer', padding: '5px 8px', borderRadius: '8px', border: '1px solid', transition: 'all 0.15s', borderColor: note.pin_to_client ? 'color-mix(in oklab, var(--accent) 35%, transparent)' : 'var(--border)', background: note.pin_to_client ? 'color-mix(in oklab, var(--accent) 8%, transparent)' : 'var(--color-surface-sunken)' }}>
+                        <BookmarkCheck size={13} color={note.pin_to_client ? 'var(--accent)' : 'var(--text-secondary)'} style={{ flexShrink: 0 }} />
+                        <span style={{ fontSize: '0.72rem', fontWeight: 600, color: note.pin_to_client ? 'var(--accent)' : 'white', whiteSpace: 'nowrap' }}>
                           Incluir no cadastro
                         </span>
                         <input
@@ -762,12 +809,69 @@ export default function NotaDetailPage() {
                       </label>
                     )}
                   </SideSection>
+
+                  <SideSection icon={<Clapperboard size={13} />} label="Cronograma / Roteiro">
+                    {canEdit ? (
+                      <Combobox
+                        options={contentPlans
+                          .filter(cp => !note.client_id || cp.client_id === note.client_id)
+                          .map(cp => ({
+                            value: cp.id,
+                            label: `${cp.title} (${cp.month_ref})`,
+                            keywords: `${cp.title} ${cp.month_ref}`,
+                          }))}
+                        value={note.plan_id ?? null}
+                        onChange={val => updateNote({ plan_id: val ?? null, is_script: val ? true : note.is_script })}
+                        clearOption={{ label: "Nenhum cronograma" }}
+                        placeholder="Nenhum cronograma"
+                        searchPlaceholder="Buscar cronograma..."
+                      />
+                    ) : (
+                      <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: 0 }}>
+                        {note.plan_id ? (contentPlans.find(cp => cp.id === note.plan_id)?.title || 'Cronograma vinculado') : '—'}
+                      </p>
+                    )}
+
+                    {canEdit && (
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px', cursor: 'pointer', padding: '5px 8px', borderRadius: '8px', border: '1px solid', transition: 'all 0.15s', borderColor: note.is_script ? 'color-mix(in oklab, var(--accent) 35%, transparent)' : 'var(--border)', background: note.is_script ? 'color-mix(in oklab, var(--accent) 8%, transparent)' : 'var(--color-surface-sunken)' }}>
+                        <Clapperboard size={13} color={note.is_script ? 'var(--accent)' : 'var(--text-secondary)'} style={{ flexShrink: 0 }} />
+                        <span style={{ fontSize: '0.72rem', fontWeight: 600, color: note.is_script ? 'var(--accent)' : 'white', whiteSpace: 'nowrap' }}>
+                          Roteiro de Conteúdo
+                        </span>
+                        <input
+                          type="checkbox"
+                          checked={!!note.is_script}
+                          onChange={e => updateNote({ is_script: e.target.checked })}
+                          style={{ accentColor: 'var(--accent)', width: '13px', height: '13px', marginLeft: 'auto', flexShrink: 0 }}
+                        />
+                      </label>
+                    )}
+
+                    {note.plan_id && (
+                      <div style={{ marginTop: '4px' }}>
+                        <Link
+                          href={`/admin/cronogramas/${note.plan_id}`}
+                          target="_blank"
+                          style={{
+                            fontSize: '0.72rem',
+                            color: 'var(--accent)',
+                            textDecoration: 'none',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            fontWeight: 600,
+                          }}
+                        >
+                          <ExternalLink size={11} /> Ver cronograma
+                        </Link>
+                      </div>
+                    )}
+                  </SideSection>
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
 
-          {/* Title Area (Static) */}
           <div style={{
             margin: '10px 0 5px 0',
             padding: '0',
@@ -787,16 +891,15 @@ export default function NotaDetailPage() {
           />
         </div>
 
-      {/* ── Print overlay (hidden on screen, visible on print) ─────────── */}
       <PrintOverlay note={note} linkedClient={linkedClient} />
 
       <CustomModal
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={deleteNote}
-        title="Excluir nota"
+        title="Excluir Nota"
         message="Tem certeza que deseja excluir esta nota permanentemente? Esta ação não pode ser desfeita."
-        type="confirm"
+        type="danger"
         confirmText="Excluir"
         cancelText="Cancelar"
       />
@@ -818,11 +921,9 @@ export default function NotaDetailPage() {
 
 function SideSection({ icon, label, children }: { icon: React.ReactNode; label: string; children: React.ReactNode }) {
   return (
-    // height 100% para preencher a célula esticada do grid — sem isso
-    // o card não acompanha a altura da linha e os quatro desalinham.
-    <div className="glass-card" style={{ padding: '12px 14px', height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '10px', color: 'var(--color-text-tertiary)', fontSize: 'var(--text-micro)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-        {icon} {label}
+    <div className="glass-card" style={{ padding: '10px 12px', height: '100%', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', color: 'var(--color-text-tertiary)', fontSize: 'var(--text-micro)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        {icon} <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
       </div>
       {children}
     </div>

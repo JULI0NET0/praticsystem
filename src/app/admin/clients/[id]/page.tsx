@@ -56,6 +56,7 @@ import Spotlight from "@/components/Spotlight";
 import DialogShell from "@/components/DialogShell";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/components/CustomToast";
+import { useConfirm } from "@/components/ConfirmProvider";
 import {
   InstagramIcon,
   FacebookIcon,
@@ -86,6 +87,7 @@ export default function ClientDetailPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { showToast } = useToast();
+  const { confirm } = useConfirm();
   const { currentUser } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
@@ -459,8 +461,13 @@ export default function ClientDetailPage() {
   };
 
   const handleDeleteNote = async (noteToDelete: any) => {
-    const confirm = window.confirm(`Tem certeza que deseja excluir a nota "${noteToDelete.title || 'Sem título'}"?`);
-    if (!confirm) return;
+    const ok = await confirm({
+      title: "Excluir nota",
+      message: `Tem certeza que deseja excluir a nota "${noteToDelete.title || 'Sem título'}"?`,
+      variant: "danger",
+      confirmText: "Excluir",
+    });
+    if (!ok) return;
     try {
       const { error } = await supabase.from('notes').delete().eq('id', noteToDelete.id);
       if (error) throw error;
@@ -615,13 +622,15 @@ export default function ClientDetailPage() {
     setIsDeleting(true);
     try {
       const res = await fetch(`/api/clients/${id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Falha ao excluir');
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Falha ao excluir cliente');
 
+      showToast("Cliente excluído com sucesso!", 'success');
       setIsDeleteModalOpen(false);
       router.push("/admin/clients");
-    } catch (err) {
+    } catch (err: any) {
       console.error("Erro ao excluir cliente:", err);
-      showToast("Erro ao excluir cliente. Verifique se há dependências.", 'error');
+      showToast(err.message || "Erro ao excluir cliente.", 'error');
     } finally {
       setIsDeleting(false);
     }

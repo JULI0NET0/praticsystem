@@ -198,6 +198,48 @@ export default function ClientSidebar() {
           </AnimatePresence>
         </div>
 
+        {mounted && (
+          <button
+            onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
+            onMouseEnter={(e) => {
+              setHoveredPath('client-theme');
+              if (!isExpanded) {
+                const rect = e.currentTarget.getBoundingClientRect();
+                setActiveTooltip({ label: resolvedTheme === 'dark' ? "Modo Claro" : "Modo Escuro", top: rect.top + rect.height / 2 });
+              }
+            }}
+            onMouseLeave={() => {
+              setHoveredPath(null);
+              setActiveTooltip(null);
+            }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '12px', padding: isExpanded ? '12px 16px' : '12px 0', borderRadius: '12px',
+              background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer',
+              transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+              justifyContent: isExpanded ? 'flex-start' : 'center',
+              position: 'relative',
+              overflow: 'hidden'
+            }}
+          >
+            <div style={{ minWidth: '20px', minHeight: '20px', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              {resolvedTheme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+            </div>
+            <AnimatePresence initial={false}>
+              {isExpanded && (
+                <motion.span
+                  initial={{ opacity: 0, width: 0 }}
+                  animate={{ opacity: 1, width: 'auto' }}
+                  exit={{ opacity: 0, width: 0 }}
+                  transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                  style={{ whiteSpace: 'nowrap', overflow: 'hidden' }}
+                >
+                  {resolvedTheme === 'dark' ? "Modo Claro" : "Modo Escuro"}
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </button>
+        )}
+
         <button
           onClick={() => window.location.href = '/login'}
           onMouseEnter={(e) => {

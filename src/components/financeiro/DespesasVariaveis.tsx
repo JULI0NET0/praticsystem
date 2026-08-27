@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import DialogShell from "@/components/DialogShell";
+import { useConfirm } from "@/components/ConfirmProvider";
 import { ExpenseLinkDialog } from "@/components/financeiro/ExpenseLinkDialog";
 import type { Expense, ExpenseEntry, ExpenseCategory, AsaasTransaction } from "@/types/database";
 import { tint } from "@/lib/tint";
@@ -52,6 +53,7 @@ export function DespesasVariaveis({
   onDeleteEntry,
   onLinkTransaction,
 }: DespesasVariaveisProps) {
+  const { confirm } = useConfirm();
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const [groupDialog, setGroupDialog] = useState(false);
@@ -297,9 +299,15 @@ export function DespesasVariaveis({
                       <Pencil size={14} />
                     </button>
                     <button
-                      onClick={(e) => {
+                      onClick={async (e) => {
                         e.stopPropagation();
-                        if (confirm(`Excluir o grupo "${group.description}" e todos os seus lançamentos?`)) onDeleteGroup(group.id);
+                        const ok = await confirm({
+                          title: "Excluir grupo",
+                          message: `Excluir o grupo "${group.description}" e todos os seus lançamentos?`,
+                          variant: "danger",
+                          confirmText: "Excluir",
+                        });
+                        if (ok) onDeleteGroup(group.id);
                       }}
                       style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-danger)", padding: "4px", display: "flex" }}
                       title="Excluir grupo"
@@ -450,7 +458,15 @@ export function DespesasVariaveis({
                                           )}
                                           {onDeleteEntry && (
                                             <button
-                                              onClick={() => { if (confirm("Excluir este lançamento?")) onDeleteEntry(entry.id); }}
+                                              onClick={async () => {
+                                                const ok = await confirm({
+                                                  title: "Excluir lançamento",
+                                                  message: "Excluir este lançamento?",
+                                                  variant: "danger",
+                                                  confirmText: "Excluir",
+                                                });
+                                                if (ok) onDeleteEntry(entry.id);
+                                              }}
                                               style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-danger)", padding: "4px", display: "flex" }}
                                               title="Excluir"
                                             >

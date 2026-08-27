@@ -1,4 +1,13 @@
-import { Clapperboard, Quote, Sparkles, Video, type LucideIcon } from 'lucide-react';
+import {
+  Clapperboard,
+  ImageIcon,
+  Layers,
+  Palette,
+  Quote,
+  Sparkles,
+  Video,
+  type LucideIcon,
+} from 'lucide-react';
 
 export interface ContentTypeDef {
   id: string;
@@ -18,7 +27,10 @@ export interface ContentTypeDef {
 export const CONTENT_TYPES: ContentTypeDef[] = [
   { id: 'video', label: 'Vídeo', color: '#5B84AD', icon: Video },
   { id: 'reels', label: 'Reels', color: '#A66189', icon: Clapperboard },
+  { id: 'carrossel', label: 'Carrossel', color: '#38A3A5', icon: Layers },
+  { id: 'imagem_frase', label: 'Imagem + Frase', color: '#D48B38', icon: ImageIcon },
   { id: 'frase', label: 'Frase', color: '#BE8A4A', icon: Quote },
+  { id: 'criativo', label: 'Criativo', color: '#8F6593', icon: Palette },
   { id: 'extra', label: 'Conteúdo extra', color: '#788C5D', icon: Sparkles },
 ];
 

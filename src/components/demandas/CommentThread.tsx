@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { splitMentions, type QuickCatalogs } from "@/lib/quickParse";
 import { clientLabel } from "@/types/demandas";
 import { useDemandas } from "./DemandasProvider";
+import { LinkifiedText } from "@/lib/linkify";
 import { UserAvatar } from "./AssigneePicker";
 import { AttachmentChip } from "./AttachmentList";
 import MentionTextarea from "./MentionTextarea";
@@ -16,14 +17,12 @@ const MENTION_STYLE: Record<"user" | "client", React.CSSProperties> = {
 };
 
 /**
- * Destaca `@Colaborador` e `#Cliente`. Casa contra os nomes do catálogo em vez
- * de um `@\S+`: os nomes têm espaço, e o padrão antigo destacava só a primeira
- * palavra de "@Julio Neto".
+ * Destaca `@Colaborador` e `#Cliente` e converte links para elementos clicáveis.
  */
 function renderBody(body: string, catalogs: QuickCatalogs) {
   return splitMentions(body, catalogs).map((segment, index) =>
     segment.kind === "text" ? (
-      <span key={index}>{segment.value}</span>
+      <LinkifiedText key={index} text={segment.value} />
     ) : (
       <span key={index} style={MENTION_STYLE[segment.kind]}>
         {segment.value}

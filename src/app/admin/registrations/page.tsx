@@ -63,7 +63,7 @@ export default function RegistrationsPage() {
           <p style={{ color: 'var(--text-secondary)' }}>Gerencie todos os registros e configurações estruturais do sistema.</p>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '24px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 280px), 1fr))', gap: '20px' }}>
           {REGISTRATION_CARDS.map((card, idx) => (
             <Link key={card.title} href={card.href} style={{ textDecoration: 'none', color: 'inherit' }}>
               <motion.div 

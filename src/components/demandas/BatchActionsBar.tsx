@@ -11,12 +11,15 @@ import { toISODate } from "@/lib/dueDate";
 import { PRIORITY_COLORS, type DemandPriority, type AgendaSubject } from "@/types/demandas";
 import { DEMAND_AGENDA_SUBJECTS } from "@/lib/agendaCategories";
 import { useDemandas } from "./DemandasProvider";
+import { CalendarPopover } from "@/components/ui/DatePicker";
+import { WhatsAppIcon } from "@/components/SocialIcons";
 
 interface Props {
   selectedIds: Set<string>;
   onClearSelection: () => void;
   onSelectAll: () => void;
   totalVisible: number;
+  onOpenWhatsApp?: () => void;
 }
 
 export default function BatchActionsBar({
@@ -24,6 +27,7 @@ export default function BatchActionsBar({
   onClearSelection,
   onSelectAll,
   totalVisible,
+  onOpenWhatsApp,
 }: Props) {
   const { statuses, batchMoveDemands, batchUpdateDemands, batchDeleteDemands, batchToggleComplete } = useDemandas();
   
@@ -31,6 +35,7 @@ export default function BatchActionsBar({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [customDate, setCustomDate] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
+  const dueButtonRef = useRef<HTMLButtonElement>(null);
 
   const selectedCount = selectedIds.size;
   const isAllSelected = selectedCount === totalVisible && totalVisible > 0;
@@ -245,6 +250,7 @@ export default function BatchActionsBar({
         {/* Botão Reagendar Prazo */}
         <div style={{ position: "relative" }}>
           <button
+            ref={dueButtonRef}
             type="button"
             className="btn btn-secondary"
             onClick={() => setOpenMenu(openMenu === "due" ? null : "due")}
@@ -253,97 +259,17 @@ export default function BatchActionsBar({
             <Calendar size={13} /> Reagendar <ChevronDown size={11} />
           </button>
 
-          {openMenu === "due" && (
-            <div
-              style={{
-                position: "absolute",
-                bottom: "calc(100% + 8px)",
-                left: 0,
-                width: 200,
-                background: "var(--color-surface-raised)",
-                border: "1px solid var(--border)",
-                borderRadius: "14px",
-                padding: 6,
-                boxShadow: "0 12px 30px rgba(0,0,0,0.3)",
-                display: "flex",
-                flexDirection: "column",
-                gap: 2,
-                zIndex: 10,
-              }}
-            >
-              <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "var(--text-tertiary)", padding: "4px 8px", textTransform: "uppercase" }}>
-                Definir prazo
-              </span>
-              <button
-                type="button"
-                onClick={() => handleSetDue(toISODate(new Date()))}
-                style={{
-                  display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", borderRadius: "8px",
-                  background: "transparent", border: "none", color: "var(--accent)", fontSize: "0.8rem", fontWeight: 600, cursor: "pointer", textAlign: "left"
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-surface-sunken)")}
-                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-              >
-                ⚡ Hoje
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSetDue(tomorrowDate())}
-                style={{
-                  display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", borderRadius: "8px",
-                  background: "transparent", border: "none", color: "var(--text-primary)", fontSize: "0.8rem", fontWeight: 500, cursor: "pointer", textAlign: "left"
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-surface-sunken)")}
-                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-              >
-                ☀️ Amanhã
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSetDue(nextMondayDate())}
-                style={{
-                  display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", borderRadius: "8px",
-                  background: "transparent", border: "none", color: "var(--text-primary)", fontSize: "0.8rem", fontWeight: 500, cursor: "pointer", textAlign: "left"
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-surface-sunken)")}
-                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-              >
-                📅 Próxima Segunda
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSetDue(null)}
-                style={{
-                  display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", borderRadius: "8px",
-                  background: "transparent", border: "none", color: "var(--text-tertiary)", fontSize: "0.8rem", fontWeight: 500, cursor: "pointer", textAlign: "left"
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-surface-sunken)")}
-                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-              >
-                ❌ Sem Prazo
-              </button>
-
-              <div style={{ borderTop: "1px solid var(--border)", margin: "4px 0", paddingTop: 6 }}>
-                <input
-                  type="date"
-                  value={customDate}
-                  onChange={(e) => {
-                    setCustomDate(e.target.value);
-                    if (e.target.value) handleSetDue(e.target.value);
-                  }}
-                  style={{
-                    width: "100%",
-                    fontSize: "0.78rem",
-                    padding: "6px 8px",
-                    borderRadius: "8px",
-                    border: "1px solid var(--border)",
-                    background: "var(--color-surface-sunken)",
-                    color: "var(--text-primary)",
-                  }}
-                />
-              </div>
-            </div>
-          )}
+          <CalendarPopover
+            open={openMenu === "due"}
+            onClose={() => setOpenMenu(null)}
+            anchorEl={dueButtonRef.current}
+            value={null}
+            onSelect={(d) => {
+              handleSetDue(d);
+            }}
+            title="Reagendar em Lote"
+            withTime={false}
+          />
         </div>
 
         {/* Botão Prioridade */}
@@ -466,6 +392,19 @@ export default function BatchActionsBar({
             </div>
           )}
         </div>
+
+        {/* WhatsApp Export */}
+        {onOpenWhatsApp && (
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={onOpenWhatsApp}
+            style={{ padding: "6px 10px", fontSize: "0.78rem", height: 32, color: "#25D366", borderColor: "rgba(37, 211, 102, 0.3)" }}
+            title="Copiar resumo formatado para WhatsApp"
+          >
+            <WhatsAppIcon size={14} style={{ color: "#25D366" }} /> WhatsApp
+          </button>
+        )}
 
         {/* Concluir / Reabrir */}
         <button

@@ -181,17 +181,17 @@ export default function UsersPage() {
         transition={{ duration: 0.5 }}
         style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}
       >
-      <div className="mobile-stack" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px' }}>
-        <div>
-          <h1 style={{ fontSize: 'clamp(1.5rem, 4vw, 2rem)', fontWeight: 700, marginBottom: '8px' }}>Gestão de Equipe</h1>
+      <div className="page-header">
+        <div className="page-header-info">
+          <h1 style={{ fontSize: 'clamp(1.5rem, 4vw, 2rem)', fontWeight: 700, marginBottom: '6px' }}>Gestão de Equipe</h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Gerencie os membros, cargos e frases de status da Prátic.</p>
         </div>
-        <div className="mobile-stack" style={{ display: 'flex', gap: '12px' }}>
+        <div className="page-header-actions">
           <Link href="/admin/users/roles">
-            <Spotlight as="button" className="btn" style={{ background: 'var(--color-surface-sunken)', minHeight: '44px' }}>Gerenciar Cargos</Spotlight>
+            <Spotlight as="button" className="btn" style={{ background: 'var(--color-surface-sunken)', minHeight: '40px' }}>Gerenciar Cargos</Spotlight>
           </Link>
           <Link href="/admin/users/create">
-            <Spotlight as="button" className="btn btn-accent" style={{ minHeight: '44px' }}><Plus size={18} /> Criar Novo Usuário</Spotlight>
+            <Spotlight as="button" className="btn btn-accent" style={{ minHeight: '40px' }}><Plus size={18} /> Criar Novo Usuário</Spotlight>
           </Link>
         </div>
       </div>

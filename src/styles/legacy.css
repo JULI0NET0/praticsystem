@@ -254,12 +254,15 @@
   }
 }
 
-/* Mobile-specific responsive helpers */
-@media (max-width: 768px) {
+/* Mobile and Tablet responsive helpers */
+@media (max-width: 900px) {
   .mobile-stack {
     flex-direction: column !important;
     align-items: stretch !important;
   }
+}
+
+@media (max-width: 768px) {
 
   /* Header de detalhe do cliente: info acima, botões abaixo em linha */
   .client-page-header {

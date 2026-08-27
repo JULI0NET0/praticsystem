@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/components/CustomToast";
+import { useConfirm } from "@/components/ConfirmProvider";
 import { Loader2, LayoutDashboard, AlertTriangle, ListOrdered, Wallet, RefreshCw, Layers, Repeat } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { FinancialKPIs } from "@/components/financeiro/FinancialKPIs";
@@ -29,6 +30,7 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
 export default function FinanceiroPage() {
   const now = new Date();
   const { showToast } = useToast();
+  const { confirm } = useConfirm();
 
   const [tab, setTab] = useState<Tab>("dashboard");
   const [dateRange, setDateRange] = useState(() => {
@@ -240,7 +242,13 @@ export default function FinanceiroPage() {
     const msg = entries.length > 0
       ? `Remover esta despesa e as ${entries.length} fatura(s) gerada(s)? Esta ação não pode ser desfeita.`
       : "Remover esta despesa? Esta ação não pode ser desfeita.";
-    if (!confirm(msg)) return;
+    const ok = await confirm({
+      title: "Remover despesa",
+      message: msg,
+      variant: "danger",
+      confirmText: "Remover",
+    });
+    if (!ok) return;
     await supabase.from("expense_entries").delete().eq("expense_id", id);
     await supabase.from("expenses").delete().eq("id", id);
     setExpenses((prev) => prev.filter((e) => e.id !== id));
@@ -500,7 +508,7 @@ export default function FinanceiroPage() {
       />
 
       {/* Tabs */}
-      <div style={{ display: "flex", gap: "4px", background: "var(--color-surface-sunken)", padding: "4px", borderRadius: "16px", border: "1px solid var(--border)", overflowX: "auto" }}>
+      <div className="tabs-scrollable" style={{ gap: "4px", background: "var(--color-surface-sunken)", padding: "4px", borderRadius: "16px", border: "1px solid var(--border)" }}>
         {TABS.map((t) => (
           <button
             key={t.id}

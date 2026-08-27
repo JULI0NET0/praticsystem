@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Building2, CalendarRange, Info, ListPlus, PenLine, Video } from "lucide-react";
 import DialogShell from "@/components/DialogShell";
 import Combobox, { type ComboboxOption } from "@/components/ui/Combobox";
+import DatePicker from "@/components/ui/DatePicker";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/components/CustomToast";
 import { formatMonthRef, toISODateLocal } from "@/lib/contentSchedule";
@@ -325,13 +326,12 @@ export default function NewContentPlanModal({ isOpen, onClose, onCreated }: Prop
               />
             ) : (
               <>
-                <input
-                  type="date"
-                  value={draft.startDate}
-                  onChange={(event) => patch({ startDate: event.target.value, firstDate: "" })}
-                  aria-label="Primeira publicação"
-                  title="Primeira publicação"
-                  style={{ ...inputStyle, width: 160 }}
+                <DatePicker
+                  value={draft.startDate || null}
+                  onChange={(val) => patch({ startDate: val ?? "", firstDate: "" })}
+                  withTime={false}
+                  clearable={false}
+                  placeholder="Data de início"
                 />
                 <input
                   type="number"
@@ -360,12 +360,12 @@ export default function NewContentPlanModal({ isOpen, onClose, onCreated }: Prop
             }
           >
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <input
-                type="date"
-                value={draft.firstDate}
-                onChange={(event) => chooseFirstDate(event.target.value)}
-                aria-label="Primeira publicação"
-                style={{ ...inputStyle, width: 170 }}
+              <DatePicker
+                value={draft.firstDate || null}
+                onChange={(val) => chooseFirstDate(val ?? "")}
+                withTime={false}
+                clearable={true}
+                placeholder="Início do mês"
               />
               {draft.firstDate && (
                 <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--accent)" }}>

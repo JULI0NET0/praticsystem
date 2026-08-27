@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { User, Settings, Shield, Bell, CreditCard, Save, Loader2, Camera, Smile } from "lucide-react";
+import { User, Settings, Shield, Bell, CreditCard, Save, Loader2, Camera, Smile, Sun, Moon } from "lucide-react";
 import Spotlight from "@/components/Spotlight";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth, UserProfile } from "@/hooks/useAuth";
+import { useTheme } from "next-themes";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/components/CustomToast";
 import CustomModal from "@/components/CustomModal";
@@ -19,6 +20,8 @@ const TABS = [
 export default function ProfilePage() {
   const { currentUser } = useAuth();
   const { showToast } = useToast();
+  const { resolvedTheme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState('profile');
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -30,6 +33,7 @@ export default function ProfilePage() {
   const EMOJIS = ["☀️", "🌙", "🚀", "🔥", "☕", "💻", "🎨", "📈", "🎯", "✨"];
 
   useEffect(() => {
+    setMounted(true);
     if (currentUser) {
       setFormData({
         name: currentUser.name,
@@ -171,10 +175,10 @@ export default function ProfilePage() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-      <div>
-        <h1 style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '8px' }}>Configurações</h1>
-        <p style={{ color: 'var(--text-secondary)' }}>Gerencie seu perfil e preferências do sistema.</p>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      <div className="page-header-info">
+        <h1 style={{ fontSize: 'clamp(1.5rem, 4vw, 2rem)', fontWeight: 700, marginBottom: '6px' }}>Configurações</h1>
+        <p style={{ color: 'var(--text-secondary)', fontSize: 'clamp(0.85rem, 2vw, 1rem)' }}>Gerencie seu perfil e preferências do sistema.</p>
       </div>
 
       <div className="profile-tabs-bar">
@@ -334,6 +338,56 @@ export default function ProfilePage() {
 
         {activeTab === 'settings' && (
           <Spotlight className="glass-card profile-card-spotlight" style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+              <div>
+                <h4 style={{ fontSize: '1.125rem', fontWeight: 600 }}>Aparência do Sistema</h4>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Alterne entre o Modo Claro (pergaminho) e Modo Escuro (carvão).</p>
+              </div>
+              {mounted && (
+                <div style={{ display: 'flex', gap: '8px', background: 'var(--color-surface-sunken)', padding: '4px', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                  <button
+                    type="button"
+                    onClick={() => setTheme('light')}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '8px 14px',
+                      borderRadius: '8px',
+                      border: 'none',
+                      fontSize: '0.85rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      background: resolvedTheme === 'light' ? 'var(--accent)' : 'transparent',
+                      color: resolvedTheme === 'light' ? 'var(--color-text-on-accent)' : 'var(--text-secondary)',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    <Sun size={16} /> Modo Claro
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTheme('dark')}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '8px 14px',
+                      borderRadius: '8px',
+                      border: 'none',
+                      fontSize: '0.85rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      background: resolvedTheme === 'dark' ? 'var(--accent)' : 'transparent',
+                      color: resolvedTheme === 'dark' ? 'var(--color-text-on-accent)' : 'var(--text-secondary)',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    <Moon size={16} /> Modo Escuro
+                  </button>
+                </div>
+              )}
+            </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
               <div>
                 <h4 style={{ fontSize: '1.125rem', fontWeight: 600 }}>Notificações por E-mail</h4>

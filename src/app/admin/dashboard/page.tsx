@@ -66,14 +66,14 @@ export default function DashboardPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--page-gap)' }}>
-      <div className="mobile-stack" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '16px' }}>
-        <div>
-          <h1 style={{ fontSize: '1.75rem', fontWeight: 700, marginBottom: '4px' }}>Dashboard</h1>
+      <div className="page-header">
+        <div className="page-header-info">
+          <h1 style={{ fontSize: 'clamp(1.5rem, 4vw, 2rem)', fontWeight: 700, marginBottom: '4px' }}>Dashboard</h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Visão geral da sua agência hoje.</p>
         </div>
-        <div style={{ display: 'flex', gap: '12px', width: 'auto' }}>
-          <button className="btn btn-secondary" style={{ minHeight: '44px' }}>Relatórios</button>
-          <Spotlight as="button" className="btn btn-accent" style={{ minHeight: '44px' }}><Plus size={18} /> Novo Projeto</Spotlight>
+        <div className="page-header-actions">
+          <button className="btn btn-secondary" style={{ minHeight: '38px' }}>Relatórios</button>
+          <Spotlight as="button" className="btn btn-accent" style={{ minHeight: '38px' }}><Plus size={18} /> Novo Projeto</Spotlight>
         </div>
       </div>
 

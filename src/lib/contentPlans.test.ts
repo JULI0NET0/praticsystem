@@ -124,4 +124,28 @@ describe('resolvePlanItems', () => {
   it('sem dia da semana marcado não gera nada', () => {
     expect(resolvePlanItems(draft({ weekdays: [] }), 'Luane')).toHaveLength(0);
   });
+
+  it('permite sobrescrever o título individual de posts e itens de produção', () => {
+    const items = resolvePlanItems(
+      draft({ includeCapture: true, captureFrequency: '1x meia-diária' }),
+      'Luane',
+      {},
+      {
+        'post-2026-09-07': 'Lançamento Especial Luane',
+        'roteiro-2026-09-01-0': 'Roteiro Gravação Institucional',
+        'captacao-2026-09-04-0': 'Diária Vídeos Luane Setembro',
+      },
+    );
+
+    const postItem = items.find((i) => i.role === 'post' && i.date === '2026-09-07');
+    const roteiroItem = items.find((i) => i.role === 'roteiro');
+    const captacaoItem = items.find((i) => i.role === 'captacao');
+    const secondPost = items.find((i) => i.role === 'post' && i.date === '2026-09-14');
+
+    expect(postItem?.title).toBe('Lançamento Especial Luane');
+    expect(roteiroItem?.title).toBe('Roteiro Gravação Institucional');
+    expect(captacaoItem?.title).toBe('Diária Vídeos Luane Setembro');
+    // Itens sem override continuam com o nome derivado do template
+    expect(secondPost?.title).toBe('Post Frase 02 — Luane');
+  });
 });

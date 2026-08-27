@@ -12,6 +12,10 @@ vi.mock("./AssigneePicker", () => ({
   AssigneeStack: () => <div />,
 }));
 vi.mock("@/components/ui/Combobox", () => ({ default: () => <div /> }));
+vi.mock("@/components/ConfirmProvider", () => ({
+  useConfirm: () => ({ confirm: vi.fn() }),
+  ConfirmProvider: ({ children }: any) => children,
+}));
 
 const STATUS: DemandStatus = {
   id: "pending",

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Check, ListPlus, Plus, Trash2, X } from "lucide-react";
 import Combobox, { type ComboboxOption } from "@/components/ui/Combobox";
+import { LinkifiedText } from "@/lib/linkify";
 import { groupChecklist, type DemandChecklistItem } from "@/types/demandas";
 import { useDemandas } from "./DemandasProvider";
 
@@ -244,9 +245,10 @@ function ChecklistRow({
           lineHeight: 1.45,
           color: item.done ? "var(--text-tertiary)" : "var(--text-secondary)",
           textDecoration: item.done ? "line-through" : "none",
+          wordBreak: "break-word",
         }}
       >
-        {item.label}
+        <LinkifiedText text={item.label} />
       </span>
 
       <button

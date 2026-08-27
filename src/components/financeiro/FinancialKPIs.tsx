@@ -145,17 +145,17 @@ export function FinancialKPIs({
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
       {/* Month selector */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "20px" }}>
-        <div>
-          <h1 style={{ fontSize: "2.5rem", fontWeight: 800, letterSpacing: "-0.02em", marginBottom: "6px" }}>
+      <div className="page-header">
+        <div className="page-header-info">
+          <h1 style={{ fontSize: "clamp(1.5rem, 4vw, 2.2rem)", fontWeight: 800, letterSpacing: "-0.02em", marginBottom: "6px" }}>
             Gestão Financeira
           </h1>
-          <p style={{ color: "var(--text-secondary)", fontSize: "1rem" }}>
+          <p style={{ color: "var(--text-secondary)", fontSize: "clamp(0.85rem, 2vw, 1rem)" }}>
             Faturamento, despesas e saúde financeira da agência.
           </p>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'flex-end' }}>
-          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+        <div className="page-header-actions" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '8px' }}>
+          <div className="tabs-scrollable" style={{ gap: '6px', maxWidth: '100%' }}>
             {[
               { id: 'all', label: 'Tudo' },
               { id: 'this_month', label: 'Este Mês' },
@@ -171,6 +171,7 @@ export function FinancialKPIs({
                   borderRadius: '12px',
                   fontSize: '0.8rem',
                   fontWeight: 700,
+                  whiteSpace: 'nowrap',
                   cursor: 'pointer',
                   transition: 'all 0.2s',
                   border: datePreset === preset.id ? '1px solid var(--accent)' : '1px solid var(--border)',

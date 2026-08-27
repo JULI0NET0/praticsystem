@@ -23,6 +23,7 @@ import type {
   ContractHint,
 } from '@/types/cronogramas';
 import type { Demand } from '@/types/demandas';
+import type { Note } from '@/types/database';
 
 /** Contrato ativo do cliente, para pré-preencher o wizard. */
 export async function fetchContractHint(clientId: string): Promise<ContractHint | null> {
@@ -156,6 +157,7 @@ export function resolvePlanItems(
   draft: ContentPlanDraft,
   clientName: string,
   typeOverrides: Record<string, string> = {},
+  titleOverrides: Record<string, string> = {},
 ): ContentPlanItemDraft[] {
   const preview = previewPlan(draft);
   const channels = draft.channels.length ? draft.channels : ['FEED'];
@@ -165,32 +167,36 @@ export function resolvePlanItems(
   const items: ContentPlanItemDraft[] = [];
 
   preview.scriptDates.forEach((date, index) => {
+    const key = `roteiro-${date}-${index}`;
+    const defaultTitle = renderTitleTemplate(draft.scriptTitleTemplate, {
+      ...baseVars,
+      n: index + 1,
+      data: date,
+    });
     items.push({
       n: index + 1,
       date,
       role: 'roteiro',
       contentType: null,
       channel: null,
-      title: renderTitleTemplate(draft.scriptTitleTemplate, {
-        ...baseVars,
-        n: index + 1,
-        data: date,
-      }),
+      title: titleOverrides[key] ?? titleOverrides[`roteiro-${date}`] ?? defaultTitle,
     });
   });
 
   preview.captureDates.forEach((date, index) => {
+    const key = `captacao-${date}-${index}`;
+    const defaultTitle = renderTitleTemplate(draft.captureTitleTemplate, {
+      ...baseVars,
+      n: index + 1,
+      data: date,
+    });
     items.push({
       n: index + 1,
       date,
       role: 'captacao',
       contentType: null,
       channel: null,
-      title: renderTitleTemplate(draft.captureTitleTemplate, {
-        ...baseVars,
-        n: index + 1,
-        data: date,
-      }),
+      title: titleOverrides[key] ?? titleOverrides[`captacao-${date}`] ?? defaultTitle,
     });
   });
 
@@ -199,6 +205,15 @@ export function resolvePlanItems(
     const channel = channels[index % channels.length];
     const rotated = types.length ? types[index % types.length] : null;
     const contentType = typeOverrides[date] ?? rotated;
+    const key = `post-${date}`;
+    const keyWithIndex = `post-${date}-${index}`;
+    const defaultTitle = renderTitleTemplate(draft.postTitleTemplate, {
+      ...baseVars,
+      n: index + 1,
+      data: date,
+      tipo: contentTypeLabel(contentType),
+      canal: channelLabel(channel),
+    });
 
     items.push({
       n: index + 1,
@@ -206,13 +221,11 @@ export function resolvePlanItems(
       role: 'post',
       contentType,
       channel,
-      title: renderTitleTemplate(draft.postTitleTemplate, {
-        ...baseVars,
-        n: index + 1,
-        data: date,
-        tipo: contentTypeLabel(contentType),
-        canal: channelLabel(channel),
-      }),
+      title:
+        titleOverrides[key] ??
+        titleOverrides[keyWithIndex] ??
+        titleOverrides[date] ??
+        defaultTitle,
     });
   });
 
@@ -378,3 +391,168 @@ export async function deleteContentPlan(
   const { error } = await supabase.from('content_plans').delete().eq('id', id);
   if (error) throw error;
 }
+
+/** Busca todas as notas vinculadas a um cronograma (roteiros) */
+export async function fetchPlanScriptNotes(planId: string): Promise<Note[]> {
+  const { data, error } = await supabase
+    .from('notes')
+    .select(`
+      *,
+      author:users!notes_user_id_fkey(id, name, avatar_url),
+      client:clients!notes_client_id_fkey(id, name, nome_fantasia)
+    `)
+    .eq('plan_id', planId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    // Fallback caso a foreign key join dê erro por configuração de schema
+    const { data: fallbackData, error: fallbackError } = await supabase
+      .from('notes')
+      .select('*')
+      .eq('plan_id', planId)
+      .order('created_at', { ascending: false });
+
+    if (fallbackError) throw fallbackError;
+    return (fallbackData ?? []) as Note[];
+  }
+
+  return (data ?? []) as Note[];
+}
+
+/** Busca notas candidatas a serem vinculadas ao cronograma (do cliente ou com share_all/do usuário) */
+export async function fetchAvailableNotesForLinking(clientId?: string | null, excludePlanId?: string): Promise<Note[]> {
+  let query = supabase.from('notes').select(`
+    *,
+    client:clients!notes_client_id_fkey(id, name, nome_fantasia)
+  `);
+
+  if (clientId) {
+    query = query.eq('client_id', clientId);
+  }
+
+  const { data, error } = await query.order('updated_at', { ascending: false }).limit(50);
+  if (error) {
+    // Fallback sem join
+    const fallbackQuery = clientId
+      ? supabase.from('notes').select('*').eq('client_id', clientId).order('updated_at', { ascending: false }).limit(50)
+      : supabase.from('notes').select('*').order('updated_at', { ascending: false }).limit(50);
+    const { data: fbData, error: fbError } = await fallbackQuery;
+    if (fbError) throw fbError;
+    return ((fbData ?? []) as Note[]).filter(n => n.plan_id !== excludePlanId);
+  }
+
+  return ((data ?? []) as Note[]).filter(n => n.plan_id !== excludePlanId);
+}
+
+/** Vincula uma nota existente ao cronograma e marca como roteiro */
+export async function linkNoteToPlan(
+  noteId: string,
+  planId: string,
+  options: { isScript?: boolean; demandId?: string | null; clientId?: string } = {}
+): Promise<void> {
+  const patch: Record<string, unknown> = {
+    plan_id: planId,
+    is_script: options.isScript ?? true,
+  };
+  if (options.demandId !== undefined) {
+    patch.demand_id = options.demandId;
+  }
+  if (options.clientId) {
+    patch.client_id = options.clientId;
+  }
+
+  const { error } = await supabase
+    .from('notes')
+    .update(patch)
+    .eq('id', noteId);
+
+  if (error) throw error;
+}
+
+/** Desvincula uma nota do cronograma */
+export async function unlinkNoteFromPlan(noteId: string): Promise<void> {
+  const { error } = await supabase
+    .from('notes')
+    .update({
+      plan_id: null,
+      demand_id: null,
+    })
+    .eq('id', noteId);
+
+  if (error) throw error;
+}
+
+/** Cria uma nova nota de roteiro diretamente para o cronograma */
+export async function createScriptNoteForPlan({
+  planId,
+  clientId,
+  userId,
+  title,
+  demandId,
+}: {
+  planId: string;
+  clientId?: string | null;
+  userId: string;
+  title?: string;
+  demandId?: string | null;
+}): Promise<Note> {
+  const newTitle = title?.trim() || 'Novo Roteiro';
+  const { data, error } = await supabase
+    .from('notes')
+    .insert({
+      user_id: userId,
+      title: newTitle,
+      content: {
+        type: 'doc',
+        content: [
+          {
+            type: 'paragraph',
+            content: [{ type: 'text', text: '' }]
+          }
+        ]
+      },
+      date: new Date().toISOString().split('T')[0],
+      subjects: ['Roteiro'],
+      shared_with: [],
+      share_all: true,
+      pin_to_client: true,
+      client_id: clientId || null,
+      plan_id: planId,
+      is_script: true,
+      demand_id: demandId || null,
+    })
+    .select(`
+      *,
+      author:users!notes_user_id_fkey(id, name, avatar_url),
+      client:clients!notes_client_id_fkey(id, name, nome_fantasia)
+    `)
+    .single();
+
+  if (error) {
+    // Fallback sem joins
+    const { data: fbData, error: fbError } = await supabase
+      .from('notes')
+      .insert({
+        user_id: userId,
+        title: newTitle,
+        content: { type: 'doc', content: [{ type: 'paragraph' }] },
+        date: new Date().toISOString().split('T')[0],
+        subjects: ['Roteiro'],
+        shared_with: [],
+        share_all: true,
+        pin_to_client: true,
+        client_id: clientId || null,
+        plan_id: planId,
+        is_script: true,
+        demand_id: demandId || null,
+      })
+      .select('*')
+      .single();
+
+    if (fbError) throw fbError;
+    return fbData as Note;
+  }
+
+  return data as Note;
+}
+

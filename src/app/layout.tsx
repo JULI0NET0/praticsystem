@@ -3,6 +3,7 @@ import { Inter, Newsreader, JetBrains_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import GlobalClientControls from "@/components/GlobalClientControls";
 import { ToastProvider } from "@/components/CustomToast";
+import { ConfirmProvider } from "@/components/ConfirmProvider";
 import "../styles/globals.css";
 
 /**
@@ -70,8 +71,10 @@ export default function RootLayout({
       <body>
         <ThemeProvider>
           <ToastProvider>
-            <GlobalClientControls />
-            {children}
+            <ConfirmProvider>
+              <GlobalClientControls />
+              {children}
+            </ConfirmProvider>
           </ToastProvider>
         </ThemeProvider>
       </body>
