@@ -97,6 +97,21 @@ export default function NewContentPlanModal({ isOpen, onClose, onCreated }: Prop
   const patch = (changes: Partial<ContentPlanDraft>) =>
     setDraft((current) => ({ ...current, ...changes }));
 
+  /**
+   * Escolher a primeira publicação move a competência junto.
+   *
+   * Sem isso, o padrão (mês corrente) mais uma data no mês seguinte — que é
+   * justamente o caso de uso deste campo, programar algo daqui a 15 dias —
+   * cortava o período inteiro e a prévia vinha vazia.
+   */
+  const chooseFirstDate = (value: string) => {
+    if (!value) {
+      patch({ firstDate: "" });
+      return;
+    }
+    patch({ firstDate: value, monthRef: value.slice(0, 7) });
+  };
+
   /** Escolher o cliente puxa o contrato ativo e pré-preenche o que ele souber. */
   const chooseClient = async (clientId: string | null) => {
     patch({ clientId, contractId: null });
@@ -199,6 +214,16 @@ export default function NewContentPlanModal({ isOpen, onClose, onCreated }: Prop
   };
 
   const totalItems = items.length;
+
+  /** Por que a prévia está vazia — a causa importa mais que o aviso. */
+  const emptyReason =
+    draft.weekdays.length === 0
+      ? "Nenhum dia da semana marcado. Escolha ao menos um."
+      : draft.postsPerWeek <= 0
+        ? "Posts por semana está zerado."
+        : draft.firstDate
+          ? `A primeira publicação (${describeDate(draft.firstDate)}) está fora do período escolhido.`
+          : "Nenhuma data cai nos dias marcados. Revise o período ou os dias da semana.";
 
   return (
     <DialogShell
@@ -303,8 +328,9 @@ export default function NewContentPlanModal({ isOpen, onClose, onCreated }: Prop
                 <input
                   type="date"
                   value={draft.startDate}
-                  onChange={(event) => patch({ startDate: event.target.value })}
-                  aria-label="Início"
+                  onChange={(event) => patch({ startDate: event.target.value, firstDate: "" })}
+                  aria-label="Primeira publicação"
+                  title="Primeira publicação"
                   style={{ ...inputStyle, width: 160 }}
                 />
                 <input
@@ -322,29 +348,33 @@ export default function NewContentPlanModal({ isOpen, onClose, onCreated }: Prop
           </div>
         </Field>
 
-        <Field
-          label="Primeira publicação"
-          hint={
-            draft.firstDate
-              ? `Nada antes de ${describeDate(draft.firstDate)} será gerado.`
-              : "Em branco, começa no início do período."
-          }
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <input
-              type="date"
-              value={draft.firstDate}
-              onChange={(event) => patch({ firstDate: event.target.value })}
-              aria-label="Primeira publicação"
-              style={{ ...inputStyle, width: 170 }}
-            />
-            {draft.firstDate && (
-              <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--accent)" }}>
-                {describeDate(draft.firstDate)}
-              </span>
-            )}
-          </div>
-        </Field>
+        {/* No modo "semanas" a data de início já é a primeira publicação —
+            dois campos de começo se contradiziam. */}
+        {draft.periodKind === "month" && (
+          <Field
+            label="Primeira publicação"
+            hint={
+              draft.firstDate
+                ? `Nada antes de ${describeDate(draft.firstDate)} será gerado. A competência acompanha a data.`
+                : "Em branco, começa no início do mês."
+            }
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <input
+                type="date"
+                value={draft.firstDate}
+                onChange={(event) => chooseFirstDate(event.target.value)}
+                aria-label="Primeira publicação"
+                style={{ ...inputStyle, width: 170 }}
+              />
+              {draft.firstDate && (
+                <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--accent)" }}>
+                  {describeDate(draft.firstDate)}
+                </span>
+              )}
+            </div>
+          </Field>
+        )}
 
         {/* Cadência */}
         <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: 18, alignItems: "start" }}>
@@ -554,7 +584,7 @@ export default function NewContentPlanModal({ isOpen, onClose, onCreated }: Prop
         <Field label="Prévia das datas">
           {totalItems === 0 ? (
             <span style={{ fontSize: "0.78rem", color: "var(--color-danger)" }}>
-              Nenhuma data cai nos dias marcados. Revise o período ou os dias da semana.
+              {emptyReason}
             </span>
           ) : (
             <div

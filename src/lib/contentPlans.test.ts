@@ -101,4 +101,27 @@ describe('resolvePlanItems', () => {
     const items = posts(resolvePlanItems(draft({ firstDate: '2026-09-14' }), 'Luane'));
     expect(items.every((item) => item.date >= '2026-09-14')).toBe(true);
   });
+
+  // O caso que apareceu em uso: o wizard abre no mês corrente e o usuário
+  // escolhe a primeira publicação no mês seguinte. Se a competência não for
+  // junto, o período inteiro é cortado e a prévia vem vazia.
+  it('primeira publicação fora da competência zera tudo', () => {
+    const items = resolvePlanItems(
+      draft({ monthRef: '2026-09', firstDate: '2026-10-05' }),
+      'Luane',
+    );
+    expect(items).toHaveLength(0);
+  });
+
+  it('com a competência acompanhando a data, volta a gerar', () => {
+    const items = posts(
+      resolvePlanItems(draft({ monthRef: '2026-10', firstDate: '2026-10-05' }), 'Luane'),
+    );
+    expect(items.length).toBeGreaterThan(0);
+    expect(items.every((item) => item.date >= '2026-10-05')).toBe(true);
+  });
+
+  it('sem dia da semana marcado não gera nada', () => {
+    expect(resolvePlanItems(draft({ weekdays: [] }), 'Luane')).toHaveLength(0);
+  });
 });

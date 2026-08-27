@@ -250,7 +250,7 @@ export default function FloatingSearch() {
   }, [query, results, recentDemands]);
 
   const grouped = useMemo(() => {
-    return DISPLAY_ORDER.reduce<{ type: ResultType; items: SearchResult[] }>((acc, type) => {
+    return DISPLAY_ORDER.reduce<{ type: ResultType; items: SearchResult[] }[]>((acc, type) => {
       const items = displayList.filter(r => r.type === type);
       if (items.length > 0) acc.push({ type, items });
       return acc;
