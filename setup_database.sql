@@ -1083,7 +1083,7 @@ ALTER TABLE public.demands ADD COLUMN IF NOT EXISTS content_type TEXT;
 ALTER TABLE public.demands DROP CONSTRAINT IF EXISTS demands_content_type_check;
 ALTER TABLE public.demands
     ADD CONSTRAINT demands_content_type_check
-    CHECK (content_type IS NULL OR content_type IN ('video', 'reels', 'frase', 'extra'));
+    CHECK (content_type IS NULL OR content_type IN ('video', 'reels', 'carrossel', 'imagem_frase', 'frase', 'criativo', 'extra'));
 
 CREATE INDEX IF NOT EXISTS demands_content_type_idx ON public.demands (content_type);
 

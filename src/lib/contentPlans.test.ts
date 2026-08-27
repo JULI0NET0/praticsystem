@@ -126,21 +126,29 @@ describe('resolvePlanItems', () => {
   });
 
   it('permite sobrescrever o título individual de posts e itens de produção', () => {
+    const baseItems = resolvePlanItems(
+      draft({ includeCapture: true, captureFrequency: '1x meia-diária' }),
+      'Luane',
+    );
+    const firstPost = baseItems.find((i) => i.role === 'post')!;
+    const firstRoteiro = baseItems.find((i) => i.role === 'roteiro')!;
+    const firstCaptacao = baseItems.find((i) => i.role === 'captacao')!;
+
     const items = resolvePlanItems(
       draft({ includeCapture: true, captureFrequency: '1x meia-diária' }),
       'Luane',
       {},
       {
-        'post-2026-09-07': 'Lançamento Especial Luane',
-        'roteiro-2026-09-01-0': 'Roteiro Gravação Institucional',
-        'captacao-2026-09-04-0': 'Diária Vídeos Luane Setembro',
+        [`post-${firstPost.date}`]: 'Lançamento Especial Luane',
+        [`roteiro-${firstRoteiro.date}-0`]: 'Roteiro Gravação Institucional',
+        [`captacao-${firstCaptacao.date}`]: 'Diária Vídeos Luane Setembro',
       },
     );
 
-    const postItem = items.find((i) => i.role === 'post' && i.date === '2026-09-07');
+    const postItem = items.find((i) => i.role === 'post' && i.date === firstPost.date);
     const roteiroItem = items.find((i) => i.role === 'roteiro');
     const captacaoItem = items.find((i) => i.role === 'captacao');
-    const secondPost = items.find((i) => i.role === 'post' && i.date === '2026-09-14');
+    const secondPost = items.filter((i) => i.role === 'post')[1];
 
     expect(postItem?.title).toBe('Lançamento Especial Luane');
     expect(roteiroItem?.title).toBe('Roteiro Gravação Institucional');

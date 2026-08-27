@@ -81,6 +81,8 @@ export default function NewContentPlanModal({ isOpen, onClose, onCreated }: Prop
   /** Formato escolhido à mão, indexado pela data. Data que sai do período
    *  perde o override sozinha — não há estado obsoleto para limpar. */
   const [typeOverrides, setTypeOverrides] = useState<Record<string, string>>({});
+  /** Nome escolhido à mão por demanda (itemKey: `${item.role}-${item.date}-${index}` ou `post-${item.date}`) */
+  const [titleOverrides, setTitleOverrides] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [wasOpen, setWasOpen] = useState(false);
 
@@ -91,6 +93,7 @@ export default function NewContentPlanModal({ isOpen, onClose, onCreated }: Prop
       setDraft(emptyDraft());
       setHint(null);
       setTypeOverrides({});
+      setTitleOverrides({});
       setSaving(false);
     }
   }
@@ -139,8 +142,8 @@ export default function NewContentPlanModal({ isOpen, onClose, onCreated }: Prop
   // A prévia e a criação olham para a MESMA lista: o que está na tela é
   // literalmente o que será gravado.
   const items = useMemo(
-    () => resolvePlanItems(draft, selectedClientName || "Cliente", typeOverrides),
-    [draft, selectedClientName, typeOverrides],
+    () => resolvePlanItems(draft, selectedClientName || "Cliente", typeOverrides, titleOverrides),
+    [draft, selectedClientName, typeOverrides, titleOverrides],
   );
 
   const postItems = items.filter((item) => item.role === "post");
@@ -601,24 +604,39 @@ export default function NewContentPlanModal({ isOpen, onClose, onCreated }: Prop
               }}
             >
               {/* Ordem do processo: roteiro e captação, depois os posts */}
-              {productionItems.map((item, index) => (
-                <PreviewItem key={`${item.role}-${item.date}-${index}`} item={item} />
-              ))}
+              {productionItems.map((item, index) => {
+                const itemKey = `${item.role}-${item.date}-${index}`;
+                return (
+                  <PreviewItem
+                    key={itemKey}
+                    item={item}
+                    onChangeTitle={(value) =>
+                      setTitleOverrides((current) => ({ ...current, [itemKey]: value }))
+                    }
+                  />
+                );
+              })}
 
-              {postItems.map((item) => (
-                <PreviewItem
-                  key={`post-${item.date}`}
-                  item={item}
-                  onChangeType={(value) =>
-                    setTypeOverrides((current) => {
-                      const next = { ...current };
-                      if (value) next[item.date] = value;
-                      else delete next[item.date];
-                      return next;
-                    })
-                  }
-                />
-              ))}
+              {postItems.map((item) => {
+                const itemKey = `post-${item.date}`;
+                return (
+                  <PreviewItem
+                    key={itemKey}
+                    item={item}
+                    onChangeType={(value) =>
+                      setTypeOverrides((current) => {
+                        const next = { ...current };
+                        if (value) next[item.date] = value;
+                        else delete next[item.date];
+                        return next;
+                      })
+                    }
+                    onChangeTitle={(value) =>
+                      setTitleOverrides((current) => ({ ...current, [itemKey]: value }))
+                    }
+                  />
+                );
+              })}
             </div>
           )}
         </Field>
@@ -628,15 +646,17 @@ export default function NewContentPlanModal({ isOpen, onClose, onCreated }: Prop
 }
 
 /**
- * Uma linha da prévia. Nos posts o formato é editável: trocar reescreve o
- * nome na hora, porque o nome já é derivado do template.
+ * Uma linha da prévia. O nome e o formato são editáveis diretamente na prévia:
+ * o usuário pode customizar títulos individuais antes de gerar as demandas.
  */
 function PreviewItem({
   item,
   onChangeType,
+  onChangeTitle,
 }: {
   item: ContentPlanItemDraft;
   onChangeType?: (value: string | null) => void;
+  onChangeTitle?: (value: string) => void;
 }) {
   const type = getContentType(item.contentType);
   const RoleIcon =
@@ -648,15 +668,15 @@ function PreviewItem({
         display: "flex",
         alignItems: "center",
         gap: 8,
-        padding: "4px 6px",
+        padding: "3px 4px",
         borderRadius: "var(--radius-sm)",
       }}
     >
-      <RoleIcon size={12} color="var(--text-tertiary)" style={{ flexShrink: 0 }} />
+      <RoleIcon size={13} color="var(--text-tertiary)" style={{ flexShrink: 0 }} />
 
       <span
         style={{
-          width: 52,
+          width: 44,
           flexShrink: 0,
           fontSize: "0.72rem",
           fontWeight: 700,
@@ -666,21 +686,37 @@ function PreviewItem({
         {item.date.slice(8, 10)}/{item.date.slice(5, 7)}
       </span>
 
-      <span
-        title={item.title}
+      <input
+        type="text"
+        value={item.title}
+        onChange={(event) => onChangeTitle?.(event.target.value)}
+        placeholder="Nome da demanda..."
+        aria-label={`Nome da demanda de ${item.date}`}
         style={{
           flex: 1,
           minWidth: 0,
+          height: 30,
+          padding: "4px 8px",
           fontSize: "0.78rem",
           fontWeight: 600,
           color: "var(--text-primary)",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
+          background: "var(--color-surface-card, rgba(255, 255, 255, 0.04))",
+          border: "1px solid var(--border)",
+          borderRadius: "var(--radius-sm)",
+          outline: "none",
+          transition: "border-color 0.15s ease, background-color 0.15s ease",
         }}
-      >
-        {item.title}
-      </span>
+        onFocus={(e) => {
+          e.currentTarget.style.borderColor = "var(--accent)";
+          e.currentTarget.style.background =
+            "var(--color-surface-raised, rgba(255, 255, 255, 0.08))";
+        }}
+        onBlur={(e) => {
+          e.currentTarget.style.borderColor = "var(--border)";
+          e.currentTarget.style.background =
+            "var(--color-surface-card, rgba(255, 255, 255, 0.04))";
+        }}
+      />
 
       {onChangeType ? (
         <Combobox
