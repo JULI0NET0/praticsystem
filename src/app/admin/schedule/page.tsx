@@ -25,6 +25,7 @@ import { computePosition, flip, shift, offset, size } from "@floating-ui/dom";
 import { AGENDA_CATEGORIES as CATEGORIES } from "@/lib/agendaCategories";
 import Combobox from "@/components/ui/Combobox";
 import { UserAvatar } from "@/components/demandas/AssigneePicker";
+import { playSound } from "@/utils/audio";
 
 const toLocalISOString = (dateInput: any) => {
   if (!dateInput) return '';
@@ -518,6 +519,9 @@ export default function SchedulePage() {
         .update({ status: nextStatus })
         .eq('id', selectedEvent.id);
       if (error) throw error;
+      if (nextStatus === 'completed') {
+        playSound("task_done");
+      }
       setFormData({ ...formData, status: nextStatus });
       fetchEvents();
       showToast(nextStatus === 'completed' ? "Concluído! 🎉" : "Marcado como pendente", "success");
@@ -535,6 +539,9 @@ export default function SchedulePage() {
         .update({ status: nextStatus })
         .eq('id', eventId);
       if (error) throw error;
+      if (nextStatus === 'completed') {
+        playSound("task_done");
+      }
       fetchEvents();
       showToast(nextStatus === 'completed' ? "Concluído! 🎉" : "Marcado como pendente", "success");
     } catch (err) {

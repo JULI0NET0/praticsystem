@@ -49,7 +49,7 @@ function readSoundPreference(): boolean {
   if (typeof window === "undefined") return true;
   try {
     const raw = window.localStorage.getItem(SOUND_STORAGE_KEY);
-    return raw === null ? true : raw === "true";
+    return raw === null ? true : raw === "true" || raw === "on";
   } catch {
     return true;
   }
@@ -522,6 +522,14 @@ export function DemandasProvider({ children }: { children: ReactNode }) {
       const previous = demands.find((d) => d.id === id);
       if (!previous) return;
 
+      if (patch.status && soundEnabled) {
+        const prevStatus = statuses.find((s) => s.id === previous.status);
+        const nextStatus = statuses.find((s) => s.id === patch.status);
+        if (prevStatus?.category !== "fechado" && nextStatus?.category === "fechado") {
+          playSound("task_done");
+        }
+      }
+
       // Localmente o patch vai enriquecido com o que a trigger derivaria, para
       // a interface não ficar meio-atualizada durante a ida ao servidor. Para
       // o banco segue o patch original — lá quem calcula isso é a trigger.
@@ -557,7 +565,7 @@ export function DemandasProvider({ children }: { children: ReactNode }) {
         });
       }
     },
-    [demands, statuses, showToast, syncAgendaMirror],
+    [demands, statuses, showToast, syncAgendaMirror, soundEnabled],
   );
 
   const deleteDemand = useCallback(
@@ -621,11 +629,9 @@ export function DemandasProvider({ children }: { children: ReactNode }) {
         showToast("Nenhum status de conclusão configurado.", "error");
         return;
       }
-      // Só ao concluir — reabrir não faz som
-      if (soundEnabled) playSound("task_done");
       await updateDemand(id, { status: closed.id });
     },
-    [demands, statuses, updateDemand, showToast, soundEnabled],
+    [demands, statuses, updateDemand, showToast],
   );
 
   const batchUpdateDemands = useCallback(
@@ -1014,6 +1020,9 @@ export function DemandasProvider({ children }: { children: ReactNode }) {
   const toggleChecklistItem = useCallback(
     async (item: DemandChecklistItem) => {
       const next = !item.done;
+      if (next && soundEnabled) {
+        playSound("task_done");
+      }
       const updated = (checklists[item.demand_id] ?? []).map((current) =>
         current.id === item.id ? { ...current, done: next } : current,
       );
@@ -1036,7 +1045,7 @@ export function DemandasProvider({ children }: { children: ReactNode }) {
         showToast("Erro ao marcar item: " + error.message, "error");
       }
     },
-    [checklists, syncChecklistCounts, showToast],
+    [checklists, syncChecklistCounts, showToast, soundEnabled],
   );
 
   const addChecklistItem = useCallback(
