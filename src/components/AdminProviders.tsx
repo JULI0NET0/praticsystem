@@ -8,6 +8,8 @@ import { TimeTrackerProvider } from "@/hooks/useTimeTracker";
 import { PomodoroProvider } from "@/hooks/usePomodoro";
 import { Loader2 } from "lucide-react";
 
+import { NotificationProvider } from "@/context/NotificationContext";
+
 function AdminProvidersInner({ children }: { children: React.ReactNode }) {
   const { currentUser, loading } = useAuth();
   const router = useRouter();
@@ -35,11 +37,13 @@ function AdminProvidersInner({ children }: { children: React.ReactNode }) {
 
   return (
     <PresenceProvider currentUser={currentUser}>
-      <TimeTrackerProvider>
-        <PomodoroProvider>
-          {children}
-        </PomodoroProvider>
-      </TimeTrackerProvider>
+      <NotificationProvider>
+        <TimeTrackerProvider>
+          <PomodoroProvider>
+            {children}
+          </PomodoroProvider>
+        </TimeTrackerProvider>
+      </NotificationProvider>
     </PresenceProvider>
   );
 }

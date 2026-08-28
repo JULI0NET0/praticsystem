@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   ChevronLeft,
   ChevronRight,
@@ -11,8 +11,8 @@ import {
   LogOut,
   Loader2,
 } from "lucide-react";
-import { notifications } from "@/mocks/db";
 import { useAuth } from "@/hooks/useAuth";
+import { useNotifications } from "@/context/NotificationContext";
 import { useState, useEffect } from "react";
 import { useTheme } from "next-themes";
 import ThemeLogo from "./ThemeLogo";
@@ -23,11 +23,12 @@ import { NAV_GROUPS } from "@/lib/navConfig";
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { currentUser, users, logout } = useAuth();
+  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const [isExpanded, setIsExpanded] = useState(true);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserSwitcher, setShowUserSwitcher] = useState(false);
-  const [localNotifications, setLocalNotifications] = useState(notifications);
   const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [hoveredPath, setHoveredPath] = useState<string | null>(null);
@@ -37,16 +38,10 @@ export default function Sidebar() {
     setMounted(true);
 
     const handleToggle = () => setIsExpanded(prev => !prev);
-    const handleNewNotification = (e: any) => {
-      setLocalNotifications(prev => [e.detail, ...prev]);
-    };
-
     window.addEventListener('toggle-sidebar', handleToggle);
-    window.addEventListener('new-notification', handleNewNotification);
 
     return () => {
       window.removeEventListener('toggle-sidebar', handleToggle);
-      window.removeEventListener('new-notification', handleNewNotification);
     };
   }, []);
 
@@ -393,8 +388,8 @@ export default function Sidebar() {
               onClick={() => setShowNotifications(!showNotifications)}
             >
               <div style={{ position: 'relative' }}>
-                <Bell size={16} color={localNotifications.some(n => !n.read) ? 'var(--accent)' : 'currentColor'} />
-                {localNotifications.filter(n => !n.read).length > 0 && (
+                <Bell size={16} color={unreadCount > 0 ? 'var(--accent)' : 'currentColor'} />
+                {unreadCount > 0 && (
                   <div style={{
                     position: 'absolute', top: -6, right: -6,
                     backgroundColor: 'var(--accent)', color: 'var(--color-text-on-accent)',
@@ -402,7 +397,7 @@ export default function Sidebar() {
                     borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
                     border: '2px solid var(--bg-secondary)'
                   }}>
-                    {localNotifications.filter(n => !n.read).length}
+                    {unreadCount > 9 ? '9+' : unreadCount}
                   </div>
                 )}
               </div>
@@ -423,25 +418,30 @@ export default function Sidebar() {
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                       <h4 style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)' }}>Notificações</h4>
-                      <button
-                        onClick={() => {
-                          setLocalNotifications(localNotifications.map(n => ({ ...n, read: true })));
-                        }}
-                        style={{ background: 'none', border: 'none', fontSize: '0.75rem', color: 'var(--accent)', fontWeight: 600, cursor: 'pointer' }}
-                      >
-                        Limpar tudo
-                      </button>
+                      {notifications.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => markAllAsRead()}
+                          style={{ background: 'none', border: 'none', fontSize: '0.75rem', color: 'var(--accent)', fontWeight: 600, cursor: 'pointer' }}
+                        >
+                          Marcar todas como lidas
+                        </button>
+                      )}
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '350px', overflowY: 'auto', paddingRight: '4px' }}>
-                      {localNotifications.length === 0 ? (
+                      {notifications.length === 0 ? (
                         <p style={{ textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.85rem', padding: '20px' }}>Nenhuma notificação por enquanto.</p>
                       ) : (
-                        localNotifications.map(notif => (
+                        notifications.map(notif => (
                           <motion.div
                             key={notif.id}
                             whileHover={{ x: 4 }}
                             onClick={() => {
-                              setLocalNotifications(localNotifications.map(n => n.id === notif.id ? { ...n, read: true } : n));
+                              markAsRead(notif.id);
+                              if (notif.actionUrl) {
+                                setShowNotifications(false);
+                                router.push(notif.actionUrl);
+                              }
                             }}
                             style={{
                               padding: '14px', borderRadius: '16px',

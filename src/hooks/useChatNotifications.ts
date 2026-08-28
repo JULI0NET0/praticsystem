@@ -7,11 +7,7 @@ import type { ChatMessage } from './useRealtimeChat'
 const ICON = '/SIMBOLO-BRANCO.png'
 
 export function useChatNotifications(currentUserId: string | undefined) {
-  // Pede permissão uma vez ao montar
-  useEffect(() => {
-    if (typeof Notification === 'undefined') return
-    if (Notification.permission === 'default') Notification.requestPermission()
-  }, [])
+  // A permissão agora é gerenciada com elegância pelo NotificationPermissionModal (Soft Prompt)
 
   // chatVisible = se o painel de chat está aberto e visível pelo usuário
   const notify = useCallback(

@@ -131,6 +131,7 @@ class SoundManager {
         case "chat":
           this.bell(ctx, 1046.5, t, 0.13, 0.13);
           this.impact(ctx, t, 0.04);
+          this.vibrate([40]);
           break;
 
         case "mention":
@@ -138,10 +139,21 @@ class SoundManager {
           this.impact(ctx, t, 0.045);
           this.bell(ctx, 1318.5, t + 0.13, 0.17, 0.12);
           this.impact(ctx, t + 0.13, 0.05);
+          this.vibrate([60, 40, 60]);
           break;
       }
     } catch (err) {
       console.warn("Erro no SoundManager:", err);
+    }
+  }
+
+  public vibrate(pattern: number | number[] = [40]) {
+    if (typeof window !== 'undefined' && typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      try {
+        navigator.vibrate(pattern);
+      } catch {
+        // Silencioso em navegadores sem suporte
+      }
     }
   }
 
@@ -245,3 +257,4 @@ class SoundManager {
 
 export const soundManager = new SoundManager();
 export const playSound = (type: SoundType) => soundManager.play(type);
+export const triggerHaptic = (pattern?: number | number[]) => soundManager.vibrate(pattern);

@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect, useRef } from "react";
 import { useTheme } from "next-themes";
 import { useAuth } from "@/hooks/useAuth";
+import { useNotifications } from "@/context/NotificationContext";
 import { NAV_GROUPS } from "@/lib/navConfig";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
@@ -20,6 +21,7 @@ export default function MobileMenuDrawer({ isOpen, onClose }: MobileMenuDrawerPr
   const pathname = usePathname();
   const router = useRouter();
   const { currentUser, logout } = useAuth();
+  const { unreadCount } = useNotifications();
   const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -439,8 +441,46 @@ export default function MobileMenuDrawer({ isOpen, onClose }: MobileMenuDrawerPr
                     minHeight: '48px'
                   }}
                 >
-                  <Bell size={20} color="var(--text-secondary)" />
+                  <div style={{ position: 'relative' }}>
+                    <Bell size={20} color={unreadCount > 0 ? "var(--accent)" : "var(--text-secondary)"} />
+                    {unreadCount > 0 && (
+                      <span
+                        style={{
+                          position: 'absolute',
+                          top: -4,
+                          right: -4,
+                          width: '14px',
+                          height: '14px',
+                          borderRadius: '50%',
+                          background: 'var(--accent)',
+                          color: 'var(--color-text-on-accent)',
+                          fontSize: '9px',
+                          fontWeight: 700,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          border: '2px solid var(--color-surface-raised, #18181b)'
+                        }}
+                      >
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </span>
+                    )}
+                  </div>
                   <span style={{ fontWeight: 500, fontSize: '0.95rem', flex: 1 }}>Notificações</span>
+                  {unreadCount > 0 && (
+                    <span
+                      style={{
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                        padding: '2px 8px',
+                        borderRadius: '999px',
+                        background: 'var(--color-terracotta-100)',
+                        color: 'var(--accent)'
+                      }}
+                    >
+                      {unreadCount} nova{unreadCount > 1 ? 's' : ''}
+                    </span>
+                  )}
                 </motion.button>
               </div>
 
