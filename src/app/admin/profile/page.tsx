@@ -175,10 +175,12 @@ export default function ProfilePage() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-      <div className="page-header-info">
-        <h1 style={{ fontSize: 'clamp(1.5rem, 4vw, 2rem)', fontWeight: 700, marginBottom: '6px' }}>Configurações</h1>
-        <p style={{ color: 'var(--text-secondary)', fontSize: 'clamp(0.85rem, 2vw, 1rem)' }}>Gerencie seu perfil e preferências do sistema.</p>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <div className="page-header">
+        <div className="page-header-info">
+          <h1 style={{ fontSize: 'clamp(1.5rem, 4vw, 2rem)', fontWeight: 700, marginBottom: '4px' }}>Configurações</h1>
+          <p style={{ color: 'var(--text-secondary)', fontSize: 'clamp(0.85rem, 2vw, 1rem)' }}>Gerencie seu perfil e preferências do sistema.</p>
+        </div>
       </div>
 
       <div className="profile-tabs-bar">

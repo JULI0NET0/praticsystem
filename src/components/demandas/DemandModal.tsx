@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import dynamic from "next/dynamic";
+import { computePosition, flip, offset, shift, size } from "@floating-ui/dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Building2,
@@ -11,17 +12,29 @@ import {
   CalendarClock,
   CalendarRange,
   Clapperboard,
+  Clock,
+  Flag,
   ListChecks,
   Lock,
   MessageSquare,
   Paperclip,
   Trash2,
+  User,
   X,
 } from "lucide-react";
 import Combobox, { type ComboboxOption } from "@/components/ui/Combobox";
+import { CalendarPopover, TimePickerPopover } from "@/components/ui/DatePicker";
 import { CONTENT_TYPES, getContentType } from "@/lib/contentTypes";
 import { GoogleIcon } from "@/components/SocialIcons";
 import { DEMAND_AGENDA_SUBJECTS, getAgendaCategory } from "@/lib/agendaCategories";
+import {
+  activeMarkerQuery,
+  applyMarkerCompletion,
+  parseQuickInput,
+  type QuickCatalogs,
+  type QuickTokenKind,
+} from "@/lib/quickParse";
+import { formatDueDateLabel } from "@/lib/dueDate";
 import {
   clientLabel,
   PRIORITY_COLORS,
@@ -50,6 +63,14 @@ const BlockEditor = dynamic(() => import("@/components/notas/BlockEditor"), {
 
 const PRIORITIES: DemandPriority[] = ["none", "low", "medium", "high", "urgent"];
 
+const TOKEN_ICON: Record<QuickTokenKind, typeof Building2> = {
+  client: Building2,
+  assignee: User,
+  priority: Flag,
+  date: CalendarClock,
+  time: Clock,
+};
+
 /** Descrição salva com atraso, para não gravar a cada tecla (igual às Notas). */
 const DESCRIPTION_SAVE_DELAY = 900;
 
@@ -70,6 +91,7 @@ export default function DemandModal({ demandId, onClose }: Props) {
     getStatus,
     statuses,
     clients,
+    users,
     updateDemand,
     deleteDemand,
     loadDetails,
@@ -82,9 +104,13 @@ export default function DemandModal({ demandId, onClose }: Props) {
     id: null,
     title: "",
   });
+  const [caret, setCaret] = useState(0);
+  const [activeIndex, setActiveIndex] = useState(0);
+
   const loadedFor = useRef<string | null>(null);
   const descriptionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const titleRef = useRef<HTMLTextAreaElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   const demand = demandId ? getDemand(demandId) : undefined;
   const isOpen = !!demand;
@@ -99,6 +125,135 @@ export default function DemandModal({ demandId, onClose }: Props) {
     setSyncedFrom({ id: demandId, title: storedTitle });
     setTitleDraft(storedTitle);
   }
+
+  const catalogs = useMemo<QuickCatalogs>(
+    () => ({
+      clients: (clients || []).map((client) => ({
+        id: client.id,
+        label: clientLabel(client),
+        alias: client.name,
+      })),
+      users: (users || []).map((user) => ({
+        id: user.id,
+        label: user.username || user.name || user.email,
+        alias: user.name,
+      })),
+    }),
+    [clients, users],
+  );
+
+  const parsed = useMemo(
+    () => parseQuickInput(titleDraft, catalogs),
+    [titleDraft, catalogs],
+  );
+
+  const marker = activeMarkerQuery(titleDraft, caret);
+  const suggestions = useMemo(() => {
+    if (!marker) return [];
+    const query = marker.query.trim().toLowerCase();
+
+    if (marker.marker === "#") {
+      const activeClients = clients.filter(
+        (c) => !c.status || c.status === "active" || c.status === "prospect",
+      );
+      const inactiveClients = clients.filter((c) => c.status === "inactive");
+
+      if (!query) {
+        return activeClients.slice(0, 7).map((c) => ({
+          id: c.id,
+          label: clientLabel(c),
+          alias: c.name,
+          isInactive: false,
+        }));
+      }
+
+      const matchFn = (c: (typeof clients)[0]) => {
+        const label = clientLabel(c).toLowerCase();
+        const name = (c.name || "").toLowerCase();
+        return label.includes(query) || name.includes(query);
+      };
+
+      const matchedActive = activeClients.filter(matchFn).map((c) => ({
+        id: c.id,
+        label: clientLabel(c),
+        alias: c.name,
+        isInactive: false,
+      }));
+
+      const matchedInactive = inactiveClients.filter(matchFn).map((c) => ({
+        id: c.id,
+        label: clientLabel(c),
+        alias: `${c.name} (Inativo)`,
+        isInactive: true,
+      }));
+
+      return [...matchedActive, ...matchedInactive].slice(0, 7);
+    }
+
+    // Colaboradores / Usuários (@)
+    const pool = catalogs.users;
+    const matches = query
+      ? pool.filter(
+          (item) =>
+            item.label.toLowerCase().includes(query) ||
+            (item.alias && item.alias.toLowerCase().includes(query)),
+        )
+      : pool;
+    return matches.slice(0, 6).map((u) => ({ ...u, isInactive: false }));
+  }, [marker, clients, catalogs.users]);
+
+  // Floating UI para posicionar autocomplete de # e @
+  useLayoutEffect(() => {
+    if (suggestions.length === 0) return;
+    const titleEl = titleRef.current;
+    const panel = panelRef.current;
+    if (!titleEl || !panel) return;
+
+    let active = true;
+    const place = () => {
+      computePosition(titleEl, panel, {
+        placement: "bottom-start",
+        middleware: [
+          offset(6),
+          flip({ fallbackPlacements: ["top-start", "bottom-end", "top-end"] }),
+          shift({ padding: 12 }),
+          size({
+            padding: 12,
+            apply({ availableHeight, rects }) {
+              Object.assign(panel.style, {
+                maxHeight: `${Math.max(160, Math.min(availableHeight, 300))}px`,
+                minWidth: `${Math.max(rects.reference.width, 240)}px`,
+              });
+            },
+          }),
+        ],
+      }).then(({ x, y }) => {
+        if (!active) return;
+        Object.assign(panel.style, { left: `${x}px`, top: `${y}px` });
+      });
+    };
+
+    place();
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+    return () => {
+      active = false;
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
+    };
+  }, [suggestions.length]);
+
+  const complete = (label: string) => {
+    const next = applyMarkerCompletion(titleDraft, caret, label);
+    setTitleDraft(next.text);
+    setCaret(next.caret);
+    requestAnimationFrame(() => {
+      titleRef.current?.focus();
+      titleRef.current?.setSelectionRange(next.caret, next.caret);
+    });
+  };
+
+  const syncCaret = () => setCaret(titleRef.current?.selectionStart ?? 0);
 
   // Carrega comentários e anexos uma vez por demanda aberta
   useEffect(() => {
@@ -201,12 +356,68 @@ export default function DemandModal({ demandId, onClose }: Props) {
 
   const commitTitle = () => {
     if (!demand) return;
-    const trimmed = titleDraft.trim();
-    if (!trimmed || trimmed === demand.title) {
-      setTitleDraft(demand.title);
-      return;
+    const parsedResult = parseQuickInput(titleDraft, catalogs);
+    const cleanTitle = parsedResult.title.trim() || demand.title;
+
+    const updates: Partial<Demand> = {};
+    if (cleanTitle !== demand.title) {
+      updates.title = cleanTitle;
     }
-    updateDemand(demand.id, { title: trimmed });
+    if (parsedResult.clientId !== null && parsedResult.clientId !== demand.client_id) {
+      updates.client_id = parsedResult.clientId;
+    }
+    if (parsedResult.assigneeIds.length > 0) {
+      updates.assignee_ids = parsedResult.assigneeIds;
+    }
+    if (parsedResult.priority !== null && parsedResult.priority !== demand.priority) {
+      updates.priority = parsedResult.priority;
+    }
+    if (parsedResult.dueDate !== null && parsedResult.dueDate !== demand.due_date) {
+      updates.due_date = parsedResult.dueDate;
+    }
+    if (parsedResult.dueTime !== null && parsedResult.dueTime !== demand.due_time) {
+      updates.due_time = parsedResult.dueTime;
+    }
+
+    setTitleDraft(cleanTitle);
+    setSyncedFrom({ id: demand.id, title: cleanTitle });
+
+    if (Object.keys(updates).length > 0) {
+      updateDemand(demand.id, updates);
+    }
+  };
+
+  const handleTitleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (suggestions.length > 0) {
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        setActiveIndex((index) => (index + 1) % suggestions.length);
+        return;
+      }
+      if (event.key === "ArrowUp") {
+        event.preventDefault();
+        setActiveIndex((index) => (index - 1 + suggestions.length) % suggestions.length);
+        return;
+      }
+      if (event.key === "Enter" || event.key === "Tab") {
+        event.preventDefault();
+        complete(suggestions[activeIndex].label);
+        setActiveIndex(0);
+        return;
+      }
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
+        setCaret(-1);
+        return;
+      }
+    }
+
+    if (event.key === "Enter") {
+      event.preventDefault();
+      commitTitle();
+      (event.target as HTMLTextAreaElement).blur();
+    }
   };
 
   const handleDelete = async () => {
@@ -355,39 +566,84 @@ export default function DemandModal({ demandId, onClose }: Props) {
                 gap: 22,
               }}
             >
-              <textarea
-                ref={titleRef}
-                value={titleDraft}
-                onChange={(event) => setTitleDraft(event.target.value)}
-                onBlur={commitTitle}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    event.preventDefault();
-                    (event.target as HTMLTextAreaElement).blur();
-                  }
-                }}
-                rows={1}
-                aria-label="Título da demanda"
-                style={{
-                  width: "100%",
-                  resize: "none",
-                  border: "none",
-                  background: "transparent",
-                  outline: "none",
-                  fontSize: "clamp(1.25rem, 2.4vw, 1.6rem)",
-                  fontWeight: 800,
-                  letterSpacing: "-0.02em",
-                  lineHeight: 1.25,
-                  color: "var(--text-primary)",
-                  fontFamily: "inherit",
-                  padding: 0,
-                  overflow: "hidden",
-                  // Itens de flex encolhem por padrão; sem isto a textarea
-                  // era comprimida a zero pelos irmãos altos abaixo.
-                  flexShrink: 0,
-                  minHeight: "1.3em",
-                }}
-              />
+              {/* Título com atalhos (#cliente, @responsável, P1..P4, datas, horas) */}
+              <div style={{ position: "relative", display: "flex", flexDirection: "column", gap: 8, flexShrink: 0 }}>
+                <textarea
+                  ref={titleRef}
+                  value={titleDraft}
+                  onChange={(event) => {
+                    setTitleDraft(event.target.value);
+                    setCaret(event.target.selectionStart ?? 0);
+                    setActiveIndex(0);
+                  }}
+                  onKeyUp={syncCaret}
+                  onClick={syncCaret}
+                  onBlur={commitTitle}
+                  onKeyDown={handleTitleKeyDown}
+                  rows={1}
+                  aria-label="Título da demanda"
+                  placeholder="Título da demanda… #cliente @responsável P1-P4 data hora"
+                  style={{
+                    width: "100%",
+                    resize: "none",
+                    border: "none",
+                    background: "transparent",
+                    outline: "none",
+                    fontSize: "clamp(1.25rem, 2.4vw, 1.6rem)",
+                    fontWeight: 800,
+                    letterSpacing: "-0.02em",
+                    lineHeight: 1.25,
+                    color: "var(--text-primary)",
+                    fontFamily: "inherit",
+                    padding: 0,
+                    overflow: "hidden",
+                    // Itens de flex encolhem por padrão; sem isto a textarea
+                    // era comprimida a zero pelos irmãos altos abaixo.
+                    flexShrink: 0,
+                    minHeight: "1.3em",
+                  }}
+                />
+
+                {/* Chips do que foi reconhecido */}
+                {parsed.tokens.length > 0 && (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                    {parsed.tokens.map((token, index) => {
+                      const Icon = TOKEN_ICON[token.kind];
+                      const label =
+                        token.kind === "date"
+                          ? formatDueDateLabel(parsed.dueDate).label
+                          : token.kind === "priority" && parsed.priority
+                            ? PRIORITY_LABELS[parsed.priority]
+                            : token.label;
+                      const color =
+                        token.kind === "priority" && parsed.priority
+                          ? PRIORITY_COLORS[parsed.priority]
+                          : "var(--accent)";
+
+                      return (
+                        <span
+                          key={`${token.kind}-${index}`}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 4,
+                            padding: "2px 8px",
+                            borderRadius: "var(--radius-badge)",
+                            fontSize: "0.68rem",
+                            fontWeight: 700,
+                            color,
+                            background: "color-mix(in oklab, currentColor 12%, transparent)",
+                            border: "1px solid color-mix(in oklab, currentColor 28%, transparent)",
+                          }}
+                        >
+                          <Icon size={11} />
+                          {label}
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
 
               {/* Cabeçalho em duas linhas: identidade na primeira,
                   tempo e urgência na segunda. */}
@@ -575,6 +831,49 @@ export default function DemandModal({ demandId, onClose }: Props) {
 
             </div>
           </motion.div>
+
+          {/* Autocomplete de menções (#cliente e @responsável) em Portal sobreposto */}
+          {suggestions.length > 0 && (
+            <motion.div
+              ref={panelRef}
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.12 }}
+              className="combobox-panel"
+              style={{ position: "fixed", zIndex: 99999 }}
+            >
+              <div className="combobox-list">
+                {suggestions.map((item, index) => {
+                  const displayLabel =
+                    marker?.marker === "@"
+                      ? `@${item.label.replace(/^@/, "")}`
+                      : item.label;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onMouseEnter={() => setActiveIndex(index)}
+                      onMouseDown={(event) => {
+                        event.preventDefault(); // não tira o foco da textarea
+                        complete(item.label);
+                      }}
+                      className="combobox-option"
+                      data-active={index === activeIndex || undefined}
+                    >
+                      {marker?.marker === "#" ? <Building2 size={14} /> : <User size={14} />}
+                      <span className="combobox-option-text">
+                        <span className="combobox-option-label">{displayLabel}</span>
+                        {item.alias && item.alias !== item.label && (
+                          <span className="combobox-option-description">{item.alias}</span>
+                        )}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </motion.div>
+          )}
         </div>
       )}
     </AnimatePresence>,
@@ -594,7 +893,7 @@ function iconButtonStyle(color: string): React.CSSProperties {
   };
 }
 
-/** Rótulo + campo numa peça só, para as datas caberem todas numa linha. */
+/** Rótulo + campo numa peça só com popovers customizados na identidade visual do sistema. */
 function DateField({
   label,
   type,
@@ -606,45 +905,99 @@ function DateField({
   value: string;
   onChange: (value: string | null) => void;
 }) {
+  const [open, setOpen] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+
+  const displayValue = useMemo(() => {
+    if (!value) return type === "date" ? "dd/mm/aaaa" : "--:--";
+    if (type === "date") {
+      const parts = value.split("-");
+      if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+      return value;
+    }
+    return value.slice(0, 5);
+  }, [value, type]);
+
   return (
-    <label
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 5,
-        padding: "3px 6px",
-        borderRadius: "var(--radius-sm)",
-        cursor: "pointer",
-      }}
-    >
-      <span
-        style={{
-          fontSize: "0.62rem",
-          fontWeight: 800,
-          textTransform: "uppercase",
-          letterSpacing: "0.04em",
-          color: "var(--text-tertiary)",
+    <>
+      <button
+        ref={buttonRef}
+        type="button"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setOpen((prev) => !prev);
         }}
-      >
-        {label}
-      </span>
-      <input
-        type={type}
-        value={value}
-        onChange={(event) => onChange(event.target.value || null)}
         aria-label={label}
         style={{
-          border: "none",
-          background: "transparent",
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 5,
+          padding: "3px 6px",
+          borderRadius: "var(--radius-sm)",
+          border: open ? "1px solid var(--accent)" : "1px solid transparent",
+          background: open ? "color-mix(in oklab, var(--accent) 15%, transparent)" : "transparent",
+          cursor: "pointer",
           outline: "none",
-          color: value ? "var(--text-primary)" : "var(--text-tertiary)",
-          fontSize: "0.78rem",
-          fontWeight: 600,
-          fontFamily: "inherit",
-          padding: 0,
+          transition: "background 0.15s, border-color 0.15s",
         }}
-      />
-    </label>
+        onMouseEnter={(e) => {
+          if (!open) e.currentTarget.style.background = "var(--color-surface-sunken)";
+        }}
+        onMouseLeave={(e) => {
+          if (!open) e.currentTarget.style.background = "transparent";
+        }}
+      >
+        <span
+          style={{
+            fontSize: "0.62rem",
+            fontWeight: 800,
+            textTransform: "uppercase",
+            letterSpacing: "0.04em",
+            color: "var(--text-tertiary)",
+          }}
+        >
+          {label}
+        </span>
+        <span
+          style={{
+            color: value ? "var(--text-primary)" : "var(--text-tertiary)",
+            fontSize: "0.78rem",
+            fontWeight: 600,
+            fontFamily: "inherit",
+          }}
+        >
+          {displayValue}
+        </span>
+      </button>
+
+      {type === "date" ? (
+        <CalendarPopover
+          open={open}
+          onClose={() => setOpen(false)}
+          anchorEl={buttonRef.current}
+          value={value || null}
+          onSelect={(newDate) => {
+            onChange(newDate);
+          }}
+          title={`Definir ${label}`}
+          withTime={false}
+          clearable={true}
+        />
+      ) : (
+        <TimePickerPopover
+          open={open}
+          onClose={() => setOpen(false)}
+          anchorEl={buttonRef.current}
+          value={value || null}
+          onChange={(newTime) => {
+            onChange(newTime);
+          }}
+          title="Definir Horário"
+          clearable={true}
+        />
+      )}
+    </>
   );
 }
 

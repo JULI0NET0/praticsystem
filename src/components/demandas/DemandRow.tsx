@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Building2, Calendar, GripVertical, ListChecks, Lock, MessageSquare, Paperclip } from "lucide-react";
+import { Building2, Calendar, GripVertical, ListChecks, Lock, MessageSquare, Paperclip, Play, ArrowUpRight } from "lucide-react";
 import { richTextToPlain } from "@/lib/richText";
 import { getAgendaCategory } from "@/lib/agendaCategories";
 import { getContentType } from "@/lib/contentTypes";
@@ -21,6 +21,7 @@ interface Props {
   onToggleStart?: (id: string) => void;
   onDragStart?: (id: string) => void;
   onDragEnd?: () => void;
+  onStartTimer?: (demand: Demand) => void;
   dragging?: boolean;
   /** Falso quando o grupo que envolve a linha já mostra o status (agrupamento por status). */
   showStatusPill?: boolean;
@@ -35,6 +36,7 @@ export default function DemandRow({
   onToggleStart,
   onDragStart,
   onDragEnd,
+  onStartTimer,
   dragging,
   showStatusPill = true,
   selected = false,
@@ -196,50 +198,80 @@ export default function DemandRow({
       </div>
 
       <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 4 }}>
-        {/* Linha 1: título + descrição ao centro + contadores */}
-        <div style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
-          <span className="demanda-row-title">
-            <motion.span
-              initial={false}
-              animate={{ color: done ? "var(--text-tertiary)" : "var(--text-primary)" }}
-              transition={{ duration: reduceMotion ? 0 : 0.25 }}
-            >
-              {demand.title}
-            </motion.span>
-            {/* Risco desenhado: cresce da esquerda, em vez de piscar pronto */}
-            <motion.span
-              aria-hidden="true"
-              initial={false}
-              animate={{ scaleX: done ? 1 : 0 }}
-              transition={{ duration: reduceMotion ? 0 : 0.34, ease: [0.16, 1, 0.3, 1] }}
-              style={{
-                position: "absolute",
-                left: 0,
-                right: 0,
-                top: "52%",
-                height: 1,
-                background: "var(--text-tertiary)",
-                transformOrigin: "left center",
-              }}
-            />
-          </span>
-
-          {description && (
-            <span
-              className="demanda-row-description"
-              style={{
-                flex: 1,
-                minWidth: 0,
-                fontSize: "0.78rem",
-                color: "var(--text-tertiary)",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-              }}
-            >
-              {description}
+        {/* Linha 1: título + descrição ao centro + ações rápidas no hover */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, width: "100%" }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 10, minWidth: 0, flex: 1 }}>
+            <span className="demanda-row-title">
+              <motion.span
+                initial={false}
+                animate={{ color: done ? "var(--text-tertiary)" : "var(--text-primary)" }}
+                transition={{ duration: reduceMotion ? 0 : 0.25 }}
+              >
+                {demand.title}
+              </motion.span>
+              {/* Risco desenhado: cresce da esquerda, em vez de piscar pronto */}
+              <motion.span
+                aria-hidden="true"
+                initial={false}
+                animate={{ scaleX: done ? 1 : 0 }}
+                transition={{ duration: reduceMotion ? 0 : 0.34, ease: [0.16, 1, 0.3, 1] }}
+                style={{
+                  position: "absolute",
+                  left: 0,
+                  right: 0,
+                  top: "52%",
+                  height: 1,
+                  background: "var(--text-tertiary)",
+                  transformOrigin: "left center",
+                }}
+              />
             </span>
-          )}
+
+            {description && (
+              <span
+                className="demanda-row-description"
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  fontSize: "0.78rem",
+                  color: "var(--text-tertiary)",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {description}
+              </span>
+            )}
+          </div>
+
+          {/* Ações Rápidas no Hover */}
+          <div className="demanda-row-actions" onClick={(e) => e.stopPropagation()}>
+            {onStartTimer && !done && (
+              <button
+                type="button"
+                className="demanda-action-btn"
+                title="Iniciar Timer / Focar nesta demanda"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onStartTimer(demand);
+                }}
+              >
+                <Play size={12} fill="currentColor" />
+              </button>
+            )}
+            <button
+              type="button"
+              className="demanda-action-btn"
+              title="Abrir detalhes da demanda"
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpen(demand.id);
+              }}
+            >
+              <ArrowUpRight size={13} />
+            </button>
+          </div>
         </div>
 
         {/* Linha 2: os detalhes, abaixo do próprio título */}
@@ -277,9 +309,7 @@ export default function DemandRow({
             max={3}
           />
 
-          {/* Comentários e anexos ficam junto dos demais chips. Ancorados à
-              direita da linha ninguém olhava: em tela larga eles acabavam a
-              centenas de pixels do título a que se referem. */}
+          {/* Comentários e anexos */}
           {(checklistTotal > 0 || commentCount > 0 || attachmentCount > 0) && (
             <span
               style={{

@@ -107,25 +107,26 @@ export default function LoginPage() {
           backgroundImage: `url(${resolvedTheme === 'dark' ? '/wallpaper-dark.webp' : '/wallpaper-light.webp'})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
-          opacity: 0.05,
-          pointerEvents: 'none'
+          opacity: resolvedTheme === 'dark' ? 0.25 : 0.45,
+          pointerEvents: 'none',
+          transition: 'opacity 0.3s ease'
         }} />
       )}
       <motion.div
         initial={{ opacity: 0, y: 30, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-        style={{ width: '100%', maxWidth: '420px' }}
+        style={{ width: '100%', maxWidth: '440px', position: 'relative', zIndex: 2 }}
       >
-        <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '24px' }}>
-            <ThemeLogo />
+        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
+            <ThemeLogo width={260} height={64} />
           </div>
           <h1 style={{ fontSize: '1.75rem', fontWeight: 700, marginBottom: '8px' }}>Bem-vindo à {brandName}</h1>
           <p style={{ color: 'var(--text-secondary)' }}>Acesse o seu workspace administrativo</p>
         </div>
 
-        <Spotlight className="glass-card" style={{ padding: '32px' }}>
+        <Spotlight className="glass-card" style={{ padding: '36px 32px', boxShadow: '0 20px 40px -15px rgba(0, 0, 0, 0.12), 0 0 0 1px var(--color-border-subtle)' }}>
           <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
             {error && (

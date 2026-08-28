@@ -3,6 +3,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import DueChip from "./DueChip";
 import DueDatePickerPopover from "./DueDatePickerPopover";
+import { toISODate } from "@/lib/dueDate";
 
 const updateDemand = vi.fn();
 
@@ -14,14 +15,14 @@ vi.mock("./DemandasProvider", () => ({
 
 describe("DueDatePickerPopover & DueChip", () => {
   it("renderiza o label 'Hoje' formatado corretamente no chip", () => {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = toISODate(new Date());
     render(<DueChip dueDate={today} demandId="demand-1" />);
 
     expect(screen.getByText("Hoje")).toBeTruthy();
   });
 
   it("abre o calendário ao clicar no chip de data da demanda", async () => {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = toISODate(new Date());
     render(<DueChip dueDate={today} demandId="demand-1" />);
 
     const chip = screen.getByRole("button", { name: /hoje/i });

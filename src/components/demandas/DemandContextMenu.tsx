@@ -24,6 +24,7 @@ import {
 } from "@/types/demandas";
 import { useDemandas } from "./DemandasProvider";
 import { useConfirm } from "@/components/ConfirmProvider";
+import { CalendarPopover, TimePickerPopover } from "@/components/ui/DatePicker";
 
 const PRIORITIES: DemandPriority[] = ["urgent", "high", "medium", "low", "none"];
 
@@ -67,6 +68,10 @@ export default function DemandContextMenu({
   const { getDemand, statuses, updateDemand, deleteDemand, toggleComplete } = useDemandas();
   const { confirm } = useConfirm();
   const [panel, setPanel] = useState<Panel>("root");
+  const [datePopoverOpen, setDatePopoverOpen] = useState(false);
+  const [timePopoverOpen, setTimePopoverOpen] = useState(false);
+  const dateBtnRef = useRef<HTMLButtonElement>(null);
+  const timeBtnRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState({ x: anchor.x, y: anchor.y });
 
@@ -212,24 +217,49 @@ export default function DemandContextMenu({
             <span>Próxima semana</span>
           </button>
           <div className="context-menu-separator" />
-          <label className="context-menu-item context-menu-item-field">
+          <button
+            ref={dateBtnRef}
+            type="button"
+            className="context-menu-item"
+            onClick={() => setDatePopoverOpen((prev) => !prev)}
+          >
             <CalendarClock size={16} />
-            <span>Data</span>
-            <input
-              type="date"
-              value={demand.due_date ?? ""}
-              onChange={(event) => apply({ due_date: event.target.value || null })}
-            />
-          </label>
-          <label className="context-menu-item context-menu-item-field">
+            <span>{demand.due_date ? `Data: ${demand.due_date.split("-").reverse().join("/")}` : "Escolher data..."}</span>
+          </button>
+          <CalendarPopover
+            open={datePopoverOpen}
+            onClose={() => setDatePopoverOpen(false)}
+            anchorEl={dateBtnRef.current}
+            value={demand.due_date ?? null}
+            onSelect={(d) => {
+              apply({ due_date: d });
+              setDatePopoverOpen(false);
+            }}
+            title="Escolher Data"
+            withTime={false}
+          />
+
+          <button
+            ref={timeBtnRef}
+            type="button"
+            className="context-menu-item"
+            onClick={() => setTimePopoverOpen((prev) => !prev)}
+          >
             <CalendarClock size={16} />
-            <span>Hora</span>
-            <input
-              type="time"
-              value={demand.due_time?.slice(0, 5) ?? ""}
-              onChange={(event) => apply({ due_time: event.target.value || null })}
-            />
-          </label>
+            <span>{demand.due_time ? `Hora: ${demand.due_time.slice(0, 5)}` : "Definir horário..."}</span>
+          </button>
+          <TimePickerPopover
+            open={timePopoverOpen}
+            onClose={() => setTimePopoverOpen(false)}
+            anchorEl={timeBtnRef.current}
+            value={demand.due_time?.slice(0, 5) ?? null}
+            onChange={(t) => {
+              apply({ due_time: t });
+              setTimePopoverOpen(false);
+            }}
+            title="Definir Horário"
+          />
+
           <div className="context-menu-separator" />
           <button
             className="context-menu-item"

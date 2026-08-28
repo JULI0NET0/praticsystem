@@ -17,6 +17,7 @@ import { useToast } from "@/components/CustomToast";
 import { playSound } from "@/utils/audio";
 import { deriveStatusFields } from "@/lib/demandState";
 import { computeAgendaMirror, shouldSyncGoogle } from "@/lib/demandAgendaSync";
+import { POINTS, isOnTime } from "@/lib/points";
 import {
   EMPTY_DEMAND_FILTERS,
   PRIORITY_ORDER,
@@ -563,6 +564,17 @@ export function DemandasProvider({ children }: { children: ReactNode }) {
         syncAgendaMirror(merged).catch((err) => {
           console.error("Erro ao sincronizar demanda com a Agenda:", err);
         });
+
+        if (previous.status_category !== "fechado" && merged.status_category === "fechado") {
+          const bonus = isOnTime(previous.due_date, merged.completed_at) ? POINTS.ON_TIME_BONUS : 0;
+          const total = POINTS.DEMAND_COMPLETED + bonus;
+          showToast(
+            bonus
+              ? `+${total} pts! Demanda concluída no prazo 🎉⏱️`
+              : `+${total} pts! Demanda concluída 🎉`,
+            "success",
+          );
+        }
       }
     },
     [demands, statuses, showToast, syncAgendaMirror, soundEnabled],
@@ -1022,6 +1034,9 @@ export function DemandasProvider({ children }: { children: ReactNode }) {
       const next = !item.done;
       if (next && soundEnabled) {
         playSound("task_done");
+      }
+      if (next) {
+        showToast(`+${POINTS.CHECKLIST_ITEM_COMPLETED} pts! Etapa concluída ✅`, "success");
       }
       const updated = (checklists[item.demand_id] ?? []).map((current) =>
         current.id === item.id ? { ...current, done: next } : current,

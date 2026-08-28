@@ -11,6 +11,7 @@ import {
   NotebookPen,
   ListChecks,
   CalendarRange,
+  Trophy,
   type LucideIcon
 } from "lucide-react";
 
@@ -38,6 +39,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: "/admin/schedule", label: "Minha Agenda", icon: CalendarDays, roles: ['admin', 'board', 'social_media', 'filmmaker'] },
       { href: "/admin/notas", label: "Notas", icon: NotebookPen, roles: ['admin', 'board', 'social_media', 'filmmaker'] },
       { href: "/admin/chat", label: "Chat", icon: MessageSquare, roles: ['admin', 'board', 'social_media', 'filmmaker'] },
+      { href: "/admin/ranking", label: "Ranking", icon: Trophy, roles: ['admin', 'board', 'social_media', 'filmmaker'] },
     ]
   },
   {

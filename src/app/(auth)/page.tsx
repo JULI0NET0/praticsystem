@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useTheme } from "next-themes";
 import { Eye, EyeOff, Loader2, AlertCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import ThemeLogo from "@/components/ThemeLogo";
@@ -10,12 +11,18 @@ import Spotlight from "@/components/Spotlight";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,51 +76,45 @@ export default function LoginPage() {
       alignItems: 'center',
       justifyContent: 'center',
       position: 'relative',
-      overflow: 'hidden'
+      overflow: 'hidden',
+      backgroundColor: 'var(--color-surface-canvas)',
+      backgroundImage:
+        'radial-gradient(circle at 50% -20%, var(--color-terracotta-200), transparent 60%)',
+      padding: '24px'
     }}>
-      {/* Ambient Gradients */}
-      <div style={{
-        position: 'absolute',
-        width: '600px',
-        height: '600px',
-        background: 'radial-gradient(circle, color-mix(in oklab, var(--accent) 15%, transparent) 0%, rgba(10, 10, 10, 0) 70%)',
-        top: '-200px',
-        left: '-200px',
-        borderRadius: '50%',
-        filter: 'blur(40px)',
-        zIndex: 0
-      }} />
-      <div style={{
-        position: 'absolute',
-        width: '500px',
-        height: '500px',
-        background: 'radial-gradient(circle, color-mix(in oklab, var(--accent) 8%, transparent) 0%, rgba(10, 10, 10, 0) 70%)',
-        bottom: '-150px',
-        right: '-100px',
-        borderRadius: '50%',
-        filter: 'blur(60px)',
-        zIndex: 0
-      }} />
+      {mounted && (
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          backgroundImage: `url(${resolvedTheme === 'dark' ? '/wallpaper-dark.webp' : '/wallpaper-light.webp'})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          opacity: resolvedTheme === 'dark' ? 0.25 : 0.45,
+          pointerEvents: 'none',
+          transition: 'opacity 0.3s ease'
+        }} />
+      )}
 
       {/* Login Card */}
       <div 
         className="glass-card animate-fade-in-up"
         style={{
           width: '100%',
-          maxWidth: '420px',
-          padding: '48px 32px',
-          zIndex: 1,
+          maxWidth: '440px',
+          padding: '40px 32px',
+          zIndex: 2,
           animation: 'fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards',
           display: 'flex',
           flexDirection: 'column',
-          gap: '32px'
+          gap: '28px',
+          boxShadow: '0 20px 40px -15px rgba(0, 0, 0, 0.12), 0 0 0 1px var(--color-border-subtle)'
         }}
       >
-        <div style={{ textAlign: 'center', marginBottom: '16px', display: 'flex', justifyContent: 'center' }}>
-          <ThemeLogo width={240} height={60} />
+        <div style={{ textAlign: 'center', display: 'flex', justifyContent: 'center' }}>
+          <ThemeLogo width={260} height={64} />
         </div>
         <div style={{ textAlign: 'center' }}>
-          <p style={{ color: 'var(--text-secondary)' }}>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
             Acesso ao Sistema Integrado
           </p>
         </div>

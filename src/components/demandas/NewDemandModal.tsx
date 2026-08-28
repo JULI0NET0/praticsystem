@@ -6,7 +6,7 @@ import DialogShell from "@/components/DialogShell";
 import Combobox, { type ComboboxOption } from "@/components/ui/Combobox";
 import DatePicker from "@/components/ui/DatePicker";
 import { useAuth } from "@/hooks/useAuth";
-import { formatDueDateLabel } from "@/lib/dueDate";
+import { formatDueDateLabel, toISODate } from "@/lib/dueDate";
 import { DEMAND_AGENDA_SUBJECTS } from "@/lib/agendaCategories";
 import { parseQuickInput, type QuickCatalogs, type QuickParseResult } from "@/lib/quickParse";
 import {
@@ -50,7 +50,7 @@ export default function NewDemandModal({
   const [priority, setPriority] = useState<DemandPriority>("none");
   const [assigneeIds, setAssigneeIds] = useState<string[]>([]);
   const [allTeam, setAllTeam] = useState(false);
-  const [dueDate, setDueDate] = useState("");
+  const [dueDate, setDueDate] = useState(() => toISODate(new Date()));
   const [dueTime, setDueTime] = useState("");
   // "demand" é o padrão: toda demanda nova aparece na agenda pessoal de quem
   // é responsável, a menos que a pessoa escolha "Não aparece na agenda".
@@ -59,7 +59,7 @@ export default function NewDemandModal({
   const [saving, setSaving] = useState(false);
   const [wasOpen, setWasOpen] = useState(false);
 
-  // Reabrir sempre parte do zero, com quem criou já atribuído.
+  // Reabrir sempre parte do zero, com quem criou já atribuído e data padrão hoje.
   // Ajuste durante o render (padrão do React para estado derivado de props).
   if (isOpen !== wasOpen) {
     setWasOpen(isOpen);
@@ -70,7 +70,7 @@ export default function NewDemandModal({
       setPriority("none");
       setAssigneeIds(currentUser ? [currentUser.id] : []);
       setAllTeam(false);
-      setDueDate("");
+      setDueDate(toISODate(new Date()));
       setDueTime("");
       setAgendaSubject("demand");
       setTouched(new Set());

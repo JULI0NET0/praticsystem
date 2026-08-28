@@ -10,7 +10,7 @@ import DemandListView from "@/components/demandas/DemandListView";
 import DemandKanban from "@/components/demandas/DemandKanban";
 import DemandModal from "@/components/demandas/DemandModal";
 import StatusManagerModal from "@/components/demandas/StatusManagerModal";
-import type { DemandListGroupBy, DemandView } from "@/types/demandas";
+import type { Demand, DemandListGroupBy, DemandView } from "@/types/demandas";
 
 export const VIEW_STORAGE_KEY = "pratic-demandas-view";
 export const GROUPBY_STORAGE_KEY = "pratic-demandas-groupby";
@@ -43,6 +43,7 @@ interface Props {
   onViewChange: (view: DemandView) => void;
   groupBy: DemandListGroupBy;
   onGroupByChange: (groupBy: DemandListGroupBy) => void;
+  onStartTimer?: (demand: Demand) => void;
 }
 
 export default function DemandsWidget(props: Props) {
@@ -53,7 +54,7 @@ export default function DemandsWidget(props: Props) {
   );
 }
 
-function DemandsWidgetInner({ view, onViewChange, groupBy, onGroupByChange }: Props) {
+function DemandsWidgetInner({ view, onViewChange, groupBy, onGroupByChange, onStartTimer }: Props) {
   const { currentUser } = useAuth();
   const { demands, loading } = useDemandas();
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -154,7 +155,7 @@ function DemandsWidgetInner({ view, onViewChange, groupBy, onGroupByChange }: Pr
             </div>
           </div>
         ) : view === "list" ? (
-          <DemandListView demands={myOpenDemands} onOpenDemand={setSelectedId} groupBy={groupBy} />
+          <DemandListView demands={myOpenDemands} onOpenDemand={setSelectedId} groupBy={groupBy} onStartTimer={onStartTimer} />
         ) : (
           <DemandKanban
             demands={myOpenDemands}

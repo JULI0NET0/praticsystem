@@ -62,6 +62,7 @@ interface Props {
   groupBy: DemandListGroupBy;
   selectedIds?: Set<string>;
   onSelectDemand?: (id: string, event: React.MouseEvent) => void;
+  onStartTimer?: (demand: Demand) => void;
 }
 
 interface GroupSectionProps {
@@ -83,6 +84,7 @@ interface GroupSectionProps {
   onToggleStart: (id: string) => void;
   onDragStartRow: (id: string) => void;
   onDragEndRow: () => void;
+  onStartTimer?: (demand: Demand) => void;
   dragId: string | null;
   showStatusPill: boolean;
   selectedIds?: Set<string>;
@@ -112,6 +114,7 @@ function GroupSection({
   onToggleStart,
   onDragStartRow,
   onDragEndRow,
+  onStartTimer,
   dragId,
   showStatusPill,
   selectedIds,
@@ -230,6 +233,7 @@ function GroupSection({
                     onToggleStart={onToggleStart}
                     onDragStart={onDragStartRow}
                     onDragEnd={onDragEndRow}
+                    onStartTimer={onStartTimer}
                     dragging={dragId === demand.id}
                     showStatusPill={showStatusPill}
                     selected={selectedIds?.has(demand.id)}
@@ -271,6 +275,7 @@ export default function DemandListView({
   groupBy,
   selectedIds,
   onSelectDemand,
+  onStartTimer,
 }: Props) {
   const { loading, updateDemand, demands: allDemands, statuses, moveDemand } = useDemandas();
   const { anchor, openFor, close } = useDemandContextMenu();
@@ -411,6 +416,7 @@ export default function DemandListView({
               onToggleStart={holdForAnimation}
               onDragStartRow={setDragId}
               onDragEndRow={endDrag}
+              onStartTimer={onStartTimer}
               dragId={dragId}
               showStatusPill
               selectedIds={selectedIds}
@@ -445,6 +451,7 @@ export default function DemandListView({
               onToggleStart={holdForAnimation}
               onDragStartRow={setDragId}
               onDragEndRow={endDrag}
+              onStartTimer={onStartTimer}
               dragId={dragId}
               showStatusPill={false}
               selectedIds={selectedIds}

@@ -27,6 +27,7 @@ import {
   RotateCcw,
   SkipForward,
   Trophy,
+  Award,
   Pin,
   FileText
 } from "lucide-react";
@@ -48,6 +49,7 @@ import DemandsWidgetImpl, {
   VIEW_STORAGE_KEY as DEMANDS_VIEW_STORAGE_KEY,
   GROUPBY_STORAGE_KEY as DEMANDS_GROUPBY_STORAGE_KEY,
 } from "@/components/workspace/DemandsWidget";
+import PointsWidget from "@/components/workspace/PointsWidget";
 
 // Definição dos Widgets Disponíveis
 const AVAILABLE_WIDGETS = [
@@ -59,6 +61,7 @@ const AVAILABLE_WIDGETS = [
   { id: 'links', title: 'Links Úteis', icon: Star },
   { id: 'team', title: 'Equipe Online', icon: User },
   { id: 'agenda', title: 'Agenda', icon: Calendar },
+  { id: 'points', title: 'Pontos & Ranking', icon: Award },
 ];
 
 export default function WorkspacePage() {
@@ -80,6 +83,35 @@ export default function WorkspacePage() {
   const [alertsCount, setAlertsCount] = useState(0);
   const [demandsView, setDemandsView] = useState<DemandView>(readStoredDemandsView);
   const [demandsGroupBy, setDemandsGroupBy] = useState<DemandListGroupBy>(readStoredDemandsGroupBy);
+  const [activeDemandTitle, setActiveDemandTitle] = useState<string | null>(null);
+  const [headerElapsed, setHeaderElapsed] = useState("00:00:00");
+
+  // Cronômetro dinâmico para o Command Header quando em tracking
+  useEffect(() => {
+    if (!isTracking || !currentSession) {
+      setHeaderElapsed("00:00:00");
+      return;
+    }
+    const tick = () => {
+      const start = new Date(currentSession.start_time).getTime();
+      const diff = Math.max(0, Date.now() - start);
+      const h = Math.floor(diff / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      setHeaderElapsed(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`);
+    };
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [isTracking, currentSession]);
+
+  const handleStartTimerForDemand = (demand: any) => {
+    setActiveDemandTitle(demand.title);
+    if (!isTracking) {
+      clockIn();
+    }
+    showToast(`⏱️ Foco iniciado em: ${demand.title}`, "success");
+  };
 
   const changeDemandsView = (next: DemandView) => {
     setDemandsView(next);
@@ -182,6 +214,7 @@ export default function WorkspacePage() {
       { id: 'team', colSpan: 3, rowSpan: 2 },
       { id: 'links', colSpan: 6, rowSpan: 1 },
       { id: 'agenda', colSpan: 4, rowSpan: 2 },
+      { id: 'points', colSpan: 4, rowSpan: 1 },
     ],
     finance: [
       { id: 'stats', colSpan: 12, rowSpan: 1 },
@@ -286,6 +319,7 @@ export default function WorkspacePage() {
     timetracker: { colSpan: 4, rowSpan: 2 },
     team: { colSpan: 3, rowSpan: 2 },
     agenda: { colSpan: 4, rowSpan: 2 },
+    points: { colSpan: 4, rowSpan: 1 },
   };
 
   const addWidget = (id: string) => {
@@ -439,22 +473,27 @@ export default function WorkspacePage() {
               )}
             </AnimatePresence>
           </div>
-          <h1 className="workspace-title" style={{ fontSize: '1.2rem', fontWeight: 800, letterSpacing: '-0.02em', margin: 0 }}>
-            {greeting}
-          </h1>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <h1 className="workspace-title" style={{ fontSize: '1.2rem', fontWeight: 800, letterSpacing: '-0.02em', margin: 0 }}>
+              {greeting}
+            </h1>
+            <span style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)', fontWeight: 600, textTransform: 'capitalize' }}>
+              {new Intl.DateTimeFormat('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date())}
+            </span>
+          </div>
         </div>
 
         <div className="workspace-header-divider" />
 
         {/* Status Bar Integrada */}
-        <div className="workspace-status-bar">
-          <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--color-success)', boxShadow: '0 0 10px var(--color-success)', flexShrink: 0 }} />
+        <div className="workspace-status-bar" style={{ minWidth: 220 }}>
+          <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: isTracking ? 'var(--color-success)' : 'var(--color-success)', boxShadow: isTracking ? '0 0 10px var(--color-success)' : 'none', flexShrink: 0 }} />
           <input
             value={status}
             onChange={(e) => setStatus(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && updateStatusInDB()}
             style={{ background: 'none', border: 'none', color: 'var(--text-primary)', fontSize: '0.85rem', outline: 'none', width: '100%', fontWeight: 500 }}
-            placeholder="No que você está trabalhando?"
+            placeholder={isTracking && activeDemandTitle ? `Foco: ${activeDemandTitle}` : "No que você está trabalhando?"}
           />
           {status !== (currentUser?.workspace_settings?.status || "") && (
             <button onClick={updateStatusInDB} style={{ color: 'var(--accent)', padding: '4px' }}>
@@ -495,22 +534,74 @@ export default function WorkspacePage() {
             )}
           </AnimatePresence>
 
-          {/* Timer Compacto */}
-          <button
-            onClick={isTracking ? clockOut : clockIn}
-            title={isTracking ? "Parar Timer" : "Iniciar Timer"}
-            style={{
-              height: '36px', padding: '0 12px', borderRadius: '10px',
-              background: isTracking ? 'var(--color-danger-wash)' : 'var(--color-success-wash)',
-              color: isTracking ? 'var(--color-danger)' : 'var(--color-success)',
-              display: 'flex', alignItems: 'center', gap: '6px',
-              transition: 'all 0.3s ease', fontSize: '0.8rem', fontWeight: 600,
-              border: `1px solid ${isTracking ? 'var(--color-danger-wash)' : 'var(--color-success-wash)'}`
-            }}
-          >
-            {isTracking ? <Square size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" />}
-            {isTracking ? 'Parar' : 'Iniciar'}
-          </button>
+          {/* Timer de Trabalho Ativo no Header */}
+          {isTracking ? (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '3px 6px 3px 10px',
+              borderRadius: '10px',
+              background: 'var(--color-success-wash)',
+              border: '1px solid color-mix(in oklab, var(--color-success) 30%, transparent)'
+            }}>
+              <div className="timer-live-dot" />
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <span style={{ fontSize: '0.62rem', fontWeight: 800, color: 'var(--color-success)', textTransform: 'uppercase', letterSpacing: '0.05em', lineHeight: 1 }}>
+                  Trabalhando
+                </span>
+                <span className="timer-tabular" style={{ fontSize: '0.88rem', fontWeight: 800, color: 'var(--color-success)', lineHeight: 1.2 }}>
+                  {headerElapsed}
+                </span>
+              </div>
+              <button
+                onClick={() => {
+                  clockOut();
+                  setActiveDemandTitle(null);
+                }}
+                title="Finalizar sessão de trabalho"
+                style={{
+                  height: '28px',
+                  padding: '0 8px',
+                  borderRadius: '6px',
+                  background: 'var(--color-danger-wash)',
+                  color: 'var(--color-danger)',
+                  border: '1px solid color-mix(in oklab, var(--color-danger) 25%, transparent)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  marginLeft: 4
+                }}
+              >
+                <Square size={10} fill="currentColor" /> Parar
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={clockIn}
+              title="Iniciar medição de tempo de trabalho"
+              style={{
+                height: '36px',
+                padding: '0 14px',
+                borderRadius: '10px',
+                background: 'var(--color-success-wash)',
+                color: 'var(--color-success)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'all 0.2s ease',
+                fontSize: '0.8rem',
+                fontWeight: 700,
+                border: '1px solid color-mix(in oklab, var(--color-success) 30%, transparent)',
+                cursor: 'pointer'
+              }}
+            >
+              <Play size={13} fill="currentColor" /> Iniciar Trabalho
+            </button>
+          )}
 
           {/* Botão Personalizar / Salvar */}
           <button
@@ -615,7 +706,7 @@ export default function WorkspacePage() {
 
                 <div style={{ opacity: isEditing ? 0.3 : 1, transition: 'opacity 0.3s', flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                   {w.id === 'stats' && <StatsWidget colSpan={w.colSpan} demandsCount={demands.length} finishedCount={finishedCount} alertsCount={alertsCount} todayHours={todayHours} isTracking={isTracking} onTimerToggle={isTracking ? clockOut : clockIn} />}
-                  {w.id === 'timetracker' && <TimeTrackerWidget isTracking={isTracking} todayHours={todayHours} todayMinutes={todayMinutes} currentSession={currentSession} clockIn={clockIn} clockOut={clockOut} />}
+                  {w.id === 'timetracker' && <TimeTrackerWidget isTracking={isTracking} todayHours={todayHours} todayMinutes={todayMinutes} currentSession={currentSession} clockIn={clockIn} clockOut={clockOut} activeDemandTitle={activeDemandTitle} />}
                   {w.id === 'pomodoro' && <PomodoroWidget />}
                   {w.id === 'demands' && (
                     <DemandsWidgetImpl
@@ -623,12 +714,14 @@ export default function WorkspacePage() {
                       onViewChange={changeDemandsView}
                       groupBy={demandsGroupBy}
                       onGroupByChange={changeDemandsGroupBy}
+                      onStartTimer={handleStartTimerForDemand}
                     />
                   )}
                   {w.id === 'notes' && <NotesWidget />}
                   {w.id === 'links' && <LinksWidget />}
                   {w.id === 'team' && <TeamWidget isUserOnline={isUserOnline} onlineUsers={onlineUsers} />}
                   {w.id === 'agenda' && <AgendaWidget />}
+                  {w.id === 'points' && <PointsWidget colSpan={w.colSpan} />}
                 </div>
 
                 {/* Controles de Redimensionamento */}
@@ -684,6 +777,7 @@ export default function WorkspacePage() {
                     links: 'Atalhos e links importantes',
                     team: 'Presença online da equipe',
                     agenda: 'Próximos compromissos da semana',
+                    points: 'Seus pontos e posição no ranking',
                   };
                   return (
                     <motion.button
@@ -702,7 +796,7 @@ export default function WorkspacePage() {
                         opacity: isActive ? 0.5 : 1
                       }}
                       onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.borderColor = 'var(--accent)'; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; }}
+                      onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.borderColor = 'var(--border)'; }}
                     >
                       <div style={{
                         width: '44px', height: '44px', borderRadius: '12px', flexShrink: 0,
@@ -739,13 +833,14 @@ export default function WorkspacePage() {
 
 // Sub-componentes
 function StatsWidget({ colSpan, demandsCount, finishedCount, alertsCount, todayHours, isTracking, onTimerToggle }: { colSpan: number, demandsCount: number, finishedCount: number, alertsCount: number, todayHours: string, isTracking: boolean, onTimerToggle: () => void }) {
-  const gridCols = colSpan > 8 ? 'repeat(4, 1fr)' : colSpan > 5 ? 'repeat(3, 1fr)' : colSpan > 2 ? 'repeat(2, 1fr)' : '1fr';
+  const totalToday = demandsCount + finishedCount;
+  const completionRate = totalToday > 0 ? Math.round((finishedCount / totalToday) * 100) : 0;
 
   const items = [
-    { id: 'demands', label: "Demandas", value: demandsCount, icon: CheckCircle2, color: "var(--accent)", gradient: "linear-gradient(135deg, color-mix(in oklab, var(--accent) 20%, transparent), transparent)" },
-    { id: 'finished', label: "Finalizadas", value: finishedCount, icon: CheckCircle2, color: "var(--color-success)", gradient: "linear-gradient(135deg, rgba(16, 185, 129, 0.2), transparent)" },
-    { id: 'timer', label: "Tempo Hoje", value: todayHours.split(' ')[0], sub: todayHours.split(' ')[1], icon: isTracking ? Timer : Clock, color: isTracking ? "var(--color-success)" : "#3B82F6", gradient: isTracking ? "linear-gradient(135deg, var(--color-success-wash), transparent)" : "linear-gradient(135deg, rgba(59, 130, 246, 0.2), transparent)", interactive: true },
-    { id: 'alerts', label: "Alertas", value: alertsCount, icon: Zap, color: "var(--color-danger)", gradient: "linear-gradient(135deg, var(--color-danger-wash), transparent)" }
+    { id: 'demands', label: "Demandas", value: demandsCount, sub: `${alertsCount} prioritárias`, icon: CheckCircle2, color: "var(--accent)", gradient: "linear-gradient(135deg, color-mix(in oklab, var(--accent) 15%, transparent), transparent)", progress: Math.min(100, demandsCount * 10) },
+    { id: 'finished', label: "Finalizadas", value: finishedCount, sub: totalToday > 0 ? `${completionRate}% concluído` : "Hoje", icon: CheckCircle2, color: "var(--color-success)", gradient: "linear-gradient(135deg, rgba(16, 185, 129, 0.15), transparent)", progress: completionRate },
+    { id: 'timer', label: "Tempo Hoje", value: todayHours.split(' ')[0], sub: todayHours.split(' ')[1] || "0min", icon: isTracking ? Timer : Clock, color: isTracking ? "var(--color-success)" : "#3B82F6", gradient: isTracking ? "linear-gradient(135deg, var(--color-success-wash), transparent)" : "linear-gradient(135deg, rgba(59, 130, 246, 0.15), transparent)", interactive: true },
+    { id: 'alerts', label: "Alertas", value: alertsCount, sub: alertsCount > 0 ? "Atenção necessária" : "Tudo em dia", icon: Zap, color: "var(--color-danger)", gradient: "linear-gradient(135deg, var(--color-danger-wash), transparent)" }
   ];
 
   return (
@@ -757,14 +852,14 @@ function StatsWidget({ colSpan, demandsCount, finishedCount, alertsCount, todayH
           onClick={item.interactive ? onTimerToggle : undefined}
           style={{
             background: 'var(--card-inner-bg)',
-            padding: '10px 14px',
+            padding: '12px 16px',
             borderRadius: 'var(--radius-card)',
             border: item.id === 'timer' && isTracking ? '1px solid var(--color-success-wash)' : '1px solid var(--border)',
             position: 'relative',
             overflow: 'hidden',
             display: 'flex',
             flexDirection: 'column',
-            justifyContent: 'center',
+            justifyContent: 'space-between',
             cursor: item.interactive ? 'pointer' : 'default',
             transition: 'all 0.3s ease',
             boxShadow: item.id === 'timer' && isTracking ? '0 0 20px var(--color-success-wash)' : 'none',
@@ -772,20 +867,28 @@ function StatsWidget({ colSpan, demandsCount, finishedCount, alertsCount, todayH
           onMouseEnter={(e) => item.interactive && (e.currentTarget.style.borderColor = 'var(--accent)')}
           onMouseLeave={(e) => item.interactive && (e.currentTarget.style.borderColor = item.id === 'timer' && isTracking ? 'var(--color-success-wash)' : 'var(--border)')}
         >
-          <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: item.gradient, opacity: 0.5, pointerEvents: 'none' }} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', position: 'relative' }}>
-            <div style={{ padding: '6px', borderRadius: '10px', background: 'var(--color-surface-sunken)', color: item.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <item.icon size={14} className={item.id === 'timer' && isTracking ? 'animate-pulse' : ''} />
+          <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: item.gradient, opacity: 0.6, pointerEvents: 'none' }} />
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', position: 'relative' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ padding: '6px', borderRadius: '10px', background: 'var(--color-surface-sunken)', color: item.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <item.icon size={14} className={item.id === 'timer' && isTracking ? 'animate-pulse' : ''} />
+              </div>
+              <p style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
+                {item.label}
+              </p>
             </div>
-            <p style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
-              {item.label}
-            </p>
+            {item.interactive && isTracking && <span className="timer-live-dot" title="Timer em andamento" />}
           </div>
-          <div style={{ position: 'relative' }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-              <h2 style={{ fontSize: '1.4rem', fontWeight: 900, margin: 0, color: 'var(--text-primary)' }}>{item.value}</h2>
-              {item.sub && <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-secondary)' }}>{item.sub}</span>}
+          <div style={{ position: 'relative', marginTop: 4 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+              <h2 className="timer-tabular" style={{ fontSize: '1.6rem', fontWeight: 900, margin: 0, color: 'var(--text-primary)', lineHeight: 1 }}>{item.value}</h2>
+              {item.sub && <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-secondary)' }}>{item.sub}</span>}
             </div>
+            {item.progress !== undefined && (
+              <div style={{ width: '100%', height: '4px', background: 'var(--color-surface-sunken)', borderRadius: '2px', marginTop: '8px', overflow: 'hidden' }}>
+                <div style={{ width: `${item.progress}%`, height: '100%', background: item.color, borderRadius: '2px', transition: 'width 0.4s ease' }} />
+              </div>
+            )}
           </div>
         </div>
       ))}
@@ -794,7 +897,7 @@ function StatsWidget({ colSpan, demandsCount, finishedCount, alertsCount, todayH
 }
 
 // Timer Widget com contagem ao vivo
-function TimeTrackerWidget({ isTracking, todayHours, todayMinutes, currentSession, clockIn, clockOut }: any) {
+function TimeTrackerWidget({ isTracking, todayHours, todayMinutes, currentSession, clockIn, clockOut, activeDemandTitle }: any) {
   const [elapsed, setElapsed] = useState('00:00:00');
 
   useEffect(() => {
@@ -829,42 +932,57 @@ function TimeTrackerWidget({ isTracking, todayHours, todayMinutes, currentSessio
             transition={{ repeat: Infinity, duration: 2, ease: "easeOut" }}
             style={{
               position: 'absolute',
-              width: '120px',
-              height: '120px',
+              width: '130px',
+              height: '130px',
               borderRadius: '50%',
-              background: 'var(--accent)',
+              background: 'var(--color-success)',
               zIndex: 0
             }}
           />
         )}
       </AnimatePresence>
 
-      <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+      <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', width: '100%' }}>
         <div style={{
-          width: '60px',
-          height: '60px',
+          width: '54px',
+          height: '54px',
           borderRadius: 'var(--radius-card)',
           background: isTracking ? 'var(--color-success-wash)' : 'var(--color-surface-sunken)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           color: isTracking ? 'var(--color-success)' : 'var(--text-tertiary)',
-          marginBottom: '8px',
+          marginBottom: '4px',
           border: `1px solid ${isTracking ? 'var(--color-success-wash)' : 'var(--border)'}`
         }}>
-          <Timer size={28} className={isTracking ? "animate-pulse" : ""} />
+          <Timer size={26} className={isTracking ? "animate-pulse" : ""} />
         </div>
 
+        {activeDemandTitle && isTracking && (
+          <span style={{
+            fontSize: '0.7rem',
+            fontWeight: 700,
+            color: 'var(--color-success)',
+            background: 'var(--color-success-wash)',
+            padding: '2px 8px',
+            borderRadius: '6px',
+            maxWidth: '90%',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap'
+          }}>
+            🎯 {activeDemandTitle}
+          </span>
+        )}
+
         <div style={{ textAlign: 'center' }}>
-          <p style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>
-            Sessão Atual
+          <p style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '2px' }}>
+            {isTracking ? "Sessão Ativa" : "Sessão Atual"}
           </p>
-          <h2 style={{
-            fontFamily: 'monospace',
-            fontSize: '2.5rem',
-            fontWeight: 800,
-            letterSpacing: '-0.02em',
-            color: isTracking ? 'var(--text-primary)' : 'var(--text-tertiary)',
+          <h2 className="timer-tabular" style={{
+            fontSize: '2.4rem',
+            fontWeight: 900,
+            color: isTracking ? 'var(--color-success)' : 'var(--text-tertiary)',
             lineHeight: 1,
             margin: 0
           }}>
@@ -873,16 +991,16 @@ function TimeTrackerWidget({ isTracking, todayHours, todayMinutes, currentSessio
         </div>
 
         <div style={{
-          marginTop: '16px',
+          marginTop: '10px',
           padding: '4px 12px',
           borderRadius: '10px',
           background: 'var(--color-surface-sunken)',
           border: '1px solid var(--border)',
-          fontSize: '0.8rem',
+          fontSize: '0.78rem',
           color: 'var(--text-secondary)',
           fontWeight: 600
         }}>
-          Hoje: <span style={{ color: 'var(--text-primary)' }}>{todayHours}</span>
+          Hoje: <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{todayHours}</span>
         </div>
 
         <button

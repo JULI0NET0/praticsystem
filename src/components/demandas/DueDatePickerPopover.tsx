@@ -752,43 +752,26 @@ export default function DueDatePickerPopover({
               <div
                 style={{
                   display: "flex",
+                  flexWrap: "wrap",
                   alignItems: "center",
-                  gap: 6,
+                  gap: 4,
                   paddingTop: 2,
                 }}
               >
-                <input
-                  type="time"
-                  value={selectedTime}
-                  onChange={(e) => handleApplyTime(e.target.value, e)}
-                  onClick={(e) => e.stopPropagation()}
-                  style={{
-                    flex: 1,
-                    padding: "5px 8px",
-                    borderRadius: 6,
-                    border: "1px solid var(--border)",
-                    background: "var(--color-surface-sunken)",
-                    color: "var(--text-primary)",
-                    fontSize: "0.75rem",
-                    fontWeight: 600,
-                    fontFamily: "inherit",
-                    outline: "none",
-                  }}
-                />
-
-                {["09:00", "14:00", "18:00"].map((t) => (
+                {["08:00", "09:00", "10:00", "14:00", "16:00", "18:00", "20:00"].map((t) => (
                   <button
                     key={t}
                     type="button"
                     onClick={(e) => handleApplyTime(t, e)}
                     style={{
-                      padding: "4px 6px",
+                      flex: "1 0 auto",
+                      padding: "5px 6px",
                       borderRadius: 6,
                       border: selectedTime === t ? "1px solid var(--accent)" : "1px solid var(--border)",
                       background: selectedTime === t ? "color-mix(in oklab, var(--accent) 15%, transparent)" : "var(--color-surface-sunken)",
-                      color: selectedTime === t ? "var(--accent)" : "var(--text-secondary)",
-                      fontSize: "0.68rem",
-                      fontWeight: 600,
+                      color: selectedTime === t ? "var(--accent)" : "var(--text-primary)",
+                      fontSize: "0.72rem",
+                      fontWeight: selectedTime === t ? 700 : 500,
                       cursor: "pointer",
                     }}
                   >
