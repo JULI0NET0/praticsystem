@@ -85,10 +85,13 @@ function SingleBanner({ banner }: { banner: InAppNotification }) {
             />
           ) : (
             <div
-              className="w-10 h-10 rounded-full flex items-center justify-center"
-              style={{ background: 'rgba(255, 255, 255, 0.08)' }}
+              className="w-10 h-10 rounded-full flex items-center justify-center p-2 bg-black/40 border border-white/10"
             >
-              {getIcon()}
+              <img
+                src="/SIMBOLO-BRANCO.png"
+                alt="Prátic"
+                className="w-full h-full object-contain"
+              />
             </div>
           )}
           <div

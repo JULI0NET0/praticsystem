@@ -10,6 +10,7 @@ import {
   Bell,
   LogOut,
   Loader2,
+  Settings,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNotifications } from "@/context/NotificationContext";
@@ -417,7 +418,18 @@ export default function Sidebar() {
                     onClick={(e) => e.stopPropagation()}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                      <h4 style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)' }}>Notificações</h4>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <h4 style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)' }}>Notificações</h4>
+                        <button
+                          type="button"
+                          aria-label="Preferências de Lembrete"
+                          onClick={() => window.dispatchEvent(new CustomEvent('open-notification-settings'))}
+                          style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', display: 'flex', padding: '2px' }}
+                          title="Configurar Lembretes e Resumos"
+                        >
+                          <Settings size={14} />
+                        </button>
+                      </div>
                       {notifications.length > 0 && (
                         <button
                           type="button"
