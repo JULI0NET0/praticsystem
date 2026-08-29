@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { X, Search, Sun, Moon, Bell, LogOut, User, ChevronRight } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useDragControls } from "framer-motion";
 import { useState, useEffect, useRef } from "react";
 import { useTheme } from "next-themes";
 import { useAuth } from "@/hooks/useAuth";
@@ -27,10 +27,22 @@ export default function MobileMenuDrawer({ isOpen, onClose }: MobileMenuDrawerPr
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const dragControls = useDragControls();
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Bloquear scroll de fundo quando o menu estiver aberto
+  useEffect(() => {
+    if (isOpen) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [isOpen]);
 
   // Fechar ao navegar
   useEffect(() => {
@@ -126,39 +138,55 @@ export default function MobileMenuDrawer({ isOpen, onClose }: MobileMenuDrawerPr
             exit={{ y: '100%' }}
             transition={{ type: 'spring', stiffness: 400, damping: 40 }}
             drag="y"
+            dragControls={dragControls}
+            dragListener={false}
             dragConstraints={{ top: 0 }}
-            dragElastic={0.1}
+            dragElastic={{ top: 0, bottom: 0.5 }}
             onDragEnd={(_, info) => {
-              if (info.offset.y > 120) onClose();
+              if (info.offset.y > 100 || info.velocity.y > 400) onClose();
             }}
             style={{
               position: 'fixed',
               inset: 0,
+              height: '100dvh',
+              maxHeight: '100dvh',
               zIndex: 9999,
               background: 'var(--glass-bg)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
               display: 'flex',
               flexDirection: 'column',
-              overflowY: 'auto',
-              WebkitOverflowScrolling: 'touch',
-              paddingBottom: 'env(safe-area-inset-bottom, 20px)'
+              overflow: 'hidden'
             }}
           >
-            {/* Drag handle */}
-            <div style={{
-              width: '40px',
-              height: '4px',
-              borderRadius: '2px',
-              background: 'var(--border)',
-              margin: '12px auto 0',
-              flexShrink: 0
-            }} />
+            {/* Drag handle area */}
+            <div
+              onPointerDown={(e) => dragControls.start(e)}
+              style={{
+                width: '100%',
+                padding: '12px 0 6px',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                cursor: 'grab',
+                touchAction: 'none',
+                flexShrink: 0
+              }}
+            >
+              <div style={{
+                width: '40px',
+                height: '4px',
+                borderRadius: '2px',
+                background: 'var(--border)'
+              }} />
+            </div>
 
             {/* Header */}
             <div style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              padding: '16px 20px',
+              padding: '8px 20px 16px',
               borderBottom: '1px solid var(--border)',
               flexShrink: 0
             }}>
@@ -184,7 +212,17 @@ export default function MobileMenuDrawer({ isOpen, onClose }: MobileMenuDrawerPr
               </motion.button>
             </div>
 
-            <div style={{ flex: 1, padding: '20px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            <div style={{
+              flex: 1,
+              overflowY: 'auto',
+              WebkitOverflowScrolling: 'touch',
+              overscrollBehavior: 'contain',
+              padding: '20px',
+              paddingBottom: 'calc(env(safe-area-inset-bottom, 24px) + 32px)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '24px'
+            }}>
               {/* Profile Card */}
               <motion.div
                 whileTap={{ scale: 0.98 }}
