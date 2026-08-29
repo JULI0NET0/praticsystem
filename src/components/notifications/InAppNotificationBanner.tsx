@@ -166,9 +166,21 @@ export default function InAppNotificationBanner() {
   return (
     <aside
       aria-label="Notificações em tempo real"
-      className="fixed top-3 sm:top-5 left-1/2 -translate-x-1/2 z-[99999] max-w-[92vw] sm:max-w-[420px] w-full pointer-events-none flex flex-col gap-2.5"
+      style={{
+        position: 'fixed',
+        top: '20px',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        zIndex: 999999,
+        width: '92%',
+        maxWidth: '420px',
+        pointerEvents: 'none',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '10px'
+      }}
     >
-      <div className="pointer-events-auto w-full flex flex-col gap-2">
+      <div style={{ pointerEvents: 'auto', width: '100%', display: 'flex', flexDirection: 'column', gap: '8px' }}>
         <AnimatePresence mode="sync">
           {activeBanners.map(banner => (
             <SingleBanner key={banner.id} banner={banner} />

@@ -1,18 +1,30 @@
 "use client";
 
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { PresenceProvider } from "@/hooks/usePresence";
 import { TimeTrackerProvider } from "@/hooks/useTimeTracker";
 import { PomodoroProvider } from "@/hooks/usePomodoro";
 import { Loader2 } from "lucide-react";
-
 import { NotificationProvider } from "@/context/NotificationContext";
+import InAppNotificationBanner from "@/components/notifications/InAppNotificationBanner";
+import NotificationPermissionModal from "@/components/notifications/NotificationPermissionModal";
+import NotificationSettingsModal from "@/components/notifications/NotificationSettingsModal";
+import { useDemandReminders } from "@/hooks/useDemandReminders";
 
 function AdminProvidersInner({ children }: { children: React.ReactNode }) {
   const { currentUser, loading } = useAuth();
   const router = useRouter();
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  useDemandReminders();
+
+  useEffect(() => {
+    const handleOpen = () => setIsSettingsOpen(true);
+    window.addEventListener("open-notification-settings", handleOpen);
+    return () => window.removeEventListener("open-notification-settings", handleOpen);
+  }, []);
 
   useEffect(() => {
     if (!loading && !currentUser) {
@@ -38,6 +50,12 @@ function AdminProvidersInner({ children }: { children: React.ReactNode }) {
   return (
     <PresenceProvider currentUser={currentUser}>
       <NotificationProvider>
+        <InAppNotificationBanner />
+        <NotificationPermissionModal />
+        <NotificationSettingsModal
+          isOpen={isSettingsOpen}
+          onClose={() => setIsSettingsOpen(false)}
+        />
         <TimeTrackerProvider>
           <PomodoroProvider>
             {children}

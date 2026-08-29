@@ -7,11 +7,13 @@ import GlobalClientControls from "@/components/GlobalClientControls";
 import { AuthProvider } from "@/hooks/useAuth";
 
 import { NotificationProvider } from "@/context/NotificationContext";
+import InAppNotificationBanner from "@/components/notifications/InAppNotificationBanner";
 
 export default function ClientLayout({ children }: { children: ReactNode }) {
   return (
     <AuthProvider>
       <NotificationProvider>
+        <InAppNotificationBanner />
         <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--color-surface-canvas)' }}>
           <ShortcutOverlay />
           <GlobalClientControls />
