@@ -146,7 +146,7 @@ export interface Invoice {
 export interface AgendaEvent {
   id: string;
   title: string;
-  type: 'meeting' | 'payment' | 'prospecting' | 'task';
+  type: 'meeting' | 'payment' | 'prospecting' | 'task' | 'demand';
   date: string;
   client_id?: string;
   assigned_to: string;

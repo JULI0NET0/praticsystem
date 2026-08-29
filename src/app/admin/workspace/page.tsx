@@ -1302,14 +1302,22 @@ function AgendaWidget() {
 
         const { data } = await supabase
           .from('agenda_events')
-          .select('id, title, date, type, client_id, assigned_to, visibility, status')
+          .select('id, title, date, type, client_id, assigned_to, visibility, status, demand_id, demands(assignee_ids, assign_all_team)')
           .gte('date', now.toISOString())
           .lt('date', end.toISOString())
-          .or(`visibility.eq.public,assigned_to.eq.${currentUser.id}`)
-          .order('date', { ascending: true })
-          .limit(8);
+          .order('date', { ascending: true });
 
-        if (data) setEvents(data);
+        if (data) {
+          const visible = data.filter((event: any) => {
+            if (event.demand_id && event.demands) {
+              if (event.demands.assign_all_team) return true;
+              return Array.isArray(event.demands.assignee_ids) && event.demands.assignee_ids.includes(currentUser.id);
+            }
+            if (event.visibility === 'public') return true;
+            return event.assigned_to === currentUser.id;
+          }).slice(0, 8);
+          setEvents(visible);
+        }
       } catch (err) {
         console.error("Erro ao buscar agenda do workspace:", err);
       } finally {

@@ -28,6 +28,17 @@ body {
   height: 100%;
 }
 
+/* ---------- Seleção de texto com a cor terracota do sistema ---------- */
+::selection {
+  background-color: var(--color-selection-bg, color-mix(in oklab, var(--color-terracotta) 35%, transparent));
+  color: var(--color-text-primary);
+}
+
+::-moz-selection {
+  background-color: var(--color-selection-bg, color-mix(in oklab, var(--color-terracotta) 35%, transparent));
+  color: var(--color-text-primary);
+}
+
 body {
   background-color: var(--color-surface-canvas);
   color: var(--color-text-primary);

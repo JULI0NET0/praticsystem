@@ -10,7 +10,10 @@ import {
   ChevronLeft,
   ChevronRight,
   CircleDot,
+  Copy,
   Flag,
+  Hash,
+  Link as LinkIcon,
   Maximize2,
   Trash2,
 } from "lucide-react";
@@ -24,6 +27,7 @@ import {
 } from "@/types/demandas";
 import { useDemandas } from "./DemandasProvider";
 import { useConfirm } from "@/components/ConfirmProvider";
+import { useToast } from "@/components/CustomToast";
 import { CalendarPopover, TimePickerPopover } from "@/components/ui/DatePicker";
 
 const PRIORITIES: DemandPriority[] = ["urgent", "high", "medium", "low", "none"];
@@ -34,6 +38,7 @@ export interface ContextMenuAnchor {
   demandId: string;
   x: number;
   y: number;
+  selectedText?: string;
 }
 
 /** Estado do menu + handler pronto para o onContextMenu da linha/card. */
@@ -45,7 +50,8 @@ export function useDemandContextMenu() {
     // Impede que o ContextMenu global da aplicação (tema, recarregar)
     // abra junto — ele escuta 'contextmenu' no document.
     event.stopPropagation();
-    setAnchor({ demandId, x: event.clientX, y: event.clientY });
+    const selectedText = window.getSelection()?.toString().trim() || "";
+    setAnchor({ demandId, x: event.clientX, y: event.clientY, selectedText });
   };
 
   return { anchor, openFor, close: () => setAnchor(null) };
@@ -67,6 +73,7 @@ export default function DemandContextMenu({
 }: Props) {
   const { getDemand, statuses, updateDemand, deleteDemand, toggleComplete } = useDemandas();
   const { confirm } = useConfirm();
+  const { showToast } = useToast();
   const [panel, setPanel] = useState<Panel>("root");
   const [datePopoverOpen, setDatePopoverOpen] = useState(false);
   const [timePopoverOpen, setTimePopoverOpen] = useState(false);
@@ -76,6 +83,16 @@ export default function DemandContextMenu({
   const [position, setPosition] = useState({ x: anchor.x, y: anchor.y });
 
   const demand: Demand | undefined = getDemand(anchor.demandId);
+
+  const copyToClipboard = async (text: string, msg: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast(msg, "success");
+      onClose();
+    } catch {
+      showToast("Erro ao copiar para a área de transferência.", "error");
+    }
+  };
 
   // Mantém o menu dentro da viewport
   useLayoutEffect(() => {
@@ -139,6 +156,19 @@ export default function DemandContextMenu({
     >
       {panel === "root" && (
         <>
+          {anchor.selectedText && (
+            <>
+              <button
+                className="context-menu-item"
+                onClick={() => copyToClipboard(anchor.selectedText!, "Texto copiado!")}
+              >
+                <Copy size={16} />
+                <span>Copiar texto</span>
+              </button>
+              <div className="context-menu-separator" />
+            </>
+          )}
+
           <button className="context-menu-item" onClick={() => { onOpenDetails(demand.id); onClose(); }}>
             <Maximize2 size={16} />
             <span>Abrir detalhes</span>
@@ -175,6 +205,36 @@ export default function DemandContextMenu({
             <CircleDot size={16} />
             <span>Status</span>
             <ChevronRight size={14} className="context-menu-more" />
+          </button>
+
+          <div className="context-menu-separator" />
+
+          <button
+            className="context-menu-item"
+            onClick={() => copyToClipboard(demand.id, "ID da demanda copiado!")}
+          >
+            <Hash size={16} />
+            <span>Copiar ID</span>
+            <span className="context-menu-shortcut">#{demand.id.slice(0, 6)}</span>
+          </button>
+
+          <button
+            className="context-menu-item"
+            onClick={() => copyToClipboard(demand.title, "Título copiado!")}
+          >
+            <Copy size={16} />
+            <span>Copiar título</span>
+          </button>
+
+          <button
+            className="context-menu-item"
+            onClick={() => {
+              const url = `${window.location.origin}/demandas?id=${demand.id}`;
+              copyToClipboard(url, "Link da demanda copiado!");
+            }}
+          >
+            <LinkIcon size={16} />
+            <span>Copiar link</span>
           </button>
 
           <div className="context-menu-separator" />

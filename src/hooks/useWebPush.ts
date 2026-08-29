@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 
-const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || 'BEMhf9Gr0w8B8p1BR3wovmq7A8FxmjDItTWZBE0BawIKCi486RgilFrYSLe9JJT3-d2Mk77qddFJhpITvTYS2jA'
+const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
 
 function urlBase64ToUint8Array(base64String: string) {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
@@ -26,7 +26,10 @@ export function useWebPush(currentUserId?: string) {
     if (typeof window === 'undefined') return
 
     const supported = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window
-    setIsSupported(supported)
+    if (supported && !VAPID_PUBLIC_KEY) {
+      console.error('[WebPush] NEXT_PUBLIC_VAPID_PUBLIC_KEY não configurada — Web Push desativado.')
+    }
+    setIsSupported(supported && !!VAPID_PUBLIC_KEY)
 
     if (supported) {
       navigator.serviceWorker
@@ -62,6 +65,11 @@ export function useWebPush(currentUserId?: string) {
         let subscription = await registration.pushManager.getSubscription()
 
         if (!subscription) {
+          if (!VAPID_PUBLIC_KEY) {
+            console.error('[WebPush] NEXT_PUBLIC_VAPID_PUBLIC_KEY não configurada — Web Push desativado.')
+            setLoading(false)
+            return false
+          }
           const applicationServerKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
           subscription = await registration.pushManager.subscribe({
             userVisibleOnly: true,

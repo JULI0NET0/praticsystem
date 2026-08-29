@@ -27,7 +27,7 @@ export type DemandDescription = Record<string, unknown> | null;
  * ver src/lib/demandAgendaSync.ts). Subconjunto do vocabulário de
  * agenda_events.type; null = não aparece na agenda.
  */
-export type AgendaSubject = 'meeting' | 'leadership_meeting' | 'prospecting' | 'task' | 'demand';
+export type AgendaSubject = 'meeting' | 'prospecting' | 'task' | 'demand';
 
 export interface DemandStatus {
   id: string;

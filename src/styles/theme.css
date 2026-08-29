@@ -39,6 +39,7 @@
   --color-terracotta-active-solid: #eba48f;
   --color-terracotta-100: #fff1ed; /* wash */
   --color-terracotta-200: #f3dfd3; /* wash forte / borda */
+  --color-selection-bg: color-mix(in oklab, var(--color-terracotta) 30%, transparent);
   /* Texto sobre wash terracota. Separado do -700 porque o -700
      (#c96442, o terracota validado no mockup) dá só 3.54:1 sobre o
      wash e reprova em AA — ele continua sendo a cor de hover e de
@@ -175,6 +176,7 @@
      muda, só a luminosidade, para manter AA nos dois modos. */
   --color-terracotta-100: #3a2419;
   --color-terracotta-200: #4a2e20;
+  --color-selection-bg: color-mix(in oklab, var(--color-terracotta) 38%, transparent);
   /* Clareia junto com os outros inks: #a54a29 sobre o wash escuro
      seria ilegível. 7.25:1 sobre #3a2419. */
   --color-terracotta-ink: #e8a98d;

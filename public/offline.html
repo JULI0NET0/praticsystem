@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Sem conexão — Prátic</title>
+  <style>
+    :root { color-scheme: light; }
+    * { box-sizing: border-box; }
+    html, body {
+      height: 100%;
+      margin: 0;
+      background: #FAF9F5;
+      color: #141413;
+      font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+    }
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      text-align: center;
+    }
+    .card { max-width: 360px; }
+    .icon {
+      width: 56px;
+      height: 56px;
+      margin: 0 auto 20px;
+      border-radius: 16px;
+      background: #141413;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .icon svg { width: 26px; height: 26px; }
+    h1 { font-size: 1.05rem; font-weight: 600; margin: 0 0 8px; }
+    p { font-size: 0.85rem; line-height: 1.5; color: #6b6a63; margin: 0 0 20px; }
+    button {
+      font: inherit;
+      font-weight: 600;
+      font-size: 0.82rem;
+      padding: 10px 20px;
+      border-radius: 10px;
+      border: none;
+      background: #141413;
+      color: #FAF9F5;
+      cursor: pointer;
+    }
+    button:active { opacity: 0.85; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#FAF9F5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="1" y1="1" x2="23" y2="23"></line>
+        <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"></path>
+        <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"></path>
+        <path d="M10.71 5.05A16 16 0 0 1 22.58 9"></path>
+        <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"></path>
+        <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
+        <line x1="12" y1="20" x2="12.01" y2="20"></line>
+      </svg>
+    </div>
+    <h1>Sem conexão no momento</h1>
+    <p>O Prátic precisa de internet para carregar seus dados. Assim que a conexão voltar, tente novamente.</p>
+    <button type="button" onclick="location.reload()">Tentar de novo</button>
+  </div>
+</body>
+</html>

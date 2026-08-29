@@ -61,6 +61,8 @@ export default function DemandRow({
 
   return (
     <motion.div
+      data-id={demand.id}
+      data-demand-id={demand.id}
       // `layout` faz a linha deslizar até a nova posição quando ela é
       // concluída e cai para o fim do grupo, em vez de saltar.
       layout={reduceMotion ? false : "position"}

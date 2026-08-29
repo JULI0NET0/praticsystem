@@ -7,6 +7,7 @@ import { playSound } from '@/utils/audio'
 
 import { useAuth } from '@/hooks/useAuth'
 import { useWebPush } from '@/hooks/useWebPush'
+import { useStandaloneMode } from '@/hooks/useStandaloneMode'
 
 const PROMPT_DISMISS_KEY = 'pratic_notif_prompt_dismissed_v1'
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000
@@ -21,12 +22,23 @@ function useSafeAuth() {
 
 export default function NotificationPermissionModal() {
   const { currentUser } = useSafeAuth()
-  const { subscribeToPush } = useWebPush(currentUser?.id)
+  const { isSupported, subscribeToPush } = useWebPush(currentUser?.id)
+  const { isIOS, isStandalone, isOldIOSStandalone, ready: standaloneReady } = useStandaloneMode()
   const [visible, setVisible] = useState(false)
   const [granted, setGranted] = useState(false)
+  const [denied, setDenied] = useState(false)
 
   useEffect(() => {
     if (typeof window === 'undefined' || typeof Notification === 'undefined') return
+    // Sem suporte real (falta PushManager, ou VAPID não configurada), não
+    // faz sentido pedir a permissão nativa — ela seria concedida e a
+    // inscrição falharia silenciosamente depois (ver useWebPush.ts).
+    if (!isSupported) return
+    // iOS fora do modo instalado (ou instalado numa versão antiga demais)
+    // não tem PushManager de verdade — quem cobre esse caso é o
+    // IOSInstallPrompt, não este modal.
+    if (!standaloneReady) return
+    if (isIOS && (!isStandalone || isOldIOSStandalone)) return
 
     // Só exibe se ainda estiver como 'default' (nem concedido, nem bloqueado)
     if (Notification.permission === 'default') {
@@ -42,7 +54,7 @@ export default function NotificationPermissionModal() {
 
       return () => clearTimeout(timer)
     }
-  }, [])
+  }, [isSupported, standaloneReady, isIOS, isStandalone, isOldIOSStandalone])
 
   const handleRequestPermission = async () => {
     if (typeof Notification === 'undefined') return
@@ -59,6 +71,10 @@ export default function NotificationPermissionModal() {
         setTimeout(() => {
           setVisible(false)
         }, 1500)
+      } else if (permission === 'denied') {
+        // Bloqueio explícito: não há como reabrir o prompt nativo via JS.
+        // Mostra a instrução de reativação manual em vez de só fechar.
+        setDenied(true)
       } else {
         setVisible(false)
       }
@@ -112,6 +128,29 @@ export default function NotificationPermissionModal() {
                   <h4 className="text-sm font-semibold text-white">Notificações ativadas!</h4>
                   <p className="text-xs text-zinc-400">Você receberá avisos em tempo real.</p>
                 </div>
+              </div>
+            ) : denied ? (
+              <div className="flex flex-col gap-2 py-1">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-red-500/15 border border-red-500/30 flex items-center justify-center shrink-0 text-red-400">
+                    <Bell size={20} />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-semibold text-white">Permissão bloqueada</h4>
+                    <p className="text-xs text-zinc-300 mt-1 leading-relaxed">
+                      Seu navegador bloqueou as notificações. Para ativar depois, abra as
+                      configurações do site (ícone de cadeado/informações ao lado do endereço)
+                      e permita &quot;Notificações&quot;.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleDismiss}
+                  className="self-end py-1.5 px-3 rounded-lg text-xs font-medium text-zinc-400 hover:text-zinc-200 hover:bg-white/5 transition-colors"
+                >
+                  Entendi
+                </button>
               </div>
             ) : (
               <div className="flex flex-col gap-3">

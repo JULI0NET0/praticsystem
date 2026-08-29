@@ -173,14 +173,20 @@ export default function SchedulePage() {
     try {
       setLoading(true);
 
-      let query = supabase.from('agenda_events').select('*');
+      const { data: agendaEvents, error: agendaError } = await supabase
+        .from('agenda_events')
+        .select('*, demands(assignee_ids, assign_all_team)');
 
-      if (currentUser?.role !== 'admin' && currentUser?.role !== 'board') {
-        query = query.or(`visibility.eq.public,assigned_to.eq.${currentUser?.id}`);
-      }
-
-      const { data: agendaEvents, error: agendaError } = await query;
       if (agendaError) throw agendaError;
+
+      const visibleAgendaEvents = (agendaEvents || []).filter((event: any) => {
+        if (event.demand_id && event.demands) {
+          if (event.demands.assign_all_team) return true;
+          return Array.isArray(event.demands.assignee_ids) && event.demands.assignee_ids.includes(currentUser.id);
+        }
+        if (event.visibility === 'public') return true;
+        return event.assigned_to === currentUser.id;
+      });
 
       let invoiceEvents: any[] = [];
       if (currentUser?.role === 'admin' || currentUser?.role === 'board') {
@@ -214,7 +220,7 @@ export default function SchedulePage() {
         }
       }
 
-      const formattedAgendaEvents = (agendaEvents || []).map(event => ({
+      const formattedAgendaEvents = visibleAgendaEvents.map((event: any) => ({
         id: event.id,
         title: event.title,
         start: event.date,
@@ -703,7 +709,11 @@ export default function SchedulePage() {
   const filteredEvents = events.filter(e =>
     e.title.toLowerCase().includes(searchQuery.toLowerCase()) &&
     activeFilters.includes(e.extendedProps.type) &&
-    (!responsibleFilter || e.extendedProps?.assigned_to === responsibleFilter)
+    (!responsibleFilter || 
+      e.extendedProps?.assigned_to === responsibleFilter ||
+      (e.extendedProps?.demands && Array.isArray(e.extendedProps.demands.assignee_ids) && e.extendedProps.demands.assignee_ids.includes(responsibleFilter)) ||
+      (e.extendedProps?.demands?.assign_all_team)
+    )
   );
 
   const toggleFilter = (id: string) => {
@@ -1112,8 +1122,20 @@ export default function SchedulePage() {
                         </div>
                       )}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-secondary)' }}>
-                        {selectedEvent.extendedProps.visibility === 'public' ? <Shield size={16} color="var(--color-success)" /> : <ShieldOff size={16} color="var(--color-danger)" />}
-                        <span style={{ fontSize: '0.85rem' }}>{selectedEvent.extendedProps.visibility === 'public' ? 'Visível para todos' : 'Apenas para mim'}</span>
+                        {selectedEvent.extendedProps?.demands?.assign_all_team || selectedEvent.extendedProps.visibility === 'public' ? (
+                          <Shield size={16} color="var(--color-success)" />
+                        ) : (
+                          <ShieldOff size={16} color="var(--color-danger)" />
+                        )}
+                        <span style={{ fontSize: '0.85rem' }}>
+                          {selectedEvent.extendedProps?.demands?.assign_all_team
+                            ? 'Visível para toda a equipe'
+                            : selectedEvent.extendedProps?.demand_id
+                            ? 'Visível para os responsáveis da demanda'
+                            : selectedEvent.extendedProps.visibility === 'public'
+                            ? 'Visível para todos'
+                            : 'Apenas para mim'}
+                        </span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-secondary)' }}>
                         {selectedEvent.extendedProps.status === 'completed' ? <CheckCircle2 size={16} color="var(--color-success)" /> : <Clock size={16} color="var(--color-warning)" />}
@@ -1341,7 +1363,7 @@ export default function SchedulePage() {
                     <div>
                       <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>agenciapratic@gmail.com</span>
                       <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', margin: '2px 0 0' }}>
-                        Reuniões, Captação, Tarefas, Social Media, Tráfego, Lançamentos
+                        Reuniões, Captações e Tarefas
                       </p>
                     </div>
                     <span

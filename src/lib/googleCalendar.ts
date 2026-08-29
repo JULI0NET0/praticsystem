@@ -5,20 +5,14 @@ const GOOGLE_CALENDAR_API = 'https://www.googleapis.com/calendar/v3';
 
 export type GoogleAccount = 'agenciapratic' | 'praticlabs';
 
-// Reunião, Captação, Tarefa Interna, Social Media, Tráfego Pago e Lançamento são "gerais" e
-// vão para agenciapratic@gmail.com; pagamento e reunião de liderança são assuntos internos/
-// financeiros e vão para praticlabs@gmail.com.
+// Reunião, Captação e Tarefa Interna são "gerais" e vão para agenciapratic@gmail.com;
+// pagamento é assunto financeiro.
 export const CATEGORY_GOOGLE_ACCOUNT: Record<string, GoogleAccount> = {
   meeting: 'agenciapratic',
-  leadership_meeting: 'agenciapratic',
   prospecting: 'agenciapratic',
   task: 'agenciapratic',
-  social_media: 'agenciapratic',
-  ads: 'agenciapratic',
-  launch: 'agenciapratic',
   payment: 'agenciapratic',
-  // Nunca exercitado na prática: o assunto "demand" (evento-espelho de uma
-  // demanda genérica) é sempre privado e nunca sincroniza com o Google.
+  // O assunto "demand" (evento-espelho de uma demanda genérica) é privado
   demand: 'agenciapratic',
 };
 
@@ -100,18 +94,23 @@ export async function exchangeGoogleAuthCode(code: string, redirectUri: string):
   return await res.json();
 }
 
-async function getAccessToken(account: GoogleAccount): Promise<string> {
+export async function getValidAccessToken(account: GoogleAccount): Promise<string> {
   const cached = accessTokenCache[account];
-  if (cached && cached.expiresAt > Date.now()) {
+  if (cached && cached.expiresAt > Date.now() + 60 * 1000) {
     return cached.token;
+  }
+
+  const refreshToken = getRefreshToken(account);
+  if (!refreshToken) {
+    throw new Error(
+      `Conta Google "${account}" não configurada. Defina GOOGLE_REFRESH_TOKEN_${account.toUpperCase()} ou autorize via /admin/schedule.`
+    );
   }
 
   const clientId = getClientId();
   const clientSecret = getClientSecret();
-  const refreshToken = getRefreshToken(account);
-
-  if (!clientId || !clientSecret || !refreshToken) {
-    throw new Error(`Credenciais do Google não configuradas para a conta "${account}". Verifique GOOGLE_REFRESH_TOKEN_${account.toUpperCase()}`);
+  if (!clientId || !clientSecret) {
+    throw new Error('Credenciais GOOGLE_OAUTH_CLIENT_ID e GOOGLE_OAUTH_CLIENT_SECRET não configuradas.');
   }
 
   const res = await fetch(GOOGLE_TOKEN_URL, {
@@ -126,22 +125,24 @@ async function getAccessToken(account: GoogleAccount): Promise<string> {
   });
 
   if (!res.ok) {
-    delete accessTokenCache[account];
-    const body = await res.text();
-    throw new Error(`Falha ao renovar token do Google (${account}): ${res.status} ${body}`);
+    const errorBody = await res.text();
+    throw new Error(`Erro ao renovar token de acesso do Google (${account}): ${res.status} ${errorBody}`);
   }
 
   const data = await res.json();
+  const token = data.access_token as string;
+  const expiresIn = (data.expires_in as number) || 3600;
+
   accessTokenCache[account] = {
-    token: data.access_token,
-    // Renova um pouco antes do vencimento real para evitar folga zero.
-    expiresAt: Date.now() + (data.expires_in - 60) * 1000,
+    token,
+    expiresAt: Date.now() + expiresIn * 1000,
   };
-  return data.access_token;
+
+  return token;
 }
 
 async function calendarFetch(account: GoogleAccount, path: string, options: RequestInit = {}) {
-  const accessToken = await getAccessToken(account);
+  const accessToken = await getValidAccessToken(account);
   const res = await fetch(`${GOOGLE_CALENDAR_API}${path}`, {
     ...options,
     headers: {
@@ -210,18 +211,6 @@ export function inferCategoryFromEvent(title: string = '', description: string =
     text.includes('prospeccao')
   ) {
     return 'prospecting';
-  }
-  if (text.includes('social media') || text.includes('instagram') || text.includes('post') || text.includes('reels') || text.includes('carrossel')) {
-    return 'social_media';
-  }
-  if (text.includes('tráfego') || text.includes('trafego') || text.includes('ads') || text.includes('meta ads') || text.includes('google ads')) {
-    return 'ads';
-  }
-  if (text.includes('lançamento') || text.includes('lancamento')) {
-    return 'launch';
-  }
-  if (text.includes('liderança') || text.includes('lideranca') || text.includes('diretoria') || text.includes('board')) {
-    return 'leadership_meeting';
   }
   if (text.includes('pagamento') || text.includes('financeiro') || text.includes('fatura') || text.includes('boleto')) {
     return 'payment';

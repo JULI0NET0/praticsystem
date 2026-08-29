@@ -144,7 +144,14 @@ export default function NotificationSettingsModal({ isOpen, onClose }: Notificat
             </div>
 
             {/* Status do Web Push */}
-            {pushStatus !== 'granted' ? (
+            {pushStatus === 'denied' ? (
+              <div className="mt-3.5 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-xs text-red-200 leading-snug">
+                <span className="font-bold">Push bloqueado:</span> seu navegador negou a permissão
+                antes. Clicar em &quot;Ativar&quot; não vai funcionar de novo — abra as configurações do
+                site (ícone de cadeado/informações ao lado do endereço) e permita &quot;Notificações&quot;
+                manualmente.
+              </div>
+            ) : pushStatus !== 'granted' ? (
               <div className="mt-3.5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-2">
                 <div className="text-xs text-amber-200 leading-snug">
                   <span className="font-bold">Push não ativado:</span> Ative para receber no celular/PC com o app fechado.

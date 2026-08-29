@@ -18,19 +18,15 @@ export interface AgendaCategory {
 /** Vocabulário de "Assuntos" da Agenda — único lugar que o define. */
 export const AGENDA_CATEGORIES: AgendaCategory[] = [
   { id: "meeting", label: "Reunião", color: "#3B82F6", icon: Users },
-  { id: "leadership_meeting", label: "Reunião de Liderança", color: "#14B8A6", icon: Users },
   { id: "prospecting", label: "Captação", color: "var(--color-warning)", icon: MapPin },
   { id: "task", label: "Tarefa Interna", color: "var(--color-text-secondary)", icon: CheckCircle2 },
-  { id: "social_media", label: "Social Media", color: "#EC4899", icon: ExternalLink },
-  { id: "ads", label: "Tráfego Pago", color: "#8B5CF6", icon: ExternalLink },
-  { id: "launch", label: "Lançamento", color: "#F97316", icon: ExternalLink },
   { id: "payment", label: "Pagamento", color: "var(--color-success)", icon: Clock },
   { id: "demand", label: "Demanda", color: "#6366F1", icon: ClipboardList },
 ];
 
 /** Assuntos que fazem sentido a partir de uma Demanda — exclui os fluxos próprios da Agenda/Financeiro. */
 export const DEMAND_AGENDA_SUBJECTS: AgendaCategory[] = AGENDA_CATEGORIES.filter((category) =>
-  ["meeting", "leadership_meeting", "prospecting", "task", "demand"].includes(category.id),
+  ["meeting", "prospecting", "task", "demand"].includes(category.id),
 );
 
 /** Assuntos cujo evento-espelho sincroniza com o Google Calendar (regra fixa, não configurável por demanda). */

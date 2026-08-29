@@ -38,13 +38,12 @@ export function computeAgendaMirror(demand: Demand): AgendaMirrorPlan {
     return hadLink ? { action: "clear" } : { action: "none" };
   }
 
-  // Um evento só tem um `assigned_to`: com mais de um responsável (ou "time
-  // todo"), a única forma de continuar visível a todos eles é tornar o
-  // evento público — decisão confirmada com o usuário, mesmo para assuntos
-  // que normalmente seriam privados (ex.: Tarefa Interna).
-  const isMultiAssignee = (demand.assignee_ids?.length ?? 0) !== 1 || demand.assign_all_team;
-  const visibility: "public" | "private" =
-    AGENDA_GOOGLE_SYNC_SUBJECTS.has(demand.agenda_subject) || isMultiAssignee ? "public" : "private";
+  // Visibilidade pública só se for sincronizado com Google Calendar (reunião/captação)
+  // ou explicitamente marcado para toda a equipe (assign_all_team).
+  // Demandas com responsáveis específicos não são públicas para quem não for responsável.
+  const isAllTeam = Boolean(demand.assign_all_team);
+  const isGoogleSync = AGENDA_GOOGLE_SYNC_SUBJECTS.has(demand.agenda_subject);
+  const visibility: "public" | "private" = isGoogleSync || isAllTeam ? "public" : "private";
 
   return {
     action: "upsert",

@@ -43,6 +43,8 @@ export default function DemandCard({
 
   return (
     <motion.div
+      data-id={demand.id}
+      data-demand-id={demand.id}
       layout
       draggable
       onDragStart={() => onDragStart?.(demand.id)}

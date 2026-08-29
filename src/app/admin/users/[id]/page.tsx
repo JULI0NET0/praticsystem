@@ -23,6 +23,7 @@ import {
 import Spotlight from "@/components/Spotlight";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/components/CustomToast";
+import { useAuth } from "@/hooks/useAuth";
 import { formatCurrency } from "@/lib/format";
 import { tint } from "@/lib/tint";
 
@@ -56,6 +57,7 @@ export default function UserDetailPage() {
   const { id } = useParams();
   const router = useRouter();
   const { showToast } = useToast();
+  const { canViewFinancials } = useAuth();
 
   const [user, setUser] = useState<any>(null);
   const [userDemands, setUserDemands] = useState<any[]>([]);
@@ -113,7 +115,7 @@ export default function UserDetailPage() {
         setUser({ ...data, avatarUrl: data.avatar_url, statusMessage: data.status_message });
         await Promise.all([
           fetchDemands(data.id),
-          fetchUserFinancials(data.id),
+          canViewFinancials ? fetchUserFinancials(data.id) : Promise.resolve(),
           fetchRecentNotes(data.id),
         ]);
       }
@@ -412,7 +414,7 @@ export default function UserDetailPage() {
         {/* Coluna direita */}
         <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
           {/* Stats reais */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: canViewFinancials ? "repeat(3, 1fr)" : "repeat(2, 1fr)", gap: "16px" }}>
             <Spotlight className="glass-card" style={{ padding: "24px" }}>
               <p style={{ color: "var(--text-secondary)", fontSize: "0.78rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "8px" }}>
                 Total Demandas
@@ -433,17 +435,19 @@ export default function UserDetailPage() {
                 </p>
               )}
             </Spotlight>
-            <Spotlight className="glass-card" style={{ padding: "24px" }}>
-              <p style={{ color: "var(--text-secondary)", fontSize: "0.78rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "8px" }}>
-                Custo Mensal
-              </p>
-              <h4 style={{ fontSize: custoMensal > 0 ? "1.4rem" : "1.8rem", fontWeight: 800, color: custoMensal > 0 ? "var(--color-danger)" : "var(--text-tertiary)" }}>
-                {custoMensal > 0 ? formatCurrency(custoMensal) : "—"}
-              </h4>
-              {custoMensal === 0 && (
-                <p style={{ fontSize: "0.72rem", color: "var(--text-tertiary)", marginTop: "4px" }}>Sem despesas vinculadas</p>
-              )}
-            </Spotlight>
+            {canViewFinancials && (
+              <Spotlight className="glass-card" style={{ padding: "24px" }}>
+                <p style={{ color: "var(--text-secondary)", fontSize: "0.78rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "8px" }}>
+                  Custo Mensal
+                </p>
+                <h4 style={{ fontSize: custoMensal > 0 ? "1.4rem" : "1.8rem", fontWeight: 800, color: custoMensal > 0 ? "var(--color-danger)" : "var(--text-tertiary)" }}>
+                  {custoMensal > 0 ? formatCurrency(custoMensal) : "—"}
+                </h4>
+                {custoMensal === 0 && (
+                  <p style={{ fontSize: "0.72rem", color: "var(--text-tertiary)", marginTop: "4px" }}>Sem despesas vinculadas</p>
+                )}
+              </Spotlight>
+            )}
           </div>
 
           {/* Demandas */}
@@ -515,104 +519,106 @@ export default function UserDetailPage() {
           </Spotlight>
 
           {/* Custos Financeiros */}
-          <Spotlight className="glass-card" style={{ padding: "28px" }}>
-            <h3 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: "20px", display: "flex", alignItems: "center", gap: "10px" }}>
-              <DollarSign size={20} color="var(--accent)" /> Custos Financeiros
-            </h3>
+          {canViewFinancials && (
+            <Spotlight className="glass-card" style={{ padding: "28px" }}>
+              <h3 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: "20px", display: "flex", alignItems: "center", gap: "10px" }}>
+                <DollarSign size={20} color="var(--accent)" /> Custos Financeiros
+              </h3>
 
-            {userExpenses.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "24px 0", color: "var(--text-tertiary)", fontSize: "0.875rem" }}>
-                <TrendingUp size={28} style={{ opacity: 0.2, display: "block", margin: "0 auto 10px" }} />
-                Nenhuma despesa vinculada a este membro.<br />
-                <span style={{ fontSize: "0.8rem" }}>Vincule em Financeiro → Despesas Fixas → editar uma despesa PJ/Pro-labore.</span>
-              </div>
-            ) : (
-              <>
-                {/* Cards resumo */}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px", marginBottom: "16px" }}>
-                  {[
-                    { label: "Custo mensal", value: formatCurrency(custoMensal), color: "var(--color-danger)" },
-                    { label: "Total pago", value: formatCurrency(totalPago), color: "var(--color-success)" },
-                    { label: "Total pendente", value: formatCurrency(totalPendente), color: "var(--color-warning)" },
-                  ].map((item) => (
-                    <div key={item.label} style={{ padding: "12px 14px", background: "var(--card-inner-bg)", border: "1px solid var(--border)", borderRadius: "12px" }}>
-                      <p style={{ fontSize: "0.68rem", color: "var(--text-secondary)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "4px" }}>{item.label}</p>
-                      <p style={{ fontSize: "0.95rem", fontWeight: 800, color: item.color }}>{item.value}</p>
-                    </div>
-                  ))}
+              {userExpenses.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "24px 0", color: "var(--text-tertiary)", fontSize: "0.875rem" }}>
+                  <TrendingUp size={28} style={{ opacity: 0.2, display: "block", margin: "0 auto 10px" }} />
+                  Nenhuma despesa vinculada a este membro.<br />
+                  <span style={{ fontSize: "0.8rem" }}>Vincule em Financeiro → Despesas Fixas → editar uma despesa PJ/Pro-labore.</span>
                 </div>
-
-                {/* Lista despesas com acordeão */}
-                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                  {userExpenses.map((expense: any) => {
-                    const entries = userExpenseEntries.filter((e: any) => e.expense_id === expense.id);
-                    const isExpanded = expandedExpenseId === expense.id;
-                    const paid = entries.filter((e: any) => e.status === "paid").length;
-                    const pending = entries.filter((e: any) => e.status === "pending").length;
-                    return (
-                      <div key={expense.id} style={{ border: "1px solid var(--border)", borderRadius: "12px", overflow: "hidden" }}>
-                        <button
-                          onClick={() => setExpandedExpenseId(isExpanded ? null : expense.id)}
-                          style={{
-                            width: "100%", display: "flex", alignItems: "center", gap: "10px",
-                            padding: "12px 14px", background: "none", border: "none", cursor: "pointer",
-                            color: "var(--text-primary)", textAlign: "left",
-                          }}
-                        >
-                          {isExpanded ? <ChevronDown size={14} color="var(--text-secondary)" /> : <ChevronRight size={14} color="var(--text-secondary)" />}
-                          <span style={{ fontWeight: 600, flex: 1, fontSize: "0.875rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                            {expense.description}
-                          </span>
-                          <span style={{ fontSize: "0.72rem", color: "var(--text-secondary)", flexShrink: 0 }}>
-                            {RECURRENCE_LABEL[expense.recurrence]}
-                          </span>
-                          <span style={{ fontWeight: 800, color: "var(--color-danger)", fontSize: "0.9rem", flexShrink: 0 }}>
-                            {formatCurrency(Number(expense.amount))}
-                          </span>
-                          {entries.length > 0 && (
-                            <span style={{ fontSize: "0.68rem", color: "var(--text-tertiary)", flexShrink: 0, minWidth: "60px", textAlign: "right" }}>
-                              {entries.length} fat.
-                              {paid > 0 && <span style={{ color: "var(--color-success)" }}> {paid}✓</span>}
-                              {pending > 0 && <span style={{ color: "var(--color-warning)" }}> {pending}⏳</span>}
-                            </span>
-                          )}
-                        </button>
-
-                        {isExpanded && (
-                          <div style={{ padding: "0 14px 12px", borderTop: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: "6px" }}>
-                            {entries.length === 0 ? (
-                              <p style={{ fontSize: "0.8rem", color: "var(--text-tertiary)", padding: "10px 0" }}>Nenhuma fatura gerada ainda.</p>
-                            ) : (
-                              entries
-                                .slice()
-                                .sort((a: any, b: any) => a.date.localeCompare(b.date))
-                                .map((entry: any) => {
-                                  const d = new Date(`${entry.date}T12:00:00`);
-                                  const sc = entry.status === "paid" ? "var(--color-success)" : entry.status === "cancelled" ? "var(--text-tertiary)" : "var(--color-warning)";
-                                  const sl = entry.status === "paid" ? "Pago" : entry.status === "cancelled" ? "Cancelado" : "Pendente";
-                                  return (
-                                    <div key={entry.id} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "7px 10px", borderRadius: "8px", background: "var(--color-surface-sunken)", marginTop: "6px" }}>
-                                      <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--text-secondary)", minWidth: "52px" }}>
-                                        {d.toLocaleDateString("pt-BR", { month: "short", year: "2-digit" })}
-                                      </span>
-                                      <span style={{ fontSize: "0.72rem", color: "var(--text-tertiary)", flex: 1 }}>
-                                        vcto {d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}
-                                      </span>
-                                      <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--color-danger)" }}>{formatCurrency(Number(entry.amount))}</span>
-                                      <span style={{ fontSize: "0.68rem", fontWeight: 700, padding: "2px 7px", borderRadius: "5px", color: sc, background: `${tint(sc, 9)}`, border: `1px solid ${tint(sc, 19)}` }}>{sl}</span>
-                                    </div>
-                                  );
-                                })
-                            )}
-                          </div>
-                        )}
+              ) : (
+                <>
+                  {/* Cards resumo */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px", marginBottom: "16px" }}>
+                    {[
+                      { label: "Custo mensal", value: formatCurrency(custoMensal), color: "var(--color-danger)" },
+                      { label: "Total pago", value: formatCurrency(totalPago), color: "var(--color-success)" },
+                      { label: "Total pendente", value: formatCurrency(totalPendente), color: "var(--color-warning)" },
+                    ].map((item) => (
+                      <div key={item.label} style={{ padding: "12px 14px", background: "var(--card-inner-bg)", border: "1px solid var(--border)", borderRadius: "12px" }}>
+                        <p style={{ fontSize: "0.68rem", color: "var(--text-secondary)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "4px" }}>{item.label}</p>
+                        <p style={{ fontSize: "0.95rem", fontWeight: 800, color: item.color }}>{item.value}</p>
                       </div>
-                    );
-                  })}
-                </div>
-              </>
-            )}
-          </Spotlight>
+                    ))}
+                  </div>
+
+                  {/* Lista despesas com acordeão */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    {userExpenses.map((expense: any) => {
+                      const entries = userExpenseEntries.filter((e: any) => e.expense_id === expense.id);
+                      const isExpanded = expandedExpenseId === expense.id;
+                      const paid = entries.filter((e: any) => e.status === "paid").length;
+                      const pending = entries.filter((e: any) => e.status === "pending").length;
+                      return (
+                        <div key={expense.id} style={{ border: "1px solid var(--border)", borderRadius: "12px", overflow: "hidden" }}>
+                          <button
+                            onClick={() => setExpandedExpenseId(isExpanded ? null : expense.id)}
+                            style={{
+                              width: "100%", display: "flex", alignItems: "center", gap: "10px",
+                              padding: "12px 14px", background: "none", border: "none", cursor: "pointer",
+                              color: "var(--text-primary)", textAlign: "left",
+                            }}
+                          >
+                            {isExpanded ? <ChevronDown size={14} color="var(--text-secondary)" /> : <ChevronRight size={14} color="var(--text-secondary)" />}
+                            <span style={{ fontWeight: 600, flex: 1, fontSize: "0.875rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {expense.description}
+                            </span>
+                            <span style={{ fontSize: "0.72rem", color: "var(--text-secondary)", flexShrink: 0 }}>
+                              {RECURRENCE_LABEL[expense.recurrence]}
+                            </span>
+                            <span style={{ fontWeight: 800, color: "var(--color-danger)", fontSize: "0.9rem", flexShrink: 0 }}>
+                              {formatCurrency(Number(expense.amount))}
+                            </span>
+                            {entries.length > 0 && (
+                              <span style={{ fontSize: "0.68rem", color: "var(--text-tertiary)", flexShrink: 0, minWidth: "60px", textAlign: "right" }}>
+                                {entries.length} fat.
+                                {paid > 0 && <span style={{ color: "var(--color-success)" }}> {paid}✓</span>}
+                                {pending > 0 && <span style={{ color: "var(--color-warning)" }}> {pending}⏳</span>}
+                              </span>
+                            )}
+                          </button>
+
+                          {isExpanded && (
+                            <div style={{ padding: "0 14px 12px", borderTop: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: "6px" }}>
+                              {entries.length === 0 ? (
+                                <p style={{ fontSize: "0.8rem", color: "var(--text-tertiary)", padding: "10px 0" }}>Nenhuma fatura gerada ainda.</p>
+                              ) : (
+                                entries
+                                  .slice()
+                                  .sort((a: any, b: any) => a.date.localeCompare(b.date))
+                                  .map((entry: any) => {
+                                    const d = new Date(`${entry.date}T12:00:00`);
+                                    const sc = entry.status === "paid" ? "var(--color-success)" : entry.status === "cancelled" ? "var(--text-tertiary)" : "var(--color-warning)";
+                                    const sl = entry.status === "paid" ? "Pago" : entry.status === "cancelled" ? "Cancelado" : "Pendente";
+                                    return (
+                                      <div key={entry.id} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "7px 10px", borderRadius: "8px", background: "var(--color-surface-sunken)", marginTop: "6px" }}>
+                                        <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--text-secondary)", minWidth: "52px" }}>
+                                          {d.toLocaleDateString("pt-BR", { month: "short", year: "2-digit" })}
+                                        </span>
+                                        <span style={{ fontSize: "0.72rem", color: "var(--text-tertiary)", flex: 1 }}>
+                                          vcto {d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}
+                                        </span>
+                                        <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--color-danger)" }}>{formatCurrency(Number(entry.amount))}</span>
+                                        <span style={{ fontSize: "0.68rem", fontWeight: 700, padding: "2px 7px", borderRadius: "5px", color: sc, background: `${tint(sc, 9)}`, border: `1px solid ${tint(sc, 19)}` }}>{sl}</span>
+                                      </div>
+                                    );
+                                  })
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+            </Spotlight>
+          )}
         </div>
       </div>
 

@@ -11,6 +11,7 @@ import { NotificationProvider } from "@/context/NotificationContext";
 import InAppNotificationBanner from "@/components/notifications/InAppNotificationBanner";
 import NotificationPermissionModal from "@/components/notifications/NotificationPermissionModal";
 import NotificationSettingsModal from "@/components/notifications/NotificationSettingsModal";
+import IOSInstallPrompt from "@/components/notifications/IOSInstallPrompt";
 import { useDemandReminders } from "@/hooks/useDemandReminders";
 
 function AdminProvidersInner({ children }: { children: React.ReactNode }) {
@@ -52,6 +53,7 @@ function AdminProvidersInner({ children }: { children: React.ReactNode }) {
       <NotificationProvider>
         <InAppNotificationBanner />
         <NotificationPermissionModal />
+        <IOSInstallPrompt />
         <NotificationSettingsModal
           isOpen={isSettingsOpen}
           onClose={() => setIsSettingsOpen(false)}
