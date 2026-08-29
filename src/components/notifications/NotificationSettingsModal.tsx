@@ -12,15 +12,36 @@ import {
 import { useNotifications } from '@/context/NotificationContext'
 import { playSound } from '@/utils/audio'
 
+import { useAuth } from '@/hooks/useAuth'
+import { useWebPush } from '@/hooks/useWebPush'
+import { sendPushNotification } from '@/utils/webPushClient'
+
 interface NotificationSettingsModalProps {
   isOpen: boolean
   onClose: () => void
 }
 
+function useSafeAuth() {
+  try {
+    return useAuth()
+  } catch {
+    return { currentUser: null }
+  }
+}
+
 export default function NotificationSettingsModal({ isOpen, onClose }: NotificationSettingsModalProps) {
+  const { currentUser } = useSafeAuth()
+  const { isSubscribed, subscribeToPush } = useWebPush(currentUser?.id)
   const { pushNotification } = useNotifications()
   const [settings, setSettings] = useState<ReminderSettings>(DEFAULT_REMINDER_SETTINGS)
   const [saved, setSaved] = useState(false)
+  const [pushStatus, setPushStatus] = useState<string>('default')
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && typeof Notification !== 'undefined') {
+      setPushStatus(Notification.permission)
+    }
+  }, [isOpen])
 
   useEffect(() => {
     if (isOpen) {
@@ -37,14 +58,44 @@ export default function NotificationSettingsModal({ isOpen, onClose }: Notificat
     setTimeout(() => setSaved(false), 2000)
   }
 
-  const handleTestNotification = () => {
+  const handleEnablePush = async () => {
+    if (currentUser?.id) {
+      const success = await subscribeToPush(currentUser.id)
+      if (typeof Notification !== 'undefined') {
+        setPushStatus(Notification.permission)
+      }
+      if (success) {
+        playSound('success')
+        pushNotification({
+          title: '🔔 Notificações Ativadas!',
+          message: 'Seu dispositivo agora receberá alertas e Web Push mesmo com o app fechado.',
+          type: 'system'
+        })
+      }
+    }
+  }
+
+  const handleTestNotification = async () => {
     playSound('success')
+
+    // 1. Notificação In-App
     pushNotification({
       title: '⏰ Teste de Lembrete',
       message: 'Seus lembretes de tarefas e prazos estão funcionando perfeitamente!',
       type: 'demand',
       actionUrl: '/admin/demands'
     })
+
+    // 2. Disparo de Web Push real
+    if (currentUser?.id && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+      await sendPushNotification({
+        userId: currentUser.id,
+        title: '🚀 Teste Web Push Prátic',
+        body: 'Notificação do sistema operacional funcionando!',
+        url: '/admin/demands',
+        type: 'demand'
+      }).catch(() => {})
+    }
   }
 
   return (
@@ -91,6 +142,27 @@ export default function NotificationSettingsModal({ isOpen, onClose }: Notificat
                 <X size={16} />
               </button>
             </div>
+
+            {/* Status do Web Push */}
+            {pushStatus !== 'granted' ? (
+              <div className="mt-3.5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-2">
+                <div className="text-xs text-amber-200 leading-snug">
+                  <span className="font-bold">Push não ativado:</span> Ative para receber no celular/PC com o app fechado.
+                </div>
+                <button
+                  type="button"
+                  onClick={handleEnablePush}
+                  className="shrink-0 py-1.5 px-3 rounded-lg text-xs font-bold text-black bg-amber-400 hover:bg-amber-300 transition-colors shadow-sm"
+                >
+                  Ativar
+                </button>
+              </div>
+            ) : (
+              <div className="mt-3.5 py-1.5 px-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-2 text-xs font-semibold text-emerald-400">
+                <Check size={14} />
+                <span>Notificações Push ativas neste dispositivo</span>
+              </div>
+            )}
 
             {/* Lista de Opções */}
             <div className="py-4 flex flex-col gap-3.5">

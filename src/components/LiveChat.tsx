@@ -147,10 +147,11 @@ export default function LiveChat() {
 
   // Canal de typing
   useEffect(() => {
-    const typingChannel = supabase.channel('chat:typing:widget');
+    if (!currentUser?.id) return;
+    const typingChannel = supabase.channel(`chat:typing:widget:${currentUser.id}`);
     typingChannel
       .on('broadcast', { event: 'typing' }, ({ payload }) => {
-        if (payload.user_id !== currentUser?.id) {
+        if (payload && payload.user_id !== currentUser.id) {
           setIsTyping(payload.name);
           if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
           typingTimeoutRef.current = setTimeout(() => setIsTyping(null), 2500);
@@ -164,7 +165,7 @@ export default function LiveChat() {
 
   const handleSendMessage = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!message.trim() || !currentUser || !isConnected) return;
+    if (!message.trim() || !currentUser) return;
 
     const content = message.trim();
     setMessage("");
@@ -176,7 +177,7 @@ export default function LiveChat() {
 
     // 2. Persistir no banco em background
     try {
-      await supabase.from('chat_messages').insert([{
+      const { error: insertError } = await supabase.from('chat_messages').insert([{
         id: sent.id,
         sender_id: currentUser.id,
         receiver_id: activeChat === 'general' ? null : activeChat,
@@ -185,6 +186,11 @@ export default function LiveChat() {
         message_type: content.includes('@') ? 'mention' : 'text',
         timestamp: sent.createdAt,
       }]);
+
+      if (insertError) {
+        console.error('Erro ao salvar mensagem no LiveChat:', insertError);
+        setFailedIds(prev => new Set(prev).add(sent.id));
+      }
 
       const myHandle = currentUser.username ? `@${currentUser.username}` : currentUser.name;
 
@@ -227,10 +233,11 @@ export default function LiveChat() {
           }
         }
       }
-    } catch {
+    } catch (err) {
+      console.error('Erro inesperado ao enviar mensagem no LiveChat:', err);
       setFailedIds(prev => new Set(prev).add(sent.id));
     }
-  }, [message, currentUser, activeChat, isConnected, sendMessage, users]);
+  }, [message, currentUser, activeChat, sendMessage, users]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
@@ -537,23 +544,22 @@ export default function LiveChat() {
                 <input
                   ref={inputRef}
                   type="text" value={message} onChange={handleInputChange}
-                  placeholder={isConnected ? "Mensagem... (@ para mencionar)" : "Conectando..."}
-                  disabled={!isConnected}
+                  placeholder="Mensagem... (@ para mencionar)"
                   style={{
                     flex: 1, background: 'var(--color-surface-sunken)', border: '1px solid var(--border)',
-                    borderRadius: '10px', padding: '8px 14px', color: 'var(--color-text-primary)', outline: 'none', fontSize: '0.82rem',
-                    opacity: isConnected ? 1 : 0.5,
+                    borderRadius: '10px', padding: '8px 14px', color: 'var(--color-text-primary)', outline: 'none', fontSize: '0.82rem'
                   }}
                 />
                 <button
                   type="submit"
-                  disabled={!isConnected || !message.trim()}
+                  disabled={!message.trim()}
                   style={{
                     width: '36px', height: '36px', borderRadius: '10px',
-                    background: isConnected && message.trim() ? 'var(--accent)' : 'var(--color-surface-sunken)',
+                    background: message.trim() ? 'var(--accent)' : 'var(--color-surface-sunken)',
                     border: 'none', color: 'var(--color-text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    cursor: isConnected && message.trim() ? 'pointer' : 'default', flexShrink: 0,
+                    cursor: message.trim() ? 'pointer' : 'default', flexShrink: 0,
                     transition: 'background 0.2s',
+                    opacity: message.trim() ? 1 : 0.6
                   }}
                 >
                   <Send size={16} />

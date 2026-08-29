@@ -97,13 +97,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        fetchUserProfile(session.user);
-      } else {
+    supabase.auth.getSession()
+      .then(({ data, error }) => {
+        if (error) {
+          console.warn("[Auth] Sessão inválida ou expirada:", error.message);
+          supabase.auth.signOut().catch(() => {});
+          setCurrentUser(null);
+          setLoading(false);
+          return;
+        }
+        if (data?.session?.user) {
+          fetchUserProfile(data.session.user);
+        } else {
+          setLoading(false);
+        }
+      })
+      .catch((err) => {
+        console.warn("[Auth] Erro ao obter sessão:", err);
+        supabase.auth.signOut().catch(() => {});
+        setCurrentUser(null);
         setLoading(false);
-      }
-    });
+      });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {

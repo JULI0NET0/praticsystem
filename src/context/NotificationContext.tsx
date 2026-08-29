@@ -127,88 +127,90 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     }
   }, [router])
 
-  // Escuta broadcast de chat e menções em tempo real
+  // Escuta notificações e mensagens de chat em tempo real
   useEffect(() => {
     if (!currentUser?.id) return
 
-    // Escuta eventos na tabela notifications do Supabase
-    const dbChannel = supabase
-      .channel(`realtime:notifications:${currentUser.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${currentUser.id}`
-        },
-        payload => {
-          const row = payload.new as any
-          if (row) {
+    const channelId = `realtime:notifs_hub:${currentUser.id}:${Math.random().toString(36).substring(2, 7)}`
+    const channel = supabase.channel(channelId)
+
+    // 1. Escuta eventos na tabela notifications
+    channel.on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'notifications',
+        filter: `user_id=eq.${currentUser.id}`
+      },
+      payload => {
+        const row = payload.new as any
+        if (row) {
+          pushNotification({
+            title: row.title || 'Nova Notificação',
+            message: row.message || '',
+            type: (row.type as NotificationType) || 'system',
+            actionUrl: row.action_url || (row.type === 'demand' ? '/admin/demands' : '/admin/chat')
+          })
+        }
+      }
+    )
+
+    // 2. Escuta novas mensagens na tabela chat_messages
+    channel.on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'chat_messages'
+      },
+      payload => {
+        const row = payload.new as any
+        if (!row || row.sender_id === currentUser.id) return
+
+        const sender = users.find(u => u.id === row.sender_id)
+        const senderName = sender?.username ? `@${sender.username}` : (sender?.name || 'Colega')
+        const senderAvatar = sender?.avatar_url || sender?.avatarUrl
+
+        const isMention = row.content && (
+          row.content.includes(`@${currentUser.name}`) ||
+          (currentUser.username && row.content.includes(`@${currentUser.username}`)) ||
+          row.content.includes('@todos') ||
+          row.content.includes('@canal')
+        )
+
+        // Se for Canal Geral
+        if (row.channel === 'general') {
+          // No canal geral, só exibe banner popup se for menção ou se for mensagem geral
+          if (isMention) {
             pushNotification({
-              title: row.title || 'Nova Notificação',
-              message: row.message || '',
-              type: (row.type as NotificationType) || 'system',
-              actionUrl: row.action_url || (row.type === 'demand' ? '/admin/demands' : '/admin/chat')
+              title: `🏷️ ${senderName} mencionou você no Geral`,
+              message: row.content || 'Nova menção.',
+              type: 'mention',
+              avatarUrl: senderAvatar,
+              actionUrl: '/admin/chat',
+              actionLabel: 'Abrir Chat'
             })
           }
         }
-      )
-      .subscribe()
-
-    // Escuta broadcast de chat geral e direto
-    const chatChannel = supabase.channel('chat:general')
-      .on('broadcast', { event: 'message' }, ({ payload }: { payload: any }) => {
-        if (!payload || !payload.user || payload.user.id === currentUser.id) return
-
-        const isMention = payload.content && (
-          payload.content.includes(`@${currentUser.name}`) ||
-          payload.content.includes(`@${currentUser.username}`) ||
-          payload.content.includes('@todos') ||
-          payload.content.includes('@canal')
-        )
-
-        const senderAvatar = payload.user.avatarUrl || payload.user.avatar_url
-
-        pushNotification({
-          title: isMention ? `🏷️ ${payload.user.name} mencionou você` : `💬 ${payload.user.name}`,
-          message: payload.content || 'Enviou uma nova mensagem.',
-          type: isMention ? 'mention' : 'chat',
-          avatarUrl: senderAvatar,
-          actionUrl: '/admin/chat',
-          actionLabel: 'Abrir Chat'
-        })
-      })
-      .subscribe()
-
-    // Escuta canais de DM para todos os outros usuários
-    const dmChannels: ReturnType<typeof supabase.channel>[] = []
-    if (users && users.length > 0) {
-      for (const other of users) {
-        if (other.id === currentUser.id) continue
-        const dmRoom = `chat:dm:${[currentUser.id, other.id].sort().join(':')}`
-        const dmCh = supabase.channel(dmRoom)
-          .on('broadcast', { event: 'message' }, ({ payload }: { payload: any }) => {
-            if (!payload || !payload.user || payload.user.id === currentUser.id) return
-            const senderAvatar = payload.user.avatarUrl || payload.user.avatar_url
-            pushNotification({
-              title: `💬 Mensagem de ${payload.user.name}`,
-              message: payload.content || 'Enviou uma nova mensagem direta.',
-              type: 'chat',
-              avatarUrl: senderAvatar,
-              actionUrl: `/admin/chat?user=${payload.user.id}`,
-              actionLabel: 'Responder'
-            })
+        // Se for Mensagem Direta (DM) para o usuário logado
+        else if (row.channel === 'dm' && row.receiver_id === currentUser.id) {
+          pushNotification({
+            title: `💬 Mensagem de ${senderName}`,
+            message: row.content || 'Enviou uma nova mensagem direta.',
+            type: isMention ? 'mention' : 'chat',
+            avatarUrl: senderAvatar,
+            actionUrl: `/admin/chat?user=${row.sender_id}`,
+            actionLabel: 'Responder'
           })
-          .subscribe()
-        dmChannels.push(dmCh)
+        }
       }
-    }
+    )
+
+    channel.subscribe()
 
     return () => {
-      supabase.removeChannel(dbChannel)
-      supabase.removeChannel(chatChannel)
-      dmChannels.forEach(c => supabase.removeChannel(c))
+      supabase.removeChannel(channel)
     }
   }, [currentUser?.id, currentUser?.name, currentUser?.username, users, pushNotification])
 

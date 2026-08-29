@@ -1317,5 +1317,66 @@ CREATE POLICY "push_subscriptions_user_all" ON public.push_subscriptions
     USING (auth.uid() = user_id)
     WITH CHECK (auth.uid() = user_id);
 
+
+-- =============================================================
+-- BLOCO 16: CHAT MESSAGES (mensagens de equipe e canal geral)
+-- =============================================================
+
+CREATE TABLE IF NOT EXISTS public.chat_messages (
+    id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    sender_id    UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    receiver_id  UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    content      TEXT NOT NULL,
+    channel      TEXT NOT NULL DEFAULT 'general',
+    message_type TEXT NOT NULL DEFAULT 'text',
+    timestamp    TIMESTAMPTZ DEFAULT NOW(),
+    created_at   TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.chat_messages ADD COLUMN IF NOT EXISTS sender_id    UUID REFERENCES auth.users(id) ON DELETE CASCADE;
+ALTER TABLE public.chat_messages ADD COLUMN IF NOT EXISTS receiver_id  UUID REFERENCES auth.users(id) ON DELETE CASCADE;
+ALTER TABLE public.chat_messages ADD COLUMN IF NOT EXISTS content      TEXT NOT NULL DEFAULT '';
+ALTER TABLE public.chat_messages ADD COLUMN IF NOT EXISTS channel      TEXT NOT NULL DEFAULT 'general';
+ALTER TABLE public.chat_messages ADD COLUMN IF NOT EXISTS message_type TEXT NOT NULL DEFAULT 'text';
+ALTER TABLE public.chat_messages ADD COLUMN IF NOT EXISTS timestamp    TIMESTAMPTZ DEFAULT NOW();
+ALTER TABLE public.chat_messages ADD COLUMN IF NOT EXISTS created_at   TIMESTAMPTZ DEFAULT NOW();
+
+CREATE INDEX IF NOT EXISTS chat_messages_channel_idx ON public.chat_messages (channel, timestamp);
+CREATE INDEX IF NOT EXISTS chat_messages_sender_receiver_idx ON public.chat_messages (sender_id, receiver_id, timestamp);
+
+ALTER TABLE public.chat_messages ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "chat_messages_select" ON public.chat_messages;
+CREATE POLICY "chat_messages_select" ON public.chat_messages
+    FOR SELECT USING (
+        channel = 'general'
+        OR (auth.uid())::text = (sender_id)::text
+        OR (auth.uid())::text = (receiver_id)::text
+        OR EXISTS (SELECT 1 FROM public.users u WHERE u.id = auth.uid())
+    );
+
+DROP POLICY IF EXISTS "chat_messages_insert" ON public.chat_messages;
+CREATE POLICY "chat_messages_insert" ON public.chat_messages
+    FOR INSERT WITH CHECK (
+        (auth.uid())::text = (sender_id)::text
+        OR EXISTS (SELECT 1 FROM public.users u WHERE u.id = auth.uid())
+    );
+
+-- Habilita Realtime no Supabase para a tabela chat_messages
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_publication_tables 
+        WHERE pubname = 'supabase_realtime' 
+          AND schemaname = 'public' 
+          AND tablename = 'chat_messages'
+    ) THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.chat_messages;
+    END IF;
+EXCEPTION WHEN OTHERS THEN
+    NULL;
+END $$;
+
 -- Atualiza o cache do schema no Supabase
 NOTIFY pgrst, 'reload schema';
+

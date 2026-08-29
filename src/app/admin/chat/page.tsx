@@ -164,10 +164,11 @@ export default function ChatPage() {
 
   // Typing channel
   useEffect(() => {
-    const typingChannel = supabase.channel('chat:typing:page');
+    if (!currentUser?.id) return;
+    const typingChannel = supabase.channel(`chat:typing:page:${currentUser.id}`);
     typingChannel
       .on('broadcast', { event: 'typing' }, ({ payload }) => {
-        if (payload.user_id !== currentUser?.id) {
+        if (payload && payload.user_id !== currentUser.id) {
           setIsTyping(payload.name);
           if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
           typingTimeoutRef.current = setTimeout(() => setIsTyping(null), 2500);
@@ -180,7 +181,7 @@ export default function ChatPage() {
 
   const handleSendMessage = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!message.trim() || !currentUser || !isConnected) return;
+    if (!message.trim() || !currentUser) return;
 
     const content = message.trim();
     setMessage("");
@@ -191,7 +192,7 @@ export default function ChatPage() {
 
     // Persistir no banco em background
     try {
-      await supabase.from('chat_messages').insert([{
+      const { error: insertError } = await supabase.from('chat_messages').insert([{
         id: sent.id,
         sender_id: currentUser.id,
         receiver_id: activeChat === 'general' ? null : activeChat,
@@ -200,6 +201,11 @@ export default function ChatPage() {
         message_type: content.includes('@') ? 'mention' : 'text',
         timestamp: sent.createdAt,
       }]);
+
+      if (insertError) {
+        console.error('Erro ao salvar mensagem:', insertError);
+        setFailedIds(prev => new Set(prev).add(sent.id));
+      }
 
       const myHandle = currentUser.username ? `@${currentUser.username}` : currentUser.name;
 
@@ -241,10 +247,11 @@ export default function ChatPage() {
           }
         }
       }
-    } catch {
+    } catch (err) {
+      console.error('Erro inesperado ao enviar mensagem:', err);
       setFailedIds(prev => new Set(prev).add(sent.id));
     }
-  }, [message, currentUser, activeChat, isConnected, sendMessage, users]);
+  }, [message, currentUser, activeChat, sendMessage, users]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -503,15 +510,14 @@ export default function ChatPage() {
               value={message}
               onChange={handleInputChange}
               onKeyDown={handleKeyDown}
-              placeholder={isConnected ? "Escreva sua mensagem... (@ para mencionar)" : "Conectando..."}
+              placeholder="Escreva sua mensagem... (@ para mencionar)"
               rows={1}
-              disabled={!isConnected}
-              style={{ flex: 1, background: 'var(--color-surface-sunken)', border: '1px solid var(--border)', borderRadius: '14px', padding: '12px 16px', color: 'var(--color-text-primary)', outline: 'none', fontSize: '0.88rem', resize: 'none', lineHeight: 1.4, maxHeight: '120px', fontFamily: 'inherit', opacity: isConnected ? 1 : 0.5 }}
+              style={{ flex: 1, background: 'var(--color-surface-sunken)', border: '1px solid var(--border)', borderRadius: '14px', padding: '12px 16px', color: 'var(--color-text-primary)', outline: 'none', fontSize: '0.88rem', resize: 'none', lineHeight: 1.4, maxHeight: '120px', fontFamily: 'inherit' }}
             />
             <button
               type="submit"
-              disabled={!isConnected || !message.trim()}
-              style={{ width: '44px', height: '44px', borderRadius: '14px', background: isConnected && message.trim() ? 'var(--accent)' : 'var(--color-surface-sunken)', border: 'none', color: 'var(--color-text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: isConnected && message.trim() ? 'pointer' : 'default', transition: 'all 0.2s', flexShrink: 0 }}
+              disabled={!message.trim()}
+              style={{ width: '44px', height: '44px', borderRadius: '14px', background: message.trim() ? 'var(--accent)' : 'var(--color-surface-sunken)', border: 'none', color: 'var(--color-text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: message.trim() ? 'pointer' : 'default', transition: 'all 0.2s', flexShrink: 0, opacity: message.trim() ? 1 : 0.6 }}
             >
               <Send size={18} />
             </button>
