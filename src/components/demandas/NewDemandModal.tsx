@@ -22,6 +22,8 @@ import AssigneePicker from "./AssigneePicker";
 import QuickAddInput from "./QuickAddInput";
 import { PriorityFlag } from "./PriorityFlag";
 
+import { sendPushNotification } from "@/utils/webPushClient";
+
 const PRIORITIES: DemandPriority[] = ["none", "low", "medium", "high", "urgent"];
 
 /** Campos que o usuário mexeu à mão — o texto do título não os sobrescreve. */
@@ -132,6 +134,15 @@ export default function NewDemandModal({
     setSaving(false);
 
     if (created) {
+      if (merged.assigneeIds && merged.assigneeIds.length > 0) {
+        sendPushNotification({
+          userIds: merged.assigneeIds,
+          title: '📋 Nova Demanda Atribuída',
+          body: result.title,
+          url: '/admin/demands',
+          type: 'demand'
+        }).catch(() => {});
+      }
       onCreated(created);
       onClose();
     }

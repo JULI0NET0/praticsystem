@@ -13,6 +13,7 @@ import { useUnreadCounts } from "@/hooks/useUnreadCounts";
 import { ChatMessageItem } from "@/components/ChatMessageItem";
 import { supabase } from "@/lib/supabase";
 import { usePathname } from "next/navigation";
+import { sendPushNotification } from "@/utils/webPushClient";
 
 function UnreadBadge({ count }: { count: number }) {
   return (
@@ -185,6 +186,19 @@ export default function LiveChat() {
         timestamp: sent.createdAt,
       }]);
 
+      const myHandle = currentUser.username ? `@${currentUser.username}` : currentUser.name;
+
+      // Dispara Web Push se for mensagem direta (DM)
+      if (activeChat !== 'general') {
+        sendPushNotification({
+          userId: activeChat,
+          title: `💬 ${currentUser.name}`,
+          body: content.substring(0, 100),
+          url: '/admin/chat',
+          type: 'chat'
+        }).catch(() => {});
+      }
+
       // Notificações de @ menção
       const mentions = content.match(/@(\S+)/g);
       if (mentions) {
@@ -195,13 +209,21 @@ export default function LiveChat() {
             u.name.toLowerCase().includes(username.toLowerCase())
           );
           if (mentioned && mentioned.id !== currentUser.id) {
-            const myHandle = currentUser.username ? `@${currentUser.username}` : currentUser.name;
             await supabase.from('notifications').insert([{
               user_id: mentioned.id,
               title: 'Menção no Chat',
               message: `${myHandle} mencionou você: "${content.substring(0, 60)}"`,
               type: 'mention',
             }]);
+
+            // Dispara Web Push para o usuário mencionado
+            sendPushNotification({
+              userId: mentioned.id,
+              title: `🏷️ ${myHandle} mencionou você`,
+              body: content.substring(0, 100),
+              url: '/admin/chat',
+              type: 'mention'
+            }).catch(() => {});
           }
         }
       }

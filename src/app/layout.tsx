@@ -47,10 +47,13 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: "Agência Prátic - Sistema de Gestão",
   description: "Plataforma completa de gestão para a Agência Prátic",
+  manifest: "/manifest.json",
+  icons: {
+    icon: "/SIMBOLO-BRANCO.png",
+    apple: "/SIMBOLO-BRANCO.png",
+  },
   appleWebApp: {
     capable: true,
-    // "black-translucent" deixaria a barra de status escura flutuando
-    // sobre um app agora pergaminho.
     statusBarStyle: "default",
     title: "Prátic",
   },

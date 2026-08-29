@@ -5,10 +5,23 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Bell, Sparkles, X, Check } from 'lucide-react'
 import { playSound } from '@/utils/audio'
 
+import { useAuth } from '@/hooks/useAuth'
+import { useWebPush } from '@/hooks/useWebPush'
+
 const PROMPT_DISMISS_KEY = 'pratic_notif_prompt_dismissed_v1'
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000
 
+function useSafeAuth() {
+  try {
+    return useAuth()
+  } catch {
+    return { currentUser: null }
+  }
+}
+
 export default function NotificationPermissionModal() {
+  const { currentUser } = useSafeAuth()
+  const { subscribeToPush } = useWebPush(currentUser?.id)
   const [visible, setVisible] = useState(false)
   const [granted, setGranted] = useState(false)
 
@@ -39,6 +52,10 @@ export default function NotificationPermissionModal() {
       if (permission === 'granted') {
         setGranted(true)
         playSound('success')
+        // Registra o dispositivo no Web Push em segundo plano
+        if (currentUser?.id) {
+          subscribeToPush(currentUser.id).catch(() => {})
+        }
         setTimeout(() => {
           setVisible(false)
         }, 1500)
