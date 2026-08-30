@@ -2,6 +2,12 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 
 export const IG_GRAPH_BASE = 'https://graph.instagram.com/v25.0'
+
+export function getSiteOrigin(): string {
+  const redirectUri = process.env.IG_OAUTH_REDIRECT_URI
+  if (!redirectUri) throw new Error('IG_OAUTH_REDIRECT_URI não configurada.')
+  return new URL(redirectUri).origin
+}
 export const IG_SESSION_COOKIE = 'ig_admin_session'
 
 export function getSupabaseAdmin(): SupabaseClient {

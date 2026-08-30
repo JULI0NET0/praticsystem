@@ -1,5 +1,11 @@
 import { NextResponse } from 'next/server'
-import { getIgConfig, getSupabaseAdmin, logIgEvent, sendInstagramMessage } from '@/lib/instagram'
+import {
+  getIgConfig,
+  getSiteOrigin,
+  getSupabaseAdmin,
+  logIgEvent,
+  sendInstagramMessage
+} from '@/lib/instagram'
 
 export async function POST(request: Request) {
   const authHeader = request.headers.get('authorization') || ''
@@ -48,13 +54,19 @@ export async function POST(request: Request) {
     try {
       const recipient = item.comment_id ? { comment_id: item.comment_id } : { id: item.igsid }
 
+      // O botão da DM aponta pro nosso redirect (conta o clique) em vez do
+      // link final direto, pra alimentar o funil de resultados.
+      const trackedButtonUrl = item.button_url
+        ? `${getSiteOrigin()}/api/instagram/click/${item.id}`
+        : null
+
       await sendInstagramMessage({
         igUserId: config.ig_user_id,
         accessToken: config.access_token,
         recipient,
         text: item.message_text,
         buttonText: item.button_text,
-        buttonUrl: item.button_url
+        buttonUrl: trackedButtonUrl
       })
 
       await supabase

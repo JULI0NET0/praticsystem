@@ -175,12 +175,20 @@ export default function AutomationsClient({
             <h1 className="text-2xl font-semibold">Automação Instagram</h1>
             <p className="text-neutral-400 text-sm">Substituto do ManyChat — @juli0net0</p>
           </div>
-          <button
-            onClick={handleLogout}
-            className="text-sm text-neutral-400 hover:text-white transition-colors"
-          >
-            Sair
-          </button>
+          <div className="flex items-center gap-4">
+            <a
+              href="/automacao-instagram/resultados"
+              className="text-sm text-neutral-400 hover:text-white transition-colors"
+            >
+              Resultados
+            </a>
+            <button
+              onClick={handleLogout}
+              className="text-sm text-neutral-400 hover:text-white transition-colors"
+            >
+              Sair
+            </button>
+          </div>
         </div>
 
         {/* Conexão */}
