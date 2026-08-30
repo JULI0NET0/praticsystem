@@ -22,7 +22,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     'dm_message_text',
     'dm_button_text',
     'dm_button_url',
-    'use_button'
+    'cta_type',
+    'require_follow',
+    'follow_gate_message',
+    'follow_gate_button_text'
   ] as const
 
   const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }

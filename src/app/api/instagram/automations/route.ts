@@ -45,7 +45,10 @@ export async function POST(request: Request) {
       dm_message_text: body.dm_message_text,
       dm_button_text: body.dm_button_text || null,
       dm_button_url: body.dm_button_url || null,
-      use_button: body.use_button ?? true
+      cta_type: ['link', 'quick_reply'].includes(body.cta_type) ? body.cta_type : 'button',
+      require_follow: body.require_follow ?? false,
+      follow_gate_message: body.follow_gate_message || null,
+      follow_gate_button_text: body.follow_gate_button_text || null
     })
     .select()
     .single()

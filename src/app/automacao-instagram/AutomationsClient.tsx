@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useTheme } from "next-themes";
 import { useToast } from "@/components/CustomToast";
 import type { IgAutomation, IgConfig } from "@/lib/instagram";
+import InstagramPostPicker from "./InstagramPostPicker";
 import {
   Home,
   Users,
@@ -92,7 +93,10 @@ const emptyForm = {
   dm_message_text: "",
   dm_button_text: "",
   dm_button_url: "",
-  use_button: true,
+  cta_type: "button" as "link" | "button" | "quick_reply",
+  require_follow: false,
+  follow_gate_message: "",
+  follow_gate_button_text: "",
   is_active: true,
 };
 
@@ -113,7 +117,10 @@ const TEMPLATES = [
       dm_message_text: "Olá! Vi que você comentou no nosso post. Aqui está o link exclusivo que você pediu:",
       dm_button_text: "👉 Acessar Link Agora",
       dm_button_url: "https://",
-      use_button: true,
+      cta_type: "button" as const,
+      require_follow: false,
+      follow_gate_message: "",
+      follow_gate_button_text: "",
       is_active: true,
     },
   },
@@ -133,7 +140,10 @@ const TEMPLATES = [
       dm_message_text: "Oi! Aqui está o material especial dos stories que você pediu:",
       dm_button_text: "🎁 Resgatar Material",
       dm_button_url: "https://",
-      use_button: true,
+      cta_type: "button" as const,
+      require_follow: false,
+      follow_gate_message: "",
+      follow_gate_button_text: "",
       is_active: true,
     },
   },
@@ -153,7 +163,10 @@ const TEMPLATES = [
       dm_message_text: "Olá! Obrigado pelo contato. Para falar diretamente com nossa equipe no WhatsApp, toque no botão abaixo:",
       dm_button_text: "💬 Falar no WhatsApp",
       dm_button_url: "https://wa.me/55",
-      use_button: true,
+      cta_type: "button" as const,
+      require_follow: false,
+      follow_gate_message: "",
+      follow_gate_button_text: "",
       is_active: true,
     },
   },
@@ -276,8 +289,8 @@ export default function AutomationsClient({
 
   const completedCount = checklistItems.filter((i) => i.completed).length;
 
-  function openCreateForm(templateData?: typeof emptyForm) {
-    setForm(templateData || emptyForm);
+  function openCreateForm(templateData?: Partial<typeof emptyForm>) {
+    setForm(templateData ? { ...emptyForm, ...templateData } : emptyForm);
     setEditingId(null);
     setShowForm(true);
   }
@@ -292,7 +305,10 @@ export default function AutomationsClient({
       dm_message_text: automation.dm_message_text,
       dm_button_text: automation.dm_button_text || "",
       dm_button_url: automation.dm_button_url || "",
-      use_button: automation.use_button,
+      cta_type: automation.cta_type || "button",
+      require_follow: automation.require_follow ?? false,
+      follow_gate_message: automation.follow_gate_message || "",
+      follow_gate_button_text: automation.follow_gate_button_text || "",
       is_active: automation.is_active,
     });
     setEditingId(automation.id);
@@ -320,7 +336,10 @@ export default function AutomationsClient({
       dm_message_text: form.dm_message_text,
       dm_button_text: form.dm_button_text || null,
       dm_button_url: form.dm_button_url || null,
-      use_button: form.use_button,
+      cta_type: form.cta_type,
+      require_follow: form.require_follow,
+      follow_gate_message: form.require_follow ? (form.follow_gate_message || null) : null,
+      follow_gate_button_text: form.require_follow ? (form.follow_gate_button_text || null) : null,
       is_active: form.is_active,
     };
 
@@ -1056,6 +1075,11 @@ export default function AutomationsClient({
                             >
                               {a.is_active ? "Ativa" : "Pausada"}
                             </span>
+                            {a.require_follow && (
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[var(--color-terracotta)]/15 text-[var(--color-terracotta)]">
+                                🔒 Exclusivo seguidores
+                              </span>
+                            )}
                           </div>
 
                           <div className="flex items-center gap-2 shrink-0">
@@ -1098,7 +1122,11 @@ export default function AutomationsClient({
                               <ExternalLink className="w-3 h-3" />
                               <span>
                                 {a.dm_button_text} ({a.dm_button_url}) —{" "}
-                                {a.use_button ? "botão fixo" : "sugestão de resposta"}
+                                {a.cta_type === "link"
+                                  ? "link direto"
+                                  : a.cta_type === "quick_reply"
+                                  ? "sugestão de resposta"
+                                  : "botão fixo"}
                               </span>
                             </div>
                           )}
@@ -1387,31 +1415,28 @@ export default function AutomationsClient({
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-bold text-[var(--color-text-primary)] mb-1">
-                    Correspondência
-                  </label>
-                  <select
-                    value={form.match_mode}
-                    onChange={(e) => setForm({ ...form, match_mode: e.target.value as "contains" | "exact" })}
-                    className="w-full bg-[var(--color-surface-sunken)] border border-[var(--color-border-default)] rounded-lg px-3 py-2 text-xs text-[var(--color-text-primary)] outline-none"
-                  >
-                    <option value="contains">Contém a palavra</option>
-                    <option value="exact">Comentário exato</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block font-bold text-[var(--color-text-primary)] mb-1">
-                    ID do Post (Opcional)
-                  </label>
-                  <input
-                    value={form.post_id}
-                    onChange={(e) => setForm({ ...form, post_id: e.target.value })}
-                    placeholder="Vazio = todos os posts"
-                    className="w-full bg-[var(--color-surface-sunken)] border border-[var(--color-border-default)] rounded-lg px-3 py-2 text-xs text-[var(--color-text-primary)] outline-none"
-                  />
-                </div>
+              <div>
+                <label className="block font-bold text-[var(--color-text-primary)] mb-1">
+                  Tipo de Correspondência do Comentário
+                </label>
+                <select
+                  value={form.match_mode}
+                  onChange={(e) => setForm({ ...form, match_mode: e.target.value as "contains" | "exact" })}
+                  className="w-full bg-[var(--color-surface-sunken)] border border-[var(--color-border-default)] rounded-lg px-3 py-2 text-xs text-[var(--color-text-primary)] outline-none"
+                >
+                  <option value="contains">Contém a palavra-chave (recomendado)</option>
+                  <option value="exact">Comentário exato (somente a palavra digitada)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-bold text-[var(--color-text-primary)] mb-1.5">
+                  Publicação / Reel de Origem
+                </label>
+                <InstagramPostPicker
+                  selectedPostId={form.post_id}
+                  onSelectPost={(postId) => setForm({ ...form, post_id: postId })}
+                />
               </div>
 
               <div>
@@ -1469,12 +1494,23 @@ export default function AutomationsClient({
                   <label className="block font-bold text-[var(--color-text-primary)] mb-1">
                     Como o botão chega na DM
                   </label>
-                  <div className="flex items-center gap-1 bg-[var(--color-surface-sunken)] border border-[var(--color-border-default)] p-1 rounded-lg w-fit">
+                  <div className="flex items-center gap-1 bg-[var(--color-surface-sunken)] border border-[var(--color-border-default)] p-1 rounded-lg w-fit flex-wrap">
                     <button
                       type="button"
-                      onClick={() => setForm({ ...form, use_button: true })}
+                      onClick={() => setForm({ ...form, cta_type: "link" })}
                       className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
-                        form.use_button
+                        form.cta_type === "link"
+                          ? "bg-[var(--color-terracotta)] text-[var(--color-text-on-accent)]"
+                          : "text-[var(--color-text-secondary)]"
+                      }`}
+                    >
+                      Link direto
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setForm({ ...form, cta_type: "button" })}
+                      className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
+                        form.cta_type === "button"
                           ? "bg-[var(--color-terracotta)] text-[var(--color-text-on-accent)]"
                           : "text-[var(--color-text-secondary)]"
                       }`}
@@ -1483,9 +1519,9 @@ export default function AutomationsClient({
                     </button>
                     <button
                       type="button"
-                      onClick={() => setForm({ ...form, use_button: false })}
+                      onClick={() => setForm({ ...form, cta_type: "quick_reply" })}
                       className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
-                        !form.use_button
+                        form.cta_type === "quick_reply"
                           ? "bg-[var(--color-terracotta)] text-[var(--color-text-on-accent)]"
                           : "text-[var(--color-text-secondary)]"
                       }`}
@@ -1494,12 +1530,85 @@ export default function AutomationsClient({
                     </button>
                   </div>
                   <p className="text-[11px] text-[var(--color-text-muted)] mt-1.5">
-                    {form.use_button
-                      ? "Fica fixo dentro do balão da mensagem, não some."
-                      : "Aparece como um chip abaixo da mensagem e some se a pessoa ignorar ou responder outra coisa."}
+                    {form.cta_type === "link"
+                      ? "Abre o link direto ao tocar — mais rápido, sem esperar uma 2ª mensagem."
+                      : form.cta_type === "button"
+                      ? "Fica fixo dentro do balão. Ao tocar, manda o link de verdade na hora numa 2ª DM."
+                      : "Some se a pessoa ignorar ou responder outra coisa. Ao tocar, manda o link de verdade na hora numa 2ª DM."}
                   </p>
                 </div>
               )}
+
+              {/* Follow Gate Toggle */}
+              <div className="border border-[var(--color-border-subtle)] bg-[var(--color-surface-sunken)]/60 rounded-xl p-4 space-y-3">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <label className="font-bold text-xs text-[var(--color-text-primary)] cursor-pointer" htmlFor="require_follow_toggle">
+                        Conteúdo exclusivo para seguidores
+                      </label>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[var(--color-terracotta)]/15 text-[var(--color-terracotta)]">
+                        Follow Gate
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-[var(--color-text-muted)]">
+                      Só libera o material depois que a pessoa seguir o seu perfil no Instagram.
+                    </p>
+                  </div>
+
+                  <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                    <input
+                      id="require_follow_toggle"
+                      type="checkbox"
+                      checked={form.require_follow}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setForm({
+                          ...form,
+                          require_follow: checked,
+                          follow_gate_message: checked && !form.follow_gate_message
+                            ? "Para liberar o seu material, você precisa me seguir no Instagram! Siga o perfil e depois toque no botão abaixo 👇"
+                            : form.follow_gate_message,
+                          follow_gate_button_text: checked && !form.follow_gate_button_text
+                            ? "Pronto, agora te sigo"
+                            : form.follow_gate_button_text,
+                        });
+                      }}
+                      className="sr-only peer"
+                    />
+                    <div className="w-9 h-5 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[var(--color-terracotta)]"></div>
+                  </label>
+                </div>
+
+                {form.require_follow && (
+                  <div className="pt-3 border-t border-[var(--color-border-subtle)] space-y-3">
+                    <div>
+                      <label className="block font-bold text-[var(--color-text-primary)] mb-1">
+                        Mensagem do Gate (Pedindo pra seguir)
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={form.follow_gate_message}
+                        onChange={(e) => setForm({ ...form, follow_gate_message: e.target.value })}
+                        placeholder="Ex: Para liberar o material, você precisa me seguir no Instagram! Siga o perfil e toque no botão abaixo 👇"
+                        className="w-full bg-[var(--color-surface-sunken)] border border-[var(--color-border-default)] rounded-lg px-3 py-2 text-xs text-[var(--color-text-primary)] outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-bold text-[var(--color-text-primary)] mb-1">
+                        Texto do Botão do Gate
+                      </label>
+                      <input
+                        value={form.follow_gate_button_text}
+                        onChange={(e) => setForm({ ...form, follow_gate_button_text: e.target.value })}
+                        placeholder="Ex: Pronto, agora te sigo"
+                        className="w-full bg-[var(--color-surface-sunken)] border border-[var(--color-border-default)] rounded-lg px-3 py-2 text-xs text-[var(--color-text-primary)] outline-none"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="px-6 py-4 border-t border-[var(--color-border-subtle)] flex items-center justify-end gap-2.5">

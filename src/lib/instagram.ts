@@ -68,24 +68,43 @@ export async function getIgConfig(supabase: SupabaseClient): Promise<IgConfig | 
   return data
 }
 
+export type IgCtaType = 'link' | 'button' | 'quick_reply'
+
 interface SendMessageParams {
   igUserId: string
   accessToken: string
   recipient: { id: string } | { comment_id: string }
   text: string
   buttonText?: string | null
-  // true = botão fixo dentro do balão (postback); false = sugestão de
-  // resposta que some se ignorada (quick_reply). Ambos dependem de
-  // `payload` para o webhook saber a qual envio o toque se refere.
-  useButton?: boolean
+  ctaType?: IgCtaType
+  // 'link': URL aberta direto pelo botão (web_url).
+  buttonUrl?: string | null
+  // 'button' / 'quick_reply': o webhook usa esse valor pra saber a qual
+  // envio o toque se refere.
   payload?: string | null
 }
 
 export async function sendInstagramMessage(params: SendMessageParams) {
-  const { igUserId, accessToken, recipient, text, buttonText, useButton, payload } = params
+  const { igUserId, accessToken, recipient, text, buttonText, ctaType, buttonUrl, payload } = params
 
   let message: Record<string, unknown>
-  if (buttonText && payload && useButton) {
+  if (buttonText && ctaType === 'link' && buttonUrl) {
+    message = {
+      attachment: {
+        type: 'template',
+        payload: {
+          template_type: 'button',
+          text,
+          buttons: [{ type: 'web_url', url: buttonUrl, title: buttonText }]
+        }
+      }
+    }
+  } else if (buttonText && ctaType === 'quick_reply' && payload) {
+    message = {
+      text,
+      quick_replies: [{ content_type: 'text', title: buttonText, payload }]
+    }
+  } else if (buttonText && payload) {
     message = {
       attachment: {
         type: 'template',
@@ -95,11 +114,6 @@ export async function sendInstagramMessage(params: SendMessageParams) {
           buttons: [{ type: 'postback', title: buttonText, payload }]
         }
       }
-    }
-  } else if (buttonText && payload) {
-    message = {
-      text,
-      quick_replies: [{ content_type: 'text', title: buttonText, payload }]
     }
   } else {
     message = { text }
@@ -155,6 +169,41 @@ export async function replyToComment(commentId: string, accessToken: string, tex
   return data
 }
 
+export async function checkUserFollowsBusiness(
+  igsid: string,
+  accessToken: string
+): Promise<boolean> {
+  try {
+    const res = await fetch(
+      `${IG_GRAPH_BASE}/${igsid}?fields=is_user_follow_business,name,username&access_token=${accessToken}`,
+      { method: 'GET' }
+    )
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      // Erro de permissão/consentimento ou falha da API: libera para não travar o lead
+      await logIgEvent('info', 'follow_check_error_fallback', {
+        igsid,
+        status: res.status,
+        error: data?.error
+      })
+      return true
+    }
+
+    if (typeof data?.is_user_follow_business === 'boolean') {
+      return data.is_user_follow_business
+    }
+
+    // Se o campo não vier por restrição de consentimento, libera por segurança
+    return true
+  } catch (err) {
+    await logIgEvent('error', 'follow_check_exception', {
+      igsid,
+      error: err instanceof Error ? err.message : String(err)
+    })
+    return true
+  }
+}
+
 export interface IgAutomation {
   id: string
   name: string
@@ -166,7 +215,10 @@ export interface IgAutomation {
   dm_message_text: string
   dm_button_text: string | null
   dm_button_url: string | null
-  use_button: boolean
+  cta_type: IgCtaType
+  require_follow?: boolean
+  follow_gate_message?: string | null
+  follow_gate_button_text?: string | null
   created_at: string
   updated_at: string
 }
@@ -194,3 +246,4 @@ export function findMatchingAutomation(
 
   return null
 }
+

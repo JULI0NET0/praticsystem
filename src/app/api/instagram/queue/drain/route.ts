@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import {
   getIgConfig,
+  getSiteOrigin,
   getSupabaseAdmin,
   logIgEvent,
   sendInstagramMessage,
@@ -57,17 +58,23 @@ export async function POST(request: Request) {
     try {
       const recipient = item.comment_id ? { comment_id: item.comment_id } : { id: item.igsid }
 
-      // O payload do botão/sugestão é o próprio id da fila: quando a
-      // pessoa tocar, o webhook usa esse id pra achar o link real e
-      // registrar o clique no funil.
+      // 'link': o botão abre a URL na hora — mandamos nosso redirect
+      // próprio (conta o clique) em vez do link final direto.
+      // 'button' / 'quick_reply': o payload é o id da fila; quando a
+      // pessoa tocar, o webhook usa esse id pra achar o link real,
+      // registrar o clique e mandar a 2ª DM na hora.
       await sendInstagramMessage({
         igUserId: config.ig_user_id,
         accessToken: config.access_token,
         recipient,
         text: item.message_text,
         buttonText: item.button_text,
-        useButton: item.use_button,
-        payload: item.button_text ? item.id : null
+        ctaType: item.cta_type,
+        buttonUrl:
+          item.button_text && item.cta_type === 'link' && item.button_url
+            ? `${getSiteOrigin()}/api/instagram/click/${item.id}`
+            : null,
+        payload: item.button_text && item.cta_type !== 'link' ? item.id : null
       })
 
       await supabase
