@@ -1,6 +1,6 @@
 // Service Worker para PWA e Notificações Web Push do PRATIC System
 
-const CACHE_VERSION = 'v1';
+const CACHE_VERSION = 'v2';
 const CACHE_NAME = `pratic-shell-${CACHE_VERSION}`;
 const OFFLINE_URL = '/offline.html';
 
@@ -58,6 +58,8 @@ async function networkFirstNavigate(request) {
 
 // Assets do Next com hash no nome: imutáveis, seguro cachear agressivamente.
 async function cacheFirst(request) {
+  const isDev = self.location.hostname === 'localhost' || self.location.hostname === '127.0.0.1';
+  if (isDev) return fetch(request);
   const cache = await caches.open(CACHE_NAME);
   const cached = await cache.match(request);
   if (cached) return cached;

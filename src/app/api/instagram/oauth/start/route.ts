@@ -12,7 +12,7 @@ export async function GET(request: Request) {
   authUrl.searchParams.set('response_type', 'code')
   authUrl.searchParams.set(
     'scope',
-    'instagram_business_basic,instagram_business_manage_messages,instagram_business_manage_comments'
+    'instagram_business_basic,instagram_business_manage_messages,instagram_business_manage_comments,instagram_business_manage_insights'
   )
 
   return NextResponse.redirect(authUrl.toString())
