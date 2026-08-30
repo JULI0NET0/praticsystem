@@ -21,7 +21,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     'comment_reply_text',
     'dm_message_text',
     'dm_button_text',
-    'dm_button_url'
+    'dm_button_url',
+    'use_button'
   ] as const
 
   const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getSupabaseAdmin, type IgAutomation } from "@/lib/instagram";
+import { ArrowLeft, BarChart3 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -17,23 +18,29 @@ function Funnel({ stages }: { stages: FunnelStage[] }) {
         const pct = top > 0 ? Math.round((stage.count / top) * 100) : 0;
         return (
           <div key={stage.label} className="flex items-center gap-3">
-            <span className="w-36 text-xs text-neutral-400 shrink-0">{stage.label}</span>
-            <div className="flex-1 bg-neutral-800 rounded-full h-8 relative overflow-hidden">
+            <span className="w-36 text-xs text-[var(--color-text-secondary)] font-medium shrink-0">
+              {stage.label}
+            </span>
+            <div className="flex-1 bg-[var(--color-surface-sunken)] rounded-full h-8 relative overflow-hidden">
               <div
-                className="h-full bg-blue-600 rounded-full flex items-center justify-end px-3 transition-all"
-                style={{ width: `${Math.max(pct, stage.count > 0 ? 4 : 0)}%` }}
+                className="h-full bg-[var(--color-terracotta)] rounded-full flex items-center justify-end px-3 transition-all"
+                style={{ width: `${Math.max(pct, stage.count > 0 ? 5 : 0)}%` }}
               >
                 {pct >= 15 && (
-                  <span className="text-xs font-medium text-white">{stage.count}</span>
+                  <span className="text-xs font-bold text-[var(--color-text-on-accent)]">
+                    {stage.count}
+                  </span>
                 )}
               </div>
               {pct < 15 && (
-                <span className="absolute inset-y-0 left-3 flex items-center text-xs font-medium text-neutral-300">
+                <span className="absolute inset-y-0 left-3 flex items-center text-xs font-semibold text-[var(--color-text-primary)]">
                   {stage.count}
                 </span>
               )}
             </div>
-            <span className="w-12 text-xs text-neutral-500 text-right shrink-0">{pct}%</span>
+            <span className="w-12 text-xs text-[var(--color-text-muted)] text-right shrink-0">
+              {pct}%
+            </span>
           </div>
         );
       })}
@@ -72,23 +79,34 @@ export default async function ResultsPage() {
   const overall = statsFor(null);
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-white px-4 py-8 sm:px-8">
-      <div className="max-w-3xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-2xl font-semibold">Resultados</h1>
-            <p className="text-neutral-400 text-sm">Funil: comentário → DM → clique no link</p>
+    <div className="min-h-screen bg-[var(--color-surface-canvas)] text-[var(--color-text-primary)] px-4 py-8 sm:px-8">
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[var(--color-terracotta)] text-[var(--color-text-on-accent)] flex items-center justify-center font-bold shadow-sm">
+              <BarChart3 className="w-5 h-5" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-extrabold text-[var(--color-text-primary)] tracking-tight">
+                Resultados do Funil
+              </h1>
+              <p className="text-xs text-[var(--color-text-secondary)]">
+                Comentários no Instagram ➔ DMs entregues ➔ Cliques no link rastreável
+              </p>
+            </div>
           </div>
           <Link
             href="/automacao-instagram"
-            className="text-sm text-neutral-400 hover:text-white transition-colors"
+            className="text-xs bg-[var(--color-surface-raised)] border border-[var(--color-border-default)] hover:bg-[var(--color-surface-sunken)] px-3.5 py-2 rounded-lg font-semibold text-[var(--color-text-primary)] transition-colors flex items-center gap-1.5 shadow-sm"
           >
-            ← Voltar
+            <ArrowLeft className="w-4 h-4" /> Voltar ao Painel
           </Link>
         </div>
 
-        <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5 mb-6">
-          <h2 className="text-sm text-neutral-400 mb-4">Total (todas as automações)</h2>
+        <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-2xl p-6 shadow-sm">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--color-text-muted)] mb-4">
+            Total Consolidado (Todas as Automações)
+          </h2>
           <Funnel
             stages={[
               { label: "Comentários", count: overall.comments },
@@ -99,7 +117,7 @@ export default async function ResultsPage() {
         </div>
 
         {automations.length === 0 && (
-          <p className="text-neutral-500 text-sm py-6 text-center border border-dashed border-neutral-800 rounded-xl">
+          <p className="text-[var(--color-text-muted)] text-xs py-8 text-center bg-[var(--color-surface-raised)] border border-dashed border-[var(--color-border-default)] rounded-2xl">
             Nenhuma automação criada ainda.
           </p>
         )}
@@ -110,15 +128,17 @@ export default async function ResultsPage() {
             return (
               <div
                 key={automation.id}
-                className="bg-neutral-900 border border-neutral-800 rounded-xl p-5"
+                className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-2xl p-5 space-y-4 shadow-sm"
               >
-                <div className="flex items-center gap-2 mb-4">
-                  <h3 className="font-medium">{automation.name}</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-bold text-sm text-[var(--color-text-primary)]">
+                    {automation.name}
+                  </h3>
                   <span
-                    className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                    className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
                       automation.is_active
-                        ? "bg-green-500/15 text-green-400"
-                        : "bg-neutral-800 text-neutral-500"
+                        ? "bg-[var(--color-success-wash)] text-[var(--color-success-ink)]"
+                        : "bg-[var(--color-surface-inset)] text-[var(--color-text-muted)]"
                     }`}
                   >
                     {automation.is_active ? "Ativa" : "Pausada"}

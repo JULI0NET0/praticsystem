@@ -17,6 +17,8 @@ interface IgCommentValue {
 
 interface IgMessagingEvent {
   sender?: { id?: string }
+  postback?: { payload?: string }
+  message?: { quick_reply?: { payload?: string } }
 }
 
 interface IgWebhookEntry {
@@ -150,6 +152,7 @@ async function handleComment(
     message_text: automation.dm_message_text,
     button_text: automation.dm_button_text,
     button_url: automation.dm_button_url,
+    use_button: automation.use_button,
     dedupe_key: dedupeKey
   })
 
@@ -193,4 +196,52 @@ async function handleIncomingMessage(
     },
     { onConflict: 'igsid' }
   )
+
+  // Botão fixo (postback) e sugestão de resposta (quick_reply) chegam em
+  // formatos diferentes, mas carregam o mesmo payload — normaliza os dois
+  // pra cair no mesmo tratamento.
+  const tapPayload = messagingEvent.postback?.payload || messagingEvent.message?.quick_reply?.payload
+  if (tapPayload) {
+    await handleButtonTap(supabase, senderId, tapPayload)
+  }
+}
+
+async function handleButtonTap(
+  supabase: ReturnType<typeof getSupabaseAdmin>,
+  senderId: string,
+  queueId: string
+) {
+  const { data: originalItem } = await supabase
+    .from('ig_message_queue')
+    .select('id, automation_id, button_url')
+    .eq('id', queueId)
+    .maybeSingle()
+
+  if (!originalItem) return
+
+  const { error: clickError } = await supabase.from('ig_link_clicks').insert({
+    queue_id: originalItem.id,
+    automation_id: originalItem.automation_id,
+    igsid: senderId
+  })
+
+  if (clickError) {
+    await logIgEvent('error', 'click_tracking_failed', { error: clickError.message, queueId })
+  }
+
+  if (originalItem.button_url) {
+    const { error: queueError } = await supabase.from('ig_message_queue').insert({
+      automation_id: originalItem.automation_id,
+      igsid: senderId,
+      message_text: originalItem.button_url,
+      dedupe_key: `postback-followup:${queueId}`
+    })
+
+    // 23505 = unique_violation (toque duplicado do mesmo evento) — ignora
+    if (queueError && queueError.code !== '23505') {
+      await logIgEvent('error', 'queue_insert_failed', { error: queueError.message, queueId })
+    }
+  }
+
+  await logIgEvent('info', 'button_tapped', { queueId, senderId })
 }

@@ -74,25 +74,36 @@ interface SendMessageParams {
   recipient: { id: string } | { comment_id: string }
   text: string
   buttonText?: string | null
-  buttonUrl?: string | null
+  // true = botão fixo dentro do balão (postback); false = sugestão de
+  // resposta que some se ignorada (quick_reply). Ambos dependem de
+  // `payload` para o webhook saber a qual envio o toque se refere.
+  useButton?: boolean
+  payload?: string | null
 }
 
 export async function sendInstagramMessage(params: SendMessageParams) {
-  const { igUserId, accessToken, recipient, text, buttonText, buttonUrl } = params
+  const { igUserId, accessToken, recipient, text, buttonText, useButton, payload } = params
 
-  const message =
-    buttonText && buttonUrl
-      ? {
-          attachment: {
-            type: 'template',
-            payload: {
-              template_type: 'button',
-              text,
-              buttons: [{ type: 'web_url', url: buttonUrl, title: buttonText }]
-            }
-          }
+  let message: Record<string, unknown>
+  if (buttonText && payload && useButton) {
+    message = {
+      attachment: {
+        type: 'template',
+        payload: {
+          template_type: 'button',
+          text,
+          buttons: [{ type: 'postback', title: buttonText, payload }]
         }
-      : { text }
+      }
+    }
+  } else if (buttonText && payload) {
+    message = {
+      text,
+      quick_replies: [{ content_type: 'text', title: buttonText, payload }]
+    }
+  } else {
+    message = { text }
+  }
 
   const res = await fetch(`${IG_GRAPH_BASE}/${igUserId}/messages`, {
     method: 'POST',
@@ -115,7 +126,7 @@ export async function subscribeToWebhooks(igUserId: string, accessToken: string)
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
-      subscribed_fields: 'comments,messages',
+      subscribed_fields: 'comments,messages,messaging_postbacks',
       access_token: accessToken
     })
   })
@@ -155,6 +166,7 @@ export interface IgAutomation {
   dm_message_text: string
   dm_button_text: string | null
   dm_button_url: string | null
+  use_button: boolean
   created_at: string
   updated_at: string
 }

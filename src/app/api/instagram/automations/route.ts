@@ -44,7 +44,8 @@ export async function POST(request: Request) {
       comment_reply_text: body.comment_reply_text || null,
       dm_message_text: body.dm_message_text,
       dm_button_text: body.dm_button_text || null,
-      dm_button_url: body.dm_button_url || null
+      dm_button_url: body.dm_button_url || null,
+      use_button: body.use_button ?? true
     })
     .select()
     .single()

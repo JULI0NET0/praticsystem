@@ -1,9 +1,37 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useTheme } from "next-themes";
 import { useToast } from "@/components/CustomToast";
 import type { IgAutomation, IgConfig } from "@/lib/instagram";
+import {
+  Home,
+  Users,
+  Workflow,
+  Sparkles,
+  MessageSquare,
+  BarChart3,
+  Settings,
+  Plus,
+  Trash2,
+  ExternalLink,
+  AlertTriangle,
+  RefreshCw,
+  Search,
+  ChevronRight,
+  Zap,
+  Smartphone,
+  LogOut,
+  Check,
+  ChevronLeft,
+  Clock,
+  X,
+  Menu,
+  Sun,
+  Moon,
+} from "lucide-react";
 
 interface LogRow {
   id: string;
@@ -13,12 +41,47 @@ interface LogRow {
   created_at: string;
 }
 
+interface QueueItem {
+  id: string;
+  automation_id: string | null;
+  igsid: string;
+  comment_id?: string | null;
+  message_text: string;
+  button_text?: string | null;
+  button_url?: string | null;
+  status: "pending" | "sending" | "sent" | "failed";
+  attempts?: number;
+  error?: string | null;
+  created_at: string;
+  sent_at?: string | null;
+}
+
+interface ContactItem {
+  id: string;
+  igsid: string;
+  username?: string | null;
+  first_seen_at: string;
+  last_seen_at: string;
+}
+
+interface ClickItem {
+  id: string;
+  queue_id: string;
+  automation_id: string | null;
+  created_at: string;
+}
+
 interface Props {
   initialConfig: IgConfig | null;
   initialAutomations: IgAutomation[];
   initialLogs: LogRow[];
-  queueStats: { pending: number; failed: number };
+  initialQueue?: QueueItem[];
+  initialContacts?: ContactItem[];
+  initialClicks?: ClickItem[];
+  queueStats: { pending: number; failed: number; sent?: number };
 }
+
+type TabType = "home" | "contacts" | "automations" | "ai" | "inbox" | "results" | "settings";
 
 const emptyForm = {
   name: "",
@@ -29,31 +92,124 @@ const emptyForm = {
   dm_message_text: "",
   dm_button_text: "",
   dm_button_url: "",
+  use_button: true,
   is_active: true,
 };
+
+const TEMPLATES = [
+  {
+    id: "comments_dm",
+    title: "Enviar links automaticamente por DM a partir dos comentários",
+    badge: "POPULAR",
+    badgeType: "popular",
+    icon: <MessageSquare className="w-4 h-4 text-[var(--color-terracotta)]" />,
+    description: "Envie um direct com botão e link rastreável no exato segundo em que alguém comentar no seu post ou reel.",
+    defaultForm: {
+      name: "Envio de Link via Comentários (Reels/Posts)",
+      keywords: "link, quero, eu quero, me manda, valor, preco",
+      match_mode: "contains" as const,
+      post_id: "",
+      comment_reply_text: "Te enviei o link no direct! Dá uma olhada 📩✨",
+      dm_message_text: "Olá! Vi que você comentou no nosso post. Aqui está o link exclusivo que você pediu:",
+      dm_button_text: "👉 Acessar Link Agora",
+      dm_button_url: "https://",
+      use_button: true,
+      is_active: true,
+    },
+  },
+  {
+    id: "stories_leads",
+    title: "Gere leads com stories e materiais gratuitos",
+    badge: "NOVO",
+    badgeType: "new",
+    icon: <Zap className="w-4 h-4 text-blue-400" />,
+    description: "Converta visualizações dos Stories em contatos qualificados entregando cupons, ebooks ou materiais por direct.",
+    defaultForm: {
+      name: "Captura de Leads via Stories",
+      keywords: "material, cupom, vip, desconto, ebook, aula",
+      match_mode: "contains" as const,
+      post_id: "",
+      comment_reply_text: "Prontinho! Dá uma olhada na sua caixa de direct 🚀",
+      dm_message_text: "Oi! Aqui está o material especial dos stories que você pediu:",
+      dm_button_text: "🎁 Resgatar Material",
+      dm_button_url: "https://",
+      use_button: true,
+      is_active: true,
+    },
+  },
+  {
+    id: "all_dms",
+    title: "Responda todas as suas DMs instantaneamente",
+    badge: "ESSENCIAL",
+    badgeType: "essential",
+    icon: <Sparkles className="w-4 h-4 text-[var(--color-success)]" />,
+    description: "Atendimento automático 24h: responda dúvidas frequentes ou envie o link do WhatsApp para fechar negócios.",
+    defaultForm: {
+      name: "Atendimento Automático & Boas-Vindas",
+      keywords: "oi, ola, orcamento, contato, preco, whatsapp, ajuda",
+      match_mode: "contains" as const,
+      post_id: "",
+      comment_reply_text: "",
+      dm_message_text: "Olá! Obrigado pelo contato. Para falar diretamente com nossa equipe no WhatsApp, toque no botão abaixo:",
+      dm_button_text: "💬 Falar no WhatsApp",
+      dm_button_url: "https://wa.me/55",
+      use_button: true,
+      is_active: true,
+    },
+  },
+];
 
 export default function AutomationsClient({
   initialConfig,
   initialAutomations,
   initialLogs,
+  initialQueue = [],
+  initialContacts = [],
+  initialClicks = [],
   queueStats,
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { showToast } = useToast();
+  const { theme, setTheme, resolvedTheme } = useTheme();
+
+  const [mounted, setMounted] = useState(false);
+  const [activeTab, setActiveTab] = useState<TabType>("home");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const [config] = useState(initialConfig);
   const [automations, setAutomations] = useState(initialAutomations);
   const [logs] = useState(initialLogs);
+  const [queue] = useState(initialQueue);
+  const [contacts] = useState(initialContacts);
+  const [clicks] = useState(initialClicks);
+  const [stats] = useState(queueStats);
+
+  // Form & Modals
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
-  const [now] = useState(() => Date.now());
+  const [drainingQueue, setDrainingQueue] = useState(false);
 
+  // Search & Filters
+  const [searchFilter, setSearchFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "paused">("all");
+
+  // Simulator Modal
+  const [showSimulator, setShowSimulator] = useState(false);
+  const [simComment, setSimComment] = useState("");
+  const [simResult, setSimResult] = useState<IgAutomation | null | undefined>(undefined);
+
+  const [now] = useState(() => Date.now());
   const tokenExpiresInDays = config
     ? Math.max(0, Math.ceil((new Date(config.token_expires_at).getTime() - now) / 86400000))
     : null;
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (searchParams.get("ig_connected")) {
@@ -65,11 +221,63 @@ export default function AutomationsClient({
       showToast(`Erro ao conectar: ${decodeURIComponent(err)}`, "error");
       router.replace("/automacao-instagram");
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [searchParams, router, showToast]);
 
-  function openCreateForm() {
-    setForm(emptyForm);
+  // Overall analytics
+  const totalComments = queue.length;
+  const totalSent = stats.sent ?? queue.filter((q) => q.status === "sent").length;
+  const totalClicks = clicks.length;
+  const overallConversionRate = totalComments > 0 ? Math.round((totalClicks / totalComments) * 100) : 0;
+
+  // Onboarding Actions List (PraticChat Checklist)
+  const checklistItems = useMemo(() => {
+    const hasConnection = !!config;
+    const hasCommentAuto = automations.length > 0;
+    const hasButtonUrl = automations.some((a) => !!a.dm_button_url);
+
+    return [
+      {
+        id: "step1",
+        title: "Conectar conta do Instagram (@juli0net0)",
+        completed: hasConnection,
+        onClick: () => {
+          if (!hasConnection) window.location.href = "/api/instagram/oauth/start";
+          else setActiveTab("settings");
+        },
+      },
+      {
+        id: "step2",
+        title: "Criar automação de comentários (DM automática)",
+        completed: hasCommentAuto,
+        onClick: () => {
+          if (hasCommentAuto) setActiveTab("automations");
+          else openCreateForm(TEMPLATES[0].defaultForm);
+        },
+      },
+      {
+        id: "step3",
+        title: "Aumente seus seguidores com respostas em stories",
+        completed: automations.some((a) =>
+          (a.keywords || []).some((k) => ["cupom", "material", "ebook", "vip"].includes(k.toLowerCase()))
+        ),
+        onClick: () => openCreateForm(TEMPLATES[1].defaultForm),
+      },
+      {
+        id: "step4",
+        title: "Configurar Resposta Padrão & Botão de Destino",
+        completed: hasButtonUrl,
+        onClick: () => {
+          if (automations.length > 0) openEditForm(automations[0]);
+          else openCreateForm(TEMPLATES[2].defaultForm);
+        },
+      },
+    ];
+  }, [config, automations]);
+
+  const completedCount = checklistItems.filter((i) => i.completed).length;
+
+  function openCreateForm(templateData?: typeof emptyForm) {
+    setForm(templateData || emptyForm);
     setEditingId(null);
     setShowForm(true);
   }
@@ -84,6 +292,7 @@ export default function AutomationsClient({
       dm_message_text: automation.dm_message_text,
       dm_button_text: automation.dm_button_text || "",
       dm_button_url: automation.dm_button_url || "",
+      use_button: automation.use_button,
       is_active: automation.is_active,
     });
     setEditingId(automation.id);
@@ -97,7 +306,7 @@ export default function AutomationsClient({
       .filter(Boolean);
 
     if (!form.name || keywords.length === 0 || !form.dm_message_text) {
-      showToast("Preencha nome, palavras-chave e a mensagem da DM.", "error");
+      showToast("Preencha o nome, ao menos uma palavra-chave e a mensagem da DM.", "error");
       return;
     }
 
@@ -111,6 +320,7 @@ export default function AutomationsClient({
       dm_message_text: form.dm_message_text,
       dm_button_text: form.dm_button_text || null,
       dm_button_url: form.dm_button_url || null,
+      use_button: form.use_button,
       is_active: form.is_active,
     };
 
@@ -131,7 +341,7 @@ export default function AutomationsClient({
         showToast("Automação atualizada!", "success");
       } else {
         setAutomations((prev) => [data.automation, ...prev]);
-        showToast("Automação criada!", "success");
+        showToast("Automação criada com sucesso!", "success");
       }
       setShowForm(false);
     } catch (err) {
@@ -142,23 +352,61 @@ export default function AutomationsClient({
   }
 
   async function toggleActive(automation: IgAutomation) {
-    const res = await fetch(`/api/instagram/automations/${automation.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ is_active: !automation.is_active }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      setAutomations((prev) => prev.map((a) => (a.id === automation.id ? data.automation : a)));
+    const nextState = !automation.is_active;
+    setAutomations((prev) =>
+      prev.map((a) => (a.id === automation.id ? { ...a, is_active: nextState } : a))
+    );
+
+    try {
+      const res = await fetch(`/api/instagram/automations/${automation.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_active: nextState }),
+      });
+      if (!res.ok) {
+        setAutomations((prev) =>
+          prev.map((a) => (a.id === automation.id ? { ...a, is_active: !nextState } : a))
+        );
+        showToast("Erro ao alterar status.", "error");
+      } else {
+        showToast(nextState ? "Automação ativada!" : "Automação pausada.", "info");
+      }
+    } catch {
+      setAutomations((prev) =>
+        prev.map((a) => (a.id === automation.id ? { ...a, is_active: !nextState } : a))
+      );
     }
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Excluir esta automação? Essa ação não pode ser desfeita.")) return;
+    if (!confirm("Excluir esta automação?")) return;
     const res = await fetch(`/api/instagram/automations/${id}`, { method: "DELETE" });
     if (res.ok) {
       setAutomations((prev) => prev.filter((a) => a.id !== id));
       showToast("Automação excluída.", "info");
+    }
+  }
+
+  async function handleDrainQueue() {
+    setDrainingQueue(true);
+    try {
+      const res = await fetch("/api/instagram/queue/drain", { method: "POST" });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(
+          data.skipped
+            ? `Fila verificada: ${data.reason}`
+            : `Fila processada! ${data.sent || 0} DMs enviadas.`,
+          "success"
+        );
+        router.refresh();
+      } else {
+        showToast(data.error || "Erro ao processar fila.", "error");
+      }
+    } catch {
+      showToast("Erro de conexão.", "error");
+    } finally {
+      setDrainingQueue(false);
     }
   }
 
@@ -167,258 +415,1160 @@ export default function AutomationsClient({
     router.push("/automacao-instagram/login");
   }
 
+  function runSimulation() {
+    if (!simComment.trim()) {
+      setSimResult(null);
+      return;
+    }
+    const normalized = simComment.toLowerCase().trim();
+    const matched = automations.find((a) => {
+      if (!a.is_active) return false;
+      return (a.keywords || []).some((kw) => {
+        const k = kw.toLowerCase().trim();
+        if (!k) return false;
+        return a.match_mode === "exact" ? normalized === k : normalized.includes(k);
+      });
+    });
+    setSimResult(matched || null);
+  }
+
+  const filteredAutomations = useMemo(() => {
+    return automations.filter((a) => {
+      if (statusFilter === "active" && !a.is_active) return false;
+      if (statusFilter === "paused" && a.is_active) return false;
+      if (searchFilter.trim()) {
+        const q = searchFilter.toLowerCase();
+        return (
+          a.name.toLowerCase().includes(q) ||
+          (a.keywords || []).some((k) => k.toLowerCase().includes(q)) ||
+          a.dm_message_text.toLowerCase().includes(q)
+        );
+      }
+      return true;
+    });
+  }, [automations, statusFilter, searchFilter]);
+
+  const tabTitleMap: Record<TabType, string> = {
+    home: "Inicial",
+    contacts: "Contatos",
+    automations: "Automação",
+    ai: "Pratic AI",
+    inbox: "Caixa de Entrada",
+    results: "Resultados & Insights",
+    settings: "Configurações",
+  };
+
+  const displayName = config?.ig_username === "juli0net0" ? "Julio Neto" : config?.ig_username || "Julio Neto";
+  const displayHandle = config?.ig_username ? `@${config.ig_username}` : "@juli0net0";
+
   return (
-    <div className="min-h-screen bg-neutral-950 text-white px-4 py-8 sm:px-8">
-      <div className="max-w-3xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-2xl font-semibold">Automação Instagram</h1>
-            <p className="text-neutral-400 text-sm">Substituto do ManyChat — @juli0net0</p>
-          </div>
-          <div className="flex items-center gap-4">
-            <a
-              href="/automacao-instagram/resultados"
-              className="text-sm text-neutral-400 hover:text-white transition-colors"
-            >
-              Resultados
-            </a>
+    <div className="flex h-screen w-full overflow-hidden bg-[var(--color-surface-canvas)] text-[var(--color-text-primary)] font-sans antialiased">
+      {/* ========================================================
+          LEFT SIDEBAR (PraticChat Sidebar)
+         ======================================================== */}
+      <aside
+        className={`h-full shrink-0 border-r border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] flex flex-col justify-between transition-all duration-200 z-30 ${
+          sidebarCollapsed ? "w-16" : "w-64 min-w-[256px]"
+        } ${mobileMenuOpen ? "fixed inset-y-0 left-0 shadow-2xl" : "hidden md:flex"}`}
+      >
+        {/* Top Header & Workspace */}
+        <div className="flex flex-col">
+          {/* Logo Bar */}
+          <div className="h-14 px-4 flex items-center justify-between border-b border-[var(--color-border-subtle)]">
+            {!sidebarCollapsed ? (
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[var(--color-terracotta)] to-[#b84627] text-white flex items-center justify-center font-black text-sm shadow-sm">
+                  P
+                </div>
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-extrabold text-base tracking-tight text-[var(--color-text-primary)]">
+                      PraticChat
+                    </span>
+                    <span className="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded bg-[var(--color-terracotta-100)] text-[var(--color-terracotta-ink)]">
+                      PRO
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-[var(--color-text-muted)] block -mt-0.5">
+                    Automação Instagram
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="w-8 h-8 rounded-xl bg-[var(--color-terracotta)] text-white flex items-center justify-center font-bold text-xs mx-auto">
+                P
+              </div>
+            )}
+
             <button
-              onClick={handleLogout}
-              className="text-sm text-neutral-400 hover:text-white transition-colors"
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              className="hidden md:flex text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] p-1 rounded-md transition-colors"
+              title={sidebarCollapsed ? "Expandir menu" : "Recolher menu"}
             >
-              Sair
+              <ChevronLeft className={`w-4 h-4 transition-transform duration-200 ${sidebarCollapsed ? "rotate-180" : ""}`} />
+            </button>
+            <button
+              onClick={() => setMobileMenuOpen(false)}
+              className="md:hidden text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] p-1"
+            >
+              <X className="w-5 h-5" />
             </button>
           </div>
+
+          {/* Connected Instagram Account Card */}
+          {!sidebarCollapsed && (
+            <div className="p-3 border-b border-[var(--color-border-subtle)]">
+              <div className="flex items-center gap-2.5 p-2 rounded-xl bg-[var(--color-surface-sunken)] border border-[var(--color-border-subtle)]">
+                <div className="relative w-8 h-8 rounded-full overflow-hidden shrink-0 ring-2 ring-[var(--color-terracotta)]/40">
+                  <Image
+                    src="/bio/avatar.jpg"
+                    alt={displayName}
+                    fill
+                    className="object-cover"
+                    unoptimized
+                  />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1">
+                    <p className="font-bold text-xs text-[var(--color-text-primary)] truncate">
+                      {displayName}
+                    </p>
+                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-success)] shrink-0" />
+                  </div>
+                  <p className="text-[11px] text-[var(--color-text-secondary)] truncate">
+                    {displayHandle}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Navigation Items */}
+          <nav className="p-2.5 space-y-1">
+            <NavItem
+              icon={<Home className="w-4 h-4" />}
+              label="Inicial"
+              active={activeTab === "home"}
+              collapsed={sidebarCollapsed}
+              onClick={() => {
+                setActiveTab("home");
+                setMobileMenuOpen(false);
+              }}
+            />
+            <NavItem
+              icon={<Users className="w-4 h-4" />}
+              label="Contatos"
+              badge={contacts.length > 0 ? String(contacts.length) : undefined}
+              active={activeTab === "contacts"}
+              collapsed={sidebarCollapsed}
+              onClick={() => {
+                setActiveTab("contacts");
+                setMobileMenuOpen(false);
+              }}
+            />
+            <NavItem
+              icon={<Workflow className="w-4 h-4" />}
+              label="Automação"
+              badge={automations.length > 0 ? String(automations.length) : undefined}
+              active={activeTab === "automations"}
+              collapsed={sidebarCollapsed}
+              onClick={() => {
+                setActiveTab("automations");
+                setMobileMenuOpen(false);
+              }}
+            />
+            <NavItem
+              icon={<Sparkles className="w-4 h-4" />}
+              label="Pratic AI"
+              active={activeTab === "ai"}
+              collapsed={sidebarCollapsed}
+              onClick={() => {
+                setActiveTab("ai");
+                setMobileMenuOpen(false);
+              }}
+            />
+            <NavItem
+              icon={<MessageSquare className="w-4 h-4" />}
+              label="Caixa de Entrada"
+              badge={stats.pending > 0 ? String(stats.pending) : undefined}
+              badgeColor="blue"
+              active={activeTab === "inbox"}
+              collapsed={sidebarCollapsed}
+              onClick={() => {
+                setActiveTab("inbox");
+                setMobileMenuOpen(false);
+              }}
+            />
+            <NavItem
+              icon={<BarChart3 className="w-4 h-4" />}
+              label="Resultados & Funil"
+              active={activeTab === "results"}
+              collapsed={sidebarCollapsed}
+              onClick={() => {
+                setActiveTab("results");
+                setMobileMenuOpen(false);
+              }}
+            />
+            <NavItem
+              icon={<Settings className="w-4 h-4" />}
+              label="Configurações"
+              active={activeTab === "settings"}
+              collapsed={sidebarCollapsed}
+              onClick={() => {
+                setActiveTab("settings");
+                setMobileMenuOpen(false);
+              }}
+            />
+          </nav>
         </div>
 
-        {/* Conexão */}
-        <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5 mb-6">
-          {config ? (
+        {/* Sidebar Footer: Profile, Theme Switcher & Logout */}
+        <div className="p-3 border-t border-[var(--color-border-subtle)] space-y-2">
+          {!sidebarCollapsed ? (
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-neutral-400">Conectado como</p>
-                <p className="text-lg font-medium">@{config.ig_username || config.ig_user_id}</p>
-                <p className="text-xs text-neutral-500 mt-1">
-                  Token expira em {tokenExpiresInDays} dia{tokenExpiresInDays === 1 ? "" : "s"}
-                </p>
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="relative w-8 h-8 rounded-full overflow-hidden shrink-0 border border-[var(--color-border-default)]">
+                  <Image
+                    src="/bio/avatar.jpg"
+                    alt="Julio Neto"
+                    fill
+                    className="object-cover"
+                    unoptimized
+                  />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-[var(--color-text-primary)] truncate">
+                    {displayName}
+                  </p>
+                  <p className="text-[10px] text-[var(--color-text-muted)] truncate">
+                    {displayHandle}
+                  </p>
+                </div>
               </div>
-              <a
-                href="/api/instagram/oauth/start"
-                className="text-sm bg-neutral-800 hover:bg-neutral-700 px-4 py-2 rounded-lg transition-colors"
-              >
-                Reconectar
-              </a>
+
+              <div className="flex items-center gap-1">
+                {mounted && (
+                  <button
+                    onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+                    title={resolvedTheme === "dark" ? "Modo Claro" : "Modo Escuro"}
+                    className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] p-1.5 rounded-lg hover:bg-[var(--color-surface-sunken)] transition-colors"
+                  >
+                    {resolvedTheme === "dark" ? (
+                      <Sun className="w-4 h-4 text-amber-400" />
+                    ) : (
+                      <Moon className="w-4 h-4" />
+                    )}
+                  </button>
+                )}
+                <button
+                  onClick={handleLogout}
+                  title="Sair do painel"
+                  className="text-[var(--color-text-muted)] hover:text-[var(--color-danger)] p-1.5 rounded-lg hover:bg-[var(--color-surface-sunken)] transition-colors"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           ) : (
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Instagram não conectado</p>
-                <p className="text-sm text-neutral-400">Conecte sua conta para começar a automatizar.</p>
-              </div>
-              <a
-                href="/api/instagram/oauth/start"
-                className="text-sm bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg font-medium transition-colors"
+            <div className="flex flex-col items-center gap-2">
+              {mounted && (
+                <button
+                  onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+                  title={resolvedTheme === "dark" ? "Modo Claro" : "Modo Escuro"}
+                  className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] p-1.5 rounded-lg hover:bg-[var(--color-surface-sunken)]"
+                >
+                  {resolvedTheme === "dark" ? (
+                    <Sun className="w-4 h-4 text-amber-400" />
+                  ) : (
+                    <Moon className="w-4 h-4" />
+                  )}
+                </button>
+              )}
+              <button
+                onClick={handleLogout}
+                title="Sair"
+                className="text-[var(--color-text-muted)] hover:text-[var(--color-danger)] p-1.5 rounded-lg hover:bg-[var(--color-surface-sunken)]"
               >
-                Conectar Instagram
-              </a>
+                <LogOut className="w-4 h-4" />
+              </button>
             </div>
           )}
         </div>
+      </aside>
 
-        {/* Fila stats */}
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
-            <p className="text-xs text-neutral-400">Na fila (pendente)</p>
-            <p className="text-2xl font-semibold">{queueStats.pending}</p>
-          </div>
-          <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
-            <p className="text-xs text-neutral-400">Falharam</p>
-            <p className="text-2xl font-semibold text-red-400">{queueStats.failed}</p>
-          </div>
-        </div>
-
-        {/* Automações */}
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="font-medium text-lg">Automações</h2>
-          <button
-            onClick={openCreateForm}
-            className="text-sm bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg font-medium transition-colors"
-          >
-            + Nova automação
-          </button>
-        </div>
-
-        <div className="space-y-3 mb-8">
-          {automations.length === 0 && (
-            <p className="text-neutral-500 text-sm py-6 text-center border border-dashed border-neutral-800 rounded-xl">
-              Nenhuma automação ainda. Crie a primeira.
-            </p>
-          )}
-          {automations.map((automation) => (
-            <div
-              key={automation.id}
-              className="bg-neutral-900 border border-neutral-800 rounded-xl p-4"
+      {/* ========================================================
+          RIGHT MAIN CONTENT AREA
+         ======================================================== */}
+      <div className="flex-1 h-full min-w-0 flex flex-col overflow-hidden">
+        {/* TOP NOTICE BANNER (Yellow Alert Banner) */}
+        {!config ? (
+          <div className="bg-[#422006] border-b border-[#713f12] text-[#fef08a] px-6 py-2.5 text-xs flex items-center justify-between gap-3 shrink-0">
+            <div className="flex items-center gap-2 max-w-4xl">
+              <AlertTriangle className="w-4 h-4 shrink-0 text-[#facc15]" />
+              <span>
+                A conexão do Instagram com esta conta foi perdida. Para resolver isso, o administrador da conta precisa no Instagram{" "}
+                <a href="/api/instagram/oauth/start" className="underline font-bold hover:text-white">
+                  Atualizar Permissões
+                </a>
+              </span>
+            </div>
+            <a
+              href="/api/instagram/oauth/start"
+              className="bg-[#ca8a04] hover:bg-[#eab308] text-black px-3 py-1 rounded-md font-bold text-xs shrink-0 transition-colors"
             >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="font-medium truncate">{automation.name}</p>
-                  <p className="text-xs text-neutral-500 mt-0.5">
-                    Palavras: {(automation.keywords || []).join(", ")}
-                  </p>
-                  <p className="text-xs text-neutral-500 truncate mt-0.5">
-                    DM: {automation.dm_message_text}
-                  </p>
+              Conectar Conta
+            </a>
+          </div>
+        ) : tokenExpiresInDays !== null && tokenExpiresInDays <= 7 ? (
+          <div className="bg-[#422006] border-b border-[#713f12] text-[#fef08a] px-6 py-2 text-xs flex items-center justify-between gap-3 shrink-0">
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4 shrink-0 text-[#facc15]" />
+              <span>Seu token do Instagram expira em {tokenExpiresInDays} dias. Atualize as permissões.</span>
+            </div>
+            <a
+              href="/api/instagram/oauth/start"
+              className="underline font-bold text-xs hover:text-white"
+            >
+              Renovar Token
+            </a>
+          </div>
+        ) : null}
+
+        {/* TOP BREADCRUMB / HEADER BAR */}
+        <header className="h-14 border-b border-[var(--color-border-subtle)] bg-[var(--color-surface-canvas)] px-6 sm:px-8 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="md:hidden text-[var(--color-text-primary)] p-1.5 rounded-lg border border-[var(--color-border-subtle)]"
+            >
+              <Menu className="w-4 h-4" />
+            </button>
+            <h2 className="font-bold text-base text-[var(--color-text-primary)]">
+              {tabTitleMap[activeTab]}
+            </h2>
+          </div>
+
+          <div className="flex items-center gap-2.5">
+            {/* Quick Dark/Light Toggle */}
+            {mounted && (
+              <button
+                onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+                title={resolvedTheme === "dark" ? "Modo Claro" : "Modo Escuro"}
+                className="p-1.5 rounded-lg bg-[var(--color-surface-raised)] border border-[var(--color-border-default)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface-sunken)] transition-colors"
+              >
+                {resolvedTheme === "dark" ? (
+                  <Sun className="w-4 h-4 text-amber-400" />
+                ) : (
+                  <Moon className="w-4 h-4" />
+                )}
+              </button>
+            )}
+
+            <button
+              onClick={() => setShowSimulator(true)}
+              className="text-xs bg-[var(--color-surface-raised)] border border-[var(--color-border-default)] hover:bg-[var(--color-surface-sunken)] px-3.5 py-1.5 rounded-lg font-medium text-[var(--color-text-primary)] transition-colors flex items-center gap-1.5 shadow-xs"
+            >
+              <Smartphone className="w-3.5 h-3.5 text-[var(--color-terracotta)]" />
+              Testar Disparador
+            </button>
+            <button
+              onClick={() => openCreateForm()}
+              className="text-xs bg-[var(--color-terracotta)] hover:opacity-90 text-[var(--color-text-on-accent)] px-3.5 py-1.5 rounded-lg font-semibold transition-opacity flex items-center gap-1.5 shadow-xs"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Nova automação
+            </button>
+          </div>
+        </header>
+
+        {/* SCROLLABLE BODY */}
+        <main className="flex-1 overflow-y-auto px-6 py-6 sm:px-10 sm:py-8">
+          <div className="max-w-5xl mx-auto space-y-8">
+            {/* --------------------------------------------------
+                VIEW: INICIAL (Home Screen)
+               -------------------------------------------------- */}
+            {activeTab === "home" && (
+              <div className="space-y-8">
+                {/* Greeting Title */}
+                <div>
+                  <h1 className="text-3xl sm:text-4xl font-extrabold text-[var(--color-text-primary)] tracking-tight">
+                    Olá, {displayName}!
+                  </h1>
+                  <div className="flex items-center gap-4 mt-2 text-xs text-[var(--color-text-secondary)] font-medium">
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-[var(--color-success)]" />
+                      1 canal conectado ({displayHandle})
+                    </span>
+                    <span>•</span>
+                    <button
+                      onClick={() => setActiveTab("results")}
+                      className="text-[var(--color-terracotta)] hover:underline font-semibold flex items-center gap-0.5"
+                    >
+                      Ver Insights <ChevronRight className="w-3 h-3" />
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    onClick={() => toggleActive(automation)}
-                    className={`text-xs px-2.5 py-1 rounded-full font-medium ${
-                      automation.is_active
-                        ? "bg-green-500/15 text-green-400"
-                        : "bg-neutral-800 text-neutral-500"
-                    }`}
-                  >
-                    {automation.is_active ? "Ativa" : "Pausada"}
-                  </button>
-                  <button
-                    onClick={() => openEditForm(automation)}
-                    className="text-xs text-neutral-400 hover:text-white px-2"
-                  >
-                    Editar
-                  </button>
-                  <button
-                    onClick={() => handleDelete(automation.id)}
-                    className="text-xs text-red-400 hover:text-red-300 px-2"
-                  >
-                    Excluir
-                  </button>
+
+                {/* Section: "Comece aqui" (Quick Automations) */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-bold text-lg text-[var(--color-text-primary)]">
+                      Comece aqui
+                    </h3>
+                    <button
+                      onClick={() => setActiveTab("automations")}
+                      className="text-xs text-[var(--color-terracotta)] hover:underline font-semibold"
+                    >
+                      Veja todos os modelos
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {TEMPLATES.map((tpl) => (
+                      <div
+                        key={tpl.id}
+                        onClick={() => openCreateForm(tpl.defaultForm)}
+                        className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] hover:border-[var(--color-terracotta)] rounded-2xl p-5 flex flex-col justify-between cursor-pointer transition-all duration-200 hover:shadow-md group min-h-[150px]"
+                      >
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div className="p-2 rounded-lg bg-[var(--color-surface-sunken)] w-fit">
+                              {tpl.icon}
+                            </div>
+                            {tpl.badge && (
+                              <span
+                                className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full ${
+                                  tpl.badgeType === "popular"
+                                    ? "bg-[var(--color-terracotta-100)] text-[var(--color-terracotta-ink)]"
+                                    : tpl.badgeType === "new"
+                                    ? "bg-blue-500/15 text-blue-400"
+                                    : "bg-green-500/15 text-green-400"
+                                }`}
+                              >
+                                {tpl.badge}
+                              </span>
+                            )}
+                          </div>
+                          <h4 className="font-bold text-sm text-[var(--color-text-primary)] leading-snug group-hover:text-[var(--color-terracotta)] transition-colors">
+                            {tpl.title}
+                          </h4>
+                          <p className="text-xs text-[var(--color-text-secondary)] line-clamp-2">
+                            {tpl.description}
+                          </p>
+                        </div>
+
+                        <div className="mt-4 pt-3 border-t border-[var(--color-border-subtle)] flex items-center justify-between text-xs font-semibold text-[var(--color-terracotta)]">
+                          <span>Usar modelo</span>
+                          <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Section: "Suas próximas melhores ações" (Checklist) */}
+                <div className="space-y-3">
+                  <h3 className="font-bold text-lg text-[var(--color-text-primary)]">
+                    Suas próximas melhores ações
+                  </h3>
+
+                  <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-2xl p-6 max-w-xl space-y-4 shadow-sm">
+                    <div>
+                      <span className="text-[11px] uppercase tracking-wider font-bold text-[var(--color-terracotta)]">
+                        Primeiros passos
+                      </span>
+                      <p className="font-bold text-sm text-[var(--color-text-primary)] mt-0.5 leading-snug">
+                        Você está mandando muito bem! Mantenha a atenção do seu público com as automações restantes
+                      </p>
+
+                      {/* Progress bar */}
+                      <div className="mt-3 space-y-1.5">
+                        <div className="w-full bg-[var(--color-surface-sunken)] rounded-full h-2 overflow-hidden">
+                          <div
+                            className="h-full bg-[var(--color-terracotta)] rounded-full transition-all duration-300"
+                            style={{ width: `${Math.round((completedCount / checklistItems.length) * 100)}%` }}
+                          />
+                        </div>
+                        <span className="text-[11px] text-[var(--color-text-muted)] font-medium">
+                          {completedCount} de {checklistItems.length} completadas
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Checklist Rows */}
+                    <div className="space-y-2 pt-1">
+                      {checklistItems.map((item) => (
+                        <button
+                          key={item.id}
+                          onClick={item.onClick}
+                          className="w-full flex items-center justify-between p-3 rounded-xl border border-[var(--color-border-subtle)] bg-[var(--color-surface-sunken)]/40 hover:bg-[var(--color-surface-sunken)] text-left transition-colors"
+                        >
+                          <div className="flex items-center gap-3 min-w-0 pr-2">
+                            <div
+                              className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${
+                                item.completed
+                                  ? "bg-[var(--color-success-wash)] text-[var(--color-success)]"
+                                  : "border border-[var(--color-border-strong)]"
+                              }`}
+                            >
+                              {item.completed && <Check className="w-2.5 h-2.5" />}
+                            </div>
+                            <span
+                              className={`text-xs font-medium truncate ${
+                                item.completed ? "text-[var(--color-text-secondary)]" : "text-[var(--color-text-primary)] font-semibold"
+                              }`}
+                            >
+                              {item.title}
+                            </span>
+                          </div>
+                          <ChevronRight className="w-4 h-4 text-[var(--color-text-muted)] shrink-0" />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section: Live Stats Grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2">
+                  <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-xl p-4">
+                    <span className="text-xs text-[var(--color-text-muted)] font-medium">Automações Ativas</span>
+                    <p className="text-2xl font-bold text-[var(--color-text-primary)] mt-1">
+                      {automations.filter((a) => a.is_active).length}
+                    </p>
+                  </div>
+                  <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-xl p-4">
+                    <span className="text-xs text-[var(--color-text-muted)] font-medium">DMs Entregues</span>
+                    <p className="text-2xl font-bold text-[var(--color-success)] mt-1">
+                      {totalSent}
+                    </p>
+                  </div>
+                  <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-xl p-4">
+                    <span className="text-xs text-[var(--color-text-muted)] font-medium">Cliques no Link</span>
+                    <p className="text-2xl font-bold text-[var(--color-terracotta)] mt-1">
+                      {totalClicks}
+                    </p>
+                  </div>
+                  <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-xl p-4">
+                    <span className="text-xs text-[var(--color-text-muted)] font-medium">Na Fila (Pendente)</span>
+                    <p className="text-2xl font-bold text-[#eab308] mt-1">
+                      {stats.pending}
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            )}
 
-        {/* Logs recentes */}
-        <h2 className="font-medium text-lg mb-3">Últimos eventos</h2>
-        <div className="bg-neutral-900 border border-neutral-800 rounded-xl divide-y divide-neutral-800 mb-8">
-          {logs.length === 0 && (
-            <p className="text-neutral-500 text-sm p-4">Nenhum evento registrado ainda.</p>
-          )}
-          {logs.map((log) => (
-            <div key={log.id} className="p-3 flex items-center justify-between text-sm">
-              <span className={log.level === "error" ? "text-red-400" : "text-neutral-300"}>
-                {log.event}
-              </span>
-              <span className="text-xs text-neutral-500">
-                {new Date(log.created_at).toLocaleString("pt-BR")}
-              </span>
-            </div>
-          ))}
-        </div>
+            {/* --------------------------------------------------
+                VIEW: AUTOMAÇÕES (Flows List & Editor)
+               -------------------------------------------------- */}
+            {activeTab === "automations" && (
+              <div className="space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div>
+                    <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">
+                      Minhas Automações ({automations.length})
+                    </h1>
+                    <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">
+                      Regras de disparo automático acionadas por comentários e directs.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => openCreateForm()}
+                    className="text-xs bg-[var(--color-terracotta)] hover:opacity-90 text-[var(--color-text-on-accent)] px-4 py-2 rounded-lg font-semibold transition-opacity flex items-center gap-1.5 shadow-xs"
+                  >
+                    <Plus className="w-4 h-4" /> Nova automação
+                  </button>
+                </div>
+
+                {/* Filter / Search bar */}
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] p-2 rounded-xl">
+                  <div className="flex items-center gap-1 w-full sm:w-auto">
+                    <button
+                      onClick={() => setStatusFilter("all")}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${
+                        statusFilter === "all"
+                          ? "bg-[var(--color-surface-inset)] text-[var(--color-text-primary)]"
+                          : "text-[var(--color-text-secondary)]"
+                      }`}
+                    >
+                      Todas ({automations.length})
+                    </button>
+                    <button
+                      onClick={() => setStatusFilter("active")}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${
+                        statusFilter === "active"
+                          ? "bg-[var(--color-surface-inset)] text-[var(--color-success)]"
+                          : "text-[var(--color-text-secondary)]"
+                      }`}
+                    >
+                      Ativas ({automations.filter((a) => a.is_active).length})
+                    </button>
+                    <button
+                      onClick={() => setStatusFilter("paused")}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${
+                        statusFilter === "paused"
+                          ? "bg-[var(--color-surface-inset)] text-[var(--color-text-muted)]"
+                          : "text-[var(--color-text-secondary)]"
+                      }`}
+                    >
+                      Pausadas ({automations.filter((a) => !a.is_active).length})
+                    </button>
+                  </div>
+
+                  <div className="relative w-full sm:w-64">
+                    <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
+                    <input
+                      type="text"
+                      value={searchFilter}
+                      onChange={(e) => setSearchFilter(e.target.value)}
+                      placeholder="Buscar por nome ou palavra..."
+                      className="w-full bg-[var(--color-surface-sunken)] border border-[var(--color-border-subtle)] focus:border-[var(--color-terracotta)] rounded-lg pl-8 pr-3 py-1.5 text-xs text-[var(--color-text-primary)] outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* List */}
+                <div className="space-y-3">
+                  {filteredAutomations.length === 0 ? (
+                    <div className="text-center py-12 bg-[var(--color-surface-raised)] border border-dashed border-[var(--color-border-default)] rounded-xl p-8 space-y-2">
+                      <Workflow className="w-8 h-8 text-[var(--color-text-muted)] mx-auto" />
+                      <p className="text-sm font-semibold text-[var(--color-text-primary)]">
+                        Nenhuma automação encontrada.
+                      </p>
+                    </div>
+                  ) : (
+                    filteredAutomations.map((a) => (
+                      <div
+                        key={a.id}
+                        className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-xl p-4 sm:p-5 space-y-3"
+                      >
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <h4 className="font-bold text-sm text-[var(--color-text-primary)] truncate">
+                              {a.name}
+                            </h4>
+                            <span
+                              className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                a.is_active
+                                  ? "bg-[var(--color-success-wash)] text-[var(--color-success-ink)]"
+                                  : "bg-[var(--color-surface-inset)] text-[var(--color-text-muted)]"
+                              }`}
+                            >
+                              {a.is_active ? "Ativa" : "Pausada"}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            <button
+                              onClick={() => toggleActive(a)}
+                              className="text-xs bg-[var(--color-surface-sunken)] hover:bg-[var(--color-surface-inset)] px-3 py-1.5 rounded-lg font-medium text-[var(--color-text-primary)] transition-colors"
+                            >
+                              {a.is_active ? "Pausar" : "Ativar"}
+                            </button>
+                            <button
+                              onClick={() => openEditForm(a)}
+                              className="text-xs bg-[var(--color-surface-sunken)] hover:bg-[var(--color-surface-inset)] px-3 py-1.5 rounded-lg font-medium text-[var(--color-text-primary)] transition-colors"
+                            >
+                              Editar
+                            </button>
+                            <button
+                              onClick={() => handleDelete(a.id)}
+                              className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-danger)] p-1.5"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Details */}
+                        <div className="bg-[var(--color-surface-sunken)] rounded-lg p-3 text-xs space-y-1.5">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-[11px] text-[var(--color-text-muted)]">Palavras-chave:</span>
+                            {(a.keywords || []).map((k, i) => (
+                              <span key={i} className="bg-[var(--color-surface-inset)] px-1.5 py-0.5 rounded text-[10px] font-semibold">
+                                #{k}
+                              </span>
+                            ))}
+                          </div>
+                          <p className="text-[var(--color-text-secondary)]">
+                            <strong className="text-[var(--color-text-primary)]">DM:</strong> {a.dm_message_text}
+                          </p>
+                          {a.dm_button_text && (
+                            <div className="flex items-center gap-1 text-[11px] text-blue-500 font-medium">
+                              <ExternalLink className="w-3 h-3" />
+                              <span>
+                                {a.dm_button_text} ({a.dm_button_url}) —{" "}
+                                {a.use_button ? "botão fixo" : "sugestão de resposta"}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* --------------------------------------------------
+                VIEW: CONTATOS
+               -------------------------------------------------- */}
+            {activeTab === "contacts" && (
+              <div className="space-y-6">
+                <div>
+                  <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">
+                    Contatos ({contacts.length})
+                  </h1>
+                  <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">
+                    Histórico de usuários que interagiram com as automações.
+                  </p>
+                </div>
+
+                <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-xl overflow-hidden">
+                  {contacts.length === 0 ? (
+                    <div className="p-12 text-center text-xs text-[var(--color-text-muted)]">
+                      Nenhum contato registrado ainda.
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-[var(--color-border-subtle)]">
+                      <div className="bg-[var(--color-surface-sunken)] px-4 py-2 text-[11px] font-bold text-[var(--color-text-muted)] uppercase grid grid-cols-12">
+                        <span className="col-span-6">Usuário</span>
+                        <span className="col-span-6">Última Interação</span>
+                      </div>
+                      {contacts.map((c) => (
+                        <div key={c.id} className="px-4 py-3 text-xs grid grid-cols-12 items-center">
+                          <span className="col-span-6 font-semibold text-[var(--color-text-primary)]">
+                            {c.username ? `@${c.username}` : `IGSID: ${c.igsid}`}
+                          </span>
+                          <span className="col-span-6 text-[var(--color-text-secondary)]">
+                            {new Date(c.last_seen_at).toLocaleString("pt-BR")}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* --------------------------------------------------
+                VIEW: CAIXA DE ENTRADA & FILA
+               -------------------------------------------------- */}
+            {activeTab === "inbox" && (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">
+                      Caixa de Entrada & Fila de Mensagens
+                    </h1>
+                    <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">
+                      Status de envio e fila de processamento da API do Instagram.
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleDrainQueue}
+                    disabled={drainingQueue}
+                    className="text-xs bg-[var(--color-terracotta)] text-[var(--color-text-on-accent)] px-3.5 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${drainingQueue ? "animate-spin" : ""}`} />
+                    Drenar Fila Agora
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-xl p-4">
+                    <span className="text-xs text-[var(--color-text-muted)]">Na fila</span>
+                    <p className="text-xl font-bold text-[#eab308] mt-1">{stats.pending}</p>
+                  </div>
+                  <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-xl p-4">
+                    <span className="text-xs text-[var(--color-text-muted)]">Enviadas</span>
+                    <p className="text-xl font-bold text-[var(--color-success)] mt-1">{totalSent}</p>
+                  </div>
+                  <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-xl p-4">
+                    <span className="text-xs text-[var(--color-text-muted)]">Falharam</span>
+                    <p className="text-xl font-bold text-[var(--color-danger)] mt-1">{stats.failed}</p>
+                  </div>
+                </div>
+
+                <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-xl p-5 space-y-3">
+                  <h4 className="font-bold text-sm text-[var(--color-text-primary)]">Eventos Recentes</h4>
+                  <div className="divide-y divide-[var(--color-border-subtle)] max-h-72 overflow-y-auto">
+                    {logs.map((log) => (
+                      <div key={log.id} className="py-2.5 flex items-center justify-between text-xs">
+                        <span className={log.level === "error" ? "text-[var(--color-danger)] font-semibold" : "text-[var(--color-text-primary)]"}>
+                          {log.event}
+                        </span>
+                        <span className="text-[10px] text-[var(--color-text-muted)]">
+                          {new Date(log.created_at).toLocaleTimeString("pt-BR")}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* --------------------------------------------------
+                VIEW: RESULTADOS
+               -------------------------------------------------- */}
+            {activeTab === "results" && (
+              <div className="space-y-6">
+                <div>
+                  <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">
+                    Resultados & Funil de Conversão
+                  </h1>
+                  <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">
+                    Métricas de entrega e cliques de todas as automações.
+                  </p>
+                </div>
+
+                <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-2xl p-6 space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-xs font-semibold">
+                      <span>1. Comentários Recebidos</span>
+                      <span>{totalComments}</span>
+                    </div>
+                    <div className="w-full bg-[var(--color-surface-sunken)] rounded-full h-7 relative overflow-hidden flex items-center px-3">
+                      <div className="absolute inset-0 bg-blue-600 rounded-full" />
+                      <span className="relative z-10 text-xs font-bold text-white">{totalComments} comentários (100%)</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-xs font-semibold">
+                      <span>2. DMs Entregues</span>
+                      <span>{totalSent}</span>
+                    </div>
+                    <div className="w-full bg-[var(--color-surface-sunken)] rounded-full h-7 relative overflow-hidden flex items-center px-3">
+                      <div
+                        className="absolute inset-y-0 left-0 bg-[var(--color-success)] rounded-full"
+                        style={{ width: `${Math.max(totalComments > 0 ? (totalSent / totalComments) * 100 : 0, 5)}%` }}
+                      />
+                      <span className="relative z-10 text-xs font-bold text-white">{totalSent} enviadas</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-xs font-semibold">
+                      <span>3. Cliques no Link</span>
+                      <span>{totalClicks}</span>
+                    </div>
+                    <div className="w-full bg-[var(--color-surface-sunken)] rounded-full h-7 relative overflow-hidden flex items-center px-3">
+                      <div
+                        className="absolute inset-y-0 left-0 bg-[var(--color-terracotta)] rounded-full"
+                        style={{ width: `${Math.max(overallConversionRate, 5)}%` }}
+                      />
+                      <span className="relative z-10 text-xs font-bold text-white">{totalClicks} cliques ({overallConversionRate}%)</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* --------------------------------------------------
+                VIEW: PRATIC AI
+               -------------------------------------------------- */}
+            {activeTab === "ai" && (
+              <div className="space-y-6">
+                <div>
+                  <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">
+                    Pratic AI
+                  </h1>
+                  <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">
+                    Modelos prontos e prompts inteligentes para responder e qualificar leads.
+                  </p>
+                </div>
+
+                <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-2xl p-6 space-y-3">
+                  <h4 className="font-bold text-sm text-[var(--color-text-primary)]">
+                    Modelos Pré-Treinados
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div
+                      onClick={() => openCreateForm(TEMPLATES[0].defaultForm)}
+                      className="p-4 bg-[var(--color-surface-sunken)] border border-[var(--color-border-subtle)] hover:border-[var(--color-terracotta)] rounded-xl cursor-pointer transition-colors"
+                    >
+                      <span className="font-bold text-xs text-[var(--color-text-primary)]">
+                        ⚡ Disparo de Link em Lançamentos
+                      </span>
+                      <p className="text-[11px] text-[var(--color-text-muted)] mt-1">
+                        Gatilho para posts de carrossel e reels convidando para evento ou oferta.
+                      </p>
+                    </div>
+                    <div
+                      onClick={() => openCreateForm(TEMPLATES[2].defaultForm)}
+                      className="p-4 bg-[var(--color-surface-sunken)] border border-[var(--color-border-subtle)] hover:border-[var(--color-terracotta)] rounded-xl cursor-pointer transition-colors"
+                    >
+                      <span className="font-bold text-xs text-[var(--color-text-primary)]">
+                        💼 Triagem de Contato & WhatsApp
+                      </span>
+                      <p className="text-[11px] text-[var(--color-text-muted)] mt-1">
+                        Redirecionamento ágil para canal comercial sem perda de lead.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* --------------------------------------------------
+                VIEW: CONFIGURAÇÕES
+               -------------------------------------------------- */}
+            {activeTab === "settings" && (
+              <div className="space-y-6">
+                <div>
+                  <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">
+                    Configurações
+                  </h1>
+                  <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">
+                    Conexão oficial com Meta Graph API e credenciais.
+                  </p>
+                </div>
+
+                <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-2xl p-6 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-xs text-[var(--color-text-muted)]">Conta do Instagram</span>
+                      <p className="text-lg font-bold text-[var(--color-text-primary)]">
+                        {displayName} ({displayHandle})
+                      </p>
+                    </div>
+                    <a
+                      href="/api/instagram/oauth/start"
+                      className="text-xs bg-[var(--color-terracotta)] text-[var(--color-text-on-accent)] px-3.5 py-2 rounded-lg font-semibold hover:opacity-90"
+                    >
+                      {config ? "Reconectar Conta" : "Conectar Instagram"}
+                    </a>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </main>
       </div>
 
-      {/* Modal de formulário */}
+      {/* ========================================================
+          MODAL: CRIAR / EDITAR AUTOMAÇÃO
+         ======================================================== */}
       {showForm && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
-          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <h3 className="font-medium text-lg mb-4">
-              {editingId ? "Editar automação" : "Nova automação"}
-            </h3>
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-default)] rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
+            <div className="px-6 py-4 border-b border-[var(--color-border-subtle)] flex items-center justify-between">
+              <h3 className="font-bold text-base text-[var(--color-text-primary)]">
+                {editingId ? "Editar Automação" : "Nova Automação de Comentários"}
+              </h3>
+              <button onClick={() => setShowForm(false)} className="text-[var(--color-text-muted)] hover:text-white p-1">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
-            <div className="space-y-3">
-              <Field label="Nome interno">
+            <div className="flex-1 overflow-y-auto p-6 space-y-4 text-xs">
+              <div>
+                <label className="block font-bold text-[var(--color-text-primary)] mb-1">
+                  Nome da Automação
+                </label>
                 <input
-                  className={inputClass}
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  placeholder="Ex: Promo reels agosto"
+                  placeholder="Ex: Envio de Link Reels"
+                  className="w-full bg-[var(--color-surface-sunken)] border border-[var(--color-border-default)] focus:border-[var(--color-terracotta)] rounded-lg px-3 py-2 text-xs text-[var(--color-text-primary)] outline-none"
                 />
-              </Field>
+              </div>
 
-              <Field label="Palavras-chave (separadas por vírgula)">
+              <div>
+                <label className="block font-bold text-[var(--color-text-primary)] mb-1">
+                  Palavras-chave do Comentário (separadas por vírgula)
+                </label>
                 <input
-                  className={inputClass}
                   value={form.keywords}
                   onChange={(e) => setForm({ ...form, keywords: e.target.value })}
-                  placeholder="Ex: eu quero, link, quero saber"
+                  placeholder="Ex: link, eu quero, preco"
+                  className="w-full bg-[var(--color-surface-sunken)] border border-[var(--color-border-default)] focus:border-[var(--color-terracotta)] rounded-lg px-3 py-2 text-xs text-[var(--color-text-primary)] outline-none"
                 />
-              </Field>
+              </div>
 
-              <Field label="Modo de comparação">
-                <select
-                  className={inputClass}
-                  value={form.match_mode}
-                  onChange={(e) =>
-                    setForm({ ...form, match_mode: e.target.value as "contains" | "exact" })
-                  }
-                >
-                  <option value="contains">Contém a palavra</option>
-                  <option value="exact">Comentário igual à palavra</option>
-                </select>
-              </Field>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-[var(--color-text-primary)] mb-1">
+                    Correspondência
+                  </label>
+                  <select
+                    value={form.match_mode}
+                    onChange={(e) => setForm({ ...form, match_mode: e.target.value as "contains" | "exact" })}
+                    className="w-full bg-[var(--color-surface-sunken)] border border-[var(--color-border-default)] rounded-lg px-3 py-2 text-xs text-[var(--color-text-primary)] outline-none"
+                  >
+                    <option value="contains">Contém a palavra</option>
+                    <option value="exact">Comentário exato</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block font-bold text-[var(--color-text-primary)] mb-1">
+                    ID do Post (Opcional)
+                  </label>
+                  <input
+                    value={form.post_id}
+                    onChange={(e) => setForm({ ...form, post_id: e.target.value })}
+                    placeholder="Vazio = todos os posts"
+                    className="w-full bg-[var(--color-surface-sunken)] border border-[var(--color-border-default)] rounded-lg px-3 py-2 text-xs text-[var(--color-text-primary)] outline-none"
+                  />
+                </div>
+              </div>
 
-              <Field label="ID do post/reel (opcional — vazio = qualquer post)">
+              <div>
+                <label className="block font-bold text-[var(--color-text-primary)] mb-1">
+                  Resposta pública no comentário (Opcional)
+                </label>
                 <input
-                  className={inputClass}
-                  value={form.post_id}
-                  onChange={(e) => setForm({ ...form, post_id: e.target.value })}
-                  placeholder="Deixe em branco para valer em todos os posts"
-                />
-              </Field>
-
-              <Field label="Resposta pública no comentário (opcional)">
-                <input
-                  className={inputClass}
                   value={form.comment_reply_text}
                   onChange={(e) => setForm({ ...form, comment_reply_text: e.target.value })}
                   placeholder="Ex: Te chamei no direct! 📩"
+                  className="w-full bg-[var(--color-surface-sunken)] border border-[var(--color-border-default)] rounded-lg px-3 py-2 text-xs text-[var(--color-text-primary)] outline-none"
                 />
-              </Field>
+              </div>
 
-              <Field label="Mensagem da DM">
+              <div>
+                <label className="block font-bold text-[var(--color-text-primary)] mb-1">
+                  Mensagem privada da DM
+                </label>
                 <textarea
-                  className={inputClass}
                   rows={3}
                   value={form.dm_message_text}
                   onChange={(e) => setForm({ ...form, dm_message_text: e.target.value })}
-                  placeholder="Texto que a pessoa recebe no direct"
+                  placeholder="Olá! Conforme você pediu, aqui está seu link..."
+                  className="w-full bg-[var(--color-surface-sunken)] border border-[var(--color-border-default)] rounded-lg px-3 py-2 text-xs text-[var(--color-text-primary)] outline-none"
                 />
-              </Field>
+              </div>
 
-              <Field label="Texto do botão (opcional)">
-                <input
-                  className={inputClass}
-                  value={form.dm_button_text}
-                  onChange={(e) => setForm({ ...form, dm_button_text: e.target.value })}
-                  placeholder="Ex: Ver agora"
-                />
-              </Field>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-[var(--color-text-primary)] mb-1">
+                    Texto do Botão (Opcional)
+                  </label>
+                  <input
+                    value={form.dm_button_text}
+                    onChange={(e) => setForm({ ...form, dm_button_text: e.target.value })}
+                    placeholder="Ex: 👉 Acessar Agora"
+                    className="w-full bg-[var(--color-surface-sunken)] border border-[var(--color-border-default)] rounded-lg px-3 py-2 text-xs text-[var(--color-text-primary)] outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-[var(--color-text-primary)] mb-1">
+                    Link do Botão
+                  </label>
+                  <input
+                    value={form.dm_button_url}
+                    onChange={(e) => setForm({ ...form, dm_button_url: e.target.value })}
+                    placeholder="https://..."
+                    className="w-full bg-[var(--color-surface-sunken)] border border-[var(--color-border-default)] rounded-lg px-3 py-2 text-xs text-[var(--color-text-primary)] outline-none"
+                  />
+                </div>
+              </div>
 
-              <Field label="Link do botão (opcional)">
-                <input
-                  className={inputClass}
-                  value={form.dm_button_url}
-                  onChange={(e) => setForm({ ...form, dm_button_url: e.target.value })}
-                  placeholder="https://..."
-                />
-              </Field>
+              {(form.dm_button_text || form.dm_button_url) && (
+                <div>
+                  <label className="block font-bold text-[var(--color-text-primary)] mb-1">
+                    Como o botão chega na DM
+                  </label>
+                  <div className="flex items-center gap-1 bg-[var(--color-surface-sunken)] border border-[var(--color-border-default)] p-1 rounded-lg w-fit">
+                    <button
+                      type="button"
+                      onClick={() => setForm({ ...form, use_button: true })}
+                      className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
+                        form.use_button
+                          ? "bg-[var(--color-terracotta)] text-[var(--color-text-on-accent)]"
+                          : "text-[var(--color-text-secondary)]"
+                      }`}
+                    >
+                      Botão fixo
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setForm({ ...form, use_button: false })}
+                      className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
+                        !form.use_button
+                          ? "bg-[var(--color-terracotta)] text-[var(--color-text-on-accent)]"
+                          : "text-[var(--color-text-secondary)]"
+                      }`}
+                    >
+                      Sugestão de resposta
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-[var(--color-text-muted)] mt-1.5">
+                    {form.use_button
+                      ? "Fica fixo dentro do balão da mensagem, não some."
+                      : "Aparece como um chip abaixo da mensagem e some se a pessoa ignorar ou responder outra coisa."}
+                  </p>
+                </div>
+              )}
             </div>
 
-            <div className="flex gap-3 mt-6">
+            <div className="px-6 py-4 border-t border-[var(--color-border-subtle)] flex items-center justify-end gap-2.5">
               <button
                 onClick={() => setShowForm(false)}
-                className="flex-1 bg-neutral-800 hover:bg-neutral-700 py-2.5 rounded-lg transition-colors"
+                className="text-xs bg-[var(--color-surface-sunken)] hover:bg-[var(--color-surface-inset)] px-4 py-2 rounded-lg font-medium text-[var(--color-text-primary)]"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="flex-1 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 py-2.5 rounded-lg font-medium transition-colors"
+                className="text-xs bg-[var(--color-terracotta)] text-[var(--color-text-on-accent)] px-5 py-2 rounded-lg font-semibold hover:opacity-90 disabled:opacity-50"
               >
-                {saving ? "Salvando..." : "Salvar"}
+                {saving ? "Salvando..." : "Salvar Automação"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          MODAL: TESTAR DISPARADOR
+         ======================================================== */}
+      {showSimulator && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-default)] rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl text-xs">
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-sm text-[var(--color-text-primary)]">
+                Simulador de Comentário
+              </h3>
+              <button onClick={() => { setShowSimulator(false); setSimResult(undefined); }} className="text-[var(--color-text-muted)]">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div>
+              <label className="block font-bold text-[var(--color-text-primary)] mb-1">
+                Comentário de Teste
+              </label>
+              <input
+                value={simComment}
+                onChange={(e) => setSimComment(e.target.value)}
+                placeholder="Ex: eu quero o link"
+                className="w-full bg-[var(--color-surface-sunken)] border border-[var(--color-border-default)] rounded-lg px-3 py-2 text-xs text-[var(--color-text-primary)] outline-none"
+              />
+            </div>
+
+            <button
+              onClick={runSimulation}
+              className="w-full bg-[var(--color-terracotta)] text-[var(--color-text-on-accent)] font-semibold py-2 rounded-lg"
+            >
+              Testar
+            </button>
+
+            {simResult !== undefined && (
+              <div className="pt-2">
+                {simResult ? (
+                  <div className="p-3 bg-[var(--color-success-wash)] text-[var(--color-success-ink)] rounded-lg space-y-1">
+                    <p className="font-bold">✓ Acionou: &quot;{simResult.name}&quot;</p>
+                    <p className="text-[11px]">DM: {simResult.dm_message_text}</p>
+                  </div>
+                ) : (
+                  <div className="p-3 bg-[#422006] text-[#fef08a] rounded-lg">
+                    Nenhuma automação ativa correspondeu ao comentário.
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -426,14 +1576,49 @@ export default function AutomationsClient({
   );
 }
 
-const inputClass =
-  "w-full rounded-lg bg-neutral-800 border border-neutral-700 px-3 py-2 text-sm text-white placeholder-neutral-500 outline-none focus:border-blue-500";
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function NavItem({
+  icon,
+  label,
+  active,
+  badge,
+  badgeColor,
+  collapsed,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  active?: boolean;
+  badge?: string;
+  badgeColor?: string;
+  collapsed?: boolean;
+  onClick: () => void;
+}) {
   return (
-    <label className="block">
-      <span className="block text-xs text-neutral-400 mb-1">{label}</span>
-      {children}
-    </label>
+    <button
+      onClick={onClick}
+      title={collapsed ? label : undefined}
+      className={`w-full flex items-center ${collapsed ? "justify-center px-0" : "justify-between px-3"} py-2.5 rounded-xl text-xs font-medium transition-colors ${
+        active
+          ? "bg-[var(--color-surface-inset)] text-[var(--color-text-primary)] font-bold shadow-xs"
+          : "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface-sunken)]"
+      }`}
+    >
+      <div className="flex items-center gap-2.5 truncate">
+        <span className={active ? "text-[var(--color-text-primary)]" : "text-[var(--color-text-muted)]"}>
+          {icon}
+        </span>
+        {!collapsed && <span className="truncate">{label}</span>}
+      </div>
+
+      {!collapsed && badge && (
+        <span
+          className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded-full ${
+            badgeColor === "blue" ? "bg-blue-600 text-white" : "bg-[var(--color-surface-inset)] text-[var(--color-text-muted)]"
+          }`}
+        >
+          {badge}
+        </span>
+      )}
+    </button>
   );
 }

@@ -1,16 +1,19 @@
 import { NextResponse } from 'next/server'
 import {
   getIgConfig,
-  getSiteOrigin,
   getSupabaseAdmin,
   logIgEvent,
-  sendInstagramMessage
+  sendInstagramMessage,
+  requireIgSession
 } from '@/lib/instagram'
 
 export async function POST(request: Request) {
   const authHeader = request.headers.get('authorization') || ''
-  const expected = `Bearer ${process.env.IG_CRON_SECRET}`
-  if (!process.env.IG_CRON_SECRET || authHeader !== expected) {
+  const expected = process.env.IG_CRON_SECRET ? `Bearer ${process.env.IG_CRON_SECRET}` : null
+  const isCron = !!(expected && authHeader === expected)
+  const isSession = await requireIgSession()
+
+  if (!isCron && !isSession) {
     return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 })
   }
 
@@ -54,19 +57,17 @@ export async function POST(request: Request) {
     try {
       const recipient = item.comment_id ? { comment_id: item.comment_id } : { id: item.igsid }
 
-      // O botão da DM aponta pro nosso redirect (conta o clique) em vez do
-      // link final direto, pra alimentar o funil de resultados.
-      const trackedButtonUrl = item.button_url
-        ? `${getSiteOrigin()}/api/instagram/click/${item.id}`
-        : null
-
+      // O payload do botão/sugestão é o próprio id da fila: quando a
+      // pessoa tocar, o webhook usa esse id pra achar o link real e
+      // registrar o clique no funil.
       await sendInstagramMessage({
         igUserId: config.ig_user_id,
         accessToken: config.access_token,
         recipient,
         text: item.message_text,
         buttonText: item.button_text,
-        buttonUrl: trackedButtonUrl
+        useButton: item.use_button,
+        payload: item.button_text ? item.id : null
       })
 
       await supabase
