@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { IG_GRAPH_BASE, getSupabaseAdmin, logIgEvent } from '@/lib/instagram'
+import { IG_GRAPH_BASE, getSupabaseAdmin, logIgEvent, subscribeToWebhooks } from '@/lib/instagram'
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
@@ -67,6 +67,16 @@ export async function GET(request: Request) {
     })
 
     await logIgEvent('info', 'oauth_connected', { username: meData.username })
+
+    // Sem isso, a conta fica conectada mas a Meta não entrega nenhum
+    // evento de webhook (comentários/mensagens) pra ela.
+    try {
+      await subscribeToWebhooks(meData.user_id || shortData.user_id, longData.access_token)
+    } catch (err) {
+      await logIgEvent('error', 'webhook_subscribe_failed', {
+        error: err instanceof Error ? err.message : String(err)
+      })
+    }
 
     return NextResponse.redirect(`${origin}/automacao-instagram?ig_connected=1`)
   } catch (err) {

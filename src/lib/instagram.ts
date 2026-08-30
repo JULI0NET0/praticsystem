@@ -104,6 +104,23 @@ export async function sendInstagramMessage(params: SendMessageParams) {
   return data
 }
 
+export async function subscribeToWebhooks(igUserId: string, accessToken: string) {
+  const res = await fetch(`${IG_GRAPH_BASE}/${igUserId}/subscribed_apps`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      subscribed_fields: 'comments,messages',
+      access_token: accessToken
+    })
+  })
+
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    throw new Error(data?.error?.message || `Instagram API respondeu ${res.status}`)
+  }
+  return data
+}
+
 export async function replyToComment(commentId: string, accessToken: string, text: string) {
   const res = await fetch(`${IG_GRAPH_BASE}/${commentId}/replies`, {
     method: 'POST',
