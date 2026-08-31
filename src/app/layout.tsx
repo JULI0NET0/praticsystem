@@ -49,7 +49,12 @@ export const metadata: Metadata = {
   description: "Plataforma completa de gestão para a Agência Prátic",
   manifest: "/manifest.json",
   icons: {
-    icon: "/SIMBOLO-BRANCO.png",
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/SIMBOLO-BRANCO.png", type: "image/png" },
+    ],
+    shortcut: "/favicon.ico",
+    apple: "/apple-icon",
   },
   appleWebApp: {
     capable: true,
