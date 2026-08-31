@@ -382,7 +382,7 @@ export default function OnboardingPage() {
                   padding: '0 20px'
                 }}
               >
-                {"Pronto para ativar \no modo Prátic?".split('').map((char, index) => (
+                {"Pronto para ativar \nno modo Pratic?".split('').map((char, index) => (
                   char === '\n' ? (
                     <br key={index} className="br-mobile" />
                   ) : (
@@ -587,7 +587,7 @@ export default function OnboardingPage() {
                             className="input-dark"
                             value={formData.name}
                             onChange={(e) => updateForm("name", e.target.value)}
-                            placeholder={formData.tipo_pessoa === "PJ" ? "Ex: Prátic Agency LTDA" : "Seu nome completo"}
+                            placeholder={formData.tipo_pessoa === "PJ" ? "Ex: Pratic Agency LTDA" : "Seu nome completo"}
                           />
                         </div>
 

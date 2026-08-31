@@ -90,7 +90,7 @@ export default function NotificationSettingsModal({ isOpen, onClose }: Notificat
     if (currentUser?.id && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
       await sendPushNotification({
         userId: currentUser.id,
-        title: '🚀 Teste Web Push Prátic',
+        title: '🚀 Teste Web Push Pratic',
         body: 'Notificação do sistema operacional funcionando!',
         url: '/admin/demands',
         type: 'demand'

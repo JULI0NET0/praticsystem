@@ -611,7 +611,7 @@ export default function ContractsPage() {
             </div>
             <div>
               <div style={{ position: 'absolute', left: '-7px', width: '12px', height: '12px', borderRadius: '50%', backgroundColor: 'var(--accent)' }}></div>
-              <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>Onboarding Prátic</div>
+              <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>Onboarding Pratic</div>
               <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Liberação de acesso ao portal do cliente e coleta de credenciais.</p>
             </div>
             <div>

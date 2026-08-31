@@ -52,8 +52,8 @@ export const metadata: Metadata = {
       ? `https://${process.env.VERCEL_URL}`
       : "https://praticsystem.com.br"
   ),
-  title: "Agência Prátic - Sistema de Gestão",
-  description: "Plataforma completa de gestão para a Agência Prátic",
+  title: "Agência Pratic - Sistema de Gestão",
+  description: "Plataforma completa de gestão para a Agência Pratic",
   manifest: "/manifest.json",
   icons: {
     icon: [
@@ -64,30 +64,30 @@ export const metadata: Metadata = {
     apple: "/apple-icon",
   },
   openGraph: {
-    title: "Agência Prátic — Sistema de Gestão",
+    title: "Agência Pratic — Sistema de Gestão",
     description: "Acesso ao Workspace Integrado de Gestão e Operações.",
     type: "website",
     locale: "pt_BR",
-    siteName: "Agência Prátic",
+    siteName: "Agência Pratic",
     images: [
       {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "Agência Prátic - Login",
+        alt: "Agência Pratic - Login",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Agência Prátic — Sistema de Gestão",
+    title: "Agência Pratic — Sistema de Gestão",
     description: "Acesso ao Workspace Integrado de Gestão e Operações.",
     images: ["/og-image.png"],
   },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Prátic",
+    title: "Pratic",
   },
   formatDetection: { telephone: false },
 };

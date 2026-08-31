@@ -1,4 +1,4 @@
-# Agência Prátic — Sistema Integrado de Gestão
+# Agência Pratic — Sistema Integrado de Gestão
 
 ## Plano de Execução por Fases
 
@@ -100,7 +100,7 @@ Plataforma completa de gestão para agência, com estética **Apple Liquid Glass
 
 #### [NEW] `src/app/admin/layout.tsx` — Layout do Painel
 - **Sidebar retrátil** com glassmorphism (`backdrop-filter: blur`)
-- Logo "Prátic" no topo
+- Logo "Pratic" no topo
 - Itens de menu: Dashboard, Clientes, Serviços, Contratos, Financeiro, Agenda
 - Ícones via Lucide React
 - Estado aberto/fechado com animação suave

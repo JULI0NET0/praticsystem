@@ -38,7 +38,7 @@ export default function IOSInstallPrompt() {
     <AnimatePresence>
       {visible && (
         <aside
-          aria-label="Instalar o Prátic na tela de início"
+          aria-label="Instalar o Pratic na tela de início"
           className="fixed bottom-4 sm:bottom-6 right-4 sm:right-6 z-[9999] max-w-[360px] w-[calc(100vw-32px)]"
         >
           <motion.div
@@ -69,7 +69,7 @@ export default function IOSInstallPrompt() {
                 <Smartphone size={20} />
               </div>
               <div>
-                <h4 className="text-sm font-semibold text-white">Instale o Prátic</h4>
+                <h4 className="text-sm font-semibold text-white">Instale o Pratic</h4>
                 {isOldIOSStandalone ? (
                   <p className="text-xs text-zinc-300 mt-1 leading-relaxed">
                     Notificações push exigem iOS 16.4 ou mais recente. Atualize o iOS nas

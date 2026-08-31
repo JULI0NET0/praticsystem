@@ -89,7 +89,7 @@ function SingleBanner({ banner }: { banner: InAppNotification }) {
             >
               <img
                 src="/SIMBOLO-BRANCO.png"
-                alt="Prátic"
+                alt="Pratic"
                 className="w-full h-full object-contain"
               />
             </div>

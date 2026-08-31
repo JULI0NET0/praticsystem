@@ -13,7 +13,7 @@ export default function HomePage() {
             Elevando o Padrão do<br/>Seu Negócio Digital
           </h1>
           <p style={{ fontSize: '1.25rem', color: 'var(--color-text-tertiary)', maxWidth: '600px', margin: '0 auto 40px' }}>
-            A Agência Prátic une design premium, tecnologia moderna e estratégias de alta conversão.
+            A Agência Pratic une design premium, tecnologia moderna e estratégias de alta conversão.
           </p>
           <div style={{ display: 'flex', gap: '16px', justifyContent: 'center' }}>
             <Link href="/onboarding" className="btn btn-accent" style={{ fontSize: '1.125rem', padding: '16px 32px' }}>

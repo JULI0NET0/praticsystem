@@ -1712,7 +1712,7 @@ export default function ClientDetailPage() {
                     <h4 style={{ fontWeight: 700, fontSize: '1.1rem' }}>Portal do Cliente</h4>
                   </div>
                   <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--accent)', background: 'color-mix(in oklab, var(--accent) 10%, transparent)', padding: '4px 8px', borderRadius: '6px' }}>
-                    Agência Prátic
+                    Agência Pratic
                   </span>
                 </div>
 
@@ -1763,7 +1763,7 @@ export default function ClientDetailPage() {
                       onClick={() => {
                         const cleanPhone = clientData.phone.replace(/\D/g, '');
                         const portalLink = `${window.location.origin}/login`;
-                        const message = `Olá, ${clientData.contact_name}!\n\nSegue o acesso ao Portal Prátic para acompanhar o progresso da ${clientData.nome_fantasia || clientData.name}:\n\n🔗 Link: ${portalLink}\n📧 E-mail: ${clientData.portal_email || clientData.email}\n🔑 Senha: ${clientData.portal_password || '********'}\n\nQualquer dúvida, estamos à disposição!`;
+                        const message = `Olá, ${clientData.contact_name}!\n\nSegue o acesso ao Portal Pratic para acompanhar o progresso da ${clientData.nome_fantasia || clientData.name}:\n\n🔗 Link: ${portalLink}\n📧 E-mail: ${clientData.portal_email || clientData.email}\n🔑 Senha: ${clientData.portal_password || '********'}\n\nQualquer dúvida, estamos à disposição!`;
                         navigator.clipboard.writeText(message);
                         showToast('Mensagem copiada para o WhatsApp!', 'success');
                       }}

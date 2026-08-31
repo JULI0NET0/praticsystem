@@ -465,7 +465,7 @@ export default function LoginPage() {
         {/* Rodapé Seguro */}
         <div style={{ textAlign: "center", marginTop: "28px" }}>
           <p style={{ margin: 0, fontSize: "0.775rem", color: "#5E5D59" }}>
-            © 2026 Agência Prátic · Todos os direitos reservados
+            © 2026 Agência Pratic · Todos os direitos reservados
           </p>
           <p style={{ margin: "4px 0 0", fontSize: "0.725rem", color: "#4A4740" }}>
             Conexão segura com criptografia de ponta a ponta

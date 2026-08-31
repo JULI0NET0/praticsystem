@@ -71,7 +71,7 @@ export default function ThemeLogo({
       }}>
         <Image
           src={logoSrc}
-          alt="Prátic Logo"
+          alt="Pratic Logo"
           width={isCollapsed ? 32 : width}
           height={isCollapsed ? 32 : height}
           style={{

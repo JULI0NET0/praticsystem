@@ -184,7 +184,7 @@ export default function UsersPage() {
       <div className="page-header">
         <div className="page-header-info">
           <h1 style={{ fontSize: 'clamp(1.5rem, 4vw, 2rem)', fontWeight: 700, marginBottom: '6px' }}>Gestão de Equipe</h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Gerencie os membros, cargos e frases de status da Prátic.</p>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Gerencie os membros, cargos e frases de status da Pratic.</p>
         </div>
         <div className="page-header-actions">
           <Link href="/admin/users/roles">

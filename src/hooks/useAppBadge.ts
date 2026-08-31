@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 
-const BASE_TITLE = 'Agência Prátic - Sistema de Gestão'
+const BASE_TITLE = 'Agência Pratic - Sistema de Gestão'
 
 export function useAppBadge(unreadCount: number) {
   const originalTitleRef = useRef(BASE_TITLE)

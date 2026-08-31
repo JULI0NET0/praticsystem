@@ -1,6 +1,6 @@
 # 📐 Documentação Técnica & Arquitetural: Área de Automação Instagram
 
-> **Sistema:** PraticSystem (Agência Prátic / Pratic Labs)  
+> **Sistema:** PraticSystem (Agência Pratic / Pratic Labs)  
 > **Módulo:** Automação de Instagram (`/automacao-instagram`)  
 > **Status:** Operacional em Produção  
 > **Objetivo:** Substituto nativo e autônomo do ManyChat, integrado diretamente com a Meta Graph API v25.0 e Supabase, eliminando custos recorrentes e limites de terceiros.
@@ -147,7 +147,7 @@ Todas as tabelas utilizam o prefixo isolado `ig_` e possuem **Row Level Security
 
 ## 6. 🎨 Estrutura Visual & Layout (UI/UX)
 
-A interface em `AutomationsClient.tsx` foi construída com foco em produtividade, estética refinada e alinhamento com a identidade visual da Prátic (Terracotta, Dark/Light mode).
+A interface em `AutomationsClient.tsx` foi construída com foco em produtividade, estética refinada e alinhamento com a identidade visual da Pratic (Terracotta, Dark/Light mode).
 
 ### 6.1. Navegação & Abas
 - **🏠 Inicial (Home):**

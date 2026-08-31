@@ -219,7 +219,7 @@ export default function ContractDocumentPage() {
         <div className="signatures" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '80px', paddingBottom: '40px' }}>
           <div style={{ textAlign: 'center', width: '45%' }}>
             <div style={{ borderBottom: '1px solid #000', marginBottom: '8px' }}></div>
-            <p style={{ fontWeight: 'bold' }}>AGÊNCIA PRÁTIC</p>
+            <p style={{ fontWeight: 'bold' }}>AGÊNCIA PRATIC</p>
             <p style={{ fontSize: '0.8rem' }}>CONTRATADA</p>
           </div>
           <div style={{ textAlign: 'center', width: '45%' }}>

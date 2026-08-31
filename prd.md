@@ -1,6 +1,6 @@
 # PRD - Documento de Requisitos e Estrutura do Sistema (PRATIC SYSTEM)
 
-Este documento descreve a estrutura atual da aplicação **Prátic System**, detalhando sua stack tecnológica, as funcionalidades mapeadas nas rotas e o sistema de design implementado.
+Este documento descreve a estrutura atual da aplicação **Pratic System**, detalhando sua stack tecnológica, as funcionalidades mapeadas nas rotas e o sistema de design implementado.
 
 ---
 
@@ -75,7 +75,7 @@ O sistema é dividido em escopos de acesso, principalmente administrativo e clie
 
 ## 3. Design System & Interface
 
-O design do **Prátic System** foi construído sob uma identidade estética proprietária, voltada para uma experiência premium e contemporânea.
+O design do **Pratic System** foi construído sob uma identidade estética proprietária, voltada para uma experiência premium e contemporânea.
 
 ### Identidade Estética: *iOS 26 Liquid Glass*
 La interface utiliza intensivamente o conceito de **Glassmorphism**, proporcionando profundidade visual e elegância.

@@ -117,7 +117,7 @@ self.addEventListener('push', (event) => {
 
   try {
     const payload = event.data.json();
-    const title = payload.title || 'Agência Prátic';
+    const title = payload.title || 'Agência Pratic';
     const options = {
       body: payload.body || payload.message || 'Você recebeu uma nova notificação.',
       icon: payload.icon || '/icons/icon-192.png',
@@ -141,7 +141,7 @@ self.addEventListener('push', (event) => {
     // Fallback para texto plano se não for JSON
     const text = event.data.text();
     event.waitUntil(
-      self.registration.showNotification('Agência Prátic', {
+      self.registration.showNotification('Agência Pratic', {
         body: text,
         icon: '/icons/icon-192.png',
         badge: '/icons/icon-192.png',

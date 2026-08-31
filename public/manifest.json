@@ -1,7 +1,7 @@
 {
-  "name": "Agência Prátic - Sistema de Gestão",
-  "short_name": "Prátic",
-  "description": "Plataforma completa de gestão para a Agência Prátic",
+  "name": "Agência Pratic - Sistema de Gestão",
+  "short_name": "Pratic",
+  "description": "Plataforma completa de gestão para a Agência Pratic",
   "id": "/admin/dashboard",
   "start_url": "/admin/dashboard",
   "scope": "/",

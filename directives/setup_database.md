@@ -1,7 +1,7 @@
 # Diretiva: Configuração do Banco de Dados Supabase
 
 ## Objetivo
-Configurar o esquema de banco de dados para o sistema da Agência Prátic, garantindo que todas as tabelas, relacionamentos e permissões estejam corretamente estabelecidos.
+Configurar o esquema de banco de dados para o sistema da Agência Pratic, garantindo que todas as tabelas, relacionamentos e permissões estejam corretamente estabelecidos.
 
 ## Dependências
 - Projeto Supabase ativo.
