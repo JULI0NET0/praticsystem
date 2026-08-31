@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import {
   Building2,
+  Calendar,
   Clapperboard,
   CircleDot,
   Eye,
@@ -184,6 +185,18 @@ export default function DemandFilters() {
           </button>
         )}
 
+        <button
+          type="button"
+          className="filter-control"
+          data-active={filters.todayOnly || undefined}
+          aria-pressed={filters.todayOnly}
+          title={filters.todayOnly ? "Mostrar todas as datas" : "Filtrar demandas de hoje"}
+          onClick={() => setFilters({ todayOnly: !filters.todayOnly })}
+        >
+          <Calendar size={14} />
+          Hoje
+        </button>
+
         {/* Rótulo fixo e ícone alternando: o texto não muda de largura, então
             a fileira não “dança” ao ligar e desligar. */}
         <button
@@ -241,6 +254,7 @@ export default function DemandFilters() {
           onChange={(value) => setFilters({ contentType: value })}
           options={contentTypeOptions}
           ariaLabel="Filtrar por formato"
+          searchPlaceholder="Buscar formato…"
           clearOption={{ label: "Formatos", icon: <Clapperboard size={14} /> }}
         />
 
@@ -275,6 +289,7 @@ function hasActiveFilter(filters: Filters): boolean {
     filters.status !== null ||
     filters.contentType !== null ||
     filters.hideCompleted ||
+    filters.todayOnly ||
     filters.search.trim() !== ""
   );
 }

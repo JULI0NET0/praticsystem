@@ -18,6 +18,7 @@ import { playSound } from "@/utils/audio";
 import { deriveStatusFields } from "@/lib/demandState";
 import { computeAgendaMirror, shouldSyncGoogle } from "@/lib/demandAgendaSync";
 import { POINTS, isOnTime } from "@/lib/points";
+import { toISODate } from "@/lib/dueDate";
 import {
   EMPTY_DEMAND_FILTERS,
   PRIORITY_ORDER,
@@ -361,6 +362,8 @@ export function DemandasProvider({ children }: { children: ReactNode }) {
 
   const visibleDemands = useMemo(() => {
     const term = filters.search.trim().toLowerCase();
+    const todayIso = filters.todayOnly ? toISODate(new Date()) : null;
+
     return demands.filter((d) => {
       if (filters.scope !== "all" && d.scope !== filters.scope) return false;
       if (filters.clientId && d.client_id !== filters.clientId) return false;
@@ -368,6 +371,7 @@ export function DemandasProvider({ children }: { children: ReactNode }) {
       if (filters.priority && d.priority !== filters.priority) return false;
       if (filters.contentType && d.content_type !== filters.contentType) return false;
       if (filters.hideCompleted && d.status_category === "fechado") return false;
+      if (todayIso && d.due_date !== todayIso) return false;
       if (filters.assigneeId) {
         const mine = d.assignee_ids?.includes(filters.assigneeId) || d.assign_all_team;
         if (!mine) return false;

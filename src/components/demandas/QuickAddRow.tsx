@@ -34,7 +34,7 @@ export default function QuickAddRow({ defaults, placeholder, onCreated }: Props)
       // O que veio escrito no título vence o padrão do grupo/coluna
       due_date: parsed.dueDate ?? defaults?.due_date ?? null,
       due_time: parsed.dueTime ?? null,
-      priority: parsed.priority ?? undefined,
+      priority: parsed.priority ?? defaults?.priority ?? undefined,
       client_id: parsed.clientId ?? defaults?.client_id ?? filters.clientId ?? null,
       assignee_ids: parsed.assigneeIds.length ? parsed.assigneeIds : undefined,
     });

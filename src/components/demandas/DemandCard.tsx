@@ -7,6 +7,7 @@ import { useDemandas } from "./DemandasProvider";
 import { AssigneeStack } from "./AssigneePicker";
 import { AgendaLinkChip, ClientChip, InternalChip } from "./DemandRow";
 import { PriorityBadge } from "./PriorityFlag";
+import DemandStatusPill from "./DemandStatusPill";
 import DueChip from "./DueChip";
 
 interface Props {
@@ -17,6 +18,7 @@ interface Props {
   onContextMenu?: (event: React.MouseEvent) => void;
   selected?: boolean;
   onSelect?: (id: string, event: React.MouseEvent) => void;
+  showStatusPill?: boolean;
 }
 
 export default function DemandCard({
@@ -27,10 +29,12 @@ export default function DemandCard({
   onContextMenu,
   selected = false,
   onSelect,
+  showStatusPill = false,
 }: Props) {
-  const { getClient, commentsOf, attachmentsOf } = useDemandas();
+  const { getClient, getStatus, commentsOf, attachmentsOf } = useDemandas();
 
   const client = getClient(demand.client_id);
+  const status = getStatus(demand.status);
   const done = demand.status_category === "fechado";
 
   // Contagem vem agregada da listagem; quando o drawer já carregou os detalhes
@@ -78,7 +82,11 @@ export default function DemandCard({
     >
       <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
         {client ? <ClientChip label={clientLabel(client)} /> : <InternalChip />}
-        <PriorityBadge priority={demand.priority} compact />
+        {showStatusPill ? (
+          <DemandStatusPill status={status} size="sm" />
+        ) : (
+          <PriorityBadge priority={demand.priority} compact />
+        )}
         {demand.agenda_subject && <AgendaLinkChip subject={demand.agenda_subject} />}
       </div>
 

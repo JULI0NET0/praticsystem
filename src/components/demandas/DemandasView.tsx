@@ -5,11 +5,12 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { Plus, SlidersHorizontal, List, LayoutGrid } from "lucide-react";
 import PageHeader from "@/components/ui/PageHeader";
-import type { DemandListGroupBy, DemandView } from "@/types/demandas";
+import type { DemandKanbanGroupBy, DemandListGroupBy, DemandView } from "@/types/demandas";
 import { useDemandas } from "./DemandasProvider";
 import DemandFilters from "./DemandFilters";
 import DemandViewSwitcher from "./DemandViewSwitcher";
 import DemandGroupBySwitcher from "./DemandGroupBySwitcher";
+import DemandKanbanGroupBySwitcher from "./DemandKanbanGroupBySwitcher";
 import DemandListView from "./DemandListView";
 import DemandKanban from "./DemandKanban";
 import DemandModal from "./DemandModal";
@@ -21,6 +22,7 @@ import { WhatsAppIcon } from "@/components/SocialIcons";
 
 const VIEW_STORAGE_KEY = "pratic-demandas-view";
 const GROUPBY_STORAGE_KEY = "pratic-demandas-groupby";
+const KANBAN_GROUPBY_STORAGE_KEY = "pratic-demandas-kanban-groupby";
 
 function readStoredView(): DemandView {
   try {
@@ -42,6 +44,16 @@ function readStoredGroupBy(): DemandListGroupBy {
   return "due";
 }
 
+function readStoredKanbanGroupBy(): DemandKanbanGroupBy {
+  try {
+    const stored = window.localStorage.getItem(KANBAN_GROUPBY_STORAGE_KEY);
+    if (stored === "status" || stored === "priority") return stored;
+  } catch {
+    // localStorage indisponível
+  }
+  return "status";
+}
+
 export default function DemandasView() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -49,6 +61,7 @@ export default function DemandasView() {
 
   const [view, setView] = useState<DemandView>(readStoredView);
   const [groupBy, setGroupBy] = useState<DemandListGroupBy>(readStoredGroupBy);
+  const [kanbanGroupBy, setKanbanGroupBy] = useState<DemandKanbanGroupBy>(readStoredKanbanGroupBy);
   const [explicitId, setExplicitId] = useState<string | null>(null);
   const [newOpen, setNewOpen] = useState(false);
   const [statusManagerOpen, setStatusManagerOpen] = useState(false);
@@ -184,6 +197,15 @@ export default function DemandasView() {
     }
   };
 
+  const changeKanbanGroupBy = (next: DemandKanbanGroupBy) => {
+    setKanbanGroupBy(next);
+    try {
+      window.localStorage.setItem(KANBAN_GROUPBY_STORAGE_KEY, next);
+    } catch {
+      // ignora
+    }
+  };
+
   const deepLinkId = searchParams.get("d");
   const selectedId = explicitId ?? deepLinkId;
 
@@ -277,6 +299,34 @@ export default function DemandasView() {
             )}
           </>
         )}
+
+        {view === "board" && (
+          <>
+            <DemandKanbanGroupBySwitcher active={kanbanGroupBy} onChange={changeKanbanGroupBy} />
+            {kanbanGroupBy === "status" && (
+              <button
+                type="button"
+                onClick={() => setStatusManagerOpen(true)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "6px 12px",
+                  borderRadius: 9,
+                  border: "1px dashed var(--border)",
+                  background: "transparent",
+                  cursor: "pointer",
+                  fontSize: "0.78rem",
+                  fontWeight: 700,
+                  color: "var(--text-tertiary)",
+                }}
+              >
+                <SlidersHorizontal size={14} />
+                Gerenciar status
+              </button>
+            )}
+          </>
+        )}
       </div>
 
       {view === "list" ? (
@@ -294,6 +344,7 @@ export default function DemandasView() {
           onManageStatuses={() => setStatusManagerOpen(true)}
           selectedIds={selectedIds}
           onSelectDemand={handleSelectDemand}
+          groupBy={kanbanGroupBy}
         />
       )}
 

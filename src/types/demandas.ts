@@ -19,6 +19,9 @@ export type DemandView = 'list' | 'board';
 /** Como a Lista agrupa: por prazo (padrão) ou por status (espelhando o Kanban). */
 export type DemandListGroupBy = 'due' | 'status';
 
+/** Como o Kanban agrupa colunas: por status (padrão) ou por prioridade. */
+export type DemandKanbanGroupBy = 'status' | 'priority';
+
 /** Documento TipTap, mesmo formato de notes.content. */
 export type DemandDescription = Record<string, unknown> | null;
 
@@ -129,6 +132,8 @@ export interface DemandFilters {
   search: string;
   /** Esconde as demandas em status de categoria `fechado`. */
   hideCompleted: boolean;
+  /** Mostra apenas as demandas com prazo para hoje. */
+  todayOnly: boolean;
 }
 
 export const EMPTY_DEMAND_FILTERS: DemandFilters = {
@@ -140,6 +145,7 @@ export const EMPTY_DEMAND_FILTERS: DemandFilters = {
   contentType: null,
   search: '',
   hideCompleted: false,
+  todayOnly: false,
 };
 
 export const PRIORITY_ORDER: Record<DemandPriority, number> = {
