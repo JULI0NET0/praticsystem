@@ -899,7 +899,7 @@ export default function ClientDetailPage() {
               fontFamily: 'monospace', fontSize: '0.85rem', fontWeight: 600, color: 'var(--accent)',
               background: 'color-mix(in oklab, var(--accent) 5%, transparent)', padding: '4px 8px', borderRadius: '6px', border: '1px solid color-mix(in oklab, var(--accent) 10%, transparent)'
             }}>
-              #{String(clientData.sequential_id || 0).padStart(3, '0')}
+              #{clientData.sequential_id === 0 ? '00' : String(clientData.sequential_id ?? 0).padStart(3, '0')}
             </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '4px' }}>

@@ -774,7 +774,7 @@ export default function NotaDetailPage() {
                     {canEdit ? (
                       <Combobox
                         options={clients.map((c, idx) => {
-                          const seq = (c as any).sequential_id || idx + 1;
+                          const seq = (c as any).sequential_id === 0 ? '00' : String((c as any).sequential_id ?? (idx + 1)).padStart(2, '0');
                           const name = c.nome_fantasia || c.name;
                           return {
                             value: c.id,

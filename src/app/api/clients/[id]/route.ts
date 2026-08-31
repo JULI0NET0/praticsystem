@@ -44,7 +44,7 @@ export async function GET(
   if (allClientsRes.data) {
     const idx = allClientsRes.data.findIndex((c: any) => c.id === id);
     if (idx !== -1) {
-      client.sequential_id = client.sequential_id || (idx + 1);
+      client.sequential_id = (client.sequential_id !== null && client.sequential_id !== undefined) ? client.sequential_id : (idx + 1);
     }
   }
 

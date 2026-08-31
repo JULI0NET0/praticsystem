@@ -10,13 +10,15 @@ interface ThemeLogoProps {
   height?: number;
   align?: 'left' | 'center' | 'right';
   isCollapsed?: boolean;
+  forceTheme?: 'dark' | 'light';
 }
 
 export default function ThemeLogo({
   width = 200,
   height = 48,
   align = 'center',
-  isCollapsed = false
+  isCollapsed = false,
+  forceTheme
 }: ThemeLogoProps) {
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
@@ -30,8 +32,9 @@ export default function ThemeLogo({
     return <div style={{ width: isCollapsed ? 40 : width, height }} />;
   }
 
-  const fullLogo = resolvedTheme === 'light' ? '/logo-horizontal-preta.png' : '/logo-horizontal-branca.png';
-  const symbolLogo = resolvedTheme === 'light' ? '/SIMBOLO-PRETO.png' : '/SIMBOLO-BRANCO.png';
+  const currentTheme = forceTheme || resolvedTheme;
+  const fullLogo = currentTheme === 'light' ? '/logo-horizontal-preta.png' : '/logo-horizontal-branca.png';
+  const symbolLogo = currentTheme === 'light' ? '/SIMBOLO-PRETO.png' : '/SIMBOLO-BRANCO.png';
   const logoSrc = isCollapsed ? symbolLogo : fullLogo;
 
   const alignmentMap = {

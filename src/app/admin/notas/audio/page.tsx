@@ -300,7 +300,7 @@ export default function AudioNotaPage() {
           >
             <option value="">Nenhum cliente</option>
             {clients.map((c, idx) => {
-              const seq = (c as any).sequential_id || idx + 1;
+              const seq = (c as any).sequential_id === 0 ? '00' : String((c as any).sequential_id ?? (idx + 1)).padStart(2, '0');
               return (
                 <option key={c.id} value={c.id}>
                   {seq} - {c.nome_fantasia || c.name}

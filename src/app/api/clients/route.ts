@@ -21,7 +21,7 @@ export async function GET() {
 
     const clientsWithSeqId = data.map((client: any, index: number) => ({
       ...client,
-      sequential_id: client.sequential_id || (index + 1)
+      sequential_id: client.sequential_id !== null && client.sequential_id !== undefined ? client.sequential_id : (index + 1)
     }));
 
     // Reordena decrescente pelo created_at
