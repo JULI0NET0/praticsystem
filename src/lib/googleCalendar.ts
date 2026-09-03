@@ -126,6 +126,9 @@ export async function getValidAccessToken(account: GoogleAccount): Promise<strin
 
   if (!res.ok) {
     const errorBody = await res.text();
+    if (errorBody.includes('invalid_grant')) {
+      throw new Error(`A autorização do Google Agenda (${account}) expirou ou foi revogada. Por favor, reconecte a conta nas configurações da Agenda.`);
+    }
     throw new Error(`Erro ao renovar token de acesso do Google (${account}): ${res.status} ${errorBody}`);
   }
 
@@ -139,6 +142,17 @@ export async function getValidAccessToken(account: GoogleAccount): Promise<strin
   };
 
   return token;
+}
+
+export async function testAccountToken(account: GoogleAccount): Promise<{ valid: boolean; expired?: boolean; error?: string }> {
+  try {
+    await getValidAccessToken(account);
+    return { valid: true };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    const isExpired = msg.includes('expirou') || msg.includes('invalid_grant');
+    return { valid: false, expired: isExpired, error: msg };
+  }
 }
 
 async function calendarFetch(account: GoogleAccount, path: string, options: RequestInit = {}) {

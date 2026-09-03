@@ -41,14 +41,17 @@ export async function POST(request: Request) {
       post_id: body.post_id || null,
       keywords: body.keywords,
       match_mode: body.match_mode === 'exact' ? 'exact' : 'contains',
-      comment_reply_text: body.comment_reply_text || null,
+      comment_reply_texts: Array.isArray(body.comment_reply_texts)
+        ? body.comment_reply_texts.map((t: unknown) => String(t).trim()).filter(Boolean)
+        : [],
       dm_message_text: body.dm_message_text,
       dm_button_text: body.dm_button_text || null,
       dm_button_url: body.dm_button_url || null,
       cta_type: ['link', 'quick_reply'].includes(body.cta_type) ? body.cta_type : 'button',
       require_follow: body.require_follow ?? false,
       follow_gate_message: body.follow_gate_message || null,
-      follow_gate_button_text: body.follow_gate_button_text || null
+      follow_gate_button_text: body.follow_gate_button_text || null,
+      linked_material_id: body.linked_material_id || null
     })
     .select()
     .single()

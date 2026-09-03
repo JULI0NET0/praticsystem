@@ -211,7 +211,9 @@ export interface IgAutomation {
   post_id: string | null
   keywords: string[]
   match_mode: 'contains' | 'exact'
+  /** @deprecated legado — leia via comment_reply_texts / pickRandomCommentReply */
   comment_reply_text: string | null
+  comment_reply_texts: string[]
   dm_message_text: string
   dm_button_text: string | null
   dm_button_url: string | null
@@ -219,8 +221,20 @@ export interface IgAutomation {
   require_follow?: boolean
   follow_gate_message?: string | null
   follow_gate_button_text?: string | null
+  linked_material_id?: string | null
   created_at: string
   updated_at: string
+}
+
+// Escolhe uma variação aleatória de resposta pública pro comentário, pra não
+// repetir sempre o mesmo texto (evita parecer um robô). Cai no campo legado
+// comment_reply_text para automações criadas antes da migração de variações.
+export function pickRandomCommentReply(automation: IgAutomation): string | null {
+  const variations = (automation.comment_reply_texts || []).map((t) => t.trim()).filter(Boolean)
+  if (variations.length > 0) {
+    return variations[Math.floor(Math.random() * variations.length)]
+  }
+  return automation.comment_reply_text || null
 }
 
 export function findMatchingAutomation(
@@ -245,5 +259,45 @@ export function findMatchingAutomation(
   }
 
   return null
+}
+
+export type IgMaterialType = 'text' | 'file' | 'link'
+
+export interface IgMaterial {
+  id: string
+  slug: string
+  title: string
+  description: string | null
+  cover_image_path: string | null
+  material_type: IgMaterialType
+  copy_text: string | null
+  file_path: string | null
+  file_name: string | null
+  file_size_bytes: number | null
+  external_url: string | null
+  is_active: boolean
+  view_count: number
+  created_at: string
+  updated_at: string
+}
+
+export const IG_MATERIALS_BUCKET = 'ig-materials'
+
+export function getMaterialPublicUrl(supabase: SupabaseClient, path: string): string {
+  return supabase.storage.from(IG_MATERIALS_BUCKET).getPublicUrl(path).data.publicUrl
+}
+
+// Gera um slug amigável a partir do título + sufixo aleatório curto, pra
+// garantir unicidade sem precisar consultar o banco antes de inserir.
+export function slugifyMaterialTitle(title: string): string {
+  const base = title
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60)
+  const suffix = Math.random().toString(36).slice(2, 8)
+  return `${base || 'material'}-${suffix}`
 }
 

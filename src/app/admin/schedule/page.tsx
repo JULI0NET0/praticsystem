@@ -67,10 +67,10 @@ export default function SchedulePage() {
   const [isSyncingGoogle, setIsSyncingGoogle] = useState(false);
   const [showGoogleModal, setShowGoogleModal] = useState(false);
   const [googleStatus, setGoogleStatus] = useState<{
-    oauthReady: boolean;
-    accounts: {
-      agenciapratic: { configured: boolean; email: string };
-      praticlabs: { configured: boolean; email: string };
+    oauthReady?: boolean;
+    accounts?: {
+      agenciapratic?: { configured: boolean; valid?: boolean; expired?: boolean; error?: string; email: string };
+      praticlabs?: { configured: boolean; valid?: boolean; expired?: boolean; error?: string; email: string };
     };
   } | null>(null);
   // x/y são coordenadas de VIEWPORT (clientX/clientY), coerentes com o
@@ -272,6 +272,31 @@ export default function SchedulePage() {
       const data = await res.json();
 
       if (!res.ok) {
+        if (data.isExpired || data.error?.includes('expirou') || data.error?.includes('invalid_grant')) {
+          setGoogleStatus((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  accounts: {
+                    ...prev.accounts,
+                    agenciapratic: {
+                      ...prev.accounts?.agenciapratic,
+                      configured: true,
+                      valid: false,
+                      expired: true,
+                      email: 'agenciapratic@gmail.com',
+                    },
+                  },
+                }
+              : prev
+          );
+          if (!silent) {
+            setShowGoogleModal(true);
+            showToast('A autorização do Google Agenda expirou. Reconecte a conta.', 'info');
+          }
+          return;
+        }
+
         if (!silent && (data.accountNotConfigured || data.error?.includes('não configurada'))) {
           setShowGoogleModal(true);
         }
@@ -303,8 +328,9 @@ export default function SchedulePage() {
   useEffect(() => {
     fetchEvents();
     fetchClients();
-    fetchGoogleStatus();
-    handlePullFromGoogle(true);
+    fetchGoogleStatus().then(() => {
+      handlePullFromGoogle(true);
+    });
 
     const handleFocus = () => {
       handlePullFromGoogle(true);
@@ -1372,10 +1398,18 @@ export default function SchedulePage() {
                         fontWeight: 600,
                         padding: '3px 8px',
                         borderRadius: '12px',
-                        backgroundColor: googleStatus?.accounts?.agenciapratic?.configured
-                          ? 'var(--color-success-wash)'
-                          : 'var(--color-warning-wash)',
-                        color: googleStatus?.accounts?.agenciapratic?.configured ? 'var(--color-success)' : 'var(--color-warning)',
+                        backgroundColor:
+                          googleStatus?.accounts?.agenciapratic?.expired
+                            ? 'var(--color-warning-wash)'
+                            : googleStatus?.accounts?.agenciapratic?.configured
+                            ? 'var(--color-success-wash)'
+                            : 'var(--color-neutral-wash, rgba(0,0,0,0.05))',
+                        color:
+                          googleStatus?.accounts?.agenciapratic?.expired
+                            ? 'var(--color-warning)'
+                            : googleStatus?.accounts?.agenciapratic?.configured
+                            ? 'var(--color-success)'
+                            : 'var(--text-secondary)',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '4px',
@@ -1386,14 +1420,44 @@ export default function SchedulePage() {
                           width: '6px',
                           height: '6px',
                           borderRadius: '50%',
-                          backgroundColor: googleStatus?.accounts?.agenciapratic?.configured ? 'var(--color-success)' : 'var(--color-warning)',
+                          backgroundColor:
+                            googleStatus?.accounts?.agenciapratic?.expired
+                              ? 'var(--color-warning)'
+                              : googleStatus?.accounts?.agenciapratic?.configured
+                              ? 'var(--color-success)'
+                              : 'var(--text-secondary)',
                         }}
                       />
-                      {googleStatus?.accounts?.agenciapratic?.configured ? 'Conectado' : 'Pendente'}
+                      {googleStatus?.accounts?.agenciapratic?.expired
+                        ? 'Sessão Expirada'
+                        : googleStatus?.accounts?.agenciapratic?.configured
+                        ? 'Conectado'
+                        : 'Pendente'}
                     </span>
                   </div>
 
-                  {googleStatus?.accounts?.agenciapratic?.configured ? (
+                  {googleStatus?.accounts?.agenciapratic?.expired ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', paddingTop: '8px', borderTop: '1px solid var(--color-border-subtle)' }}>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--color-warning)', lineHeight: 1.4, margin: 0 }}>
+                        A autorização do Google expirou ou foi revogada. Clique abaixo para reconectar:
+                      </p>
+                      <a
+                        href="/api/agenda/google-auth?account=agenciapratic"
+                        className="btn btn-accent"
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px',
+                          height: '36px',
+                          fontSize: '0.8rem',
+                          textDecoration: 'none',
+                        }}
+                      >
+                        <GoogleIcon size={14} /> Reconectar agenciapratic@gmail.com
+                      </a>
+                    </div>
+                  ) : googleStatus?.accounts?.agenciapratic?.configured ? (
                     <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '6px', borderTop: '1px solid var(--color-border-subtle)' }}>
                       <a
                         href="/api/agenda/google-auth?account=agenciapratic"

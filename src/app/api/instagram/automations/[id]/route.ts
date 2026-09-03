@@ -18,19 +18,25 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     'post_id',
     'keywords',
     'match_mode',
-    'comment_reply_text',
+    'comment_reply_texts',
     'dm_message_text',
     'dm_button_text',
     'dm_button_url',
     'cta_type',
     'require_follow',
     'follow_gate_message',
-    'follow_gate_button_text'
+    'follow_gate_button_text',
+    'linked_material_id'
   ] as const
 
   const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
   for (const field of allowedFields) {
     if (field in body) updates[field] = body[field]
+  }
+  if (Array.isArray(updates.comment_reply_texts)) {
+    updates.comment_reply_texts = (updates.comment_reply_texts as unknown[])
+      .map((t) => String(t).trim())
+      .filter(Boolean)
   }
 
   const supabase = getSupabaseAdmin()

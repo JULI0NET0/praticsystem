@@ -10,6 +10,7 @@ import {
   inferCategoryFromEvent,
   isAccountConfigured,
   isOAuthConfigured,
+  testAccountToken,
 } from '@/lib/googleCalendar';
 
 const supabase = createClient(
@@ -24,15 +25,31 @@ export async function GET() {
     const agenciapraticConfigured = isAccountConfigured('agenciapratic');
     const praticlabsConfigured = isAccountConfigured('praticlabs');
 
+    let agenciapraticValid = false;
+    let agenciapraticExpired = false;
+    let agenciapraticError: string | undefined;
+
+    if (agenciapraticConfigured) {
+      const check = await testAccountToken('agenciapratic');
+      agenciapraticValid = check.valid;
+      agenciapraticExpired = !!check.expired;
+      agenciapraticError = check.error;
+    }
+
     return NextResponse.json({
       oauthReady: isOauthReady,
       accounts: {
         agenciapratic: {
           configured: agenciapraticConfigured,
+          valid: agenciapraticValid,
+          expired: agenciapraticExpired,
+          error: agenciapraticError,
           email: 'agenciapratic@gmail.com',
         },
         praticlabs: {
           configured: praticlabsConfigured,
+          valid: false,
+          expired: false,
           email: 'praticlabs@gmail.com',
         },
       },
@@ -285,7 +302,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, googleEventId, googleAccount: targetAccount });
   } catch (err: unknown) {
     const errorMsg = err instanceof Error ? err.message : 'Erro interno';
+    const isExpired = errorMsg.includes('expirou') || errorMsg.includes('invalid_grant');
     console.error('google-sync error:', err);
-    return NextResponse.json({ error: errorMsg }, { status: 500 });
+    return NextResponse.json(
+      {
+        error: isExpired
+          ? 'A autorização do Google Agenda expirou ou foi revogada. Por favor, reconecte sua conta em Agenda > Google.'
+          : errorMsg,
+        isExpired,
+      },
+      { status: isExpired ? 401 : 500 }
+    );
   }
 }

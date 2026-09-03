@@ -6,7 +6,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useTheme } from "next-themes";
 import { useToast } from "@/components/CustomToast";
 import type { IgAutomation, IgConfig } from "@/lib/instagram";
-import InstagramPostPicker from "./InstagramPostPicker";
+import AutomationEditorModal from "./automation-editor/AutomationEditorModal";
+import type { AutomationFormValues } from "./automation-editor/types";
 import {
   Home,
   Users,
@@ -32,6 +33,7 @@ import {
   Menu,
   Sun,
   Moon,
+  FolderOpen,
 } from "lucide-react";
 
 interface LogRow {
@@ -84,20 +86,21 @@ interface Props {
 
 type TabType = "home" | "contacts" | "automations" | "ai" | "inbox" | "results" | "settings";
 
-const emptyForm = {
+const emptyForm: AutomationFormValues = {
   name: "",
   keywords: "",
-  match_mode: "contains" as "contains" | "exact",
+  match_mode: "contains",
   post_id: "",
-  comment_reply_text: "",
+  comment_reply_texts: [],
   dm_message_text: "",
   dm_button_text: "",
   dm_button_url: "",
-  cta_type: "button" as "link" | "button" | "quick_reply",
+  cta_type: "button",
   require_follow: false,
   follow_gate_message: "",
   follow_gate_button_text: "",
   is_active: true,
+  linked_material_id: null,
 };
 
 const TEMPLATES = [
@@ -113,7 +116,7 @@ const TEMPLATES = [
       keywords: "link, quero, eu quero, me manda, valor, preco",
       match_mode: "contains" as const,
       post_id: "",
-      comment_reply_text: "Te enviei o link no direct! Dá uma olhada 📩✨",
+      comment_reply_texts: ["Te enviei o link no direct! Dá uma olhada 📩✨"],
       dm_message_text: "Olá! Vi que você comentou no nosso post. Aqui está o link exclusivo que você pediu:",
       dm_button_text: "👉 Acessar Link Agora",
       dm_button_url: "https://",
@@ -122,6 +125,7 @@ const TEMPLATES = [
       follow_gate_message: "",
       follow_gate_button_text: "",
       is_active: true,
+      linked_material_id: null,
     },
   },
   {
@@ -136,7 +140,7 @@ const TEMPLATES = [
       keywords: "material, cupom, vip, desconto, ebook, aula",
       match_mode: "contains" as const,
       post_id: "",
-      comment_reply_text: "Prontinho! Dá uma olhada na sua caixa de direct 🚀",
+      comment_reply_texts: ["Prontinho! Dá uma olhada na sua caixa de direct 🚀"],
       dm_message_text: "Oi! Aqui está o material especial dos stories que você pediu:",
       dm_button_text: "🎁 Resgatar Material",
       dm_button_url: "https://",
@@ -145,6 +149,7 @@ const TEMPLATES = [
       follow_gate_message: "",
       follow_gate_button_text: "",
       is_active: true,
+      linked_material_id: null,
     },
   },
   {
@@ -159,7 +164,7 @@ const TEMPLATES = [
       keywords: "oi, ola, orcamento, contato, preco, whatsapp, ajuda",
       match_mode: "contains" as const,
       post_id: "",
-      comment_reply_text: "",
+      comment_reply_texts: [],
       dm_message_text: "Olá! Obrigado pelo contato. Para falar diretamente com nossa equipe no WhatsApp, toque no botão abaixo:",
       dm_button_text: "💬 Falar no WhatsApp",
       dm_button_url: "https://wa.me/55",
@@ -168,6 +173,7 @@ const TEMPLATES = [
       follow_gate_message: "",
       follow_gate_button_text: "",
       is_active: true,
+      linked_material_id: null,
     },
   },
 ];
@@ -242,6 +248,23 @@ export default function AutomationsClient({
   const totalClicks = clicks.length;
   const overallConversionRate = totalComments > 0 ? Math.round((totalClicks / totalComments) * 100) : 0;
 
+  const topAutomation = useMemo(() => {
+    if (automations.length === 0) return null;
+    const clicksByAutomation = new Map<string, number>();
+    for (const click of clicks) {
+      if (!click.automation_id) continue;
+      clicksByAutomation.set(click.automation_id, (clicksByAutomation.get(click.automation_id) || 0) + 1);
+    }
+    let best: { name: string; clicks: number } | null = null;
+    for (const automation of automations) {
+      const count = clicksByAutomation.get(automation.id) || 0;
+      if (count > 0 && (!best || count > best.clicks)) {
+        best = { name: automation.name, clicks: count };
+      }
+    }
+    return best;
+  }, [automations, clicks]);
+
   // Onboarding Actions List (PraticChat Checklist)
   const checklistItems = useMemo(() => {
     const hasConnection = !!config;
@@ -301,7 +324,11 @@ export default function AutomationsClient({
       keywords: (automation.keywords || []).join(", "),
       match_mode: automation.match_mode,
       post_id: automation.post_id || "",
-      comment_reply_text: automation.comment_reply_text || "",
+      comment_reply_texts: automation.comment_reply_texts?.length
+        ? automation.comment_reply_texts
+        : automation.comment_reply_text
+        ? [automation.comment_reply_text]
+        : [],
       dm_message_text: automation.dm_message_text,
       dm_button_text: automation.dm_button_text || "",
       dm_button_url: automation.dm_button_url || "",
@@ -310,6 +337,7 @@ export default function AutomationsClient({
       follow_gate_message: automation.follow_gate_message || "",
       follow_gate_button_text: automation.follow_gate_button_text || "",
       is_active: automation.is_active,
+      linked_material_id: automation.linked_material_id ?? null,
     });
     setEditingId(automation.id);
     setShowForm(true);
@@ -332,7 +360,7 @@ export default function AutomationsClient({
       keywords,
       match_mode: form.match_mode,
       post_id: form.post_id || null,
-      comment_reply_text: form.comment_reply_text || null,
+      comment_reply_texts: form.comment_reply_texts,
       dm_message_text: form.dm_message_text,
       dm_button_text: form.dm_button_text || null,
       dm_button_url: form.dm_button_url || null,
@@ -341,6 +369,7 @@ export default function AutomationsClient({
       follow_gate_message: form.require_follow ? (form.follow_gate_message || null) : null,
       follow_gate_button_text: form.require_follow ? (form.follow_gate_button_text || null) : null,
       is_active: form.is_active,
+      linked_material_id: form.linked_material_id,
     };
 
     try {
@@ -593,6 +622,15 @@ export default function AutomationsClient({
               collapsed={sidebarCollapsed}
               onClick={() => {
                 setActiveTab("automations");
+                setMobileMenuOpen(false);
+              }}
+            />
+            <NavItem
+              icon={<FolderOpen className="w-4 h-4" />}
+              label="Materiais"
+              collapsed={sidebarCollapsed}
+              onClick={() => {
+                router.push("/automacao-instagram/materiais");
                 setMobileMenuOpen(false);
               }}
             />
@@ -885,93 +923,120 @@ export default function AutomationsClient({
                   </div>
                 </div>
 
-                {/* Section: "Suas próximas melhores ações" (Checklist) */}
-                <div className="space-y-3">
-                  <h3 className="font-bold text-lg text-[var(--color-text-primary)]">
-                    Suas próximas melhores ações
-                  </h3>
+                {/* Section: "Primeiros passos" — só aparece antes de conectar/criar a 1ª automação */}
+                {(!config || automations.length === 0) && (
+                  <div className="space-y-3">
+                    <h3 className="font-bold text-lg text-[var(--color-text-primary)]">
+                      Primeiros passos
+                    </h3>
 
-                  <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-2xl p-6 max-w-xl space-y-4 shadow-sm">
-                    <div>
-                      <span className="text-[11px] uppercase tracking-wider font-bold text-[var(--color-terracotta)]">
-                        Primeiros passos
-                      </span>
-                      <p className="font-bold text-sm text-[var(--color-text-primary)] mt-0.5 leading-snug">
-                        Você está mandando muito bem! Mantenha a atenção do seu público com as automações restantes
-                      </p>
+                    <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-2xl p-6 max-w-xl space-y-4 shadow-sm">
+                      <div>
+                        <p className="font-bold text-sm text-[var(--color-text-primary)] leading-snug">
+                          Conecte sua conta e crie sua primeira automação pra começar a acompanhar os números aqui.
+                        </p>
 
-                      {/* Progress bar */}
-                      <div className="mt-3 space-y-1.5">
-                        <div className="w-full bg-[var(--color-surface-sunken)] rounded-full h-2 overflow-hidden">
-                          <div
-                            className="h-full bg-[var(--color-terracotta)] rounded-full transition-all duration-300"
-                            style={{ width: `${Math.round((completedCount / checklistItems.length) * 100)}%` }}
-                          />
+                        {/* Progress bar */}
+                        <div className="mt-3 space-y-1.5">
+                          <div className="w-full bg-[var(--color-surface-sunken)] rounded-full h-2 overflow-hidden">
+                            <div
+                              className="h-full bg-[var(--color-terracotta)] rounded-full transition-all duration-300"
+                              style={{ width: `${Math.round((completedCount / checklistItems.length) * 100)}%` }}
+                            />
+                          </div>
+                          <span className="text-[11px] text-[var(--color-text-muted)] font-medium">
+                            {completedCount} de {checklistItems.length} completadas
+                          </span>
                         </div>
-                        <span className="text-[11px] text-[var(--color-text-muted)] font-medium">
-                          {completedCount} de {checklistItems.length} completadas
-                        </span>
+                      </div>
+
+                      {/* Checklist Rows */}
+                      <div className="space-y-2 pt-1">
+                        {checklistItems.map((item) => (
+                          <button
+                            key={item.id}
+                            onClick={item.onClick}
+                            className="w-full flex items-center justify-between p-3 rounded-xl border border-[var(--color-border-subtle)] bg-[var(--color-surface-sunken)]/40 hover:bg-[var(--color-surface-sunken)] text-left transition-colors"
+                          >
+                            <div className="flex items-center gap-3 min-w-0 pr-2">
+                              <div
+                                className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${
+                                  item.completed
+                                    ? "bg-[var(--color-success-wash)] text-[var(--color-success)]"
+                                    : "border border-[var(--color-border-strong)]"
+                                }`}
+                              >
+                                {item.completed && <Check className="w-2.5 h-2.5" />}
+                              </div>
+                              <span
+                                className={`text-xs font-medium truncate ${
+                                  item.completed ? "text-[var(--color-text-secondary)]" : "text-[var(--color-text-primary)] font-semibold"
+                                }`}
+                              >
+                                {item.title}
+                              </span>
+                            </div>
+                            <ChevronRight className="w-4 h-4 text-[var(--color-text-muted)] shrink-0" />
+                          </button>
+                        ))}
                       </div>
                     </div>
+                  </div>
+                )}
 
-                    {/* Checklist Rows */}
-                    <div className="space-y-2 pt-1">
-                      {checklistItems.map((item) => (
-                        <button
-                          key={item.id}
-                          onClick={item.onClick}
-                          className="w-full flex items-center justify-between p-3 rounded-xl border border-[var(--color-border-subtle)] bg-[var(--color-surface-sunken)]/40 hover:bg-[var(--color-surface-sunken)] text-left transition-colors"
-                        >
-                          <div className="flex items-center gap-3 min-w-0 pr-2">
-                            <div
-                              className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${
-                                item.completed
-                                  ? "bg-[var(--color-success-wash)] text-[var(--color-success)]"
-                                  : "border border-[var(--color-border-strong)]"
-                              }`}
-                            >
-                              {item.completed && <Check className="w-2.5 h-2.5" />}
-                            </div>
-                            <span
-                              className={`text-xs font-medium truncate ${
-                                item.completed ? "text-[var(--color-text-secondary)]" : "text-[var(--color-text-primary)] font-semibold"
-                              }`}
-                            >
-                              {item.title}
-                            </span>
-                          </div>
-                          <ChevronRight className="w-4 h-4 text-[var(--color-text-muted)] shrink-0" />
-                        </button>
-                      ))}
+                {/* Section: Números da automação */}
+                <div className="space-y-3">
+                  <h3 className="font-bold text-lg text-[var(--color-text-primary)]">
+                    Seus números
+                  </h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-xl p-4">
+                      <span className="text-xs text-[var(--color-text-muted)] font-medium">Automações Ativas</span>
+                      <p className="text-2xl font-bold text-[var(--color-text-primary)] mt-1">
+                        {automations.filter((a) => a.is_active).length}
+                      </p>
                     </div>
-                  </div>
-                </div>
-
-                {/* Section: Live Stats Grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2">
-                  <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-xl p-4">
-                    <span className="text-xs text-[var(--color-text-muted)] font-medium">Automações Ativas</span>
-                    <p className="text-2xl font-bold text-[var(--color-text-primary)] mt-1">
-                      {automations.filter((a) => a.is_active).length}
-                    </p>
-                  </div>
-                  <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-xl p-4">
-                    <span className="text-xs text-[var(--color-text-muted)] font-medium">DMs Entregues</span>
-                    <p className="text-2xl font-bold text-[var(--color-success)] mt-1">
-                      {totalSent}
-                    </p>
-                  </div>
-                  <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-xl p-4">
-                    <span className="text-xs text-[var(--color-text-muted)] font-medium">Cliques no Link</span>
-                    <p className="text-2xl font-bold text-[var(--color-terracotta)] mt-1">
-                      {totalClicks}
-                    </p>
-                  </div>
-                  <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-xl p-4">
-                    <span className="text-xs text-[var(--color-text-muted)] font-medium">Na Fila (Pendente)</span>
-                    <p className="text-2xl font-bold text-[#eab308] mt-1">
-                      {stats.pending}
-                    </p>
+                    <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-xl p-4">
+                      <span className="text-xs text-[var(--color-text-muted)] font-medium">DMs Entregues</span>
+                      <p className="text-2xl font-bold text-[var(--color-success)] mt-1">
+                        {totalSent}
+                      </p>
+                    </div>
+                    <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-xl p-4">
+                      <span className="text-xs text-[var(--color-text-muted)] font-medium">Cliques no Link</span>
+                      <p className="text-2xl font-bold text-[var(--color-terracotta)] mt-1">
+                        {totalClicks}
+                      </p>
+                    </div>
+                    <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-xl p-4">
+                      <span className="text-xs text-[var(--color-text-muted)] font-medium">Na Fila (Pendente)</span>
+                      <p className="text-2xl font-bold text-[#eab308] mt-1">
+                        {stats.pending}
+                      </p>
+                    </div>
+                    <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-xl p-4">
+                      <span className="text-xs text-[var(--color-text-muted)] font-medium">Taxa de Conversão</span>
+                      <p className="text-2xl font-bold text-[var(--color-text-primary)] mt-1">
+                        {overallConversionRate}%
+                      </p>
+                    </div>
+                    <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-xl p-4">
+                      <span className="text-xs text-[var(--color-text-muted)] font-medium">Contatos</span>
+                      <p className="text-2xl font-bold text-[var(--color-text-primary)] mt-1">
+                        {contacts.length}
+                      </p>
+                    </div>
+                    <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-xl p-4 col-span-2">
+                      <span className="text-xs text-[var(--color-text-muted)] font-medium">Automação com Melhor Desempenho</span>
+                      <p className="text-sm font-bold text-[var(--color-text-primary)] mt-1.5 truncate">
+                        {topAutomation ? topAutomation.name : "—"}
+                      </p>
+                      {topAutomation && (
+                        <p className="text-[11px] text-[var(--color-text-muted)]">
+                          {topAutomation.clicks} clique{topAutomation.clicks === 1 ? "" : "s"}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1379,255 +1444,16 @@ export default function AutomationsClient({
           MODAL: CRIAR / EDITAR AUTOMAÇÃO
          ======================================================== */}
       {showForm && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-default)] rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
-            <div className="px-6 py-4 border-b border-[var(--color-border-subtle)] flex items-center justify-between">
-              <h3 className="font-bold text-base text-[var(--color-text-primary)]">
-                {editingId ? "Editar Automação" : "Nova Automação de Comentários"}
-              </h3>
-              <button onClick={() => setShowForm(false)} className="text-[var(--color-text-muted)] hover:text-white p-1">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-6 space-y-4 text-xs">
-              <div>
-                <label className="block font-bold text-[var(--color-text-primary)] mb-1">
-                  Nome da Automação
-                </label>
-                <input
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  placeholder="Ex: Envio de Link Reels"
-                  className="w-full bg-[var(--color-surface-sunken)] border border-[var(--color-border-default)] focus:border-[var(--color-terracotta)] rounded-lg px-3 py-2 text-xs text-[var(--color-text-primary)] outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block font-bold text-[var(--color-text-primary)] mb-1">
-                  Palavras-chave do Comentário (separadas por vírgula)
-                </label>
-                <input
-                  value={form.keywords}
-                  onChange={(e) => setForm({ ...form, keywords: e.target.value })}
-                  placeholder="Ex: link, eu quero, preco"
-                  className="w-full bg-[var(--color-surface-sunken)] border border-[var(--color-border-default)] focus:border-[var(--color-terracotta)] rounded-lg px-3 py-2 text-xs text-[var(--color-text-primary)] outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block font-bold text-[var(--color-text-primary)] mb-1">
-                  Tipo de Correspondência do Comentário
-                </label>
-                <select
-                  value={form.match_mode}
-                  onChange={(e) => setForm({ ...form, match_mode: e.target.value as "contains" | "exact" })}
-                  className="w-full bg-[var(--color-surface-sunken)] border border-[var(--color-border-default)] rounded-lg px-3 py-2 text-xs text-[var(--color-text-primary)] outline-none"
-                >
-                  <option value="contains">Contém a palavra-chave (recomendado)</option>
-                  <option value="exact">Comentário exato (somente a palavra digitada)</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block font-bold text-[var(--color-text-primary)] mb-1.5">
-                  Publicação / Reel de Origem
-                </label>
-                <InstagramPostPicker
-                  selectedPostId={form.post_id}
-                  onSelectPost={(postId) => setForm({ ...form, post_id: postId })}
-                />
-              </div>
-
-              <div>
-                <label className="block font-bold text-[var(--color-text-primary)] mb-1">
-                  Resposta pública no comentário (Opcional)
-                </label>
-                <input
-                  value={form.comment_reply_text}
-                  onChange={(e) => setForm({ ...form, comment_reply_text: e.target.value })}
-                  placeholder="Ex: Te chamei no direct! 📩"
-                  className="w-full bg-[var(--color-surface-sunken)] border border-[var(--color-border-default)] rounded-lg px-3 py-2 text-xs text-[var(--color-text-primary)] outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block font-bold text-[var(--color-text-primary)] mb-1">
-                  Mensagem privada da DM
-                </label>
-                <textarea
-                  rows={3}
-                  value={form.dm_message_text}
-                  onChange={(e) => setForm({ ...form, dm_message_text: e.target.value })}
-                  placeholder="Olá! Conforme você pediu, aqui está seu link..."
-                  className="w-full bg-[var(--color-surface-sunken)] border border-[var(--color-border-default)] rounded-lg px-3 py-2 text-xs text-[var(--color-text-primary)] outline-none"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-bold text-[var(--color-text-primary)] mb-1">
-                    Texto do Botão (Opcional)
-                  </label>
-                  <input
-                    value={form.dm_button_text}
-                    onChange={(e) => setForm({ ...form, dm_button_text: e.target.value })}
-                    placeholder="Ex: 👉 Acessar Agora"
-                    className="w-full bg-[var(--color-surface-sunken)] border border-[var(--color-border-default)] rounded-lg px-3 py-2 text-xs text-[var(--color-text-primary)] outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block font-bold text-[var(--color-text-primary)] mb-1">
-                    Link do Botão
-                  </label>
-                  <input
-                    value={form.dm_button_url}
-                    onChange={(e) => setForm({ ...form, dm_button_url: e.target.value })}
-                    placeholder="https://..."
-                    className="w-full bg-[var(--color-surface-sunken)] border border-[var(--color-border-default)] rounded-lg px-3 py-2 text-xs text-[var(--color-text-primary)] outline-none"
-                  />
-                </div>
-              </div>
-
-              {(form.dm_button_text || form.dm_button_url) && (
-                <div>
-                  <label className="block font-bold text-[var(--color-text-primary)] mb-1">
-                    Como o botão chega na DM
-                  </label>
-                  <div className="flex items-center gap-1 bg-[var(--color-surface-sunken)] border border-[var(--color-border-default)] p-1 rounded-lg w-fit flex-wrap">
-                    <button
-                      type="button"
-                      onClick={() => setForm({ ...form, cta_type: "link" })}
-                      className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
-                        form.cta_type === "link"
-                          ? "bg-[var(--color-terracotta)] text-[var(--color-text-on-accent)]"
-                          : "text-[var(--color-text-secondary)]"
-                      }`}
-                    >
-                      Link direto
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setForm({ ...form, cta_type: "button" })}
-                      className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
-                        form.cta_type === "button"
-                          ? "bg-[var(--color-terracotta)] text-[var(--color-text-on-accent)]"
-                          : "text-[var(--color-text-secondary)]"
-                      }`}
-                    >
-                      Botão fixo
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setForm({ ...form, cta_type: "quick_reply" })}
-                      className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
-                        form.cta_type === "quick_reply"
-                          ? "bg-[var(--color-terracotta)] text-[var(--color-text-on-accent)]"
-                          : "text-[var(--color-text-secondary)]"
-                      }`}
-                    >
-                      Sugestão de resposta
-                    </button>
-                  </div>
-                  <p className="text-[11px] text-[var(--color-text-muted)] mt-1.5">
-                    {form.cta_type === "link"
-                      ? "Abre o link direto ao tocar — mais rápido, sem esperar uma 2ª mensagem."
-                      : form.cta_type === "button"
-                      ? "Fica fixo dentro do balão. Ao tocar, manda o link de verdade na hora numa 2ª DM."
-                      : "Some se a pessoa ignorar ou responder outra coisa. Ao tocar, manda o link de verdade na hora numa 2ª DM."}
-                  </p>
-                </div>
-              )}
-
-              {/* Follow Gate Toggle */}
-              <div className="border border-[var(--color-border-subtle)] bg-[var(--color-surface-sunken)]/60 rounded-xl p-4 space-y-3">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="space-y-0.5">
-                    <div className="flex items-center gap-2">
-                      <label className="font-bold text-xs text-[var(--color-text-primary)] cursor-pointer" htmlFor="require_follow_toggle">
-                        Conteúdo exclusivo para seguidores
-                      </label>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[var(--color-terracotta)]/15 text-[var(--color-terracotta)]">
-                        Follow Gate
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-[var(--color-text-muted)]">
-                      Só libera o material depois que a pessoa seguir o seu perfil no Instagram.
-                    </p>
-                  </div>
-
-                  <label className="relative inline-flex items-center cursor-pointer shrink-0">
-                    <input
-                      id="require_follow_toggle"
-                      type="checkbox"
-                      checked={form.require_follow}
-                      onChange={(e) => {
-                        const checked = e.target.checked;
-                        setForm({
-                          ...form,
-                          require_follow: checked,
-                          follow_gate_message: checked && !form.follow_gate_message
-                            ? "Para liberar o seu material, você precisa me seguir no Instagram! Siga o perfil e depois toque no botão abaixo 👇"
-                            : form.follow_gate_message,
-                          follow_gate_button_text: checked && !form.follow_gate_button_text
-                            ? "Pronto, agora te sigo"
-                            : form.follow_gate_button_text,
-                        });
-                      }}
-                      className="sr-only peer"
-                    />
-                    <div className="w-9 h-5 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[var(--color-terracotta)]"></div>
-                  </label>
-                </div>
-
-                {form.require_follow && (
-                  <div className="pt-3 border-t border-[var(--color-border-subtle)] space-y-3">
-                    <div>
-                      <label className="block font-bold text-[var(--color-text-primary)] mb-1">
-                        Mensagem do Gate (Pedindo pra seguir)
-                      </label>
-                      <textarea
-                        rows={2}
-                        value={form.follow_gate_message}
-                        onChange={(e) => setForm({ ...form, follow_gate_message: e.target.value })}
-                        placeholder="Ex: Para liberar o material, você precisa me seguir no Instagram! Siga o perfil e toque no botão abaixo 👇"
-                        className="w-full bg-[var(--color-surface-sunken)] border border-[var(--color-border-default)] rounded-lg px-3 py-2 text-xs text-[var(--color-text-primary)] outline-none"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block font-bold text-[var(--color-text-primary)] mb-1">
-                        Texto do Botão do Gate
-                      </label>
-                      <input
-                        value={form.follow_gate_button_text}
-                        onChange={(e) => setForm({ ...form, follow_gate_button_text: e.target.value })}
-                        placeholder="Ex: Pronto, agora te sigo"
-                        className="w-full bg-[var(--color-surface-sunken)] border border-[var(--color-border-default)] rounded-lg px-3 py-2 text-xs text-[var(--color-text-primary)] outline-none"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="px-6 py-4 border-t border-[var(--color-border-subtle)] flex items-center justify-end gap-2.5">
-              <button
-                onClick={() => setShowForm(false)}
-                className="text-xs bg-[var(--color-surface-sunken)] hover:bg-[var(--color-surface-inset)] px-4 py-2 rounded-lg font-medium text-[var(--color-text-primary)]"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="text-xs bg-[var(--color-terracotta)] text-[var(--color-text-on-accent)] px-5 py-2 rounded-lg font-semibold hover:opacity-90 disabled:opacity-50"
-              >
-                {saving ? "Salvando..." : "Salvar Automação"}
-              </button>
-            </div>
-          </div>
-        </div>
+        <AutomationEditorModal
+          form={form}
+          onChange={(patch) => setForm({ ...form, ...patch })}
+          editingId={editingId}
+          saving={saving}
+          displayName={displayName}
+          displayHandle={displayHandle}
+          onClose={() => setShowForm(false)}
+          onSave={handleSave}
+        />
       )}
 
       {/* ========================================================

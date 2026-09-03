@@ -7,6 +7,7 @@ import {
   sendInstagramMessage,
   checkUserFollowsBusiness,
   findMatchingAutomation,
+  pickRandomCommentReply,
   type IgAutomation
 } from '@/lib/instagram'
 
@@ -163,11 +164,12 @@ async function handleComment(
     await logIgEvent('error', 'queue_insert_failed', { error: queueError.message, dedupeKey })
   }
 
-  if (automation.comment_reply_text) {
+  const replyText = pickRandomCommentReply(automation)
+  if (replyText) {
     const config = await getIgConfig(supabase)
     if (config) {
       try {
-        await replyToComment(commentId, config.access_token, automation.comment_reply_text)
+        await replyToComment(commentId, config.access_token, replyText)
       } catch (err) {
         await logIgEvent('error', 'comment_reply_failed', {
           error: errorMessage(err),
