@@ -255,3 +255,20 @@ export interface AsaasTransaction {
   invoices?: Invoice;
 }
 
+export type DiagramType = 'flowchart' | 'mindmap' | 'whiteboard';
+
+export interface Diagram {
+  id: string;
+  user_id: string;
+  client_id?: string | null;
+  title: string;
+  description?: string | null;
+  type: DiagramType;
+  data: Record<string, unknown>;
+  is_favorite: boolean;
+  created_at: string;
+  updated_at: string;
+  // Joined fields
+  client?: Pick<Client, 'id' | 'name' | 'nome_fantasia'>;
+  author?: Pick<User, 'id' | 'name' | 'avatar_url'>;
+}
