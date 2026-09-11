@@ -112,6 +112,22 @@ export interface Contract {
   contract_number?: number;
 }
 
+export interface Proposal {
+  id: string;
+  client_id: string;
+  title: string;
+  value?: number | null;
+  status: 'draft' | 'sent' | 'accepted' | 'rejected';
+  document_url: string;
+  document_file_name?: string;
+  source: string;
+  created_by_user_id?: string;
+  created_at: string;
+  updated_at: string;
+  // Joined fields
+  client?: Pick<Client, 'id' | 'name' | 'nome_fantasia'>;
+}
+
 export interface Notification {
   id: string;
   user_id: string;
