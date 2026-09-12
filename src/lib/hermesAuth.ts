@@ -38,6 +38,17 @@ export function getHermesDefaultUserId(): string {
 }
 
 /**
+ * Identidade própria do HERMES no chat interno (auth.users + public.users
+ * dedicados, ver script de provisionamento) — para as mensagens aparecerem
+ * como vindas do agente, não de uma pessoa real do time.
+ */
+export function getHermesBotUserId(): string {
+  const id = process.env.HERMES_BOT_USER_ID;
+  if (!id) throw new Error('HERMES_BOT_USER_ID não configurado.');
+  return id;
+}
+
+/**
  * Remove credenciais de acesso do cliente antes de responder ao agente
  * externo (portal_password e as senhas dentro de social_access).
  */

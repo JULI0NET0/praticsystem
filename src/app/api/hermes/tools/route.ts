@@ -93,6 +93,150 @@ const TOOLS = [
       required: ['client_id'],
     },
   },
+  {
+    name: 'list_demands',
+    description: 'Lista demandas, opcionalmente filtradas por cliente, status, responsável ou escopo.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        client_id: { type: 'string' },
+        status: { type: 'string', description: 'Ex.: pending, in_production, review, approved, completed.' },
+        assignee_id: { type: 'string' },
+        scope: { type: 'string', enum: ['client', 'internal'] },
+      },
+    },
+  },
+  {
+    name: 'get_demand',
+    description: 'Consulta uma demanda pelo ID, incluindo os comentários.',
+    input_schema: {
+      type: 'object',
+      properties: { id: { type: 'string' } },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'create_demand',
+    description: 'Cria uma nova demanda/tarefa, vinculada a um cliente ou interna.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        title: { type: 'string' },
+        description: { type: 'string' },
+        client_id: { type: 'string', description: 'Omitir para demanda interna.' },
+        priority: { type: 'string', enum: ['none', 'low', 'medium', 'high', 'urgent'] },
+        assignee_ids: { type: 'array', items: { type: 'string' } },
+        status: { type: 'string', description: 'Padrão: pending.' },
+        due_date: { type: 'string' },
+        due_time: { type: 'string' },
+        start_date: { type: 'string' },
+        type: { type: 'string' },
+      },
+      required: ['title'],
+    },
+  },
+  {
+    name: 'update_demand_status',
+    description: 'Muda o status de uma demanda existente.',
+    input_schema: {
+      type: 'object',
+      properties: { id: { type: 'string' }, status: { type: 'string' } },
+      required: ['id', 'status'],
+    },
+  },
+  {
+    name: 'add_demand_comment',
+    description: 'Adiciona um comentário de acompanhamento a uma demanda existente.',
+    input_schema: {
+      type: 'object',
+      properties: { id: { type: 'string' }, body: { type: 'string' } },
+      required: ['id', 'body'],
+    },
+  },
+  {
+    name: 'list_agenda_events',
+    description: 'Lista compromissos da agenda, opcionalmente filtrados por cliente, tipo ou período.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        client_id: { type: 'string' },
+        type: { type: 'string' },
+        from: { type: 'string' },
+        to: { type: 'string' },
+      },
+    },
+  },
+  {
+    name: 'create_agenda_event',
+    description:
+      'Agenda um novo compromisso e sincroniza automaticamente com o Google Calendar da conta correspondente ao tipo.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        title: { type: 'string' },
+        type: {
+          type: 'string',
+          enum: ['meeting', 'prospecting', 'task', 'social_media', 'ads', 'launch', 'payment', 'leadership_meeting', 'demand'],
+        },
+        date: { type: 'string', description: 'Data/hora ISO 8601.' },
+        description: { type: 'string' },
+        client_id: { type: 'string' },
+        assigned_to: { type: 'string' },
+        visibility: { type: 'string', enum: ['public', 'private'] },
+      },
+      required: ['title', 'type', 'date'],
+    },
+  },
+  {
+    name: 'update_agenda_event',
+    description: 'Atualiza título, data, descrição ou tipo de um compromisso existente (reflete no Google Calendar).',
+    input_schema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string' },
+        title: { type: 'string' },
+        date: { type: 'string' },
+        description: { type: 'string' },
+        type: { type: 'string' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'cancel_agenda_event',
+    description: 'Cancela (remove) um compromisso, inclusive do Google Calendar.',
+    input_schema: {
+      type: 'object',
+      properties: { id: { type: 'string' } },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'list_chat_messages',
+    description: 'Lista mensagens recentes do chat interno do time (canal geral ou uma conversa direta).',
+    input_schema: {
+      type: 'object',
+      properties: {
+        channel: { type: 'string', description: "Padrão: 'general'." },
+        with_user_id: { type: 'string', description: 'ID de um usuário para ler a DM com ele.' },
+        limit: { type: 'number' },
+      },
+    },
+  },
+  {
+    name: 'send_chat_message',
+    description:
+      'Envia uma mensagem no chat interno do time, como o próprio HERMES (identidade dedicada, não uma pessoa do time).',
+    input_schema: {
+      type: 'object',
+      properties: {
+        content: { type: 'string' },
+        channel: { type: 'string', description: "Padrão: 'general'." },
+        receiver_id: { type: 'string', description: 'ID de um usuário para mandar uma DM.' },
+      },
+      required: ['content'],
+    },
+  },
 ];
 
 export async function GET(request: Request) {
