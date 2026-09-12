@@ -435,7 +435,6 @@ export async function listChatMessages(
   filters: { channel?: string; with_user_id?: string; limit?: number } = {}
 ) {
   const supabase = getSupabaseAdmin();
-  const botId = getHermesBotUserId();
   const limit = Math.min(filters.limit || 30, 100);
 
   let query = supabase
@@ -446,6 +445,7 @@ export async function listChatMessages(
 
   if (filters.with_user_id) {
     // Thread de DM entre o HERMES e um usuário específico.
+    const botId = getHermesBotUserId();
     query = query.or(
       `and(sender_id.eq.${botId},receiver_id.eq.${filters.with_user_id}),and(sender_id.eq.${filters.with_user_id},receiver_id.eq.${botId})`
     );
