@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Plus } from "lucide-react";
-import type { Demand } from "@/types/demandas";
+import { clientLabel, type Demand } from "@/types/demandas";
 import type { QuickParseResult } from "@/lib/quickParse";
 import { useDemandas } from "./DemandasProvider";
 import QuickAddInput from "./QuickAddInput";
@@ -20,22 +20,42 @@ interface Props {
  * O responsável padrão é quem está criando (regra em createDemand).
  */
 export default function QuickAddRow({ defaults, placeholder, onCreated }: Props) {
-  const { createDemand, filters } = useDemandas();
+  const { createDemand, filters, clients } = useDemandas();
   const [value, setValue] = useState("");
   const [saving, setSaving] = useState(false);
 
   const submit = async (parsed: QuickParseResult) => {
     if (!parsed.title.trim() || saving) return;
 
+    let title = parsed.title.trim();
+    const resolvedClientId = parsed.clientId ?? defaults?.client_id ?? filters.clientId ?? null;
+
+    if (resolvedClientId && typeof window !== "undefined") {
+      try {
+        if (window.localStorage.getItem("pratic-demandas-append-client-title") === "true") {
+          const client = clients.find((c) => c.id === resolvedClientId);
+          if (client) {
+            const cLabel = clientLabel(client);
+            const lowerTitle = title.toLowerCase();
+            const lowerLabel = cLabel.toLowerCase();
+            const lowerName = (client.name || "").toLowerCase();
+            if (!lowerTitle.includes(lowerLabel) && (!lowerName || !lowerTitle.includes(lowerName))) {
+              title = `${title} - ${cLabel}`;
+            }
+          }
+        }
+      } catch {}
+    }
+
     setSaving(true);
     const created = await createDemand({
       ...defaults,
-      title: parsed.title,
+      title,
       // O que veio escrito no título vence o padrão do grupo/coluna
       due_date: parsed.dueDate ?? defaults?.due_date ?? null,
       due_time: parsed.dueTime ?? null,
       priority: parsed.priority ?? defaults?.priority ?? undefined,
-      client_id: parsed.clientId ?? defaults?.client_id ?? filters.clientId ?? null,
+      client_id: resolvedClientId,
       assignee_ids: parsed.assigneeIds.length ? parsed.assigneeIds : undefined,
     });
     setSaving(false);

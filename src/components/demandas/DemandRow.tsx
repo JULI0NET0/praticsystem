@@ -42,11 +42,16 @@ export default function DemandRow({
   selected = false,
   onSelect,
 }: Props) {
-  const { getStatus, getClient, commentsOf, attachmentsOf, toggleComplete } = useDemandas();
+  const { getStatus, getClient, commentsOf, attachmentsOf, toggleComplete, showClientInTitle } = useDemandas();
   const reduceMotion = useReducedMotion();
 
   const status = getStatus(demand.status);
   const client = getClient(demand.client_id);
+  const cName = client ? clientLabel(client) : "";
+  const displayClientInTitle =
+    showClientInTitle &&
+    cName &&
+    !demand.title.toLowerCase().includes(cName.toLowerCase());
   const done = demand.status_category === "fechado";
   const priorityColor = PRIORITY_COLORS[demand.priority];
 
@@ -210,6 +215,11 @@ export default function DemandRow({
                 transition={{ duration: reduceMotion ? 0 : 0.25 }}
               >
                 {demand.title}
+                {displayClientInTitle && (
+                  <span style={{ opacity: 0.8, fontWeight: 500, marginLeft: 6 }}>
+                    — {cName}
+                  </span>
+                )}
               </motion.span>
               {/* Risco desenhado: cresce da esquerda, em vez de piscar pronto */}
               <motion.span

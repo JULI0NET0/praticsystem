@@ -60,6 +60,21 @@ export default function NewDemandModal({
   const [touched, setTouched] = useState<Set<TouchedField>>(new Set());
   const [saving, setSaving] = useState(false);
   const [wasOpen, setWasOpen] = useState(false);
+  const [appendClientToTitle, setAppendClientToTitle] = useState(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return window.localStorage.getItem("pratic-demandas-append-client-title") === "true";
+    } catch {
+      return false;
+    }
+  });
+
+  const handleToggleAppendClient = (checked: boolean) => {
+    setAppendClientToTitle(checked);
+    try {
+      window.localStorage.setItem("pratic-demandas-append-client-title", String(checked));
+    } catch {}
+  };
 
   // Reabrir sempre parte do zero, com quem criou já atribuído e data padrão hoje.
   // Ajuste durante o render (padrão do React para estado derivado de props).
@@ -119,9 +134,23 @@ export default function NewDemandModal({
     if (!result.title.trim() || saving) return;
     const merged = resolve(result);
 
+    let finalTitle = result.title.trim();
+    if (appendClientToTitle && merged.clientId) {
+      const selectedClient = clients.find((c) => c.id === merged.clientId);
+      if (selectedClient) {
+        const cLabel = clientLabel(selectedClient);
+        const lowerTitle = finalTitle.toLowerCase();
+        const lowerLabel = cLabel.toLowerCase();
+        const lowerName = (selectedClient.name || "").toLowerCase();
+        if (!lowerTitle.includes(lowerLabel) && (!lowerName || !lowerTitle.includes(lowerName))) {
+          finalTitle = `${finalTitle} - ${cLabel}`;
+        }
+      }
+    }
+
     setSaving(true);
     const created = await createDemand({
-      title: result.title,
+      title: finalTitle,
       client_id: merged.clientId,
       status: statusId || undefined,
       priority: merged.priority,
@@ -197,9 +226,12 @@ export default function NewDemandModal({
     [],
   );
 
-  // O que os campos mostram: a resolução ao vivo, para o usuário ver o
-  // efeito do que digitou antes de salvar.
   const effective = resolve(parsed);
+  const selectedClientObj = useMemo(
+    () => (effective.clientId ? clients.find((c) => c.id === effective.clientId) : null),
+    [clients, effective.clientId],
+  );
+  const selectedClientName = selectedClientObj ? clientLabel(selectedClientObj) : null;
 
   return (
     <DialogShell
@@ -241,6 +273,34 @@ export default function NewDemandModal({
             />
           </div>
         </FormField>
+
+        {selectedClientName && (
+          <label
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              fontSize: "0.78rem",
+              color: "var(--text-secondary)",
+              cursor: "pointer",
+              userSelect: "none",
+              marginTop: -6,
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={appendClientToTitle}
+              onChange={(e) => handleToggleAppendClient(e.target.checked)}
+              style={{ accentColor: "var(--accent)", cursor: "pointer" }}
+            />
+            <span>
+              Incluir nome do cliente no título:{" "}
+              <strong style={{ color: "var(--text-primary)" }}>
+                {parsed.title.trim() || "Demanda"} - {selectedClientName}
+              </strong>
+            </span>
+          </label>
+        )}
 
         <div className="new-demand-fields-grid">
           <FormField label="Cliente">

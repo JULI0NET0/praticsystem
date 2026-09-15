@@ -3,7 +3,7 @@
 import { useMemo, useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
-import { Plus, SlidersHorizontal, List, LayoutGrid } from "lucide-react";
+import { Plus, SlidersHorizontal, List, LayoutGrid, Building2 } from "lucide-react";
 import PageHeader from "@/components/ui/PageHeader";
 import type { DemandKanbanGroupBy, DemandListGroupBy, DemandView } from "@/types/demandas";
 import { useDemandas } from "./DemandasProvider";
@@ -57,7 +57,14 @@ function readStoredKanbanGroupBy(): DemandKanbanGroupBy {
 export default function DemandasView() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { visibleDemands, demands, loading, filters } = useDemandas();
+  const {
+    visibleDemands,
+    demands,
+    loading,
+    filters,
+    showClientInTitle,
+    setShowClientInTitle,
+  } = useDemandas();
 
   const [view, setView] = useState<DemandView>(readStoredView);
   const [groupBy, setGroupBy] = useState<DemandListGroupBy>(readStoredGroupBy);
@@ -327,6 +334,36 @@ export default function DemandasView() {
             )}
           </>
         )}
+
+        <button
+          type="button"
+          onClick={() => setShowClientInTitle(!showClientInTitle)}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            padding: "6px 12px",
+            borderRadius: 9,
+            border: showClientInTitle ? "1px solid var(--accent)" : "1px solid var(--border)",
+            background: showClientInTitle
+              ? "color-mix(in oklab, var(--accent) 14%, transparent)"
+              : "transparent",
+            cursor: "pointer",
+            fontSize: "0.78rem",
+            fontWeight: 700,
+            color: showClientInTitle ? "var(--accent)" : "var(--text-tertiary)",
+            marginLeft: "auto",
+            transition: "all 0.15s ease",
+          }}
+          title={
+            showClientInTitle
+              ? "Ocultar nome do cliente ao lado do título"
+              : "Exibir nome do cliente ao lado do título (Demanda — Cliente)"
+          }
+        >
+          <Building2 size={13} />
+          <span>Demanda + Cliente</span>
+        </button>
       </div>
 
       {view === "list" ? (

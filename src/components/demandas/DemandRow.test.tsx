@@ -12,15 +12,20 @@ vi.mock("./AssigneePicker", () => ({
 }));
 
 const toggleComplete = vi.fn();
+let mockContext = {
+  getStatus: () => undefined,
+  getClient: (id?: string | null) =>
+    id === "c1"
+      ? { id: "c1", name: "Kallas Design", nome_fantasia: "Kallas Design" }
+      : undefined,
+  commentsOf: () => [],
+  attachmentsOf: () => [],
+  toggleComplete,
+  showClientInTitle: false,
+};
 
 vi.mock("./DemandasProvider", () => ({
-  useDemandas: () => ({
-    getStatus: () => undefined,
-    getClient: () => undefined,
-    commentsOf: () => [],
-    attachmentsOf: () => [],
-    toggleComplete,
-  }),
+  useDemandas: () => mockContext,
 }));
 
 const { default: DemandRow } = await import("./DemandRow");
@@ -85,5 +90,19 @@ describe("DemandRow", () => {
     await userEvent.click(screen.getByLabelText("Concluir demanda"));
 
     expect(onOpen).not.toHaveBeenCalled();
+  });
+
+  it("exibe o nome do cliente ao lado do título se showClientInTitle for true", () => {
+    mockContext.showClientInTitle = true;
+    render(
+      <DemandRow
+        demand={demand({ title: "Enviar proposta Site", client_id: "c1" })}
+        onOpen={() => {}}
+      />,
+    );
+    expect(screen.getByText("Enviar proposta Site")).toBeTruthy();
+    expect(screen.getByText(/— Kallas Design/)).toBeTruthy();
+    expect(screen.getAllByText(/Kallas Design/)).toHaveLength(2);
+    mockContext.showClientInTitle = false;
   });
 });

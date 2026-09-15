@@ -66,6 +66,17 @@ function writeSoundPreference(enabled: boolean): void {
   for (const listener of soundListeners) listener();
 }
 
+const SHOW_CLIENT_IN_TITLE_STORAGE_KEY = "pratic-demandas-show-client-title";
+
+function readShowClientInTitlePreference(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.localStorage.getItem(SHOW_CLIENT_IN_TITLE_STORAGE_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+
 interface DemandasContextValue {
   demands: Demand[];
   statuses: DemandStatus[];
@@ -96,6 +107,10 @@ interface DemandasContextValue {
   /** Som ao concluir. Preferência por navegador. */
   soundEnabled: boolean;
   setSoundEnabled: (enabled: boolean) => void;
+
+  /** Exibir cliente junto com o título da demanda (Demanda - Cliente) */
+  showClientInTitle: boolean;
+  setShowClientInTitle: (enabled: boolean) => void;
 
   upsertStatus: (status: DemandStatus) => Promise<void>;
   deleteStatus: (id: string) => Promise<void>;
@@ -358,6 +373,22 @@ export function DemandasProvider({ children }: { children: ReactNode }) {
 
   const setSoundEnabled = useCallback((enabled: boolean) => {
     writeSoundPreference(enabled);
+  }, []);
+
+  const [showClientInTitle, setShowClientInTitleState] = useState<boolean>(
+    readShowClientInTitlePreference,
+  );
+
+  const setShowClientInTitle = useCallback((enabled: boolean) => {
+    setShowClientInTitleState(enabled);
+    try {
+      window.localStorage.setItem(
+        SHOW_CLIENT_IN_TITLE_STORAGE_KEY,
+        enabled ? "true" : "false",
+      );
+    } catch {
+      // ignora
+    }
   }, []);
 
   const visibleDemands = useMemo(() => {
@@ -1171,6 +1202,8 @@ export function DemandasProvider({ children }: { children: ReactNode }) {
       batchToggleComplete,
       soundEnabled,
       setSoundEnabled,
+      showClientInTitle,
+      setShowClientInTitle,
       upsertStatus,
       deleteStatus,
       reorderStatuses,
@@ -1215,6 +1248,8 @@ export function DemandasProvider({ children }: { children: ReactNode }) {
       batchToggleComplete,
       soundEnabled,
       setSoundEnabled,
+      showClientInTitle,
+      setShowClientInTitle,
       upsertStatus,
       deleteStatus,
       reorderStatuses,

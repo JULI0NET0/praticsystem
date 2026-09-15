@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { computePosition, flip, offset, shift, size } from "@floating-ui/dom";
 import { AnimatePresence, motion } from "framer-motion";
@@ -53,6 +53,7 @@ export default function QuickAddInput({
   const panelRef = useRef<HTMLDivElement>(null);
   const [caret, setCaret] = useState(0);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [dismissed, setDismissed] = useState(false);
 
   const catalogs = useMemo<QuickCatalogs>(
     () => ({
@@ -79,6 +80,19 @@ export default function QuickAddInput({
   const suggestions = useMemo(() => {
     if (!marker) return [];
     const query = marker.query.trim().toLowerCase();
+
+    // Se já foi reconhecido como token completo no título, não precisa sugerir
+    if (marker.marker === "#") {
+      const alreadyParsedClient = parsed.tokens.some(
+        (t) => t.kind === "client" && t.label.toLowerCase() === query,
+      );
+      if (alreadyParsedClient) return [];
+    } else if (marker.marker === "@") {
+      const alreadyParsedUser = parsed.tokens.some(
+        (t) => t.kind === "assignee" && t.label.toLowerCase() === query,
+      );
+      if (alreadyParsedUser) return [];
+    }
 
     if (marker.marker === "#") {
       // Clientes: preferência por clientes ativos.
@@ -131,13 +145,31 @@ export default function QuickAddInput({
         )
       : pool;
     return matches.slice(0, 6).map((u) => ({ ...u, isInactive: false }));
-  }, [marker, clients, catalogs.users]);
+  }, [marker, clients, catalogs.users, parsed.tokens]);
+
+  const visibleSuggestions = dismissed ? [] : suggestions;
+
+  // Fecha o autocomplete ao clicar fora
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        panelRef.current &&
+        !panelRef.current.contains(e.target as Node) &&
+        inputRef.current &&
+        !inputRef.current.contains(e.target as Node)
+      ) {
+        setDismissed(true);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // Posicionamento inteligente (Floating UI + Portal):
   // Se estiver no rodapé da página ou na última linha, abre para CIMA (flip),
   // garantindo sobreposição e visibilidade total sobre outros elementos.
   useLayoutEffect(() => {
-    if (suggestions.length === 0) return;
+    if (visibleSuggestions.length === 0) return;
     const input = inputRef.current;
     const panel = panelRef.current;
     if (!input || !panel) return;
@@ -174,9 +206,10 @@ export default function QuickAddInput({
       window.removeEventListener("resize", place);
       window.removeEventListener("scroll", place, true);
     };
-  }, [suggestions.length]);
+  }, [visibleSuggestions.length]);
 
   const complete = (label: string) => {
+    setDismissed(true);
     const next = applyMarkerCompletion(value, caret, label);
     onChange(next.text);
     setCaret(next.caret);
@@ -189,20 +222,25 @@ export default function QuickAddInput({
   const syncCaret = () => setCaret(inputRef.current?.selectionStart ?? 0);
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (suggestions.length > 0) {
+    if (visibleSuggestions.length > 0) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setDismissed(true);
+        return;
+      }
       if (event.key === "ArrowDown") {
         event.preventDefault();
-        setActiveIndex((index) => (index + 1) % suggestions.length);
+        setActiveIndex((index) => (index + 1) % visibleSuggestions.length);
         return;
       }
       if (event.key === "ArrowUp") {
         event.preventDefault();
-        setActiveIndex((index) => (index - 1 + suggestions.length) % suggestions.length);
+        setActiveIndex((index) => (index - 1 + visibleSuggestions.length) % visibleSuggestions.length);
         return;
       }
       if (event.key === "Enter" || event.key === "Tab") {
         event.preventDefault();
-        complete(suggestions[activeIndex].label);
+        complete(visibleSuggestions[activeIndex].label);
         setActiveIndex(0);
         return;
       }
@@ -220,6 +258,7 @@ export default function QuickAddInput({
         value={value}
         autoFocus={autoFocus}
         onChange={(event) => {
+          setDismissed(false);
           onChange(event.target.value);
           setCaret(event.target.selectionStart ?? 0);
           setActiveIndex(0);
@@ -293,7 +332,7 @@ export default function QuickAddInput({
       {typeof document !== "undefined" &&
         createPortal(
           <AnimatePresence>
-            {suggestions.length > 0 && (
+            {visibleSuggestions.length > 0 && (
               <motion.div
                 ref={panelRef}
                 initial={{ opacity: 0, y: -4 }}
@@ -304,7 +343,7 @@ export default function QuickAddInput({
                 style={{ position: "fixed", zIndex: 9999 }}
               >
                 <div className="combobox-list">
-                  {suggestions.map((item, index) => {
+                  {visibleSuggestions.map((item, index) => {
                     const displayLabel =
                       marker?.marker === "@"
                         ? `@${item.label.replace(/^@/, "")}`

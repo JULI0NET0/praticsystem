@@ -31,11 +31,16 @@ export default function DemandCard({
   onSelect,
   showStatusPill = false,
 }: Props) {
-  const { getClient, getStatus, commentsOf, attachmentsOf } = useDemandas();
+  const { getClient, getStatus, commentsOf, attachmentsOf, showClientInTitle } = useDemandas();
 
   const client = getClient(demand.client_id);
   const status = getStatus(demand.status);
   const done = demand.status_category === "fechado";
+  const cName = client ? clientLabel(client) : "";
+  const displayClientInTitle =
+    showClientInTitle &&
+    cName &&
+    !demand.title.toLowerCase().includes(cName.toLowerCase());
 
   // Contagem vem agregada da listagem; quando o drawer já carregou os detalhes
   // desta demanda, prefere-se o que está em memória (reflete o que acabou de
@@ -100,6 +105,11 @@ export default function DemandCard({
         }}
       >
         {demand.title}
+        {displayClientInTitle && (
+          <span style={{ opacity: 0.8, fontWeight: 500, marginLeft: 6 }}>
+            — {cName}
+          </span>
+        )}
       </span>
 
       <div
