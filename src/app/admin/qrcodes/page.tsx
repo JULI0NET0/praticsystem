@@ -10,6 +10,7 @@ import Badge from "@/components/ui/Badge";
 import { Field, Input, Select } from "@/components/ui/Field";
 import DataTable, { Column } from "@/components/ui/DataTable";
 import EmptyState from "@/components/ui/EmptyState";
+import Skeleton from "@/components/ui/Skeleton";
 import { useToast } from "@/components/CustomToast";
 import RoleGuard from "@/components/auth/RoleGuard";
 import type { Client } from "@/types/database";
@@ -51,38 +52,49 @@ function QrCodesContent() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
+  const [previewLoaded, setPreviewLoaded] = useState(false);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const { showToast } = useToast();
 
   useEffect(() => {
-    fetchLinks();
-    fetchClients();
+    fetchInitialData();
   }, []);
 
-  async function fetchLinks() {
+  async function fetchInitialData() {
     try {
       setLoading(true);
-      const res = await fetch("/api/qrcodes");
-      if (!res.ok) throw new Error(`Erro ao buscar QR Codes: ${res.status}`);
-      setLinks(await res.json());
+      const [linksRes, clientsRes] = await Promise.all([
+        fetch("/api/qrcodes"),
+        fetch("/api/clients").catch(() => null)
+      ]);
+
+      if (!linksRes.ok) throw new Error(`Erro ao buscar QR Codes: ${linksRes.status}`);
+      const linksData = await linksRes.json();
+      setLinks(linksData);
+
+      if (clientsRes && clientsRes.ok) {
+        setClients(await clientsRes.json());
+      }
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Erro ao buscar QR Codes.", "error");
+      showToast(err instanceof Error ? err.message : "Erro ao buscar dados.", "error");
     } finally {
       setLoading(false);
     }
   }
 
-  async function fetchClients() {
+  async function fetchLinks() {
     try {
-      const res = await fetch("/api/clients");
-      if (res.ok) setClients(await res.json());
-    } catch {
-      // lista de clientes é só pra o select — falha aqui não bloqueia a tela
+      const res = await fetch("/api/qrcodes");
+      if (!res.ok) throw new Error(`Erro ao buscar QR Codes: ${res.status}`);
+      setLinks(await res.json());
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Erro ao buscar QR Codes.", "error");
     }
   }
 
   function openCreateModal() {
     setForm(EMPTY_FORM);
+    setPreviewLoaded(false);
     setModalOpen(true);
   }
 
@@ -93,6 +105,7 @@ function QrCodesContent() {
       destination_url: link.destination_url,
       client_id: link.client_id ?? ""
     });
+    setPreviewLoaded(false);
     setModalOpen(true);
   }
 
@@ -238,7 +251,7 @@ function QrCodesContent() {
 
       <Card padding="none">
         {loading ? (
-          <div style={{ padding: 24 }}>Carregando...</div>
+          <QrCodesTableSkeleton />
         ) : links.length === 0 ? (
           <EmptyState
             icon={<QrCode size={28} />}
@@ -316,13 +329,65 @@ function QrCodesContent() {
                 </Field>
 
                 {form.id && (
-                  <img
-                    src={`/api/qrcodes/${form.id}/image`}
-                    alt="Prévia do QR Code"
-                    width={140}
-                    height={140}
-                    style={{ alignSelf: "center", borderRadius: "var(--radius-card)" }}
-                  />
+                  <div
+                    style={{
+                      position: "relative",
+                      width: 140,
+                      height: 140,
+                      alignSelf: "center",
+                      borderRadius: "var(--radius-card, 8px)",
+                      overflow: "hidden",
+                      border: "1px solid var(--color-cream-border)",
+                      background: "var(--color-container-low, #f4f4f0)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center"
+                    }}
+                  >
+                    {!previewLoaded && (
+                      <div
+                        style={{
+                          position: "absolute",
+                          inset: 0,
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: 8,
+                          background: "var(--color-container-low, #f4f4f0)"
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: 26,
+                            height: 26,
+                            borderRadius: "50%",
+                            border: "2.5px solid rgba(217, 119, 87, 0.2)",
+                            borderTopColor: "var(--color-terracotta, #d97757)",
+                            animation: "spin 0.75s linear infinite"
+                          }}
+                        />
+                        <span style={{ fontSize: 11, color: "var(--color-terracotta-ink, #a54a29)", fontWeight: 600 }}>
+                          Carregando QR...
+                        </span>
+                      </div>
+                    )}
+                    <img
+                      src={`/api/qrcodes/${form.id}/image`}
+                      alt="Prévia do QR Code"
+                      width={140}
+                      height={140}
+                      onLoad={() => setPreviewLoaded(true)}
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "contain",
+                        borderRadius: "var(--radius-card, 8px)",
+                        opacity: previewLoaded ? 1 : 0,
+                        transition: "opacity 0.25s ease"
+                      }}
+                    />
+                  </div>
                 )}
 
                 <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 4 }}>
@@ -341,3 +406,111 @@ function QrCodesContent() {
     </div>
   );
 }
+
+function QrCodesTableSkeleton() {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", width: "100%" }}>
+      {/* Top Banner de Loading com Indicador Laranja */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "12px 18px",
+          borderBottom: "1px solid var(--color-cream-border)",
+          background: "var(--color-container-low, #f4f4f0)"
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div
+            style={{
+              width: 16,
+              height: 16,
+              borderRadius: "50%",
+              border: "2px solid rgba(217, 119, 87, 0.2)",
+              borderTopColor: "var(--color-terracotta, #d97757)",
+              animation: "spin 0.75s linear infinite"
+            }}
+          />
+          <span
+            style={{
+              fontSize: "var(--text-caption, 12px)",
+              color: "var(--color-terracotta-ink, #a54a29)",
+              fontWeight: 600,
+              letterSpacing: "0.01em"
+            }}
+          >
+            Carregando QR Codes...
+          </span>
+        </div>
+        <span
+          style={{
+            fontSize: "var(--text-caption, 12px)",
+            color: "var(--color-stone-gray, #87867f)",
+            fontVariantNumeric: "tabular-nums"
+          }}
+        >
+          Sincronizando dados
+        </span>
+      </div>
+
+      {/* Linhas Skeleton estruturadas */}
+      <div style={{ padding: "8px 18px", display: "flex", flexDirection: "column", gap: 12 }}>
+        {[1, 2, 3, 4].map((i) => (
+          <div
+            key={i}
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1.8fr 1.2fr 1.5fr 70px 80px 100px",
+              alignItems: "center",
+              gap: 16,
+              padding: "12px 0",
+              borderBottom: i < 4 ? "1px solid var(--color-container-low, #f4f4f0)" : "none"
+            }}
+          >
+            {/* Título com mini ícone sutil */}
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: "var(--radius-sm, 6px)",
+                  background: "rgba(217, 119, 87, 0.08)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "var(--color-terracotta, #d97757)",
+                  opacity: 0.7,
+                  flexShrink: 0
+                }}
+              >
+                <QrCode size={15} />
+              </div>
+              <Skeleton width={`${60 + (i % 3) * 15}%`} height={15} radius={4} />
+            </div>
+
+            {/* Cliente */}
+            <Skeleton width="65%" height={14} radius={4} />
+
+            {/* URL Curta */}
+            <Skeleton width="80%" height={14} radius={4} />
+
+            {/* Cliques */}
+            <Skeleton width="45%" height={14} radius={4} />
+
+            {/* Badge Status */}
+            <Skeleton width={52} height={22} radius={11} />
+
+            {/* Ações */}
+            <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
+              <Skeleton width={26} height={26} radius={6} />
+              <Skeleton width={26} height={26} radius={6} />
+              <Skeleton width={26} height={26} radius={6} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
