@@ -13,6 +13,7 @@ import {
   CalendarRange,
   Trophy,
   Network,
+  QrCode,
   type LucideIcon
 } from "lucide-react";
 
@@ -50,6 +51,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/admin/clients", label: "Clientes", icon: Users, roles: ['admin', 'board', 'social_media'] },
       { href: "/admin/services", label: "Serviços", icon: Briefcase, roles: ['admin', 'board'] },
+      { href: "/admin/qrcodes", label: "QR Codes", icon: QrCode, roles: ['admin', 'board', 'social_media'] },
     ]
   },
   {
