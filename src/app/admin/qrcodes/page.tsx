@@ -11,7 +11,10 @@ import { Field, Input, Select } from "@/components/ui/Field";
 import DataTable, { Column } from "@/components/ui/DataTable";
 import EmptyState from "@/components/ui/EmptyState";
 import { useToast } from "@/components/CustomToast";
+import RoleGuard from "@/components/auth/RoleGuard";
 import type { Client } from "@/types/database";
+
+const ALLOWED_ROLES = ["admin", "board", "social_media"];
 
 interface QrLink {
   id: string;
@@ -35,6 +38,14 @@ interface FormState {
 const EMPTY_FORM: FormState = { id: null, title: "", destination_url: "", client_id: "" };
 
 export default function QrCodesPage() {
+  return (
+    <RoleGuard allowedRoles={ALLOWED_ROLES}>
+      <QrCodesContent />
+    </RoleGuard>
+  );
+}
+
+function QrCodesContent() {
   const [links, setLinks] = useState<QrLink[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
