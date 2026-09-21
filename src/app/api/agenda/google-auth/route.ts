@@ -15,7 +15,8 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const host = req.headers.get('host') || 'localhost:3000';
+    const forwardedHost = req.headers.get('x-forwarded-host');
+    const host = forwardedHost || req.headers.get('host') || 'www.praticlabs.com.br';
     const protocol = req.headers.get('x-forwarded-proto') || (host.includes('localhost') ? 'http' : 'https');
     const redirectUri = `${protocol}://${host}/api/agenda/google-auth/callback`;
 

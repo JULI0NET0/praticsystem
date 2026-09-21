@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { exchangeGoogleAuthCode } from '@/lib/googleCalendar';
+import { exchangeGoogleAuthCode, saveRefreshTokenToDb, GoogleAccount } from '@/lib/googleCalendar';
 
 export async function GET(req: NextRequest) {
   try {
@@ -22,7 +22,8 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    const host = req.headers.get('host') || 'localhost:3000';
+    const forwardedHost = req.headers.get('x-forwarded-host');
+    const host = forwardedHost || req.headers.get('host') || 'www.praticlabs.com.br';
     const protocol = req.headers.get('x-forwarded-proto') || (host.includes('localhost') ? 'http' : 'https');
     const redirectUri = `${protocol}://${host}/api/agenda/google-auth/callback`;
 
@@ -31,6 +32,13 @@ export async function GET(req: NextRequest) {
 
     let autoSaved = false;
     if (tokenData.refresh_token) {
+      // Salva no banco de dados (Supabase) para persistência permanente em produção Vercel
+      const savedToDb = await saveRefreshTokenToDb(state as GoogleAccount, tokenData.refresh_token);
+      if (savedToDb) {
+        autoSaved = true;
+      }
+
+      // Também tenta gravar no .env.local caso esteja em ambiente de desenvolvimento local
       try {
         const fs = await import('fs');
         const path = await import('path');
@@ -47,8 +55,8 @@ export async function GET(req: NextRequest) {
           autoSaved = true;
           process.env[envVarName] = tokenData.refresh_token;
         }
-      } catch (saveErr) {
-        console.warn('Não foi possível gravar no .env.local:', saveErr);
+      } catch {
+        // Ignora se for read-only
       }
     }
 
@@ -215,7 +223,7 @@ function renderHtmlSuccess({
     ${
       autoSaved
         ? `<div class="badge-success">
-             ✓ <strong>Atualizado automaticamente:</strong> A variável <code>${envVarName}</code> foi salva no seu arquivo <code>.env.local</code> local!
+             ✓ <strong>Sincronização Ativa:</strong> A autorização foi salva no sistema com sucesso. A Agenda já está sincronizada e pronta para uso!
            </div>`
         : ''
     }

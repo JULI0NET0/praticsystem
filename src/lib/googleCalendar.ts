@@ -34,10 +34,104 @@ function getRefreshToken(account: GoogleAccount): string {
   return '';
 }
 
+const refreshTokenCache: Partial<Record<GoogleAccount, string>> = {};
 const accessTokenCache: Partial<Record<GoogleAccount, { token: string; expiresAt: number }>> = {};
 
+export function setCachedRefreshToken(account: GoogleAccount, token: string) {
+  refreshTokenCache[account] = token;
+}
+
+export async function getRefreshTokenAsync(account: GoogleAccount): Promise<string> {
+  if (refreshTokenCache[account]) {
+    return refreshTokenCache[account]!;
+  }
+  const fromEnv = getRefreshToken(account);
+  if (fromEnv) {
+    refreshTokenCache[account] = fromEnv;
+    return fromEnv;
+  }
+
+  // Busca do Supabase no workspace_settings do usuário admin
+  try {
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (supabaseUrl && serviceKey) {
+      const supabase = createClient(supabaseUrl, serviceKey);
+      const { data } = await supabase
+        .from('users')
+        .select('workspace_settings')
+        .eq('role', 'admin')
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .single();
+
+      const tokenFromDb = data?.workspace_settings?.google_tokens?.[account]?.refresh_token;
+      if (tokenFromDb) {
+        refreshTokenCache[account] = tokenFromDb;
+        return tokenFromDb;
+      }
+    }
+  } catch (err) {
+    console.warn('Erro ao buscar token do Google no Supabase:', err);
+  }
+
+  return '';
+}
+
+export async function saveRefreshTokenToDb(account: GoogleAccount, refreshToken: string): Promise<boolean> {
+  refreshTokenCache[account] = refreshToken;
+  const envVar = `GOOGLE_REFRESH_TOKEN_${account.toUpperCase()}`;
+  process.env[envVar] = refreshToken;
+
+  try {
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (supabaseUrl && serviceKey) {
+      const supabase = createClient(supabaseUrl, serviceKey);
+      const { data: adminUser } = await supabase
+        .from('users')
+        .select('id, workspace_settings')
+        .eq('role', 'admin')
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .single();
+
+      if (adminUser) {
+        const currentSettings = adminUser.workspace_settings || {};
+        const googleTokens = currentSettings.google_tokens || {};
+        googleTokens[account] = {
+          refresh_token: refreshToken,
+          updated_at: new Date().toISOString(),
+        };
+
+        await supabase
+          .from('users')
+          .update({
+            workspace_settings: {
+              ...currentSettings,
+              google_tokens: googleTokens,
+            },
+          })
+          .eq('id', adminUser.id);
+        return true;
+      }
+    }
+  } catch (err) {
+    console.error('Falha ao persistir token do Google no Supabase:', err);
+  }
+  return false;
+}
+
 export function isAccountConfigured(account: GoogleAccount): boolean {
-  return Boolean(getClientId() && getClientSecret() && getRefreshToken(account));
+  const token = refreshTokenCache[account] || getRefreshToken(account);
+  return Boolean(getClientId() && getClientSecret() && token);
+}
+
+export async function isAccountConfiguredAsync(account: GoogleAccount): Promise<boolean> {
+  const token = await getRefreshTokenAsync(account);
+  return Boolean(getClientId() && getClientSecret() && token);
 }
 
 export function isOAuthConfigured(): boolean {
@@ -100,7 +194,7 @@ export async function getValidAccessToken(account: GoogleAccount): Promise<strin
     return cached.token;
   }
 
-  const refreshToken = getRefreshToken(account);
+  const refreshToken = await getRefreshTokenAsync(account);
   if (!refreshToken) {
     throw new Error(
       `Conta Google "${account}" não configurada. Defina GOOGLE_REFRESH_TOKEN_${account.toUpperCase()} ou autorize via /admin/schedule.`

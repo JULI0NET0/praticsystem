@@ -9,6 +9,7 @@ import {
   listEvents,
   inferCategoryFromEvent,
   isAccountConfigured,
+  isAccountConfiguredAsync,
   isOAuthConfigured,
   testAccountToken,
 } from '@/lib/googleCalendar';
@@ -22,8 +23,8 @@ const supabase = createClient(
 export async function GET() {
   try {
     const isOauthReady = isOAuthConfigured();
-    const agenciapraticConfigured = isAccountConfigured('agenciapratic');
-    const praticlabsConfigured = isAccountConfigured('praticlabs');
+    const agenciapraticConfigured = await isAccountConfiguredAsync('agenciapratic');
+    const praticlabsConfigured = await isAccountConfiguredAsync('praticlabs');
 
     let agenciapraticValid = false;
     let agenciapraticExpired = false;
@@ -75,8 +76,9 @@ export async function POST(req: NextRequest) {
     // ==========================================
     if (action === 'pull') {
       const targetAccount: GoogleAccount = account || 'agenciapratic';
+      const targetConfigured = await isAccountConfiguredAsync(targetAccount);
 
-      if (!isAccountConfigured(targetAccount)) {
+      if (!targetConfigured) {
         return NextResponse.json(
           {
             error: `Conta "${targetAccount}" não configurada no Google Calendar. Verifique as credenciais no .env.local`,
@@ -245,11 +247,13 @@ export async function POST(req: NextRequest) {
 
     const resolvedType = type || existing?.type || 'meeting';
     let targetAccount = CATEGORY_GOOGLE_ACCOUNT[resolvedType] || 'agenciapratic';
-    if (!isAccountConfigured(targetAccount) && isAccountConfigured('agenciapratic')) {
+    const isTargetConfigured = await isAccountConfiguredAsync(targetAccount);
+    const isAgenciapraticConfigured = await isAccountConfiguredAsync('agenciapratic');
+    if (!isTargetConfigured && isAgenciapraticConfigured) {
       targetAccount = 'agenciapratic';
     }
 
-    if (!isAccountConfigured(targetAccount)) {
+    if (!await isAccountConfiguredAsync(targetAccount)) {
       return NextResponse.json(
         {
           error: `Credenciais do Google não configuradas para a conta "${targetAccount}"`,
