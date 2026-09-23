@@ -127,6 +127,20 @@
   font-size: var(--text-ui);
 }
 
+/* Workspace: o painel ocupa a área útil, sem a coluna central de 1400px. */
+.admin-content-area:has(#workspace-painel) {
+  padding: 0;
+}
+
+.admin-content-area:has(#workspace-painel) > div {
+  max-width: none !important;
+  height: 100%;
+}
+
+.admin-content-area:has(#workspace-painel[data-modo="desktop"]) {
+  overflow: hidden;
+}
+
 /* Mobile (≤768px) */
 @media (max-width: 768px) {
   .admin-layout-container {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Building2, Calendar, Lock } from "lucide-react";
 import DialogShell from "@/components/DialogShell";
 import Combobox, { type ComboboxOption } from "@/components/ui/Combobox";
@@ -81,7 +81,13 @@ export default function NewDemandModal({
   if (isOpen !== wasOpen) {
     setWasOpen(isOpen);
     if (isOpen) {
-      setText("");
+      let seed = "";
+      try {
+        seed = window.sessionStorage.getItem("pratic-workspace-quickadd") || "";
+      } catch {
+        seed = "";
+      }
+      setText(seed);
       setClientId(defaultClientId ?? null);
       setStatusId(statuses[0]?.id ?? "");
       setPriority("none");
@@ -94,6 +100,18 @@ export default function NewDemandModal({
       setSaving(false);
     }
   }
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const id = window.setTimeout(() => {
+      try {
+        window.sessionStorage.removeItem("pratic-workspace-quickadd");
+      } catch {
+        // sessionStorage indisponível
+      }
+    }, 1000);
+    return () => window.clearTimeout(id);
+  }, [isOpen]);
 
   const touch = (field: TouchedField) =>
     setTouched((current) => new Set(current).add(field));
