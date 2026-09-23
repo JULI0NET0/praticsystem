@@ -3,13 +3,11 @@
 import { useMemo, useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
-import { Plus, SlidersHorizontal, List, LayoutGrid, Building2 } from "lucide-react";
-import PageHeader from "@/components/ui/PageHeader";
-import type { DemandKanbanGroupBy, DemandListGroupBy, DemandView } from "@/types/demandas";
+import { Calendar, ListChecks, Plus, Search, SlidersHorizontal } from "lucide-react";
+import DropdownMenu from "@/components/ui/DropdownMenu";
+import type { DemandKanbanGroupBy, DemandListGroupBy, DemandScope, DemandView } from "@/types/demandas";
 import { useDemandas } from "./DemandasProvider";
 import DemandFilters from "./DemandFilters";
-import DemandViewSwitcher from "./DemandViewSwitcher";
-import DemandGroupBySwitcher from "./DemandGroupBySwitcher";
 import DemandKanbanGroupBySwitcher from "./DemandKanbanGroupBySwitcher";
 import DemandListView from "./DemandListView";
 import DemandKanban from "./DemandKanban";
@@ -23,6 +21,17 @@ import { WhatsAppIcon } from "@/components/SocialIcons";
 const VIEW_STORAGE_KEY = "pratic-demandas-view";
 const GROUPBY_STORAGE_KEY = "pratic-demandas-groupby";
 const KANBAN_GROUPBY_STORAGE_KEY = "pratic-demandas-kanban-groupby";
+
+const SCOPES: { value: DemandScope | "all"; label: string }[] = [
+  { value: "all", label: "Todas" },
+  { value: "client", label: "Clientes" },
+  { value: "internal", label: "Internas" },
+];
+
+const LIST_GROUPBY_LABEL: Record<DemandListGroupBy, string> = {
+  due: "Prazo",
+  status: "Status",
+};
 
 function readStoredView(): DemandView {
   try {
@@ -57,14 +66,7 @@ function readStoredKanbanGroupBy(): DemandKanbanGroupBy {
 export default function DemandasView() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const {
-    visibleDemands,
-    demands,
-    loading,
-    filters,
-    showClientInTitle,
-    setShowClientInTitle,
-  } = useDemandas();
+  const { visibleDemands, loading, filters, setFilters } = useDemandas();
 
   const [view, setView] = useState<DemandView>(readStoredView);
   const [groupBy, setGroupBy] = useState<DemandListGroupBy>(readStoredGroupBy);
@@ -73,6 +75,8 @@ export default function DemandasView() {
   const [newOpen, setNewOpen] = useState(false);
   const [statusManagerOpen, setStatusManagerOpen] = useState(false);
   const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   // Estado da seleção múltipla / em lote
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
@@ -229,13 +233,8 @@ export default function DemandasView() {
         d.due_date &&
         d.due_date < new Date().toISOString().slice(0, 10),
     ).length;
-    return { open, overdue, total: visibleDemands.length };
+    return { open, overdue };
   }, [visibleDemands]);
-
-  const subtitle = loading
-    ? "Carregando…"
-    : `${counts.total} de ${demands.length} demandas · ${counts.open} em aberto` +
-      (counts.overdue > 0 ? ` · ${counts.overdue} atrasada${counts.overdue > 1 ? "s" : ""}` : "");
 
   return (
     <motion.div
@@ -244,126 +243,207 @@ export default function DemandasView() {
       transition={{ duration: 0.3 }}
       style={{ display: "flex", flexDirection: "column", gap: 18 }}
     >
-      <PageHeader
-        eyebrow="Operação"
-        title="Demandas"
-        subtitle={subtitle}
-        actions={
-          <>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => setWhatsappModalOpen(true)}
-              style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
-              title="Copiar resumo formatado para o WhatsApp da equipe"
+      <div style={{ display: "flex", alignItems: "baseline", gap: 12, padding: "0 2px" }}>
+        <h1 style={{ fontSize: "1.375rem", fontWeight: 700, letterSpacing: "-0.02em", margin: 0 }}>
+          Demandas
+        </h1>
+        <span style={{ fontSize: "0.78rem", color: "var(--text-tertiary)" }}>
+          {loading ? (
+            "Carregando…"
+          ) : (
+            <>
+              {counts.open} em aberto
+              {counts.overdue > 0 && (
+                <span style={{ color: "var(--color-danger)", fontWeight: 600 }}>
+                  {" · "}
+                  {counts.overdue} atrasada{counts.overdue > 1 ? "s" : ""}
+                </span>
+              )}
+            </>
+          )}
+        </span>
+
+        <div className="demandas-header-actions-desktop">
+          <button
+            type="button"
+            className="demandas-header-icon-btn"
+            onClick={() => setWhatsappModalOpen(true)}
+            title="Copiar resumo formatado para o WhatsApp da equipe"
+            aria-label="Resumo para WhatsApp"
+          >
+            <WhatsAppIcon size={15} />
+          </button>
+          <button
+            type="button"
+            className="demandas-header-icon-btn"
+            onClick={() => setStatusManagerOpen(true)}
+            title="Gerenciar status"
+            aria-label="Gerenciar status"
+          >
+            <SlidersHorizontal size={15} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setNewOpen(true)}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              height: 32,
+              padding: "0 12px",
+              borderRadius: 8,
+              border: "none",
+              background: "var(--accent)",
+              color: "var(--text-primary)",
+              fontSize: "0.78rem",
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            <Plus size={15} /> Nova demanda
+            <kbd
+              style={{
+                fontSize: "0.68rem",
+                fontWeight: 700,
+                fontFamily: "var(--font-mono)",
+                background: "color-mix(in oklab, var(--text-primary) 12%, transparent)",
+                borderRadius: 4,
+                padding: "1px 5px",
+              }}
             >
-              <WhatsAppIcon size={15} style={{ color: "#25D366" }} />
-              WhatsApp
-            </button>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => setStatusManagerOpen(true)}
-            >
-              <SlidersHorizontal size={15} /> Status
-            </button>
-            <button type="button" className="btn btn-accent" onClick={() => setNewOpen(true)}>
-              <Plus size={16} /> Nova demanda <kbd style={{ fontSize: "0.7rem", opacity: 0.7, marginLeft: 4 }}>N</kbd>
-            </button>
-          </>
-        }
+              N
+            </kbd>
+          </button>
+        </div>
+
+        <div className="demandas-header-actions-mobile">
+          <button
+            type="button"
+            className="demandas-header-icon-btn"
+            onClick={() => setMobileSearchOpen((prev) => !prev)}
+            aria-label="Buscar"
+            aria-pressed={mobileSearchOpen}
+          >
+            <Search size={17} />
+          </button>
+          <button
+            type="button"
+            className="demandas-header-icon-btn"
+            onClick={() => setMobileFiltersOpen(true)}
+            aria-label="Filtros"
+          >
+            <SlidersHorizontal size={17} />
+          </button>
+        </div>
+      </div>
+
+      <DemandFilters
+        mobileSearchOpen={mobileSearchOpen}
+        onCloseMobileSearch={() => setMobileSearchOpen(false)}
+        mobileFiltersOpen={mobileFiltersOpen}
+        onCloseMobileFilters={() => setMobileFiltersOpen(false)}
       />
 
-      <DemandFilters />
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 18,
+          borderBottom: "1px solid var(--border)",
+          overflowX: "auto",
+        }}
+      >
+        {SCOPES.map((scope) => {
+          const active = filters.scope === scope.value;
+          return (
+            <button
+              key={scope.value}
+              type="button"
+              onClick={() => setFilters({ scope: scope.value })}
+              style={{
+                flexShrink: 0,
+                padding: "0 0 10px",
+                marginBottom: -1,
+                border: "none",
+                borderBottom: active ? "2px solid var(--text-primary)" : "2px solid transparent",
+                background: "none",
+                fontSize: "0.82rem",
+                fontWeight: active ? 700 : 600,
+                color: active ? "var(--text-primary)" : "var(--text-tertiary)",
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {scope.label}
+            </button>
+          );
+        })}
 
-      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-        <DemandViewSwitcher active={view} onChange={changeView} />
-
-        {view === "list" && (
-          <>
-            <DemandGroupBySwitcher active={groupBy} onChange={changeGroupBy} />
-            {groupBy === "status" && (
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginLeft: "auto", paddingBottom: 6, flexShrink: 0 }}>
+          <div
+            style={{
+              display: "inline-flex",
+              gap: 2,
+              padding: 2,
+              borderRadius: 8,
+              background: "var(--color-surface-sunken)",
+            }}
+          >
+            {(["list", "board"] as DemandView[]).map((v) => (
               <button
+                key={v}
                 type="button"
-                onClick={() => setStatusManagerOpen(true)}
+                onClick={() => changeView(v)}
+                aria-pressed={view === v}
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  padding: "6px 12px",
-                  borderRadius: 9,
-                  border: "1px dashed var(--border)",
-                  background: "transparent",
-                  cursor: "pointer",
-                  fontSize: "0.78rem",
+                  padding: "4px 10px",
+                  borderRadius: 6,
+                  border: "none",
+                  background: view === v ? "var(--color-surface-inset)" : "transparent",
+                  fontSize: "0.76rem",
                   fontWeight: 700,
-                  color: "var(--text-tertiary)",
+                  color: view === v ? "var(--text-primary)" : "var(--text-tertiary)",
+                  cursor: "pointer",
                 }}
               >
-                <SlidersHorizontal size={14} />
-                Gerenciar status
+                {v === "list" ? "Lista" : "Kanban"}
               </button>
-            )}
-          </>
-        )}
+            ))}
+          </div>
 
-        {view === "board" && (
-          <>
+          <div style={{ width: 1, height: 14, background: "var(--border)" }} />
+
+          {view === "list" ? (
+            <DropdownMenu
+              align="right"
+              trigger={
+                <button
+                  type="button"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 4,
+                    border: "none",
+                    background: "none",
+                    fontSize: "0.78rem",
+                    fontWeight: 600,
+                    color: "var(--text-secondary)",
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  Agrupar: {LIST_GROUPBY_LABEL[groupBy]} ▾
+                </button>
+              }
+              items={[
+                { label: "Prazo", icon: Calendar, action: () => changeGroupBy("due") },
+                { label: "Status", icon: ListChecks, action: () => changeGroupBy("status") },
+              ]}
+            />
+          ) : (
             <DemandKanbanGroupBySwitcher active={kanbanGroupBy} onChange={changeKanbanGroupBy} />
-            {kanbanGroupBy === "status" && (
-              <button
-                type="button"
-                onClick={() => setStatusManagerOpen(true)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  padding: "6px 12px",
-                  borderRadius: 9,
-                  border: "1px dashed var(--border)",
-                  background: "transparent",
-                  cursor: "pointer",
-                  fontSize: "0.78rem",
-                  fontWeight: 700,
-                  color: "var(--text-tertiary)",
-                }}
-              >
-                <SlidersHorizontal size={14} />
-                Gerenciar status
-              </button>
-            )}
-          </>
-        )}
-
-        <button
-          type="button"
-          onClick={() => setShowClientInTitle(!showClientInTitle)}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            padding: "6px 12px",
-            borderRadius: 9,
-            border: showClientInTitle ? "1px solid var(--accent)" : "1px solid var(--border)",
-            background: showClientInTitle
-              ? "color-mix(in oklab, var(--accent) 14%, transparent)"
-              : "transparent",
-            cursor: "pointer",
-            fontSize: "0.78rem",
-            fontWeight: 700,
-            color: showClientInTitle ? "var(--accent)" : "var(--text-tertiary)",
-            marginLeft: "auto",
-            transition: "all 0.15s ease",
-          }}
-          title={
-            showClientInTitle
-              ? "Ocultar nome do cliente ao lado do título"
-              : "Exibir nome do cliente ao lado do título (Demanda — Cliente)"
-          }
-        >
-          <Building2 size={13} />
-          <span>Demanda + Cliente</span>
-        </button>
+          )}
+        </div>
       </div>
 
       {view === "list" ? (
@@ -384,6 +464,15 @@ export default function DemandasView() {
           groupBy={kanbanGroupBy}
         />
       )}
+
+      <button
+        type="button"
+        className="demandas-fab"
+        onClick={() => setNewOpen(true)}
+        aria-label="Nova demanda"
+      >
+        <Plus size={26} />
+      </button>
 
       <DemandModal demandId={selectedId} onClose={closeDrawer} />
 
@@ -415,5 +504,3 @@ export default function DemandasView() {
     </motion.div>
   );
 }
-
-

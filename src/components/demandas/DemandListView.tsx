@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { ChevronDown, ChevronRight } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   DUE_BUCKET_ORDER,
@@ -158,22 +157,17 @@ function GroupSection({
           display: "flex",
           alignItems: "center",
           gap: 6,
-          padding: "2px 0",
+          padding: "0 8px 6px",
           background: "none",
           border: "none",
           cursor: "pointer",
           textAlign: "left",
         }}
       >
-        {isCollapsed ? (
-          <ChevronRight size={15} color="var(--text-tertiary)" />
-        ) : (
-          <ChevronDown size={15} color="var(--text-tertiary)" />
-        )}
         <span
           style={{
-            fontSize: "0.74rem",
-            fontWeight: 800,
+            fontSize: "0.72rem",
+            fontWeight: 700,
             textTransform: "uppercase",
             letterSpacing: "0.05em",
             color,
@@ -188,12 +182,10 @@ function GroupSection({
               : `${list.length} em aberto`
           }
           style={{
-            fontSize: "0.7rem",
+            fontSize: "0.72rem",
             fontWeight: 700,
             color: "var(--text-tertiary)",
-            background: "var(--color-surface-sunken)",
-            padding: "1px 8px",
-            borderRadius: 8,
+            fontVariantNumeric: "tabular-nums",
           }}
         >
           {doneCount > 0 ? `${list.length - doneCount}/${list.length}` : list.length}

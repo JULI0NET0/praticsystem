@@ -757,34 +757,16 @@ input[type='date'] {
   color: var(--color-text-primary);
 }
 
-/* --- Linha da lista de demandas --- */
+/* --- Linha da lista de demandas (visão minimalista) --- */
 
 .demanda-row {
   position: relative;
-  transition: all var(--duration-fast) var(--ease-standard);
+  border-top: 1px solid var(--border);
+  transition: background var(--duration-fast) var(--ease-standard);
 }
 
 .demanda-row:hover {
   background: var(--color-surface-sunken);
-}
-
-.demanda-row .demanda-row-grip {
-  opacity: 0;
-  transition: opacity var(--duration-fast) var(--ease-standard);
-}
-
-.demanda-row:hover .demanda-row-grip {
-  opacity: 1;
-}
-
-.demanda-row-title {
-  position: relative;
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .demanda-row-actions {
@@ -802,6 +784,26 @@ input[type='date'] {
   opacity: 1;
   pointer-events: auto;
   transform: translateX(0);
+}
+
+/* Status + contadores: só aparecem no hover, mesmo idioma acima.
+   Forçado a sumir abaixo de 768px — touch não tem :hover persistente,
+   mas alguns navegadores simulam no tap-and-hold, então reforça aqui. */
+.demanda-row-meta {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--duration-fast) var(--ease-standard);
+}
+
+.demanda-row:hover .demanda-row-meta {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+@media (max-width: 768px) {
+  .demanda-row-meta {
+    display: none !important;
+  }
 }
 
 .demanda-action-btn {
@@ -823,6 +825,73 @@ input[type='date'] {
   color: #ffffff;
   border-color: var(--accent);
   transform: scale(1.08);
+}
+
+/* --- Header de Demandas (visão minimalista) --- */
+
+.demandas-header-actions-desktop {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.demandas-header-actions-mobile {
+  display: none;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.demandas-header-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-standard),
+              color var(--duration-fast) var(--ease-standard);
+}
+
+.demandas-header-icon-btn:hover {
+  background: var(--color-surface-sunken);
+  color: var(--text-primary);
+}
+
+/* FAB "Nova demanda" — única sombra da tela, só aparece flutuante no mobile */
+.demandas-fab {
+  display: none;
+  position: fixed;
+  right: 20px;
+  bottom: calc(34px + env(safe-area-inset-bottom, 0px));
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  border: none;
+  background: var(--accent);
+  color: var(--text-primary);
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: var(--shadow-lg);
+  z-index: 30;
+}
+
+@media (max-width: 768px) {
+  .demandas-header-actions-desktop {
+    display: none;
+  }
+  .demandas-header-actions-mobile {
+    display: flex;
+  }
+  .demandas-fab {
+    display: flex;
+  }
 }
 
 .timer-tabular {
@@ -852,27 +921,6 @@ input[type='date'] {
   animation: pulse 1.5s infinite;
 }
 
-/* A prévia da descrição é a primeira a sair quando falta largura e o título expande */
-@media (max-width: 900px) {
-  .demanda-row-description {
-    display: none !important;
-  }
-  .demanda-row-title {
-    max-width: 100% !important;
-    flex: 1 1 auto !important;
-  }
-}
-
-@media (max-width: 768px) {
-  .demanda-row-grip {
-    display: none !important;
-  }
-  .demanda-row-actions {
-    opacity: 1;
-    pointer-events: auto;
-    transform: none;
-  }
-}
 
 
 /* ============================================================
