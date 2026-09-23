@@ -141,6 +141,16 @@
   overflow: hidden;
 }
 
+.admin-content-area:has(#suporte-ai) {
+  padding: 0;
+  overflow: hidden;
+}
+
+.admin-content-area:has(#suporte-ai) > div {
+  max-width: none !important;
+  height: 100%;
+}
+
 /* Mobile (≤768px) */
 @media (max-width: 768px) {
   .admin-layout-container {
@@ -160,6 +170,10 @@
 
   .admin-content-area {
     padding: 16px 16px calc(var(--mobile-nav-height) + 40px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .admin-content-area:has(#suporte-ai) {
+    padding: 0 0 calc(var(--mobile-nav-height) + env(safe-area-inset-bottom, 0px));
   }
 }
 

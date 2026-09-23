@@ -153,7 +153,21 @@ function parseRetryAfterSeconds(errorBody: string): number {
   return DEFAULT_RETRY_WAIT_SECONDS;
 }
 
-async function callGroqChat(systemPrompt: string, userContent: string, attempt = 0): Promise<string> {
+export interface GroqChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+async function callGroqChat(systemPrompt: string, userContent: string): Promise<string> {
+  return callGroqChatMessages(systemPrompt, [{ role: 'user', content: userContent }]);
+}
+
+/** Conversa multi-turno (ex.: Kevin, o assistente de suporte interno). */
+export async function chatWithGroq(systemPrompt: string, messages: GroqChatMessage[]): Promise<string> {
+  return callGroqChatMessages(systemPrompt, messages);
+}
+
+async function callGroqChatMessages(systemPrompt: string, messages: GroqChatMessage[], attempt = 0): Promise<string> {
   const apiKey = getGroqApiKey();
   if (!apiKey) {
     throw new Error('GROQ_API_KEY não está configurado nas variáveis de ambiente.');
@@ -167,7 +181,7 @@ async function callGroqChat(systemPrompt: string, userContent: string, attempt =
       temperature: 0.3,
       messages: [
         { role: 'system', content: systemPrompt },
-        { role: 'user', content: userContent },
+        ...messages,
       ],
     }),
   });
@@ -179,7 +193,7 @@ async function callGroqChat(systemPrompt: string, userContent: string, attempt =
   if (res.status === 429 && attempt < MAX_RATE_LIMIT_RETRIES) {
     const body = await res.text().catch(() => '');
     await sleep(parseRetryAfterSeconds(body) * 1000);
-    return callGroqChat(systemPrompt, userContent, attempt + 1);
+    return callGroqChatMessages(systemPrompt, messages, attempt + 1);
   }
 
   if (!res.ok) {
