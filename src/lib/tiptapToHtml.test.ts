@@ -84,3 +84,27 @@ describe('tiptapToHtml', () => {
     expect(html).toContain('@julio');
   });
 });
+
+describe('tiptapToHtml – tabelas', () => {
+  it('renderiza tabela com cabeçalho e células', () => {
+    const cell = (type: string, text: string) => ({
+      type,
+      attrs: { colspan: 1, rowspan: 1 },
+      content: [{ type: 'paragraph', content: [{ type: 'text', text }] }],
+    });
+    const html = convertTipTapToHtml({
+      type: 'doc',
+      content: [{
+        type: 'table',
+        content: [
+          { type: 'tableRow', content: [cell('tableHeader', 'Frente'), cell('tableHeader', 'Status')] },
+          { type: 'tableRow', content: [cell('tableCell', 'Backend'), cell('tableCell', '✅')] },
+        ],
+      }],
+    });
+    expect(html).toContain('<table');
+    expect(html).toMatch(/<th [^>]*>.*Frente/);
+    expect(html).toMatch(/<td [^>]*>.*✅/);
+    expect(html).not.toContain('colspan');
+  });
+});

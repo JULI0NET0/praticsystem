@@ -5,6 +5,7 @@ import LinkExtension from '@tiptap/extension-link';
 import Highlight from '@tiptap/extension-highlight';
 import { Color } from '@tiptap/extension-color';
 import { TextStyle } from '@tiptap/extension-text-style';
+import { TableKit } from '@tiptap/extension-table';
 
 /**
  * Subconjunto das extensions de BlockEditor.tsx que Markdown gerado por IA
@@ -19,6 +20,7 @@ export const NOTES_EDITOR_EXTENSIONS = [
   Highlight.configure({ multicolor: true }),
   TextStyle,
   Color,
+  TableKit.configure({ table: { resizable: true } }),
   LinkExtension.configure({
     openOnClick: false,
     autolink: true,

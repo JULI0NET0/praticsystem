@@ -113,6 +113,21 @@ export function convertTipTapToHtml(node: any): string {
       return `<div style="margin: 6pt 0; text-align: center;"><img src="${src}" alt="${alt}" style="max-width: 100%; max-height: 250px; border-radius: 4px; border: 1px solid #eee;" /></div>`;
     }
 
+    case 'table':
+      return `<table style="border-collapse: collapse; width: 100%; margin: 6pt 0; font-size: 8.5pt;"><tbody>${childrenHtml}</tbody></table>`;
+
+    case 'tableRow':
+      return `<tr>${childrenHtml}</tr>`;
+
+    case 'tableHeader':
+    case 'tableCell': {
+      const tag = node.type === 'tableHeader' ? 'th' : 'td';
+      const colspan = Number(node.attrs?.colspan) > 1 ? ` colspan="${Number(node.attrs.colspan)}"` : '';
+      const rowspan = Number(node.attrs?.rowspan) > 1 ? ` rowspan="${Number(node.attrs.rowspan)}"` : '';
+      const bg = tag === 'th' ? ' background: #f8f9fa; font-weight: 700;' : '';
+      return `<${tag}${colspan}${rowspan} style="border: 1px solid #e9ecef; padding: 3pt 6pt; text-align: left; vertical-align: top;${bg}">${childrenHtml}</${tag}>`;
+    }
+
     default:
       return childrenHtml;
   }

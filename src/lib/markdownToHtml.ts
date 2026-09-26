@@ -217,6 +217,39 @@ export function markdownToHtml(markdown: string): string {
     return null;
   };
 
+  const TABLE_SEPARATOR = /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?\s*$/;
+
+  const isTableRow = (line: string | undefined): boolean =>
+    line !== undefined && line.trim().startsWith('|');
+
+  // Divide "| a | b \| c |" em ["a", "b | c"], respeitando pipes escapados.
+  const splitRow = (line: string): string[] => {
+    let row = line.trim();
+    if (row.startsWith('|')) row = row.slice(1);
+    if (row.endsWith('|') && !row.endsWith('\\|')) row = row.slice(0, -1);
+
+    const cells: string[] = [];
+    let current = '';
+    for (let c = 0; c < row.length; c++) {
+      if (row[c] === '\\' && row[c + 1] === '|') {
+        current += '|';
+        c++;
+      } else if (row[c] === '|') {
+        cells.push(current.trim());
+        current = '';
+      } else {
+        current += row[c];
+      }
+    }
+    cells.push(current.trim());
+    return cells;
+  };
+
+  const renderTableRow = (cells: string[], columns: number, tag: 'th' | 'td'): string => {
+    const normalized = Array.from({ length: columns }, (_, idx) => cells[idx] ?? '');
+    return `<tr>${normalized.map(cell => `<${tag}><p>${parseInline(cell)}</p></${tag}>`).join('')}</tr>`;
+  };
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
 
@@ -252,6 +285,21 @@ export function markdownToHtml(markdown: string): string {
       continue;
     } else {
       closeBlockquote();
+    }
+
+    if (isTableRow(line) && lines[i + 1] !== undefined && TABLE_SEPARATOR.test(lines[i + 1])) {
+      flushList();
+      const header = splitRow(line);
+      const columns = header.length;
+      const rows = [renderTableRow(header, columns, 'th')];
+      i += 2;
+      while (i < lines.length && isTableRow(lines[i])) {
+        rows.push(renderTableRow(splitRow(lines[i]), columns, 'td'));
+        i++;
+      }
+      i--;
+      htmlLines.push(`<table><tbody>${rows.join('')}</tbody></table>`);
+      continue;
     }
 
     if (/^(?:---|===|\*\*\*|___)$/.test(line.trim())) {

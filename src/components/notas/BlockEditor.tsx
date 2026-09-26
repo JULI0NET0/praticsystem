@@ -12,6 +12,7 @@ import {
 import { BubbleMenu } from '@tiptap/react/menus';
 import { DOMParser } from '@tiptap/pm/model';
 import StarterKit from '@tiptap/starter-kit';
+import { TableKit } from '@tiptap/extension-table';
 import Placeholder from '@tiptap/extension-placeholder';
 import { TaskList } from '@tiptap/extension-task-list';
 import { TaskItem } from '@tiptap/extension-task-item';
@@ -26,7 +27,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 're
 import {
   Type, Heading1, Heading2, Heading3, List, ListOrdered,
   CheckSquare, Quote, Code, Minus, User, Building2,
-  ImageIcon, Paperclip, FileDown, Loader2, AlertTriangle, Link2,
+  ImageIcon, Paperclip, FileDown, Loader2, AlertTriangle, Link2, Table as TableIcon,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { markdownToHtml } from '@/lib/markdownToHtml';
@@ -58,6 +59,7 @@ const SLASH_ITEMS = [
   { title: 'Lista de tarefas', description: 'Checkboxes',           icon: CheckSquare,  command: ({ editor, range }: any) => editor.chain().focus().deleteRange(range).toggleTaskList().run() },
   { title: 'Citação',          description: 'Bloco de citação',     icon: Quote,        command: ({ editor, range }: any) => editor.chain().focus().deleteRange(range).toggleBlockquote().run() },
   { title: 'Código',           description: 'Bloco de código',      icon: Code,         command: ({ editor, range }: any) => editor.chain().focus().deleteRange(range).toggleCodeBlock().run() },
+  { title: 'Tabela',           description: 'Tabela 3×3 com cabeçalho', icon: TableIcon, command: ({ editor, range }: any) => editor.chain().focus().deleteRange(range).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run() },
   { title: 'Divisor',          description: 'Linha horizontal',     icon: Minus,        command: ({ editor, range }: any) => editor.chain().focus().deleteRange(range).setHorizontalRule().run() },
   { title: 'Aviso (Callout)',  description: 'Caixa de destaque com ícone', icon: AlertTriangle,  command: ({ editor, range }: any) => {
       editor.chain().focus().deleteRange(range).insertContent([
@@ -666,6 +668,7 @@ export default function BlockEditor({
       Highlight.configure({ multicolor: true }),
       TextStyle,
       Color,
+      TableKit.configure({ table: { resizable: true } }),
       LinkExtension.configure({
         openOnClick: false,
         autolink: true,
@@ -772,7 +775,8 @@ export default function BlockEditor({
           /\*\*([^*]+)\*\*/.test(text) ||
           /~~([^~]+)~~/.test(text) ||
           /`([^`]+)`/.test(text) ||
-          /\[([^\]]+)\]\(([^)]+)\)/.test(text);
+          /\[([^\]]+)\]\(([^)]+)\)/.test(text) ||
+          (/^\s*\|.*\|\s*$/m.test(text) && /^\s*\|?\s*:?-{3,}/m.test(text));
 
         if (hasMarkdown) {
           const html = markdownToHtml(text);
