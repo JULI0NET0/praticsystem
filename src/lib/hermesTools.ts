@@ -163,14 +163,24 @@ export async function listProposals(clientId?: string) {
   return data ?? [];
 }
 
-export async function listInvoices(clientId: string) {
+export async function listInvoices(filters: {
+  client_id?: string;
+  status?: 'pending' | 'paid' | 'overdue';
+  from?: string;
+  to?: string;
+} = {}) {
   const supabase = getSupabaseAdmin();
-  const { data, error } = await supabase
+  let query = supabase
     .from('invoices')
-    .select('id, amount, due_date, status, description, paid_at, created_at')
-    .eq('client_id', clientId)
+    .select('id, client_id, contract_id, amount, due_date, status, description, paid_at, asaas_payment_id, created_at')
     .order('due_date', { ascending: false });
 
+  if (filters.client_id) query = query.eq('client_id', filters.client_id);
+  if (filters.status) query = query.eq('status', filters.status);
+  if (filters.from) query = query.gte('due_date', filters.from);
+  if (filters.to) query = query.lte('due_date', filters.to);
+
+  const { data, error } = await query;
   if (error) throw new Error(error.message);
   return data ?? [];
 }
@@ -259,6 +269,127 @@ export async function updateDemandStatus(demandId: string, status: string) {
     .from('demands')
     .update({ status })
     .eq('id', demandId)
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function listDemandStatuses() {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from('demand_statuses')
+    .select('id, label, category, position')
+    .order('position', { ascending: true });
+
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+/**
+ * Edição parcial: só os campos enviados são gravados; `null` limpa o campo.
+ * status_category, completed_at e scope são derivados pelo trigger
+ * demands_sync_derived (BLOCO 11.3), por isso não são aceitos aqui.
+ */
+export async function updateDemand(
+  demandId: string,
+  input: {
+    title?: string;
+    description?: string | null;
+    client_id?: string | null;
+    priority?: 'none' | 'low' | 'medium' | 'high' | 'urgent';
+    assignee_ids?: string[];
+    status?: string;
+    due_date?: string | null;
+    due_time?: string | null;
+    start_date?: string | null;
+    type?: string | null;
+  }
+) {
+  const updatePayload: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(input)) {
+    if (value === undefined) continue;
+    updatePayload[key] = key === 'description' && typeof value === 'string' ? textToTiptapDoc(value) : value;
+  }
+  if (Object.keys(updatePayload).length === 0) throw new Error('Nenhum campo para atualizar.');
+
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from('demands')
+    .update(updatePayload)
+    .eq('id', demandId)
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+/** Status de categoria `fechado` de menor posição — 'completed' no seed padrão. */
+async function resolveClosedStatus() {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from('demand_statuses')
+    .select('id')
+    .eq('category', 'fechado')
+    .order('position', { ascending: true })
+    .limit(1)
+    .single();
+
+  if (error) throw new Error('Nenhum status de conclusão configurado em demand_statuses.');
+  return data.id as string;
+}
+
+export async function completeDemand(demandId: string) {
+  return updateDemandStatus(demandId, await resolveClosedStatus());
+}
+
+export async function reopenDemand(demandId: string, status = 'pending') {
+  return updateDemandStatus(demandId, status);
+}
+
+export async function listDemandChecklist(demandId: string) {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from('demand_checklist')
+    .select('id, group_name, label, done, done_at, position')
+    .eq('demand_id', demandId)
+    .order('position', { ascending: true });
+
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+export async function addDemandChecklistItem(input: { demand_id: string; group_name: string; label: string }) {
+  const supabase = getSupabaseAdmin();
+  const { count } = await supabase
+    .from('demand_checklist')
+    .select('id', { count: 'exact', head: true })
+    .eq('demand_id', input.demand_id);
+
+  const { data, error } = await supabase
+    .from('demand_checklist')
+    .insert({
+      demand_id: input.demand_id,
+      group_name: input.group_name,
+      label: input.label.trim(),
+      position: count ?? 0,
+    })
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+/** done_at é carimbado pelo trigger demand_checklist_sync_done_at. */
+export async function setDemandChecklistItemDone(itemId: string, done: boolean) {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from('demand_checklist')
+    .update({ done })
+    .eq('id', itemId)
     .select()
     .single();
 
@@ -469,6 +600,192 @@ export async function sendChatMessage(input: { channel?: string; content: string
       channel: input.receiver_id ? 'dm' : (input.channel || 'general'),
     })
     .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+// =============================================================
+// Financeiro — contas a receber (invoices) e a pagar (expense_entries)
+// =============================================================
+
+const today = () => new Date().toISOString().split('T')[0];
+
+/**
+ * Mesmo fluxo de handleAddInvoice em /admin/financeiro: uma cobrança já
+ * paga ganha uma transação CREDIT em asaas_transactions para aparecer na
+ * conciliação.
+ */
+export async function createInvoice(input: {
+  client_id: string;
+  amount: number;
+  due_date: string;
+  description: string;
+  status?: 'pending' | 'paid';
+  paid_at?: string;
+  contract_id?: string | null;
+}) {
+  const supabase = getSupabaseAdmin();
+  const paid = input.status === 'paid';
+  const { data, error } = await supabase
+    .from('invoices')
+    .insert({
+      client_id: input.client_id,
+      contract_id: input.contract_id || null,
+      amount: input.amount,
+      due_date: input.due_date,
+      description: input.description,
+      status: input.status || 'pending',
+      paid_at: paid ? input.paid_at || today() : null,
+    })
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+
+  if (paid) {
+    await supabase.from('asaas_transactions').insert({
+      description: data.description,
+      value: data.amount,
+      type: 'CREDIT',
+      date: data.paid_at,
+      status: 'RECEIVED',
+      invoice_id: data.id,
+      synced_at: new Date().toISOString(),
+    });
+  }
+
+  return data;
+}
+
+/**
+ * Ajuste local da fatura. Não altera a cobrança no Asaas: se a fatura tem
+ * asaas_payment_id, valor/vencimento divergem até a próxima sincronização.
+ */
+export async function updateInvoice(
+  invoiceId: string,
+  input: {
+    amount?: number;
+    due_date?: string;
+    description?: string;
+    status?: 'pending' | 'paid' | 'overdue';
+    paid_at?: string | null;
+  }
+) {
+  const updatePayload: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(input)) {
+    if (value !== undefined) updatePayload[key] = value;
+  }
+  // Mesma regra de handleUpdateInvoiceStatus: paid_at acompanha o status.
+  if (input.status === 'paid') updatePayload.paid_at = input.paid_at || today();
+  else if (input.status) updatePayload.paid_at = null;
+  if (Object.keys(updatePayload).length === 0) throw new Error('Nenhum campo para atualizar.');
+
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from('invoices')
+    .update(updatePayload)
+    .eq('id', invoiceId)
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function listExpenses(filters: { status?: 'active' | 'inactive' } = {}) {
+  const supabase = getSupabaseAdmin();
+  let query = supabase
+    .from('expenses')
+    .select('id, description, category, amount, due_day, recurrence, status, related_user_id, notes')
+    .order('description', { ascending: true });
+
+  if (filters.status) query = query.eq('status', filters.status);
+
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+export async function listExpenseEntries(filters: {
+  status?: 'pending' | 'paid' | 'cancelled';
+  expense_id?: string;
+  from?: string;
+  to?: string;
+} = {}) {
+  const supabase = getSupabaseAdmin();
+  let query = supabase
+    .from('expense_entries')
+    .select('id, expense_id, description, amount, date, status, category, notes, asaas_transaction_id, expenses(id, description, category)')
+    .order('date', { ascending: false });
+
+  if (filters.status) query = query.eq('status', filters.status);
+  if (filters.expense_id) query = query.eq('expense_id', filters.expense_id);
+  if (filters.from) query = query.gte('date', filters.from);
+  if (filters.to) query = query.lte('date', filters.to);
+
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+export async function createExpenseEntry(input: {
+  description: string;
+  amount: number;
+  date: string;
+  status?: 'pending' | 'paid';
+  expense_id?: string | null;
+  category?: string | null;
+  notes?: string | null;
+}) {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from('expense_entries')
+    .insert({
+      description: input.description,
+      amount: input.amount,
+      date: input.date,
+      status: input.status || 'pending',
+      expense_id: input.expense_id || null,
+      category: input.category || null,
+      notes: input.notes || null,
+    })
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+/**
+ * Na UI, dar baixa grava status 'paid' e troca `date` pela data do
+ * pagamento (DespesasList/DespesasVariaveis) — então `date` é vencimento
+ * enquanto pendente e data de pagamento depois de paga.
+ */
+export async function updateExpenseEntry(
+  entryId: string,
+  input: {
+    description?: string;
+    amount?: number;
+    date?: string;
+    status?: 'pending' | 'paid' | 'cancelled';
+    category?: string | null;
+    notes?: string | null;
+  }
+) {
+  const updatePayload: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(input)) {
+    if (value !== undefined) updatePayload[key] = value;
+  }
+  if (Object.keys(updatePayload).length === 0) throw new Error('Nenhum campo para atualizar.');
+
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from('expense_entries')
+    .update(updatePayload)
+    .eq('id', entryId)
+    .select('*, expenses(id, description, category)')
     .single();
 
   if (error) throw new Error(error.message);

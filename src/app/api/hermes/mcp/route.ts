@@ -14,7 +14,20 @@ import {
   getDemand,
   createDemand,
   updateDemandStatus,
+  listDemandStatuses,
+  updateDemand,
+  completeDemand,
+  reopenDemand,
+  listDemandChecklist,
+  addDemandChecklistItem,
+  setDemandChecklistItemDone,
   addDemandComment,
+  createInvoice,
+  updateInvoice,
+  listExpenses,
+  listExpenseEntries,
+  createExpenseEntry,
+  updateExpenseEntry,
   listAgendaEvents,
   createAgendaEvent,
   updateAgendaEvent,
@@ -171,16 +184,161 @@ const mcpHandler = createMcpHandler((server) => {
     }
   );
 
+  // -----------------------------------------------------------
+  // Financeiro — contas a receber (faturas) e a pagar (despesas)
+  // -----------------------------------------------------------
+
   server.registerTool(
     'list_invoices',
     {
-      title: 'Listar faturas',
-      description: 'Lista as faturas e status de pagamento de um cliente (somente leitura).',
-      inputSchema: z.object({ client_id: z.string() }),
+      title: 'Listar faturas (contas a receber)',
+      description: 'Lista faturas/cobranças, filtrando por cliente, status ou período de vencimento.',
+      inputSchema: z.object({
+        client_id: z.string().optional(),
+        status: z.enum(['pending', 'paid', 'overdue']).optional(),
+        from: z.string().optional().describe('Vencimento mínimo, YYYY-MM-DD.'),
+        to: z.string().optional().describe('Vencimento máximo, YYYY-MM-DD.'),
+      }),
     },
-    async ({ client_id }) => {
+    async (filters) => {
       try {
-        return asToolResult(await listInvoices(client_id));
+        return asToolResult(await listInvoices(filters));
+      } catch (err) {
+        return asToolError(err);
+      }
+    }
+  );
+
+  server.registerTool(
+    'create_invoice',
+    {
+      title: 'Lançar fatura (conta a receber)',
+      description:
+        'Registra uma cobrança de cliente no financeiro. Não emite cobrança no Asaas — só o lançamento interno.',
+      inputSchema: z.object({
+        client_id: z.string(),
+        amount: z.number().positive().describe('Valor em reais.'),
+        due_date: z.string().describe('Vencimento, YYYY-MM-DD.'),
+        description: z.string(),
+        status: z.enum(['pending', 'paid']).optional().describe('Padrão: pending.'),
+        paid_at: z.string().optional().describe('Data do recebimento (YYYY-MM-DD) quando status=paid. Padrão: hoje.'),
+        contract_id: z.string().optional(),
+      }),
+    },
+    async (input) => {
+      try {
+        return asToolResult(await createInvoice(input));
+      } catch (err) {
+        return asToolError(err);
+      }
+    }
+  );
+
+  server.registerTool(
+    'update_invoice',
+    {
+      title: 'Ajustar fatura (conta a receber)',
+      description:
+        'Ajusta valor, vencimento, descrição ou status de uma fatura. Para dar baixa use status=paid (paid_at padrão: hoje); qualquer outro status limpa paid_at. Não altera a cobrança no Asaas.',
+      inputSchema: z.object({
+        id: z.string(),
+        amount: z.number().positive().optional(),
+        due_date: z.string().optional().describe('YYYY-MM-DD.'),
+        description: z.string().optional(),
+        status: z.enum(['pending', 'paid', 'overdue']).optional(),
+        paid_at: z.string().optional().describe('Data do recebimento, YYYY-MM-DD.'),
+      }),
+    },
+    async ({ id, ...input }) => {
+      try {
+        return asToolResult(await updateInvoice(id, input));
+      } catch (err) {
+        return asToolError(err);
+      }
+    }
+  );
+
+  server.registerTool(
+    'list_expenses',
+    {
+      title: 'Listar despesas fixas',
+      description: 'Lista as despesas recorrentes cadastradas (pró-labore, sistemas, internet etc.).',
+      inputSchema: z.object({ status: z.enum(['active', 'inactive']).optional() }),
+    },
+    async (filters) => {
+      try {
+        return asToolResult(await listExpenses(filters));
+      } catch (err) {
+        return asToolError(err);
+      }
+    }
+  );
+
+  server.registerTool(
+    'list_expense_entries',
+    {
+      title: 'Listar contas a pagar',
+      description:
+        'Lista os lançamentos de despesa (contas a pagar), filtrando por status, despesa fixa de origem ou período (campo date).',
+      inputSchema: z.object({
+        status: z.enum(['pending', 'paid', 'cancelled']).optional(),
+        expense_id: z.string().optional(),
+        from: z.string().optional().describe('YYYY-MM-DD.'),
+        to: z.string().optional().describe('YYYY-MM-DD.'),
+      }),
+    },
+    async (filters) => {
+      try {
+        return asToolResult(await listExpenseEntries(filters));
+      } catch (err) {
+        return asToolError(err);
+      }
+    }
+  );
+
+  server.registerTool(
+    'create_expense_entry',
+    {
+      title: 'Lançar conta a pagar',
+      description: 'Registra um lançamento de despesa, avulso ou vinculado a uma despesa fixa (expense_id).',
+      inputSchema: z.object({
+        description: z.string(),
+        amount: z.number().positive().describe('Valor em reais.'),
+        date: z.string().describe('Vencimento (ou data do pagamento, se já paga), YYYY-MM-DD.'),
+        status: z.enum(['pending', 'paid']).optional().describe('Padrão: pending.'),
+        expense_id: z.string().optional(),
+        category: z.string().optional(),
+        notes: z.string().optional(),
+      }),
+    },
+    async (input) => {
+      try {
+        return asToolResult(await createExpenseEntry(input));
+      } catch (err) {
+        return asToolError(err);
+      }
+    }
+  );
+
+  server.registerTool(
+    'update_expense_entry',
+    {
+      title: 'Ajustar conta a pagar',
+      description:
+        'Ajusta valor, data, descrição, categoria, observações ou status de um lançamento de despesa. Para dar baixa, envie status=paid e date=data do pagamento (padrão do sistema); cancelled cancela a conta.',
+      inputSchema: z.object({
+        id: z.string(),
+        description: z.string().optional(),
+        amount: z.number().positive().optional(),
+        date: z.string().optional().describe('YYYY-MM-DD.'),
+        status: z.enum(['pending', 'paid', 'cancelled']).optional(),
+        category: z.string().optional(),
+        notes: z.string().optional(),
+      }),
+    },
+    async ({ id, ...input }) => {
+      try {
+        return asToolResult(await updateExpenseEntry(id, input));
       } catch (err) {
         return asToolError(err);
       }
@@ -265,6 +423,136 @@ const mcpHandler = createMcpHandler((server) => {
     async ({ id, status }) => {
       try {
         return asToolResult(await updateDemandStatus(id, status));
+      } catch (err) {
+        return asToolError(err);
+      }
+    }
+  );
+
+  server.registerTool(
+    'list_demand_statuses',
+    {
+      title: 'Listar status de demanda',
+      description:
+        'Lista os status configurados (id, rótulo, categoria nao_iniciado/ativo/fechado). Use os ids em update_demand_status/update_demand.',
+      inputSchema: z.object({}),
+    },
+    async () => {
+      try {
+        return asToolResult(await listDemandStatuses());
+      } catch (err) {
+        return asToolError(err);
+      }
+    }
+  );
+
+  server.registerTool(
+    'update_demand',
+    {
+      title: 'Editar demanda',
+      description:
+        'Edita campos de uma demanda/tarefa existente. Só os campos enviados mudam; envie null para limpar (ex.: due_date: null, client_id: null torna a demanda interna).',
+      inputSchema: z.object({
+        id: z.string(),
+        title: z.string().optional(),
+        description: z.string().nullable().optional().describe('Texto/markdown simples; substitui a descrição atual.'),
+        client_id: z.string().nullable().optional(),
+        priority: z.enum(['none', 'low', 'medium', 'high', 'urgent']).optional(),
+        assignee_ids: z.array(z.string()).optional().describe('Substitui a lista inteira de responsáveis.'),
+        status: z.string().optional(),
+        due_date: z.string().nullable().optional().describe('YYYY-MM-DD.'),
+        due_time: z.string().nullable().optional().describe('HH:MM.'),
+        start_date: z.string().nullable().optional().describe('YYYY-MM-DD.'),
+        type: z.string().nullable().optional(),
+      }),
+    },
+    async ({ id, ...input }) => {
+      try {
+        return asToolResult(await updateDemand(id, input));
+      } catch (err) {
+        return asToolError(err);
+      }
+    }
+  );
+
+  server.registerTool(
+    'complete_demand',
+    {
+      title: 'Concluir demanda',
+      description: 'Marca uma demanda/tarefa como concluída (status de categoria fechado; completed_at é preenchido).',
+      inputSchema: z.object({ id: z.string() }),
+    },
+    async ({ id }) => {
+      try {
+        return asToolResult(await completeDemand(id));
+      } catch (err) {
+        return asToolError(err);
+      }
+    }
+  );
+
+  server.registerTool(
+    'reopen_demand',
+    {
+      title: 'Reabrir demanda',
+      description: 'Reabre uma demanda concluída, voltando para o status informado (padrão: pending).',
+      inputSchema: z.object({ id: z.string(), status: z.string().optional() }),
+    },
+    async ({ id, status }) => {
+      try {
+        return asToolResult(await reopenDemand(id, status));
+      } catch (err) {
+        return asToolError(err);
+      }
+    }
+  );
+
+  server.registerTool(
+    'list_demand_checklist',
+    {
+      title: 'Ver checklist da demanda',
+      description: 'Lista os itens do checklist de uma demanda (etapa = group_name, ação = label).',
+      inputSchema: z.object({ demand_id: z.string() }),
+    },
+    async ({ demand_id }) => {
+      try {
+        return asToolResult(await listDemandChecklist(demand_id));
+      } catch (err) {
+        return asToolError(err);
+      }
+    }
+  );
+
+  server.registerTool(
+    'add_demand_checklist_item',
+    {
+      title: 'Adicionar item ao checklist',
+      description: 'Adiciona uma ação ao checklist de uma demanda, dentro de uma etapa (group_name).',
+      inputSchema: z.object({
+        demand_id: z.string(),
+        group_name: z.string().describe('Etapa, ex.: Roteiro, Captação, Edição.'),
+        label: z.string(),
+      }),
+    },
+    async (input) => {
+      try {
+        return asToolResult(await addDemandChecklistItem(input));
+      } catch (err) {
+        return asToolError(err);
+      }
+    }
+  );
+
+  server.registerTool(
+    'set_demand_checklist_item_done',
+    {
+      title: 'Marcar item do checklist',
+      description: 'Marca (done=true) ou desmarca (done=false) um item do checklist de uma demanda.',
+      inputSchema: z.object({ item_id: z.string(), done: z.boolean() }),
+    },
+    async ({ item_id, done }) => {
+      try {
+        return asToolResult(await setDemandChecklistItemDone(item_id, done));
       } catch (err) {
         return asToolError(err);
       }

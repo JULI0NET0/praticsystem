@@ -10,7 +10,8 @@
       "Bash(qlmanage -t -s 1600 -o . \"/Users/julioneto/Downloads/Proposta Recloset Bazar - Parceria.docx\")",
       "Bash(sed -i '' 's/w:after=\"160\" w:before=\"360\"/w:after=\"140\" w:before=\"260\"/; s/def marker_item\\(marker, lead, rest=\"\", after=100\\)/def marker_item\\(marker, lead, rest=\"\", after=70\\)/; s/    spacer\\(80\\),\\\\n//' build_proposta.py)",
       "Bash(rm -f *.png)",
-      "Bash(python3 -c ' *)"
+      "Bash(python3 -c ' *)",
+      "Bash(awk '/BLOCO 11/,/BLOCO 12/' setup_database.sql)"
     ]
   }
 }

@@ -13,7 +13,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const invoices = await listInvoices(clientId);
+    const invoices = await listInvoices({ client_id: clientId });
     return NextResponse.json({ invoices });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erro ao listar faturas.';
