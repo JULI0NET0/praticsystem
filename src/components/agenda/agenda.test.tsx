@@ -2,6 +2,7 @@ import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import type { AgendaItem } from "@/lib/agendaItems";
+import CategoryFilterChips from "./CategoryFilterChips";
 import DayEventList from "./DayEventList";
 import { EventFormFields, type EventFormData } from "./EventForm";
 import MobileAgenda, { type MobileView } from "./MobileAgenda";
@@ -282,5 +283,36 @@ describe("MobileAgenda", () => {
   it("o contador de filtros ativos aparece no rótulo do botão", () => {
     setup("day", { filtersActiveCount: 2 });
     expect(screen.getByRole("button", { name: "Filtros (2 ativos)" })).toBeTruthy();
+  });
+});
+
+describe("CategoryFilterChips", () => {
+  const ALL = ["meeting", "prospecting", "task", "payment", "demand"];
+  const counts = { meeting: 2, prospecting: 10, task: 0, payment: 12, demand: 133 };
+
+  it("mostra um chip por assunto, com a contagem do período", () => {
+    render(<CategoryFilterChips active={ALL} counts={counts} onToggle={vi.fn()} onReset={vi.fn()} />);
+    const group = screen.getByRole("group", { name: "Filtrar por assunto" });
+    expect(within(group).getAllByRole("button")).toHaveLength(5);
+    expect(within(screen.getByRole("button", { name: /Demanda/ })).getByText("133")).toBeTruthy();
+    expect(within(screen.getByRole("button", { name: /Tarefa Interna/ })).getByText("0")).toBeTruthy();
+  });
+
+  it("clicar liga/desliga o assunto e reflete no aria-pressed", () => {
+    const onToggle = vi.fn();
+    render(<CategoryFilterChips active={["meeting"]} counts={counts} onToggle={onToggle} onReset={vi.fn()} />);
+    expect(screen.getByRole("button", { name: /Reunião/ }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("button", { name: /Captação/ }).getAttribute("aria-pressed")).toBe("false");
+    fireEvent.click(screen.getByRole("button", { name: /Captação/ }));
+    expect(onToggle).toHaveBeenCalledWith("prospecting");
+  });
+
+  it("'Mostrar todos' só aparece quando há filtro e restaura", () => {
+    const onReset = vi.fn();
+    const { rerender } = render(<CategoryFilterChips active={ALL} counts={counts} onToggle={vi.fn()} onReset={onReset} />);
+    expect(screen.queryByRole("button", { name: "Mostrar todos" })).toBeNull();
+    rerender(<CategoryFilterChips active={["meeting"]} counts={counts} onToggle={vi.fn()} onReset={onReset} />);
+    fireEvent.click(screen.getByRole("button", { name: "Mostrar todos" }));
+    expect(onReset).toHaveBeenCalledOnce();
   });
 });

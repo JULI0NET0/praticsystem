@@ -36,6 +36,7 @@ import { playSound } from "@/utils/audio";
 import AgendaSidePanel from "@/components/agenda/AgendaSidePanel";
 import AgendaToolbar, { type CalendarViewId } from "@/components/agenda/AgendaToolbar";
 import BottomSheet from "@/components/agenda/BottomSheet";
+import CategoryFilterChips from "@/components/agenda/CategoryFilterChips";
 import type { OpenPoint } from "@/components/agenda/DayEventList";
 import EventDetails from "@/components/agenda/EventDetails";
 import { EventFormPanel, type AgendaClient, type EventFormData } from "@/components/agenda/EventForm";
@@ -850,6 +851,13 @@ export default function SchedulePage() {
           onToggleMine={currentUser ? toggleMine : null}
         />
 
+        <CategoryFilterChips
+          active={activeFilters}
+          counts={categoryCounts}
+          onToggle={toggleFilter}
+          onReset={resetFilters}
+        />
+
         <div style={{ flex: 1, minHeight: 0, display: "flex" }}>
           <div className="agenda-calendar" style={{ flex: 1, minWidth: 0, minHeight: 0 }}>
             <FullCalendar
@@ -885,8 +893,6 @@ export default function SchedulePage() {
             now={now}
             items={filteredItems}
             clientNames={clientNames}
-            activeCategories={activeFilters}
-            categoryCounts={categoryCounts}
             onPrevDay={() => setSelectedDay((day) => addDays(day, -1))}
             onNextDay={() => setSelectedDay((day) => addDays(day, 1))}
             onSelectDay={(day) => {
@@ -897,7 +903,6 @@ export default function SchedulePage() {
             onOpen={openDetails}
             onToggleComplete={toggleComplete}
             onNewOnDay={(point) => openNew(selectedDay, point)}
-            onToggleCategory={toggleFilter}
           />
         </div>
       </div>

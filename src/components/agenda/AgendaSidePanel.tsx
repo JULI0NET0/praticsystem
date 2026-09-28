@@ -10,7 +10,6 @@ import {
   upcomingAfter,
   type AgendaItem,
 } from "@/lib/agendaItems";
-import CategoryFilterList from "./CategoryFilterList";
 import DayEventList, { type OpenPoint } from "./DayEventList";
 
 interface AgendaSidePanelProps {
@@ -19,16 +18,12 @@ interface AgendaSidePanelProps {
   /** Compromissos já filtrados (assunto, responsável, busca). */
   items: AgendaItem[];
   clientNames: Map<string, string>;
-  activeCategories: string[];
-  /** Contagem por assunto dentro do período visível. */
-  categoryCounts: Record<string, number>;
   onPrevDay: () => void;
   onNextDay: () => void;
   onSelectDay: (day: Date) => void;
   onOpen: (item: AgendaItem, point: OpenPoint) => void;
   onToggleComplete: (item: AgendaItem) => void;
   onNewOnDay: (point: OpenPoint) => void;
-  onToggleCategory: (id: string) => void;
 }
 
 /** "Amanhã" por extenso; depois disso, "Sex 2" — cabe na coluna de 60px. */
@@ -52,15 +47,12 @@ export default function AgendaSidePanel({
   now,
   items,
   clientNames,
-  activeCategories,
-  categoryCounts,
   onPrevDay,
   onNextDay,
   onSelectDay,
   onOpen,
   onToggleComplete,
   onNewOnDay,
-  onToggleCategory,
 }: AgendaSidePanelProps) {
   const dayItems = itemsOnDay(items, day);
   const done = dayItems.filter((item) => item.status === "completed").length;
@@ -179,10 +171,6 @@ export default function AgendaSidePanel({
         </section>
       )}
 
-      <section style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 4, paddingTop: 14, borderTop: "1px solid var(--color-border-subtle)" }}>
-        <h3 style={{ ...sectionTitle, marginBottom: 4 }}>Assuntos no período</h3>
-        <CategoryFilterList active={activeCategories} counts={categoryCounts} onToggle={onToggleCategory} />
-      </section>
     </aside>
   );
 }
