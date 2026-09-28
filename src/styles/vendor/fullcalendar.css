@@ -11,6 +11,10 @@
    ainda são mais específicos que os nossos (`.fc .fc-button-primary`
    contra `.fc-button-primary`), rebaixar isto para layer(components)
    faria todo override aqui perder silenciosamente.
+
+   A barra de ferramentas do FullCalendar não é usada: a Agenda tem a
+   própria (AgendaToolbar) e chama a API do calendário. No mobile o
+   FullCalendar nem é montado — MobileAgenda cuida da tela inteira.
    ============================================================ */
 
 /* Variáveis próprias do FC — o caminho limpo, quando ele oferece */
@@ -21,10 +25,21 @@
   --fc-neutral-text-color: var(--color-text-tertiary);
   --fc-daygrid-event-dot-width: 8px;
   --fc-list-event-hover-bg-color: var(--color-surface-sunken);
-  --fc-today-bg-color: var(--color-terracotta-100);
+  --fc-today-bg-color: transparent;
   --fc-highlight-color: var(--color-info-wash);
+  --fc-now-indicator-color: var(--color-terracotta);
   --fc-small-font-size: var(--text-caption);
   font-family: inherit; /* era 'Outfit', fonte aposentada */
+}
+
+/* O calendário preenche a área que a página reserva (sem alturas fixas por linha). */
+.agenda-calendar {
+  position: relative;
+}
+
+.agenda-calendar > .fc {
+  position: absolute;
+  inset: 0;
 }
 
 /* ---------- Grade ---------- */
@@ -43,13 +58,24 @@
   background: transparent !important;
 }
 
+/* Sábado e domingo levemente no canvas, para a semana se ler de relance */
+.fc-theme-standard td.fc-day-sat,
+.fc-theme-standard td.fc-day-sun {
+  background: var(--color-surface-canvas) !important;
+}
+
 .fc-col-header-cell {
   padding: 6px 0 !important;
   background: var(--color-surface-sunken) !important;
-  border: none !important;
+  border-top: none !important;
+  border-left: none !important;
+  border-right: none !important;
 }
 
 .fc-col-header-cell-cushion {
+  display: block;
+  padding: 2px 10px !important;
+  text-align: left;
   color: var(--color-text-tertiary) !important;
   font-size: var(--text-micro) !important;
   font-weight: 600 !important;
@@ -58,54 +84,49 @@
   text-decoration: none !important;
 }
 
+/* Número do dia à esquerda (o FC alinha à direita por padrão) */
+.fc-daygrid-day-top {
+  flex-direction: row !important;
+}
+
 .fc-daygrid-day-number {
   font-size: var(--text-caption) !important;
   font-weight: 600 !important;
-  padding: 6px !important;
-  color: var(--color-text-secondary) !important;
-}
-
-/* ---------- Toolbar ---------- */
-.fc-header-toolbar {
-  margin-bottom: var(--space-4) !important;
-  padding: 0 var(--space-4) !important;
-}
-
-.fc-toolbar-title {
-  font-size: var(--text-h3) !important;
-  font-weight: 600 !important;
-  color: var(--color-text-primary);
-}
-
-.fc-button-primary {
-  background-color: var(--color-surface-raised) !important;
-  border-color: var(--color-border-default) !important;
+  padding: 6px 8px !important;
   color: var(--color-text-primary) !important;
-  font-weight: 600 !important;
-  font-size: var(--text-ui) !important;
-  border-radius: var(--radius-input) !important;
-  padding: 6px 12px !important;
-  text-transform: capitalize !important;
-  box-shadow: none !important;
-  transition: background-color var(--duration-fast) var(--ease-standard) !important;
+  font-variant-numeric: tabular-nums;
 }
 
-.fc-button-primary:hover {
-  background-color: var(--color-surface-sunken) !important;
-  border-color: var(--color-border-strong) !important;
+.fc-day-other .fc-daygrid-day-number {
+  color: var(--color-text-muted) !important;
 }
 
-.fc-button-primary:focus {
-  box-shadow: 0 0 0 3px var(--color-info-wash) !important;
+.fc-day-today {
+  background: transparent !important;
 }
 
-/* Texto ESCURO sobre o coral — branco reprova AA (3.12:1) */
-.fc-button-active,
-.fc-button-primary:not(:disabled).fc-button-active,
-.fc-button-primary:not(:disabled):active {
-  background-color: var(--accent) !important;
-  border-color: var(--accent) !important;
+.fc-day-today .fc-daygrid-day-number {
   color: var(--color-text-on-accent) !important;
+  background: var(--color-terracotta) !important;
+  border-radius: var(--radius-full) !important;
+  font-weight: 700;
+  width: 24px;
+  height: 24px;
+  padding: 0 !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 5px 6px;
+}
+
+/* Dia escolhido: é o que o painel lateral está mostrando */
+.fc-theme-standard td.agenda-day-selected {
+  background: var(--color-terracotta-100) !important;
+  box-shadow: inset 0 0 0 1.5px var(--color-terracotta);
+}
+
+.fc-daygrid-day {
+  cursor: pointer;
 }
 
 /* ---------- Eventos ---------- */
@@ -113,49 +134,78 @@
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
+  cursor: pointer;
 }
 
-.fc-event-premium {
-  overflow: hidden;
-  position: relative;
+.fc-daygrid-event {
+  margin: 1px 4px !important;
 }
 
-.fc-day-today {
-  background: var(--color-terracotta-100) !important;
-}
-
-.fc-day-today .fc-daygrid-day-number {
-  color: var(--color-text-on-accent) !important;
-  background: var(--accent) !important;
-  border-radius: var(--radius-sm) !important;
-  font-weight: 700;
-  width: 26px;
-  height: 26px;
+/* Etiqueta do mês: fundo claro na cor do assunto, ponto, título e hora */
+.agenda-chip {
+  height: 22px;
   display: flex;
   align-items: center;
-  justify-content: center;
-  margin: 4px;
+  gap: 6px;
+  padding: 0 6px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
 }
 
-/* ---------- Células de mês com altura fixa ---------- */
-.fc-daygrid-body > table > tbody > tr {
-  height: 96px !important;
+.agenda-chip-dot {
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
 }
 
-.fc-daygrid-day {
-  position: relative !important;
-  overflow: hidden !important;
+.agenda-chip-title {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--text-caption);
+  font-weight: 500;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.fc-daygrid-day-frame {
-  position: absolute !important;
-  inset: 0 !important;
-  min-height: 0 !important;
-  overflow: hidden !important;
+.agenda-chip-time {
+  flex-shrink: 0;
+  font-size: var(--text-micro);
+  color: var(--color-text-tertiary);
+  font-variant-numeric: tabular-nums;
 }
 
-.fc-daygrid-day-events {
-  min-height: 0 !important;
+/* Bloco de semana/dia: faixa da cor do assunto à esquerda */
+.fc-timegrid-event {
+  border-radius: var(--radius-sm) !important;
+}
+
+.agenda-block {
+  height: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 3px 6px;
+  border-left: 3px solid;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.agenda-block-title {
+  font-size: var(--text-caption);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.agenda-block-time {
+  font-size: var(--text-micro);
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
 }
 
 /* ---------- "mais N" ---------- */
@@ -164,16 +214,21 @@
   font-weight: 600 !important;
   color: var(--color-text-secondary) !important;
   padding: 1px 6px !important;
-  border-radius: var(--radius-sm) !important;
-  background: var(--color-surface-sunken) !important;
-  margin-top: 1px !important;
-  display: block !important;
+  margin: 0 4px !important;
   text-decoration: none !important;
 }
 
 .fc-daygrid-more-link:hover {
-  background: var(--color-surface-inset) !important;
   color: var(--color-text-primary) !important;
+  text-decoration: underline !important;
+}
+
+/* ---------- Semana e dia ---------- */
+.fc-timegrid-slot-label-cushion,
+.fc-timegrid-axis-cushion {
+  font-size: var(--text-micro);
+  color: var(--color-text-tertiary);
+  font-variant-numeric: tabular-nums;
 }
 
 /* ---------- Lista ---------- */
@@ -185,12 +240,7 @@
   background: var(--color-surface-sunken) !important;
 }
 
-/* ---------- Popover ---------- */
-.agenda-popover {
-  background: var(--color-surface-raised) !important;
-  border: 1px solid var(--color-border-default) !important;
-}
-
+/* ---------- Popover do "+N mais" ---------- */
 .fc-theme-standard .fc-popover {
   background: var(--color-surface-raised) !important;
   border: 1px solid var(--color-border-default) !important;
@@ -215,37 +265,22 @@
   max-width: 100% !important;
 }
 
+/* No mobile vale o respiro padrão do conteúdo (16px + barra inferior). */
 @media (max-width: 768px) {
   .admin-content-area:has(#agenda-page-container) {
-    padding: var(--space-3) 6px calc(var(--mobile-nav-height) + 20px) !important;
+    padding: 16px 16px calc(var(--mobile-nav-height) + 40px + env(safe-area-inset-bottom, 0px)) !important;
   }
 }
 
 @media (min-width: 769px) {
   #agenda-page-container {
-    height: calc(100vh - 130px) !important;
-  }
-  .fc {
-    height: 100% !important;
-  }
-  .fc-view-harness {
-    flex: 1 !important;
-    height: 100% !important;
+    height: calc(100vh - 130px);
   }
 }
 
-@media (max-width: 768px) {
-  .agenda-layout {
-    grid-template-columns: 1fr;
-  }
-  .fc-header-toolbar {
-    flex-direction: column;
-    gap: var(--space-3);
-    padding: 0 var(--space-2) !important;
-  }
-  .fc-toolbar-chunk {
-    display: flex;
-    justify-content: center;
-    width: 100%;
+/* Ícone de sincronização girando (Google, puxar para atualizar) */
+@keyframes agenda-spin {
+  to {
+    transform: rotate(360deg);
   }
 }

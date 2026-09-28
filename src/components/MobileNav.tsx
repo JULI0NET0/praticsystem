@@ -12,6 +12,30 @@ interface MobileNavProps {
   unreadChat?: number;
 }
 
+function UnreadBadge({ count }: { count: number }) {
+  return (
+    <div style={{
+      position: 'absolute',
+      top: '-4px',
+      right: '-6px',
+      minWidth: '16px',
+      height: '16px',
+      borderRadius: '8px',
+      backgroundColor: 'var(--color-danger)',
+      color: 'var(--color-text-on-danger)',
+      fontSize: '0.55rem',
+      fontWeight: 800,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '0 4px',
+      border: '2px solid var(--glass-bg)'
+    }}>
+      {count > 99 ? '99+' : count}
+    </div>
+  );
+}
+
 export default function MobileNav({ onOpenMenu, unreadChat = 0 }: MobileNavProps) {
   const pathname = usePathname();
   const { currentUser } = useAuth();
@@ -24,6 +48,8 @@ export default function MobileNav({ onOpenMenu, unreadChat = 0 }: MobileNavProps
   const allNavHrefs = NAV_GROUPS.flatMap(g => g.items.map(i => i.href));
   const isDrawerRoute = !visibleItems.some(i => pathname.startsWith(i.href))
     && allNavHrefs.some(href => pathname.startsWith(href));
+  // Sem o Chat na barra, o contador de não lidas sobe para o "Mais"
+  const showMenuBadge = !bottomNavHrefs.has('/admin/chat') && unreadChat > 0;
 
   return (
     <nav className="mobile-nav glass-card">
@@ -62,27 +88,7 @@ export default function MobileNav({ onOpenMenu, unreadChat = 0 }: MobileNavProps
             >
               <div style={{ position: 'relative' }}>
                 <Icon size={22} />
-                {showBadge && (
-                  <div style={{
-                    position: 'absolute',
-                    top: '-4px',
-                    right: '-6px',
-                    minWidth: '16px',
-                    height: '16px',
-                    borderRadius: '8px',
-                    backgroundColor: 'var(--color-danger)',
-                    color: 'var(--color-text-on-danger)',
-                    fontSize: '0.55rem',
-                    fontWeight: 800,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: '0 4px',
-                    border: '2px solid var(--glass-bg)'
-                  }}>
-                    {unreadChat > 99 ? '99+' : unreadChat}
-                  </div>
-                )}
+                {showBadge && <UnreadBadge count={unreadChat} />}
               </div>
               <span style={{
                 fontSize: '0.6rem',
@@ -133,7 +139,10 @@ export default function MobileNav({ onOpenMenu, unreadChat = 0 }: MobileNavProps
         }}
         aria-label="Abrir menu"
       >
-        <Menu size={22} />
+        <div style={{ position: 'relative' }}>
+          <Menu size={22} />
+          {showMenuBadge && <UnreadBadge count={unreadChat} />}
+        </div>
         <span style={{ fontSize: '0.6rem', fontWeight: isDrawerRoute ? 700 : 500 }}>Mais</span>
         {isDrawerRoute && (
           <motion.div

@@ -2,7 +2,6 @@ import {
   CheckCircle2,
   Clock,
   ClipboardList,
-  ExternalLink,
   MapPin,
   Users,
   type LucideIcon,
@@ -15,13 +14,20 @@ export interface AgendaCategory {
   icon: LucideIcon;
 }
 
-/** Vocabulário de "Assuntos" da Agenda — único lugar que o define. */
+/**
+ * Vocabulário de "Assuntos" da Agenda — único lugar que o define.
+ *
+ * As cores vêm da rampa categórica do design system (§2.6), em hex literal
+ * (exceção permitida à regra de tokens). Antes Reunião e Demanda eram azuis
+ * do Tailwind, e Tarefa usava o cinza de texto, que parecia desativada.
+ * Pagamento fica no verde-oliva de "sucesso" da própria rampa.
+ */
 export const AGENDA_CATEGORIES: AgendaCategory[] = [
-  { id: "meeting", label: "Reunião", color: "#3B82F6", icon: Users },
-  { id: "prospecting", label: "Captação", color: "var(--color-warning)", icon: MapPin },
-  { id: "task", label: "Tarefa Interna", color: "var(--color-text-secondary)", icon: CheckCircle2 },
-  { id: "payment", label: "Pagamento", color: "var(--color-success)", icon: Clock },
-  { id: "demand", label: "Demanda", color: "#6366F1", icon: ClipboardList },
+  { id: "meeting", label: "Reunião", color: "#5B84AD", icon: Users },
+  { id: "prospecting", label: "Captação", color: "#BE8A4A", icon: MapPin },
+  { id: "task", label: "Tarefa Interna", color: "#6E6D66", icon: CheckCircle2 },
+  { id: "payment", label: "Pagamento", color: "#788C5D", icon: Clock },
+  { id: "demand", label: "Demanda", color: "#8A6FA0", icon: ClipboardList },
 ];
 
 /** Assuntos que fazem sentido a partir de uma Demanda — exclui os fluxos próprios da Agenda/Financeiro. */

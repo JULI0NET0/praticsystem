@@ -91,8 +91,8 @@ const _notas: NavItem      = { href: "/admin/notas",      label: "Notas",      i
 
 /** 4 atalhos fixos por papel — sem itens ausentes na bottom nav. */
 export const MOBILE_NAV_BY_ROLE: Record<string, NavItem[]> = {
-  admin:        [_workspace, _demandas, _chat, _notas],
-  board:        [_workspace, _demandas, _chat, _notas],
-  social_media: [_workspace, _demandas, _chat, _notas],
+  admin:        [_workspace, _demandas, _schedule, _notas],
+  board:        [_workspace, _demandas, _schedule, _notas],
+  social_media: [_workspace, _demandas, _schedule, _notas],
   filmmaker:    [_workspace, _chat, _schedule, _notas],
 };
