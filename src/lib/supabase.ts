@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 export const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
 export const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key';
@@ -48,11 +48,18 @@ function ignoreStaleRefreshTokenLogs() {
 
 ignoreStaleRefreshTokenLogs();
 
+// O projeto não gera os tipos do schema (`supabase gen types`). Sem um schema, o
+// cliente sem generics infere as tabelas como `never` e qualquer `.select()`
+// vira erro de tipo no build. Com `any`, as linhas voltam como `any` — o mesmo
+// comportamento que o código já assume em todas as telas.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type PraticSupabaseClient = SupabaseClient<any, 'public', any>;
+
 const globalForSupabase = globalThis as typeof globalThis & {
-  __praticSupabase?: ReturnType<typeof createClient>;
+  __praticSupabase?: PraticSupabaseClient;
 };
 
-export const supabase =
+export const supabase: PraticSupabaseClient =
   globalForSupabase.__praticSupabase ?? createClient(supabaseUrl, supabaseAnonKey);
 
 if (typeof window !== 'undefined') {

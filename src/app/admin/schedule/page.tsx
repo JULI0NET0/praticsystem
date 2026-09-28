@@ -50,12 +50,6 @@ const DESKTOP_VIEWS: CalendarViewId[] = ["dayGridMonth", "timeGridWeek", "timeGr
 const MOBILE_VIEWS: MobileView[] = ["day", "month", "list"];
 const ALL_CATEGORY_IDS = CATEGORIES.map((c) => c.id);
 
-// `createClient` é chamado sem o schema (src/lib/supabase.ts), então as tabelas
-// inferem `never`. Em vez de espalhar `any`, a exceção fica aqui e as linhas são
-// tipadas na borda (RawAgendaEvent, RawInvoice).
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const db = supabase as any;
-
 interface RawClient {
   id: string;
   name: string;
@@ -178,14 +172,14 @@ export default function SchedulePage() {
   }, []);
 
   const fetchClients = useCallback(async () => {
-    const { data } = await db.from("clients").select("id, name, nome_fantasia, status").order("name");
+    const { data } = await supabase.from("clients").select("id, name, nome_fantasia, status").order("name");
     if (data) setClients(data as AgendaClient[]);
   }, []);
 
   const fetchEvents = useCallback(async () => {
     if (!currentUser) return;
     try {
-      const { data: agendaData, error: agendaError } = await db
+      const { data: agendaData, error: agendaError } = await supabase
         .from("agenda_events")
         .select("*, demands(assignee_ids, assign_all_team)");
 
@@ -206,8 +200,8 @@ export default function SchedulePage() {
       let invoiceItems: AgendaItem[] = [];
       if (currentUser.role === "admin" || currentUser.role === "board") {
         const [invoicesRes, clientsRes] = await Promise.all([
-          db.from("invoices").select("*").order("due_date"),
-          db.from("clients").select("id, name, nome_fantasia"),
+          supabase.from("invoices").select("*").order("due_date"),
+          supabase.from("clients").select("id, name, nome_fantasia"),
         ]);
         if (invoicesRes.error) throw invoicesRes.error;
         const localClients = (clientsRes.data ?? []) as RawClient[];
@@ -491,11 +485,11 @@ export default function SchedulePage() {
       let savedEventId: string | undefined = editing?.id;
 
       if (editing) {
-        const { error } = await db.from("agenda_events").update(eventData).eq("id", editing.id);
+        const { error } = await supabase.from("agenda_events").update(eventData).eq("id", editing.id);
         if (error) throw error;
         showToast("Compromisso atualizado!", "success");
       } else {
-        const { data: inserted, error } = await db
+        const { data: inserted, error } = await supabase
           .from("agenda_events")
           .insert([eventData])
           .select("id")
@@ -535,7 +529,7 @@ export default function SchedulePage() {
     if (item.isInvoice || item.demandId) return;
     try {
       await syncToGoogleCalendar(item.id, "delete");
-      const { error } = await db.from("agenda_events").delete().eq("id", item.id);
+      const { error } = await supabase.from("agenda_events").delete().eq("id", item.id);
       if (error) throw error;
       showToast("Compromisso excluído", "success");
       closePanel();
@@ -550,7 +544,7 @@ export default function SchedulePage() {
     if (item.isInvoice || item.demandId) return;
     const nextStatus = item.status === "completed" ? "scheduled" : "completed";
     try {
-      const { error } = await db.from("agenda_events").update({ status: nextStatus }).eq("id", item.id);
+      const { error } = await supabase.from("agenda_events").update({ status: nextStatus }).eq("id", item.id);
       if (error) throw error;
       if (nextStatus === "completed") playSound("task_done");
       // Atualiza já na tela; o refetch confirma em seguida.
@@ -566,7 +560,7 @@ export default function SchedulePage() {
   const reschedule = async (item: AgendaItem, newStart: Date): Promise<boolean> => {
     try {
       const newDate = newStart.toISOString();
-      const { error } = await db.from("agenda_events").update({ date: newDate }).eq("id", item.id);
+      const { error } = await supabase.from("agenda_events").update({ date: newDate }).eq("id", item.id);
       if (error) throw error;
       fetchEvents();
       if (item.visibility !== "private") {
