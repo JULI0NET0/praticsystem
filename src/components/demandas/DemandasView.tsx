@@ -15,6 +15,7 @@ import DemandModal from "./DemandModal";
 import NewDemandModal from "./NewDemandModal";
 import StatusManagerModal from "./StatusManagerModal";
 import BatchActionsBar from "./BatchActionsBar";
+import RescheduleOverdueMenu from "./RescheduleOverdueMenu";
 import WhatsAppSummaryModal from "./WhatsAppSummaryModal";
 import { WhatsAppIcon } from "@/components/SocialIcons";
 
@@ -225,16 +226,10 @@ export default function DemandasView() {
     if (deepLinkId) router.replace("/admin/demandas");
   };
 
-  const counts = useMemo(() => {
-    const open = visibleDemands.filter((d) => d.status_category !== "fechado").length;
-    const overdue = visibleDemands.filter(
-      (d) =>
-        d.status_category !== "fechado" &&
-        d.due_date &&
-        d.due_date < new Date().toISOString().slice(0, 10),
-    ).length;
-    return { open, overdue };
-  }, [visibleDemands]);
+  const openCount = useMemo(
+    () => visibleDemands.filter((d) => d.status_category !== "fechado").length,
+    [visibleDemands],
+  );
 
   return (
     <motion.div
@@ -252,13 +247,8 @@ export default function DemandasView() {
             "Carregando…"
           ) : (
             <>
-              {counts.open} em aberto
-              {counts.overdue > 0 && (
-                <span style={{ color: "var(--color-danger)", fontWeight: 600 }}>
-                  {" · "}
-                  {counts.overdue} atrasada{counts.overdue > 1 ? "s" : ""}
-                </span>
-              )}
+              {openCount} em aberto
+              <RescheduleOverdueMenu demands={visibleDemands} variant="count" />
             </>
           )}
         </span>

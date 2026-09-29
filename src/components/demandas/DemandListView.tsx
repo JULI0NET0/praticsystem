@@ -15,6 +15,7 @@ import { useDemandas } from "./DemandasProvider";
 import DemandRow from "./DemandRow";
 import QuickAddRow from "./QuickAddRow";
 import DemandContextMenu, { useDemandContextMenu } from "./DemandContextMenu";
+import RescheduleOverdueMenu from "./RescheduleOverdueMenu";
 
 /**
  * Grupos que aceitam soltar uma demanda, com o prazo que isso aplica.
@@ -88,6 +89,7 @@ interface GroupSectionProps {
   showStatusPill: boolean;
   selectedIds?: Set<string>;
   onSelectDemand?: (id: string, event: React.MouseEvent) => void;
+  showReschedule?: boolean;
 }
 
 /**
@@ -118,6 +120,7 @@ function GroupSection({
   showStatusPill,
   selectedIds,
   onSelectDemand,
+  showReschedule = false,
 }: GroupSectionProps) {
   const doneCount = list.filter((d) => d.status_category === "fechado").length;
 
@@ -150,58 +153,69 @@ function GroupSection({
         transition: "background 0.15s",
       }}
     >
-      <button
-        type="button"
-        onClick={onToggleCollapse}
+      <div
         style={{
           display: "flex",
           alignItems: "center",
-          gap: 6,
+          gap: 8,
           padding: "0 8px 6px",
-          background: "none",
-          border: "none",
-          cursor: "pointer",
-          textAlign: "left",
+          flexWrap: "wrap",
         }}
       >
-        <span
+        <button
+          type="button"
+          onClick={onToggleCollapse}
           style={{
-            fontSize: "0.72rem",
-            fontWeight: 700,
-            textTransform: "uppercase",
-            letterSpacing: "0.05em",
-            color,
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            padding: 0,
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            textAlign: "left",
           }}
         >
-          {label}
-        </span>
-        <span
-          title={
-            doneCount > 0
-              ? `${list.length - doneCount} em aberto · ${doneCount} concluída(s)`
-              : `${list.length} em aberto`
-          }
-          style={{
-            fontSize: "0.72rem",
-            fontWeight: 700,
-            color: "var(--text-tertiary)",
-            fontVariantNumeric: "tabular-nums",
-          }}
-        >
-          {doneCount > 0 ? `${list.length - doneCount}/${list.length}` : list.length}
-        </span>
-        {isOver && (
           <span
             style={{
-              fontSize: "0.68rem",
+              fontSize: "0.72rem",
               fontWeight: 700,
-              color: "var(--accent)",
+              textTransform: "uppercase",
+              letterSpacing: "0.05em",
+              color,
             }}
           >
-            soltar aqui
+            {label}
           </span>
-        )}
-      </button>
+          <span
+            title={
+              doneCount > 0
+                ? `${list.length - doneCount} em aberto · ${doneCount} concluída(s)`
+                : `${list.length} em aberto`
+            }
+            style={{
+              fontSize: "0.72rem",
+              fontWeight: 700,
+              color: "var(--text-tertiary)",
+              fontVariantNumeric: "tabular-nums",
+            }}
+          >
+            {doneCount > 0 ? `${list.length - doneCount}/${list.length}` : list.length}
+          </span>
+          {isOver && (
+            <span
+              style={{
+                fontSize: "0.68rem",
+                fontWeight: 700,
+                color: "var(--accent)",
+              }}
+            >
+              soltar aqui
+            </span>
+          )}
+        </button>
+        {showReschedule && <RescheduleOverdueMenu demands={list} variant="button" />}
+      </div>
 
       <AnimatePresence initial={false}>
         {!isCollapsed && (
@@ -413,6 +427,7 @@ export default function DemandListView({
               showStatusPill
               selectedIds={selectedIds}
               onSelectDemand={onSelectDemand}
+              showReschedule={bucket === "atrasada"}
             />
           ))
         : statuses.map((status) => (
