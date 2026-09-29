@@ -53,6 +53,7 @@ import {
   Pin
 } from "lucide-react";
 import Spotlight from "@/components/Spotlight";
+import CaptureFolders from "@/components/admin/clients/CaptureFolders";
 import DialogShell from "@/components/DialogShell";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/components/CustomToast";
@@ -2376,6 +2377,12 @@ export default function ClientDetailPage() {
                   )}
                 </div>
               </Spotlight>
+
+              <CaptureFolders
+                clientId={id as string}
+                clientLabel={clientData.nome_fantasia || clientData.name}
+                hasDriveFolder={!!clientData.google_drive_url}
+              />
 
               {/* Brand Identity Section */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>

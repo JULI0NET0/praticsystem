@@ -23,7 +23,7 @@ import http from 'node:http';
 const CLIENT_ID = process.env.GOOGLE_OAUTH_CLIENT_ID;
 const CLIENT_SECRET = process.env.GOOGLE_OAUTH_CLIENT_SECRET;
 const REDIRECT_URI = 'http://localhost:3000/oauth2callback';
-const SCOPE = 'https://www.googleapis.com/auth/calendar.events';
+const SCOPE = 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/drive';
 
 if (!CLIENT_ID || !CLIENT_SECRET) {
   console.error(

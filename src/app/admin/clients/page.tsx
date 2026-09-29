@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { Search, Plus, MoreHorizontal, User, X, Building2, Mail, Phone, Shield, Loader2, Briefcase, Copy, Download, CheckCircle, AlertCircle } from "lucide-react";
+import { Search, Plus, MoreHorizontal, User, X, Building2, Mail, Phone, Shield, Loader2, Briefcase, Copy, Download, CheckCircle, AlertCircle, HardDrive } from "lucide-react";
 import Spotlight from "@/components/Spotlight";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "@/lib/supabase";
 import { Client } from "@/types/database";
+import DriveSyncModal from "@/components/admin/clients/DriveSyncModal";
 import SearchInput from "@/components/ui/SearchInput";
 import SortFilterMenu, { SortOption } from "@/components/ui/SortFilterMenu";
 import { useToast } from "@/components/CustomToast";
@@ -38,6 +39,7 @@ export default function ClientsPage() {
   const [asaasResult, setAsaasResult] = useState<{ customer: any; payments: any[] } | null>(null);
   const [asaasImportLoading, setAsaasImportLoading] = useState(false);
   const [asaasImported, setAsaasImported] = useState(false);
+  const [driveSyncOpen, setDriveSyncOpen] = useState(false);
 
   useEffect(() => {
     fetchClients();
@@ -194,6 +196,13 @@ export default function ClientsPage() {
             style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
           >
             <Copy size={18} /> Onboarding
+          </button>
+          <button
+            onClick={() => setDriveSyncOpen(true)}
+            className="btn btn-secondary"
+            style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+          >
+            <HardDrive size={18} /> <span className="hide-mobile">Sincronizar</span> Drive
           </button>
           <button
             onClick={() => { setAsaasModalOpen(true); setAsaasResult(null); setAsaasCpfCnpj(""); setAsaasImported(false); }}
@@ -468,6 +477,8 @@ export default function ClientsPage() {
           </>
         )}
       </div>
+
+      {driveSyncOpen && <DriveSyncModal onClose={() => setDriveSyncOpen(false)} onApplied={fetchClients} />}
 
       {/* Modal: Importar cliente inativo via Asaas */}
       <AnimatePresence>
