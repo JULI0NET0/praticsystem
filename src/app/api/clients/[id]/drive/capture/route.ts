@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/hermesAuth';
 import { requireTeamUser } from '@/lib/apiAuth';
 import { createFolder, listChildFolders } from '@/lib/googleDrive';
-import { parseDriveFolderId, type DriveFolderRef } from '@/lib/driveFolders';
+import { parseDriveFolderId, type CreatedSubfolder, type SubfolderTemplate } from '@/lib/driveFolders';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -34,8 +34,18 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const body = await request.json().catch(() => null);
   const folderName = typeof body?.folderName === 'string' ? body.folderName.trim() : '';
   const captureDate = typeof body?.captureDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.captureDate) ? body.captureDate : null;
-  const subfolderNames: string[] = Array.isArray(body?.subfolders)
-    ? body.subfolders.filter((s: unknown): s is string => typeof s === 'string').map((s: string) => s.trim()).filter(Boolean)
+  const clean = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
+  const subfolderTemplates: SubfolderTemplate[] = Array.isArray(body?.subfolders)
+    ? body.subfolders
+        .map((item: unknown): SubfolderTemplate => {
+          if (typeof item === 'string') return { name: clean(item) };
+          const obj = (item ?? {}) as { name?: unknown; children?: unknown };
+          return {
+            name: clean(obj.name),
+            children: Array.isArray(obj.children) ? obj.children.map(clean).filter(Boolean) : [],
+          };
+        })
+        .filter((t: SubfolderTemplate) => t.name)
     : [];
 
   if (!folderName) return NextResponse.json({ error: 'Informe o nome da pasta.' }, { status: 400 });
@@ -62,9 +72,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     }
 
     const parent = await createFolder(folderName, parentId);
-    const subfolders: DriveFolderRef[] = [];
-    for (const name of subfolderNames) {
-      subfolders.push(await createFolder(name, parent.id));
+    const subfolders: CreatedSubfolder[] = [];
+    for (const template of subfolderTemplates) {
+      const created: CreatedSubfolder = await createFolder(template.name, parent.id);
+      if (template.children?.length) {
+        created.children = [];
+        for (const childName of template.children) {
+          created.children.push(await createFolder(childName, created.id));
+        }
+      }
+      subfolders.push(created);
     }
 
     const { data: record, error: insertError } = await supabase

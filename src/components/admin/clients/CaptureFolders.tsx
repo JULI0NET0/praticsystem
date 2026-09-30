@@ -8,6 +8,7 @@ import DatePicker from "@/components/ui/DatePicker";
 import { useToast } from "@/components/CustomToast";
 import {
   DEFAULT_CAPTURE_SUBFOLDERS,
+  type SubfolderTemplate,
   formatCaptureFolderName,
   type CaptureFolderRecord,
 } from "@/lib/driveFolders";
@@ -44,7 +45,7 @@ export default function CaptureFolders({ clientId, hasDriveFolder }: CaptureFold
   const [modalOpen, setModalOpen] = useState(false);
 
   const [date, setDate] = useState(todayIso());
-  const [subfolders, setSubfolders] = useState<string[]>(DEFAULT_CAPTURE_SUBFOLDERS);
+  const [subfolders, setSubfolders] = useState<SubfolderTemplate[]>(DEFAULT_CAPTURE_SUBFOLDERS);
   const [creating, setCreating] = useState(false);
 
   const load = useCallback(async () => {
@@ -65,6 +66,9 @@ export default function CaptureFolders({ clientId, hasDriveFolder }: CaptureFold
     setSubfolders(DEFAULT_CAPTURE_SUBFOLDERS);
     setModalOpen(true);
   };
+
+  const updateSub = (index: number, patch: Partial<SubfolderTemplate>) =>
+    setSubfolders(subfolders.map((s, j) => (j === index ? { ...s, ...patch } : s)));
 
   const handleCreate = async () => {
     setCreating(true);
@@ -141,9 +145,16 @@ export default function CaptureFolders({ clientId, hasDriveFolder }: CaptureFold
                   {open && (
                     <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", padding: "0 14px 14px" }}>
                       {r.subfolders.map((s) => (
-                        <a key={s.id} href={s.url} target="_blank" rel="noreferrer" className="btn btn-secondary" style={{ display: "flex", alignItems: "center", gap: "6px", padding: "6px 12px", fontSize: "0.8rem" }}>
-                          {s.name}
-                        </a>
+                        <div key={s.id} style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "6px" }}>
+                          <a href={s.url} target="_blank" rel="noreferrer" className="btn btn-secondary" style={{ display: "flex", alignItems: "center", gap: "6px", padding: "6px 12px", fontSize: "0.8rem" }}>
+                            {s.name}
+                          </a>
+                          {s.children?.map((c) => (
+                            <a key={c.id} href={c.url} target="_blank" rel="noreferrer" className="btn btn-secondary" style={{ display: "flex", alignItems: "center", gap: "6px", padding: "4px 10px", fontSize: "0.75rem", opacity: 0.85 }}>
+                              ↳ {c.name}
+                            </a>
+                          ))}
+                        </div>
                       ))}
                     </div>
                   )}
@@ -190,28 +201,54 @@ export default function CaptureFolders({ clientId, hasDriveFolder }: CaptureFold
 
                 <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                   <label style={{ fontSize: "0.875rem", color: "var(--text-secondary)" }}>Subpastas</label>
-                  {subfolders.map((name, i) => (
-                    <div key={i} style={{ display: "flex", gap: "8px" }}>
-                      <input
-                        className="input-dark"
-                        style={{ flex: 1 }}
-                        value={name}
-                        onChange={(e) => setSubfolders(subfolders.map((s, j) => (j === i ? e.target.value : s)))}
-                      />
+                  {subfolders.map((sub, i) => (
+                    <div key={i} style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                      <div style={{ display: "flex", gap: "8px" }}>
+                        <input
+                          className="input-dark"
+                          style={{ flex: 1 }}
+                          value={sub.name}
+                          onChange={(e) => updateSub(i, { name: e.target.value })}
+                        />
+                        <button
+                          className="btn btn-secondary"
+                          style={{ padding: "10px" }}
+                          onClick={() => setSubfolders(subfolders.filter((_, j) => j !== i))}
+                          aria-label="Remover subpasta"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                      {sub.children?.map((child, k) => (
+                        <div key={k} style={{ display: "flex", gap: "8px", marginLeft: "24px" }}>
+                          <input
+                            className="input-dark"
+                            style={{ flex: 1 }}
+                            value={child}
+                            onChange={(e) => updateSub(i, { children: (sub.children ?? []).map((c, m) => (m === k ? e.target.value : c)) })}
+                          />
+                          <button
+                            className="btn btn-secondary"
+                            style={{ padding: "10px" }}
+                            onClick={() => updateSub(i, { children: (sub.children ?? []).filter((_, m) => m !== k) })}
+                            aria-label="Remover pasta de dentro"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      ))}
                       <button
-                        className="btn btn-secondary"
-                        style={{ padding: "10px" }}
-                        onClick={() => setSubfolders(subfolders.filter((_, j) => j !== i))}
-                        aria-label="Remover subpasta"
+                        onClick={() => updateSub(i, { children: [...(sub.children ?? []), ""] })}
+                        style={{ alignSelf: "flex-start", marginLeft: "24px", background: "none", border: "none", color: "var(--text-tertiary)", fontSize: "0.78rem", cursor: "pointer", padding: 0 }}
                       >
-                        <Trash2 size={16} />
+                        + pasta dentro de {sub.name || "esta subpasta"}
                       </button>
                     </div>
                   ))}
                   <button
                     className="btn btn-secondary"
                     style={{ display: "flex", alignItems: "center", gap: "6px", alignSelf: "flex-start" }}
-                    onClick={() => setSubfolders([...subfolders, ""])}
+                    onClick={() => setSubfolders([...subfolders, { name: "" }])}
                   >
                     <Plus size={16} /> Adicionar subpasta
                   </button>

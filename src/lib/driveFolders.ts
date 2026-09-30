@@ -2,19 +2,30 @@
 // usadas tanto pelas rotas quanto pelos modais. A integração em si fica em
 // src/lib/googleDrive.ts (server-only).
 
-export const DEFAULT_CAPTURE_SUBFOLDERS = [
-  '1-FOTOS CAMERA',
-  '2-VIDEOS CAMERA',
-  '3-FOTOS CELULAR',
-  '4-VIDEOS CELULAR',
-  '5-FOTOS CELULAR',
-  '6-BACKSTAGE PRATIC',
+/** Subpasta do modelo, com subpastas opcionais dentro (ex.: METADADOS da câmera). */
+export interface SubfolderTemplate {
+  name: string;
+  children?: string[];
+}
+
+export const DEFAULT_CAPTURE_SUBFOLDERS: SubfolderTemplate[] = [
+  { name: '1-FOTOS CAMERA' },
+  { name: '2-VIDEOS CAMERA', children: ['METADADOS'] },
+  { name: '3-FOTOS CELULAR' },
+  { name: '4-VIDEOS CELULAR' },
+  { name: '5-FOTOS CELULAR' },
+  { name: '6-BACKSTAGE PRATIC' },
 ];
 
 export interface DriveFolderRef {
   id: string;
   name: string;
   url: string;
+}
+
+/** Subpasta criada no Drive, com as pastas de dentro (se houver). */
+export interface CreatedSubfolder extends DriveFolderRef {
+  children?: DriveFolderRef[];
 }
 
 /** Registro de `client_capture_folders`. */
@@ -25,7 +36,7 @@ export interface CaptureFolderRecord {
   capture_date: string | null;
   folder_id: string;
   folder_url: string;
-  subfolders: DriveFolderRef[];
+  subfolders: CreatedSubfolder[];
   created_at: string;
 }
 
