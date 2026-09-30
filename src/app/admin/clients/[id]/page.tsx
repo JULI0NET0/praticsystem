@@ -2380,7 +2380,6 @@ export default function ClientDetailPage() {
 
               <CaptureFolders
                 clientId={id as string}
-                clientLabel={clientData.nome_fantasia || clientData.name}
                 hasDriveFolder={!!clientData.google_drive_url}
               />
 

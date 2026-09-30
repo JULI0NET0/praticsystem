@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Camera, ExternalLink, FolderPlus, Plus, Trash2, X, Loader2, ChevronDown } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import DatePicker from "@/components/ui/DatePicker";
 import { useToast } from "@/components/CustomToast";
 import {
   DEFAULT_CAPTURE_SUBFOLDERS,
@@ -31,12 +32,11 @@ function formatDate(iso: string | null): string {
 
 interface CaptureFoldersProps {
   clientId: string;
-  clientLabel: string;
   hasDriveFolder: boolean;
 }
 
 /** Lista as captações criadas no Drive (com links das subpastas) e o botão de nova captação. */
-export default function CaptureFolders({ clientId, clientLabel, hasDriveFolder }: CaptureFoldersProps) {
+export default function CaptureFolders({ clientId, hasDriveFolder }: CaptureFoldersProps) {
   const { showToast } = useToast();
   const [records, setRecords] = useState<CaptureFolderRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,7 +44,6 @@ export default function CaptureFolders({ clientId, clientLabel, hasDriveFolder }
   const [modalOpen, setModalOpen] = useState(false);
 
   const [date, setDate] = useState(todayIso());
-  const [customName, setCustomName] = useState<string | null>(null);
   const [subfolders, setSubfolders] = useState<string[]>(DEFAULT_CAPTURE_SUBFOLDERS);
   const [creating, setCreating] = useState(false);
 
@@ -59,12 +58,10 @@ export default function CaptureFolders({ clientId, clientLabel, hasDriveFolder }
 
   useEffect(() => { load(); }, [load]);
 
-  // Sugestão acompanha a data até o nome ser editado à mão.
-  const folderName = customName ?? formatCaptureFolderName(clientLabel, date);
+  const folderName = formatCaptureFolderName(date);
 
   const openModal = () => {
     setDate(todayIso());
-    setCustomName(null);
     setSubfolders(DEFAULT_CAPTURE_SUBFOLDERS);
     setModalOpen(true);
   };
@@ -177,17 +174,19 @@ export default function CaptureFolders({ clientId, clientLabel, hasDriveFolder }
               <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
                 <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                   <label style={{ fontSize: "0.875rem", color: "var(--text-secondary)" }}>Data da captação</label>
-                  <input type="date" className="input-dark" value={date} onChange={(e) => setDate(e.target.value)} />
-                </div>
-
-                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                  <label style={{ fontSize: "0.875rem", color: "var(--text-secondary)" }}>Nome da pasta</label>
-                  <input
-                    className="input-dark"
-                    value={folderName}
-                    onChange={(e) => setCustomName(e.target.value)}
+                  <DatePicker
+                    value={date}
+                    onChange={(val) => setDate(val ?? todayIso())}
+                    withTime={false}
+                    clearable={false}
+                    title="Data da captação"
+                    placeholder="Selecionar data"
                   />
                 </div>
+
+                <p style={{ fontSize: "0.875rem", color: "var(--text-secondary)", margin: 0 }}>
+                  A pasta será criada como <strong style={{ color: "var(--text-primary)" }}>{folderName}</strong>.
+                </p>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                   <label style={{ fontSize: "0.875rem", color: "var(--text-secondary)" }}>Subpastas</label>
@@ -224,7 +223,7 @@ export default function CaptureFolders({ clientId, clientLabel, hasDriveFolder }
                     className="btn btn-accent"
                     style={{ flex: 1, backgroundColor: "#4285F4", borderColor: "#4285F4", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}
                     onClick={handleCreate}
-                    disabled={creating || !folderName.trim()}
+                    disabled={creating || !date}
                   >
                     {creating ? <><Loader2 size={16} className="animate-spin" /> Criando...</> : "Criar pastas"}
                   </button>

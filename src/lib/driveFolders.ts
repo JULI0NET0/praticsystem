@@ -42,11 +42,11 @@ export function parseDriveFolderId(url: string | null | undefined): string | nul
   return byQuery ? byQuery[1] : null;
 }
 
-/** `2026-09-25` → `CAP. [KALLAS] 25-09-26`. */
-export function formatCaptureFolderName(label: string, isoDate: string): string {
+/** `2026-09-25` → `CAP. 25-09-26` (a pasta já fica dentro da pasta do cliente). */
+export function formatCaptureFolderName(isoDate: string): string {
   const [y, m, d] = isoDate.split('-');
   const date = y && m && d ? `${d}-${m}-${y.slice(-2)}` : isoDate;
-  return `CAP. [${label.trim().toUpperCase()}] ${date}`;
+  return `CAP. ${date}`;
 }
 
 export function normalizeName(s: string): string {

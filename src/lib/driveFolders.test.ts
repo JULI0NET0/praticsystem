@@ -16,8 +16,8 @@ describe('parseDriveFolderId', () => {
 });
 
 describe('formatCaptureFolderName', () => {
-  it('monta CAP. [CLIENTE] DD-MM-AA', () => {
-    expect(formatCaptureFolderName('Kallas', '2026-09-25')).toBe('CAP. [KALLAS] 25-09-26');
+  it('monta CAP. DD-MM-AA, sem o nome do cliente', () => {
+    expect(formatCaptureFolderName('2026-09-25')).toBe('CAP. 25-09-26');
   });
 });
 
