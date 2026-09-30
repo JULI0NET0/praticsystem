@@ -57,6 +57,8 @@ export interface Client {
   google_drive_url?: string;
   brand_drive_url?: string;
   brand_canva_url?: string;
+  brand_canva_posts_url?: string;
+  brand_canva_stories_url?: string;
   brand_pinterest_url?: string;
   essential_links?: { id: string; title: string; url: string; icon?: string }[];
   drive_settings?: {

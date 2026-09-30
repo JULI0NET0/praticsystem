@@ -58,6 +58,8 @@ ALTER TABLE public.clients ADD COLUMN IF NOT EXISTS essential_links      JSONB D
 ALTER TABLE public.clients ADD COLUMN IF NOT EXISTS drive_settings       JSONB;
 ALTER TABLE public.clients ADD COLUMN IF NOT EXISTS brand_drive_url      TEXT;
 ALTER TABLE public.clients ADD COLUMN IF NOT EXISTS brand_canva_url      TEXT;
+ALTER TABLE public.clients ADD COLUMN IF NOT EXISTS brand_canva_posts_url    TEXT;
+ALTER TABLE public.clients ADD COLUMN IF NOT EXISTS brand_canva_stories_url  TEXT;
 ALTER TABLE public.clients ADD COLUMN IF NOT EXISTS brand_pinterest_url  TEXT;
 
 

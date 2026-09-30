@@ -50,7 +50,8 @@ import {
   Palette,
   Image,
   RefreshCw,
-  Pin
+  Pin,
+  Smartphone
 } from "lucide-react";
 import Spotlight from "@/components/Spotlight";
 import CaptureFolders from "@/components/admin/clients/CaptureFolders";
@@ -143,6 +144,8 @@ export default function ClientDetailPage() {
   const [isBrandModalOpen, setIsBrandModalOpen] = useState(false);
   const [tempBrandDriveUrl, setTempBrandDriveUrl] = useState("");
   const [tempBrandCanvaUrl, setTempBrandCanvaUrl] = useState("");
+  const [tempBrandCanvaPostsUrl, setTempBrandCanvaPostsUrl] = useState("");
+  const [tempBrandCanvaStoriesUrl, setTempBrandCanvaStoriesUrl] = useState("");
   const [tempBrandPinterestUrl, setTempBrandPinterestUrl] = useState("");
   const [isBrandUploading, setIsBrandUploading] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -314,6 +317,32 @@ export default function ClientDetailPage() {
     const shortYear = year.slice(-2);
     return `${parts[0]}/${parts[1]}/${shortYear}`;
   };
+
+  const parseCanvaLinks = (rawCanvaUrl?: string, postsCol?: string, storiesCol?: string) => {
+    let posts = postsCol || '';
+    let stories = storiesCol || '';
+    if (!posts && !stories && rawCanvaUrl) {
+      const trimmed = rawCanvaUrl.trim();
+      if (trimmed.startsWith('{')) {
+        try {
+          const parsed = JSON.parse(trimmed);
+          posts = parsed.posts || '';
+          stories = parsed.stories || '';
+        } catch {
+          posts = trimmed;
+        }
+      } else {
+        posts = trimmed;
+      }
+    }
+    return { posts, stories };
+  };
+
+  const canvaLinks = parseCanvaLinks(
+    clientData?.brand_canva_url,
+    clientData?.brand_canva_posts_url,
+    clientData?.brand_canva_stories_url
+  );
 
   const getFinanceMetrics = () => {
     const rangeInvoices = clientInvoices.filter(i => {
@@ -715,17 +744,52 @@ export default function ClientDetailPage() {
     }
   };
 
+  const openBrandModal = (targetField?: 'posts' | 'stories' | 'drive' | 'pinterest') => {
+    setTempBrandDriveUrl(clientData?.brand_drive_url || '');
+    const current = parseCanvaLinks(clientData?.brand_canva_url, clientData?.brand_canva_posts_url, clientData?.brand_canva_stories_url);
+    setTempBrandCanvaPostsUrl(current.posts);
+    setTempBrandCanvaStoriesUrl(current.stories);
+    setTempBrandCanvaUrl(clientData?.brand_canva_url || '');
+    setTempBrandPinterestUrl(clientData?.brand_pinterest_url || '');
+    setIsBrandModalOpen(true);
+  };
+
+  const handleCopyUrl = (url: string, label: string) => {
+    if (!url) return;
+    navigator.clipboard.writeText(url);
+    showToast(`Link de ${label} copiado!`, 'success');
+  };
+
   const handleSaveBrandLinks = async () => {
     try {
+      const canvaPayload = JSON.stringify({
+        posts: tempBrandCanvaPostsUrl.trim(),
+        stories: tempBrandCanvaStoriesUrl.trim(),
+      });
+
       const { error } = await supabase
         .from('clients')
-        .update({ brand_drive_url: tempBrandDriveUrl, brand_canva_url: tempBrandCanvaUrl, brand_pinterest_url: tempBrandPinterestUrl })
+        .update({
+          brand_drive_url: tempBrandDriveUrl.trim(),
+          brand_canva_url: canvaPayload,
+          brand_pinterest_url: tempBrandPinterestUrl.trim(),
+        })
         .eq('id', id);
+
       if (error) throw error;
-      setClientData({ ...clientData, brand_drive_url: tempBrandDriveUrl, brand_canva_url: tempBrandCanvaUrl, brand_pinterest_url: tempBrandPinterestUrl });
+
+      setClientData({
+        ...clientData,
+        brand_drive_url: tempBrandDriveUrl.trim(),
+        brand_canva_url: canvaPayload,
+        brand_canva_posts_url: tempBrandCanvaPostsUrl.trim(),
+        brand_canva_stories_url: tempBrandCanvaStoriesUrl.trim(),
+        brand_pinterest_url: tempBrandPinterestUrl.trim(),
+      });
       setIsBrandModalOpen(false);
-      showToast('ID Visual da Marca atualizado!', 'success');
+      showToast('ID Visual e links do Canva atualizados!', 'success');
     } catch (err) {
+      console.error('Erro ao salvar ID Visual:', err);
       showToast('Erro ao salvar ID Visual.', 'error');
     }
   };
@@ -1023,6 +1087,60 @@ export default function ClientDetailPage() {
             >
               <Calendar size={14} /> ONB {formatBadgeDate(clientData.onboarding_date)}
             </div>
+
+            {(canvaLinks.posts || canvaLinks.stories) && (
+              <>
+                <span style={{ color: 'var(--color-border-subtle)' }}>•</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  {canvaLinks.posts && (
+                    <button
+                      onClick={() => window.open(canvaLinks.posts, '_blank')}
+                      title="Abrir Canva Posts (Feed & Carrosséis)"
+                      style={{
+                        color: '#A855F7',
+                        fontSize: '0.75rem',
+                        fontWeight: 600,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        backgroundColor: 'rgba(168, 85, 247, 0.1)',
+                        padding: '4px 10px',
+                        borderRadius: '8px',
+                        border: '1px solid rgba(168, 85, 247, 0.3)',
+                        cursor: 'pointer',
+                        transition: '0.2s'
+                      }}
+                      className="hover-accent"
+                    >
+                      <Sparkles size={13} /> Canva Posts
+                    </button>
+                  )}
+                  {canvaLinks.stories && (
+                    <button
+                      onClick={() => window.open(canvaLinks.stories, '_blank')}
+                      title="Abrir Canva Stories (9:16)"
+                      style={{
+                        color: '#00C4CC',
+                        fontSize: '0.75rem',
+                        fontWeight: 600,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        backgroundColor: 'rgba(0, 196, 204, 0.1)',
+                        padding: '4px 10px',
+                        borderRadius: '8px',
+                        border: '1px solid rgba(0, 196, 204, 0.3)',
+                        cursor: 'pointer',
+                        transition: '0.2s'
+                      }}
+                      className="hover-accent"
+                    >
+                      <Smartphone size={13} /> Canva Stories
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </div>
         <div className="client-page-actions" style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
@@ -1316,6 +1434,115 @@ export default function ClientDetailPage() {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                {/* Canva Brand Identity Quick Access Card */}
+                <Spotlight className="glass-card" style={{ padding: '24px', border: '1px solid rgba(126, 86, 222, 0.25)', background: 'linear-gradient(135deg, rgba(126, 86, 222, 0.05) 0%, rgba(0, 196, 204, 0.02) 100%)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: 'linear-gradient(135deg, #7E56DE, #00C4CC)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', boxShadow: '0 4px 12px rgba(126, 86, 222, 0.25)' }}>
+                        <Sparkles size={18} />
+                      </div>
+                      <div>
+                        <h3 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0 }}>Canva da Marca</h3>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: 0 }}>Modelos oficiais de criação</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => openBrandModal()}
+                      className="btn btn-secondary btn-sm"
+                      style={{ fontSize: '0.75rem', padding: '4px 10px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                      title="Editar links do Canva"
+                    >
+                      <Edit2 size={12} /> Editar
+                    </button>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {/* Canva Posts */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', borderRadius: '12px', background: 'var(--card-inner-bg)', border: '1px solid rgba(126, 86, 222, 0.2)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                        <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(126, 86, 222, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#7E56DE', flexShrink: 0 }}>
+                          <Sparkles size={16} />
+                        </div>
+                        <div style={{ minWidth: 0 }}>
+                          <p style={{ fontSize: '0.875rem', fontWeight: 600, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Canva Posts</p>
+                          <p style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)', margin: 0 }}>Feed & Carrosséis (1080×1350)</p>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                        {canvaLinks.posts ? (
+                          <>
+                            <button
+                              onClick={() => handleCopyUrl(canvaLinks.posts, 'Canva Posts')}
+                              className="btn btn-secondary btn-sm"
+                              style={{ padding: '6px 8px', fontSize: '0.75rem', color: 'var(--text-secondary)' }}
+                              title="Copiar Link"
+                            >
+                              <Copy size={12} />
+                            </button>
+                            <button
+                              onClick={() => window.open(canvaLinks.posts, '_blank')}
+                              className="btn btn-secondary btn-sm"
+                              style={{ fontSize: '0.75rem', color: '#7E56DE', borderColor: 'rgba(126, 86, 222, 0.3)', display: 'flex', alignItems: 'center', gap: '4px' }}
+                            >
+                              <ExternalLink size={12} /> Abrir
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            onClick={() => openBrandModal('posts')}
+                            className="btn btn-secondary btn-sm"
+                            style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}
+                          >
+                            <Plus size={12} /> Vincular
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Canva Stories */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', borderRadius: '12px', background: 'var(--card-inner-bg)', border: '1px solid rgba(0, 196, 204, 0.2)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                        <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(0, 196, 204, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#00C4CC', flexShrink: 0 }}>
+                          <Smartphone size={16} />
+                        </div>
+                        <div style={{ minWidth: 0 }}>
+                          <p style={{ fontSize: '0.875rem', fontWeight: 600, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Canva Stories</p>
+                          <p style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)', margin: 0 }}>Stories & Reels (1080×1920)</p>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                        {canvaLinks.stories ? (
+                          <>
+                            <button
+                              onClick={() => handleCopyUrl(canvaLinks.stories, 'Canva Stories')}
+                              className="btn btn-secondary btn-sm"
+                              style={{ padding: '6px 8px', fontSize: '0.75rem', color: 'var(--text-secondary)' }}
+                              title="Copiar Link"
+                            >
+                              <Copy size={12} />
+                            </button>
+                            <button
+                              onClick={() => window.open(canvaLinks.stories, '_blank')}
+                              className="btn btn-secondary btn-sm"
+                              style={{ fontSize: '0.75rem', color: '#00C4CC', borderColor: 'rgba(0, 196, 204, 0.3)', display: 'flex', alignItems: 'center', gap: '4px' }}
+                            >
+                              <ExternalLink size={12} /> Abrir
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            onClick={() => openBrandModal('stories')}
+                            className="btn btn-secondary btn-sm"
+                            style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}
+                          >
+                            <Plus size={12} /> Vincular
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </Spotlight>
+
                 <Spotlight className="glass-card" style={{ padding: '24px' }}>
                   <h3 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '20px' }}>Próximos Passos & Agenda</h3>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -2394,12 +2621,7 @@ export default function ClientDetailPage() {
                     <h3 style={{ fontSize: '1.25rem', fontWeight: 700 }}>ID Visual da Marca</h3>
                   </div>
                   <button
-                    onClick={() => {
-                      setTempBrandDriveUrl(clientData.brand_drive_url || '');
-                      setTempBrandCanvaUrl(clientData.brand_canva_url || '');
-                      setTempBrandPinterestUrl(clientData.brand_pinterest_url || '');
-                      setIsBrandModalOpen(true);
-                    }}
+                    onClick={() => openBrandModal()}
                     className="btn btn-secondary btn-sm"
                     style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem' }}
                   >
@@ -2407,8 +2629,164 @@ export default function ClientDetailPage() {
                   </button>
                 </div>
 
-                {/* Drive + Canva + Pinterest Cards */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+                {/* Canva Templates Highlight Box (Área separada no topo) */}
+                <div
+                  style={{
+                    padding: '24px',
+                    borderRadius: '16px',
+                    border: '1px solid rgba(126, 86, 222, 0.3)',
+                    background: 'linear-gradient(135deg, rgba(126, 86, 222, 0.08) 0%, rgba(0, 196, 204, 0.04) 100%)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '16px',
+                    position: 'relative',
+                    boxShadow: '0 4px 24px rgba(126, 86, 222, 0.06)'
+                  }}
+                >
+                  {/* Top header Canva */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'linear-gradient(135deg, #7E56DE, #00C4CC)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', boxShadow: '0 2px 8px rgba(126, 86, 222, 0.3)' }}>
+                        <Sparkles size={16} />
+                      </div>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <h4 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>Templates Canva da Marca</h4>
+                          <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#A855F7', background: 'rgba(168, 85, 247, 0.15)', padding: '2px 8px', borderRadius: '100px', letterSpacing: '0.04em' }}>
+                            OFICIAL
+                          </span>
+                        </div>
+                        <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: '2px 0 0 0' }}>Acesso direto aos modelos de criação para posts e stories</p>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => openBrandModal()}
+                      className="btn btn-secondary btn-sm"
+                      style={{ fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '6px', color: '#A855F7', borderColor: 'rgba(168, 85, 247, 0.3)' }}
+                    >
+                      <Edit2 size={13} /> Gerenciar Links Canva
+                    </button>
+                  </div>
+
+                  {/* Canva Posts & Stories Cards Grid */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+                    {/* Canva Posts Card */}
+                    <Spotlight className="glass-card" style={{ padding: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', border: '1px solid rgba(126, 86, 222, 0.25)', background: 'rgba(126, 86, 222, 0.04)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
+                        <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(126, 86, 222, 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#7E56DE', flexShrink: 0 }}>
+                          <Sparkles size={24} />
+                        </div>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
+                            <p style={{ fontWeight: 700, fontSize: '0.98rem', margin: 0 }}>Canva Posts</p>
+                            <span style={{ fontSize: '0.65rem', fontWeight: 600, color: '#A855F7', background: 'rgba(126, 86, 222, 0.12)', padding: '1px 6px', borderRadius: '4px' }}>
+                              1080×1350
+                            </span>
+                          </div>
+                          <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: 0 }}>
+                            {canvaLinks.posts ? (
+                              <span style={{ color: 'var(--color-success)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                <CheckCircle2 size={12} /> Template conectado
+                              </span>
+                            ) : (
+                              'Feed & Carrosséis • Não vinculado'
+                            )}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                        {canvaLinks.posts ? (
+                          <>
+                            <button
+                              onClick={() => handleCopyUrl(canvaLinks.posts, 'Canva Posts')}
+                              className="btn btn-secondary btn-sm"
+                              style={{ padding: '8px', color: 'var(--text-secondary)' }}
+                              title="Copiar link do Canva Posts"
+                            >
+                              <Copy size={14} />
+                            </button>
+                            <button
+                              onClick={() => window.open(canvaLinks.posts, '_blank')}
+                              className="btn btn-secondary btn-sm"
+                              style={{ display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid rgba(126, 86, 222, 0.4)', color: '#7E56DE', fontWeight: 600, fontSize: '0.82rem' }}
+                            >
+                              <ExternalLink size={14} /> Abrir
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            onClick={() => openBrandModal('posts')}
+                            className="btn btn-secondary btn-sm"
+                            style={{ display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid rgba(126, 86, 222, 0.25)', color: '#7E56DE', fontSize: '0.82rem' }}
+                          >
+                            <Plus size={14} /> Vincular
+                          </button>
+                        )}
+                      </div>
+                    </Spotlight>
+
+                    {/* Canva Stories Card */}
+                    <Spotlight className="glass-card" style={{ padding: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', border: '1px solid rgba(0, 196, 204, 0.25)', background: 'rgba(0, 196, 204, 0.03)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
+                        <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(0, 196, 204, 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#00C4CC', flexShrink: 0 }}>
+                          <Smartphone size={24} />
+                        </div>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
+                            <p style={{ fontWeight: 700, fontSize: '0.98rem', margin: 0 }}>Canva Stories</p>
+                            <span style={{ fontSize: '0.65rem', fontWeight: 600, color: '#00C4CC', background: 'rgba(0, 196, 204, 0.12)', padding: '1px 6px', borderRadius: '4px' }}>
+                              9:16
+                            </span>
+                          </div>
+                          <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: 0 }}>
+                            {canvaLinks.stories ? (
+                              <span style={{ color: 'var(--color-success)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                <CheckCircle2 size={12} /> Template conectado
+                              </span>
+                            ) : (
+                              'Stories & Reels • Não vinculado'
+                            )}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                        {canvaLinks.stories ? (
+                          <>
+                            <button
+                              onClick={() => handleCopyUrl(canvaLinks.stories, 'Canva Stories')}
+                              className="btn btn-secondary btn-sm"
+                              style={{ padding: '8px', color: 'var(--text-secondary)' }}
+                              title="Copiar link do Canva Stories"
+                            >
+                              <Copy size={14} />
+                            </button>
+                            <button
+                              onClick={() => window.open(canvaLinks.stories, '_blank')}
+                              className="btn btn-secondary btn-sm"
+                              style={{ display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid rgba(0, 196, 204, 0.4)', color: '#00C4CC', fontWeight: 600, fontSize: '0.82rem' }}
+                            >
+                              <ExternalLink size={14} /> Abrir
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            onClick={() => openBrandModal('stories')}
+                            className="btn btn-secondary btn-sm"
+                            style={{ display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid rgba(0, 196, 204, 0.25)', color: '#00C4CC', fontSize: '0.82rem' }}
+                          >
+                            <Plus size={14} /> Vincular
+                          </button>
+                        )}
+                      </div>
+                    </Spotlight>
+                  </div>
+                </div>
+
+                {/* Repositórios de Apoio: Google Drive & Pinterest */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
                   {/* Google Drive Card */}
                   <Spotlight className="glass-card" style={{ padding: '24px', display: 'flex', alignItems: 'center', gap: '16px', border: '1px solid rgba(66, 133, 244, 0.2)', background: 'rgba(66, 133, 244, 0.03)' }}>
                     <div style={{ width: '48px', height: '48px', borderRadius: '12px', backgroundColor: 'rgba(66, 133, 244, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4285F4', flexShrink: 0 }}>
@@ -2430,39 +2808,9 @@ export default function ClientDetailPage() {
                       </button>
                     ) : (
                       <button
-                        onClick={() => { setTempBrandDriveUrl(''); setTempBrandCanvaUrl(clientData.brand_canva_url || ''); setTempBrandPinterestUrl(clientData.brand_pinterest_url || ''); setIsBrandModalOpen(true); }}
+                        onClick={() => openBrandModal('drive')}
                         className="btn btn-secondary btn-sm"
                         style={{ display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid rgba(66, 133, 244, 0.2)', color: '#4285F4', flexShrink: 0, fontSize: '0.8rem' }}
-                      >
-                        <Plus size={14} /> Vincular
-                      </button>
-                    )}
-                  </Spotlight>
-
-                  {/* Canva Card */}
-                  <Spotlight className="glass-card" style={{ padding: '24px', display: 'flex', alignItems: 'center', gap: '16px', border: '1px solid rgba(126, 86, 222, 0.2)', background: 'rgba(126, 86, 222, 0.03)' }}>
-                    <div style={{ width: '48px', height: '48px', borderRadius: '12px', backgroundColor: 'rgba(126, 86, 222, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#7E56DE', flexShrink: 0 }}>
-                      <Sparkles size={24} />
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: '2px' }}>Canva</p>
-                      <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-                        {clientData.brand_canva_url ? 'Kit vinculado' : 'Nenhum kit vinculado'}
-                      </p>
-                    </div>
-                    {clientData.brand_canva_url ? (
-                      <button
-                        onClick={() => window.open(clientData.brand_canva_url, '_blank')}
-                        className="btn btn-secondary btn-sm"
-                        style={{ display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid rgba(126, 86, 222, 0.3)', color: '#7E56DE', flexShrink: 0, fontSize: '0.8rem' }}
-                      >
-                        <ExternalLink size={14} /> Abrir
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => { setTempBrandDriveUrl(clientData.brand_drive_url || ''); setTempBrandCanvaUrl(''); setTempBrandPinterestUrl(clientData.brand_pinterest_url || ''); setIsBrandModalOpen(true); }}
-                        className="btn btn-secondary btn-sm"
-                        style={{ display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid rgba(126, 86, 222, 0.2)', color: '#7E56DE', flexShrink: 0, fontSize: '0.8rem' }}
                       >
                         <Plus size={14} /> Vincular
                       </button>
@@ -2490,7 +2838,7 @@ export default function ClientDetailPage() {
                       </button>
                     ) : (
                       <button
-                        onClick={() => { setTempBrandDriveUrl(clientData.brand_drive_url || ''); setTempBrandCanvaUrl(clientData.brand_canva_url || ''); setTempBrandPinterestUrl(''); setIsBrandModalOpen(true); }}
+                        onClick={() => openBrandModal('pinterest')}
                         className="btn btn-secondary btn-sm"
                         style={{ display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid rgba(230, 0, 35, 0.2)', color: '#E60023', flexShrink: 0, fontSize: '0.8rem' }}
                       >
@@ -3378,19 +3726,76 @@ export default function ClientDetailPage() {
               className="glass-card"
               style={{ width: '100%', maxWidth: '520px', padding: '32px' }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '28px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{ color: '#A855F7' }}><Palette size={24} /></div>
-                  <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>ID Visual da Marca</h2>
+                  <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(126, 86, 222, 0.2))', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#A855F7' }}>
+                    <Palette size={20} />
+                  </div>
+                  <div>
+                    <h2 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>ID Visual & Links da Marca</h2>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '2px 0 0 0' }}>Configure templates do Canva e pastas em nuvem</p>
+                  </div>
                 </div>
                 <button onClick={() => setIsBrandModalOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
-                  <X size={24} />
+                  <X size={22} />
                 </button>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                {/* Canva Section Box */}
+                <div style={{ padding: '16px', borderRadius: '14px', background: 'rgba(126, 86, 222, 0.05)', border: '1px solid rgba(126, 86, 222, 0.25)', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: 'linear-gradient(135deg, #7E56DE, #00C4CC)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
+                      <Sparkles size={14} />
+                    </div>
+                    <span style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-primary)' }}>Templates Oficiais do Canva</span>
+                  </div>
+
+                  {/* Canva Posts field */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <label style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
+                        <Sparkles size={14} color="#7E56DE" /> Canva Posts
+                      </label>
+                      <span style={{ fontSize: '0.7rem', color: '#A855F7', background: 'rgba(168, 85, 247, 0.1)', padding: '2px 6px', borderRadius: '4px', fontWeight: 600 }}>Feed (1080×1350)</span>
+                    </div>
+                    <div style={{ position: 'relative' }}>
+                      <Link size={16} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
+                      <input
+                        type="url"
+                        className="input-dark"
+                        placeholder="https://www.canva.com/design/..."
+                        style={{ paddingLeft: '42px', fontSize: '0.85rem' }}
+                        value={tempBrandCanvaPostsUrl}
+                        onChange={(e) => setTempBrandCanvaPostsUrl(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Canva Stories field */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <label style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
+                        <Smartphone size={14} color="#00C4CC" /> Canva Stories
+                      </label>
+                      <span style={{ fontSize: '0.7rem', color: '#00C4CC', background: 'rgba(0, 196, 204, 0.1)', padding: '2px 6px', borderRadius: '4px', fontWeight: 600 }}>Vertical 9:16 (1080×1920)</span>
+                    </div>
+                    <div style={{ position: 'relative' }}>
+                      <Link size={16} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
+                      <input
+                        type="url"
+                        className="input-dark"
+                        placeholder="https://www.canva.com/design/..."
+                        style={{ paddingLeft: '42px', fontSize: '0.85rem' }}
+                        value={tempBrandCanvaStoriesUrl}
+                        onChange={(e) => setTempBrandCanvaStoriesUrl(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </div>
+
                 {/* Drive field */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
                     <HardDrive size={15} color="#4285F4" /> Google Drive
                   </label>
                   <div style={{ position: 'relative' }}>
@@ -3399,32 +3804,16 @@ export default function ClientDetailPage() {
                       type="url"
                       className="input-dark"
                       placeholder="https://drive.google.com/drive/folders/..."
-                      style={{ paddingLeft: '42px' }}
+                      style={{ paddingLeft: '42px', fontSize: '0.85rem' }}
                       value={tempBrandDriveUrl}
                       onChange={(e) => setTempBrandDriveUrl(e.target.value)}
                     />
                   </div>
                 </div>
-                {/* Canva field */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Sparkles size={15} color="#7E56DE" /> Canva
-                  </label>
-                  <div style={{ position: 'relative' }}>
-                    <Link size={16} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
-                    <input
-                      type="url"
-                      className="input-dark"
-                      placeholder="https://www.canva.com/design/..."
-                      style={{ paddingLeft: '42px' }}
-                      value={tempBrandCanvaUrl}
-                      onChange={(e) => setTempBrandCanvaUrl(e.target.value)}
-                    />
-                  </div>
-                </div>
+
                 {/* Pinterest field */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
                     <Pin size={15} color="#E60023" /> Pinterest
                   </label>
                   <div style={{ position: 'relative' }}>
@@ -3433,20 +3822,21 @@ export default function ClientDetailPage() {
                       type="url"
                       className="input-dark"
                       placeholder="https://br.pinterest.com/..."
-                      style={{ paddingLeft: '42px' }}
+                      style={{ paddingLeft: '42px', fontSize: '0.85rem' }}
                       value={tempBrandPinterestUrl}
                       onChange={(e) => setTempBrandPinterestUrl(e.target.value)}
                     />
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: '12px', marginTop: '4px' }}>
+
+                <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
                   <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setIsBrandModalOpen(false)}>Cancelar</button>
                   <button
                     className="btn btn-accent"
                     style={{ flex: 1, backgroundColor: '#A855F7', borderColor: '#A855F7' }}
                     onClick={handleSaveBrandLinks}
                   >
-                    Salvar
+                    Salvar Alterações
                   </button>
                 </div>
               </div>
