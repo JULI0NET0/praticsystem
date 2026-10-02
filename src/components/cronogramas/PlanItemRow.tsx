@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { Check, ListChecks, Maximize2, PenLine, Video } from "lucide-react";
 import { tint } from "@/lib/tint";
-import { getContentType } from "@/lib/contentTypes";
+import { CONTENT_TYPES, getContentType } from "@/lib/contentTypes";
+import { CONTENT_CHANNELS } from "@/types/cronogramas";
 import type { QuickParseResult } from "@/lib/quickParse";
 import { useDemandas } from "@/components/demandas/DemandasProvider";
 import DemandStatusPill from "@/components/demandas/DemandStatusPill";
@@ -170,25 +171,44 @@ export default function PlanItemRow({ demand, onOpen, selected = false, onSelect
           <DueChip demandId={demand.id} dueDate={demand.due_date} dueTime={demand.due_time} />
           <DemandStatusPill status={status} size="sm" />
 
-          {contentType && (
-            <span
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 4,
-                padding: "2px 8px",
-                borderRadius: "var(--radius-badge)",
-                fontSize: "0.66rem",
-                fontWeight: 700,
-                color: contentType.color,
-                background: tint(contentType.color, 14),
-                border: `1px solid ${tint(contentType.color, 32)}`,
-                whiteSpace: "nowrap",
-              }}
-            >
-              <contentType.icon size={10} />
-              {contentType.label}
-            </span>
+          {demand.plan_role !== "roteiro" && demand.plan_role !== "captacao" && (
+            <>
+              <select
+                value={demand.content_type ?? ""}
+                onChange={(event) => updateDemand(demand.id, { content_type: event.target.value || null })}
+                onClick={(event) => event.stopPropagation()}
+                aria-label="Formato"
+                title="Alterar formato"
+                style={{
+                  ...chipSelect,
+                  color: contentType?.color ?? "var(--text-tertiary)",
+                  background: contentType ? tint(contentType.color, 14) : "transparent",
+                  border: `1px solid ${contentType ? tint(contentType.color, 32) : "var(--border)"}`,
+                }}
+              >
+                <option value="">Formato</option>
+                {CONTENT_TYPES.map((type) => (
+                  <option key={type.id} value={type.id}>
+                    {type.label}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={demand.type ?? ""}
+                onChange={(event) => updateDemand(demand.id, { type: event.target.value || null })}
+                onClick={(event) => event.stopPropagation()}
+                aria-label="Canal"
+                title="Alterar canal"
+                style={{ ...chipSelect, color: "var(--text-secondary)", border: "1px solid var(--border)" }}
+              >
+                <option value="">Canal</option>
+                {CONTENT_CHANNELS.map((channel) => (
+                  <option key={channel.value} value={channel.value}>
+                    {channel.label}
+                  </option>
+                ))}
+              </select>
+            </>
           )}
 
           <AssigneeStack
@@ -245,3 +265,13 @@ export default function PlanItemRow({ demand, onOpen, selected = false, onSelect
     </div>
   );
 }
+
+const chipSelect: React.CSSProperties = {
+  padding: "2px 6px",
+  borderRadius: "var(--radius-badge)",
+  fontSize: "0.66rem",
+  fontWeight: 700,
+  fontFamily: "inherit",
+  cursor: "pointer",
+  background: "transparent",
+};
