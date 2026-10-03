@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Check, ListChecks, Maximize2, PenLine, Video } from "lucide-react";
+import { Check, ListChecks, Maximize2, Pencil, PenLine, Video } from "lucide-react";
 import { tint } from "@/lib/tint";
-import { CONTENT_TYPES, getContentType } from "@/lib/contentTypes";
-import { CONTENT_CHANNELS } from "@/types/cronogramas";
+import { getContentType } from "@/lib/contentTypes";
+import { channelColor, channelLabel } from "@/types/cronogramas";
 import type { QuickParseResult } from "@/lib/quickParse";
 import { useDemandas } from "@/components/demandas/DemandasProvider";
 import DemandStatusPill from "@/components/demandas/DemandStatusPill";
@@ -16,6 +16,7 @@ import { PRIORITY_COLORS, type Demand } from "@/types/demandas";
 interface Props {
   demand: Demand;
   onOpen: (id: string) => void;
+  onEdit?: (id: string) => void;
   selected?: boolean;
   onSelect?: (id: string, event: React.MouseEvent) => void;
 }
@@ -28,7 +29,7 @@ interface Props {
  * O título é editável no lugar, com os mesmos atalhos das Demandas; abrir o
  * detalhe continua disponível no botão.
  */
-export default function PlanItemRow({ demand, onOpen, selected = false, onSelect }: Props) {
+export default function PlanItemRow({ demand, onOpen, onEdit, selected = false, onSelect }: Props) {
   const { getStatus, updateDemand, toggleComplete } = useDemandas();
 
   const [editing, setEditing] = useState(false);
@@ -171,44 +172,42 @@ export default function PlanItemRow({ demand, onOpen, selected = false, onSelect
           <DueChip demandId={demand.id} dueDate={demand.due_date} dueTime={demand.due_time} />
           <DemandStatusPill status={status} size="sm" />
 
-          {demand.plan_role !== "roteiro" && demand.plan_role !== "captacao" && (
-            <>
-              <select
-                value={demand.content_type ?? ""}
-                onChange={(event) => updateDemand(demand.id, { content_type: event.target.value || null })}
-                onClick={(event) => event.stopPropagation()}
-                aria-label="Formato"
-                title="Alterar formato"
-                style={{
-                  ...chipSelect,
-                  color: contentType?.color ?? "var(--text-tertiary)",
-                  background: contentType ? tint(contentType.color, 14) : "transparent",
-                  border: `1px solid ${contentType ? tint(contentType.color, 32) : "var(--border)"}`,
-                }}
-              >
-                <option value="">Formato</option>
-                {CONTENT_TYPES.map((type) => (
-                  <option key={type.id} value={type.id}>
-                    {type.label}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={demand.type ?? ""}
-                onChange={(event) => updateDemand(demand.id, { type: event.target.value || null })}
-                onClick={(event) => event.stopPropagation()}
-                aria-label="Canal"
-                title="Alterar canal"
-                style={{ ...chipSelect, color: "var(--text-secondary)", border: "1px solid var(--border)" }}
-              >
-                <option value="">Canal</option>
-                {CONTENT_CHANNELS.map((channel) => (
-                  <option key={channel.value} value={channel.value}>
-                    {channel.label}
-                  </option>
-                ))}
-              </select>
-            </>
+          {contentType && (
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 4,
+                padding: "2px 8px",
+                borderRadius: "var(--radius-badge)",
+                fontSize: "0.66rem",
+                fontWeight: 700,
+                color: contentType.color,
+                background: tint(contentType.color, 14),
+                border: `1px solid ${tint(contentType.color, 32)}`,
+                whiteSpace: "nowrap",
+              }}
+            >
+              <contentType.icon size={10} />
+              {contentType.label}
+            </span>
+          )}
+
+          {!isProduction && demand.type && (
+            <span
+              style={{
+                padding: "2px 8px",
+                borderRadius: "var(--radius-badge)",
+                fontSize: "0.66rem",
+                fontWeight: 700,
+                color: channelColor(demand.type),
+                background: tint(channelColor(demand.type), 14),
+                border: `1px solid ${tint(channelColor(demand.type), 32)}`,
+                whiteSpace: "nowrap",
+              }}
+            >
+              {channelLabel(demand.type)}
+            </span>
           )}
 
           <AssigneeStack
@@ -240,38 +239,44 @@ export default function PlanItemRow({ demand, onOpen, selected = false, onSelect
         </div>
       </div>
 
-      <button
-        type="button"
-        onClick={(event) => {
-          event.stopPropagation();
-          onOpen(demand.id);
-        }}
-        aria-label={`Abrir ${demand.title}`}
-        title="Abrir detalhes"
-        className="plan-item-open"
-        style={{
-          display: "flex",
-          marginTop: 2,
-          flexShrink: 0,
-          border: "none",
-          background: "transparent",
-          cursor: "pointer",
-          padding: 3,
-          color: "var(--text-tertiary)",
-        }}
-      >
-        <Maximize2 size={13} />
-      </button>
+      <div className="plan-item-open" style={{ display: "flex", gap: 2, marginTop: 2, flexShrink: 0 }}>
+        {onEdit && (
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              onEdit(demand.id);
+            }}
+            aria-label={`Editar ${demand.title}`}
+            title="Editar"
+            style={iconBtn}
+          >
+            <Pencil size={13} />
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            onOpen(demand.id);
+          }}
+          aria-label={`Abrir ${demand.title}`}
+          title="Abrir detalhes"
+          style={iconBtn}
+        >
+          <Maximize2 size={13} />
+        </button>
+      </div>
     </div>
   );
 }
 
-const chipSelect: React.CSSProperties = {
-  padding: "2px 6px",
-  borderRadius: "var(--radius-badge)",
-  fontSize: "0.66rem",
-  fontWeight: 700,
-  fontFamily: "inherit",
-  cursor: "pointer",
+const iconBtn: React.CSSProperties = {
+  display: "flex",
+  border: "none",
   background: "transparent",
+  cursor: "pointer",
+  padding: 4,
+  borderRadius: "var(--radius-sm)",
+  color: "var(--text-tertiary)",
 };

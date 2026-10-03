@@ -1382,8 +1382,15 @@ input[type='date'] {
   transition: opacity var(--duration-fast) var(--ease-standard);
 }
 
-.plan-item-row:hover .plan-item-open {
+.plan-item-row:hover .plan-item-open,
+.plan-item-row:focus-within .plan-item-open {
   opacity: 1;
+}
+
+@media (hover: none) {
+  .plan-item-row .plan-item-open {
+    opacity: 1;
+  }
 }
 
 /* O título só revela que é editável ao passar o mouse */

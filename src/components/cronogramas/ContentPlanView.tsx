@@ -25,7 +25,7 @@ import {
 import { useDemandas } from "@/components/demandas/DemandasProvider";
 import DemandModal from "@/components/demandas/DemandModal";
 import PlanItemRow from "./PlanItemRow";
-import AddPlanItemForm from "./AddPlanItemForm";
+import PlanItemModal from "./PlanItemModal";
 import PlanScriptRow from "./PlanScriptRow";
 import ScriptNoteDrawer from "./ScriptNoteDrawer";
 import LinkExistingNoteModal from "./LinkExistingNoteModal";
@@ -89,7 +89,7 @@ function formatPdfDate(dateStr?: string | null, timeStr?: string | null): string
 export default function ContentPlanView({ planId }: { planId: string }) {
   const { currentUser } = useAuth();
   const { showToast } = useToast();
-  const { getClient, getStatus, statuses, demands: allDemands, users, clients } = useDemandas();
+  const { getClient, getStatus, statuses, demands: allDemands, users, clients, updateDemand, deleteDemand } = useDemandas();
 
   const [plan, setPlan] = useState<ContentPlan | null>(null);
   const [planDemands, setPlanDemands] = useState<Demand[]>([]);
@@ -98,7 +98,7 @@ export default function ContentPlanView({ planId }: { planId: string }) {
   const [linkModalOpen, setLinkModalOpen] = useState(false);
   const [creatingScript, setCreatingScript] = useState(false);
   const [exporting, setExporting] = useState(false);
-  const [addingRole, setAddingRole] = useState<NewPlanItem["role"] | null>(null);
+  const [modal, setModal] = useState<{ mode: "create" | "edit"; role: NewPlanItem["role"]; demandId?: string } | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -527,11 +527,40 @@ export default function ContentPlanView({ planId }: { planId: string }) {
         Math.max(0, ...planDemands.map((d) => d.position ?? 0)) + 1,
       );
       setPlanDemands((prev) => [...prev, created]);
-      setAddingRole(null);
+      setModal(null);
       showToast("Item adicionado ao cronograma.", "success");
     } catch (err) {
       showToast("Erro ao adicionar: " + ((err as Error)?.message ?? ""), "error");
     }
+  };
+
+  const openEdit = (id: string) => {
+    const role = rows.find((d) => d.id === id)?.plan_role;
+    setModal({ mode: "edit", role: role === "captacao" || role === "roteiro" ? role : "post", demandId: id });
+  };
+
+  const handleDeleteItem = async (id: string) => {
+    await deleteDemand(id);
+    setPlanDemands((prev) => prev.filter((d) => d.id !== id));
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+    setModal(null);
+  };
+
+  const handleModalSubmit = async (item: NewPlanItem) => {
+    if (modal?.mode === "edit" && modal.demandId) {
+      await updateDemand(modal.demandId, {
+        title: item.title.trim(),
+        due_date: item.date,
+        ...(item.role === "post" ? { content_type: item.contentType, type: item.channel } : {}),
+      });
+      setModal(null);
+      return;
+    }
+    await handleAddItem(item);
   };
 
   const confirmDelete = async (deleteDemands: boolean) => {
@@ -795,20 +824,18 @@ export default function ContentPlanView({ planId }: { planId: string }) {
           action={<button
             type="button"
             className="btn btn-secondary"
-            onClick={() => setAddingRole("captacao")}
+            onClick={() => setModal({ mode: "create", role: "captacao" })}
             style={{ fontSize: "0.72rem", padding: "4px 10px", display: "flex", alignItems: "center", gap: 5 }}
           >
             <Plus size={13} /> Captação
           </button>}
         >
-          {addingRole === "captacao" && (
-            <AddPlanItemForm role="captacao" onSubmit={handleAddItem} onCancel={() => setAddingRole(null)} />
-          )}
           {producao.map((demand) => (
             <PlanItemRow
               key={demand.id}
               demand={demand}
               onOpen={setSelectedId}
+              onEdit={openEdit}
               selected={selectedIds.has(demand.id)}
               onSelect={toggleSelection}
             />
@@ -820,31 +847,16 @@ export default function ContentPlanView({ planId }: { planId: string }) {
         title="Conteúdos"
         icon={<CalendarRange size={14} />}
         count={posts.length}
-        action={<button
-            type="button"
-            className="btn btn-secondary"
-            onClick={() => setAddingRole("post")}
-            style={{ fontSize: "0.72rem", padding: "4px 10px", display: "flex", alignItems: "center", gap: 5 }}
-          >
-            <Plus size={13} /> Adicionar conteúdo
-          </button>}
       >
-        {addingRole === "post" && (
-          <AddPlanItemForm
-            role="post"
-            defaultChannel={plan.channels[0] ?? "FEED"}
-            onSubmit={handleAddItem}
-            onCancel={() => setAddingRole(null)}
-          />
-        )}
         {posts.length === 0 ? (
-          <Empty>Nenhum conteúdo neste cronograma.</Empty>
+          <Empty>Nenhum conteúdo neste cronograma. Use o botão + no canto da tela para adicionar.</Empty>
         ) : (
           posts.map((demand) => (
             <PlanItemRow
               key={demand.id}
               demand={demand}
               onOpen={setSelectedId}
+              onEdit={openEdit}
               selected={selectedIds.has(demand.id)}
               onSelect={toggleSelection}
             />
@@ -863,6 +875,52 @@ export default function ContentPlanView({ planId }: { planId: string }) {
           />
         </div>
       </Section>
+
+      <button
+        type="button"
+        onClick={() => setModal({ mode: "create", role: "post" })}
+        aria-label="Novo conteúdo"
+        title="Novo conteúdo"
+        style={{
+          position: "fixed",
+          right: 28,
+          bottom: 104,
+          zIndex: 900,
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          padding: "0 18px",
+          height: 48,
+          borderRadius: 24,
+          border: "none",
+          cursor: "pointer",
+          fontFamily: "inherit",
+          fontSize: "0.82rem",
+          fontWeight: 800,
+          color: "#fff",
+          background: "var(--accent)",
+          boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
+        }}
+      >
+        <Plus size={18} /> Novo conteúdo
+      </button>
+
+      {modal && (
+        <PlanItemModal
+          key={`${modal.mode}-${modal.demandId ?? modal.role}`}
+          mode={modal.mode}
+          role={modal.role}
+          demand={modal.demandId ? rows.find((d) => d.id === modal.demandId) : undefined}
+          defaultChannel={plan.channels[0] ?? "FEED"}
+          onSubmit={handleModalSubmit}
+          onOpenDetails={(id) => {
+            setModal(null);
+            setSelectedId(id);
+          }}
+          onDelete={handleDeleteItem}
+          onClose={() => setModal(null)}
+        />
+      )}
 
       <DemandModal
         demandId={selectedId}
