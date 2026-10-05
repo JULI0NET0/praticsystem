@@ -14,7 +14,7 @@ import type { DateClickArg } from "@fullcalendar/interaction";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/components/CustomToast";
-import { AGENDA_CATEGORIES as CATEGORIES, getAgendaCategory } from "@/lib/agendaCategories";
+import { AGENDA_CATEGORIES as CATEGORIES, AGENDA_PRIMARY_CATEGORY_IDS, getAgendaCategory, isAgendaPrimarySelection } from "@/lib/agendaCategories";
 import {
   addDays,
   isSameDay,
@@ -130,7 +130,7 @@ export default function SchedulePage() {
   const [saving, setSaving] = useState(false);
   const [clients, setClients] = useState<AgendaClient[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeFilters, setActiveFilters] = useState<string[]>(ALL_CATEGORY_IDS);
+  const [activeFilters, setActiveFilters] = useState<string[]>([...AGENDA_PRIMARY_CATEGORY_IDS]);
   const [responsibleFilter, setResponsibleFilter] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [now, setNow] = useState(() => new Date());
@@ -789,7 +789,7 @@ export default function SchedulePage() {
               )}
             </>
           }
-          filtersActiveCount={(activeFilters.length < CATEGORIES.length ? 1 : 0) + (responsibleFilter ? 1 : 0)}
+          filtersActiveCount={(isAgendaPrimarySelection(activeFilters) ? 0 : 1) + (responsibleFilter ? 1 : 0)}
           searchQuery={searchQuery}
           onSearch={setSearchQuery}
           google={google}

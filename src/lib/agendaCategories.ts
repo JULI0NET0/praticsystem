@@ -30,6 +30,16 @@ export const AGENDA_CATEGORIES: AgendaCategory[] = [
   { id: "demand", label: "Demanda", color: "#8A6FA0", icon: ClipboardList },
 ];
 
+/** Visão limpa: só reunião e captação. Tarefa, pagamento e demanda entram quando alguém liga o assunto. */
+export const AGENDA_PRIMARY_CATEGORY_IDS = ["meeting", "prospecting"] as const;
+
+export function isAgendaPrimarySelection(active: readonly string[]): boolean {
+  return (
+    active.length === AGENDA_PRIMARY_CATEGORY_IDS.length &&
+    AGENDA_PRIMARY_CATEGORY_IDS.every((id) => active.includes(id))
+  );
+}
+
 /** Assuntos que fazem sentido a partir de uma Demanda — exclui os fluxos próprios da Agenda/Financeiro. */
 export const DEMAND_AGENDA_SUBJECTS: AgendaCategory[] = AGENDA_CATEGORIES.filter((category) =>
   ["meeting", "prospecting", "task", "demand"].includes(category.id),
