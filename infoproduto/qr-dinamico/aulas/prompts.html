@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Prompts — Painel de QR</title>
+  <style>
+    :root {
+      --bg: #ebe6dc;
+      --ink: #1c1917;
+      --muted: #57534e;
+      --line: #e6e1d6;
+      --card: #fffcf7;
+      --accent: #0f766e;
+      --accent-ink: #115e59;
+      --shadow: 0 16px 40px rgba(28, 25, 23, 0.06);
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; }
+    body {
+      display: grid;
+      place-items: center;
+      color: var(--ink);
+      font-family: "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+      background:
+        radial-gradient(900px 420px at 100% -10%, rgba(15, 118, 110, 0.16), transparent 60%),
+        var(--bg);
+    }
+    .stage {
+      position: relative;
+      width: min(100vw, calc(100vh * 16 / 9));
+      height: min(100vh, calc(100vw * 9 / 16));
+      padding: 28px;
+    }
+    .window {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      background: #f7f4ee;
+      border: 1px solid #ddd6c8;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+    .titlebar {
+      flex: none;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 16px;
+      background: #fffcf7;
+      border-bottom: 1px solid var(--line);
+    }
+    .lights { display: flex; gap: 7px; }
+    .lights i { width: 12px; height: 12px; border-radius: 50%; display: block; }
+    .lights .r { background: #ff5f57; }
+    .lights .y { background: #febc2e; }
+    .lights .g { background: #28c840; }
+    .titlebar b { font-size: 13px; font-weight: 600; color: var(--muted); }
+    .lessons { margin-left: auto; display: flex; gap: 6px; align-items: center; }
+    .lessons button, .copy {
+      font: inherit;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+      background: transparent;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 4px 10px;
+      cursor: pointer;
+    }
+    .lessons button[aria-selected="true"] {
+      color: white;
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    .copy { color: var(--accent-ink); border-color: var(--accent); margin-left: 8px; }
+    .copy.on { background: var(--accent); color: white; }
+    .pane { position: relative; flex: 1; min-height: 0; }
+    .prompt {
+      display: none;
+      position: absolute;
+      inset: 0;
+      padding: 22px 28px 18px;
+      flex-direction: column;
+      gap: 10px;
+      min-height: 0;
+    }
+    .prompt.on { display: flex; }
+    .eyebrow {
+      margin: 0;
+      font-size: 12px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent-ink);
+      font-weight: 700;
+    }
+    h1 { margin: 0; font-size: 28px; letter-spacing: -0.03em; line-height: 1.1; }
+    .sheet {
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 18px 22px 22px;
+      font-size: 15px;
+      line-height: 1.45;
+    }
+    .sheet h2 { margin: 16px 0 6px; font-size: 16px; }
+    .sheet h2:first-child { margin-top: 0; }
+    .sheet p { margin: 0 0 10px; }
+    .sheet ul, .sheet ol { margin: 0 0 10px; padding-left: 1.2em; }
+    .sheet li { margin: 3px 0; }
+    .sheet code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.92em;
+    }
+  </style>
+</head>
+<body>
+  <div class="stage">
+    <div class="window">
+      <header class="titlebar">
+        <span class="lights" aria-hidden="true"><i class="r"></i><i class="y"></i><i class="g"></i></span>
+        <b id="win-title">Prompt 01 · A ideia</b>
+        <div class="lessons" role="tablist" aria-label="Prompts">
+          <button type="button" role="tab" data-deck="01" aria-selected="true">01</button>
+          <button type="button" role="tab" data-deck="02" aria-selected="false">02</button>
+          <button type="button" role="tab" data-deck="03" aria-selected="false">03</button>
+          <button type="button" role="tab" data-deck="04" aria-selected="false">04</button>
+          <button class="copy" type="button" id="copy">Copiar prompt</button>
+        </div>
+      </header>
+      <div class="pane">
+
+        <article class="prompt on" data-deck="01" data-title="Prompt 01 · A ideia">
+          <p class="eyebrow">Aula 01</p>
+          <h1>A ideia</h1>
+          <div class="sheet">
+            <p>Cole este texto inteiro no Cursor. Nesta aula não se escreve código.</p>
+            <p>Você está começando uma ferramenta de QR Code dinâmico com Next.js (App Router) e Supabase. Esta é a aula 1. Não crie arquivos, não instale pacote, não proponha schema.</p>
+            <p>Explique, em português e em poucas frases, a diferença que o resto do curso inteiro depende:</p>
+            <ul>
+              <li>QR estático: a imagem guarda o site final. Se o site muda, o papel impresso morre.</li>
+              <li>QR dinâmico: a imagem guarda só uma URL curta, no formato origem/q/slug. O site final fica num registro e pode ser trocado sem gerar outra imagem.</li>
+            </ul>
+            <p>Feche com a frase que o aluno precisa saber de cor: se eu imprimir o QR e depois mudar o link, o papel continua valendo.</p>
+            <p>Pare aí. A aula 2 cria o link.</p>
+          </div>
+        </article>
+
+        <article class="prompt" data-deck="02" data-title="Prompt 02 · O link que muda">
+          <p class="eyebrow">Aula 02</p>
+          <h1>O link que muda</h1>
+          <div class="sheet">
+            <p>Cole este texto inteiro no Cursor. O projeto Next.js já existe (App Router, pasta src) e o <code>.env.local</code> já tem a URL do Supabase, a chave anônima e a service role. Não crie painel nem login.</p>
+            <p>Nesta aula nascem três coisas juntas: a tabela, o redirect de verdade e a imagem do QR.</p>
+            <h2>Tabela</h2>
+            <p>Crie o arquivo <code>supabase/migration.sql</code> com a tabela <code>public.qr_links</code>:</p>
+            <ul>
+              <li><code>id</code> uuid, chave primária, default <code>gen_random_uuid()</code></li>
+              <li><code>slug</code> text, único e obrigatório</li>
+              <li><code>title</code> text obrigatório</li>
+              <li><code>destination_url</code> text obrigatório, só http ou https</li>
+              <li><code>is_active</code> boolean, default true</li>
+              <li><code>click_count</code> integer, default 0</li>
+              <li><code>created_at</code> e <code>updated_at</code> timestamptz, default now()</li>
+            </ul>
+            <p>Ainda não coloque <code>user_id</code> nem login. Isso é a aula 4. Não crie cliente, papel de acesso nem tabela de usuários da aplicação. Não conte clique ainda. Não crie a função <code>increment_qr_click</code>.</p>
+            <p>O slug é o pedaço estável da URL. Ele nasce uma vez e as próximas aulas não podem atualizá-lo. O <code>destination_url</code> é o campo que muda.</p>
+            <h2>Redirect</h2>
+            <p>Crie <code>src/app/q/[slug]/route.ts</code> lendo o banco de verdade. Não deixe redirect fixo para um slug de teste.</p>
+            <ul>
+              <li>Leia no servidor, com a service role do Supabase (variável <code>SUPABASE_SERVICE_ROLE_KEY</code>, nunca <code>NEXT_PUBLIC_</code>), o registro daquele slug.</li>
+              <li>Se não existir, estiver inativo, ou o destino não for http(s), redirecione para <code>/q/indisponivel</code>.</li>
+              <li>Se existir e estiver ativo, responda 307 para <code>destination_url</code>.</li>
+              <li>Cabeçalhos: Cache-Control no-store, no-cache, must-revalidate. Marque a rota como dinâmica.</li>
+              <li>Não conte clique. Não leia <code>click_count</code>.</li>
+            </ul>
+            <p>A service role ignora RLS e fica só neste redirect público. Não importe essa chave em componente de cliente.</p>
+            <p>Explique no código, num comentário curto, por que é 307 e não 301: o 301 o celular guarda, e o QR deixaria de ser dinâmico.</p>
+            <p>Crie a página <code>/q/indisponivel</code> com o texto "Este link está desativado".</p>
+            <p>Não use <code>middleware.ts</code>. Neste Next.js o arquivo de borda, quando existir, será <code>src/proxy.ts</code>. Nesta aula ele não existe.</p>
+            <h2>Imagem</h2>
+            <p>Instale o pacote qrcode e os types. Crie GET <code>src/app/api/qrcodes/[id]/image/route.ts</code>:</p>
+            <ul>
+              <li>Busque o slug pelo id, no servidor, com a service role.</li>
+              <li>Se não achar, 404 JSON.</li>
+              <li>Gere um PNG de 512px, margem 2, cujo conteúdo é exatamente origem + /q/ + slug. Nunca codifique <code>destination_url</code>.</li>
+              <li>Responda image/png com Cache-Control: public, max-age=31536000, immutable.</li>
+              <li>Não leia cookie nesta rota. A imagem só depende do slug, que não muda, então o cache longo é seguro. O redirect continua sem cache.</li>
+            </ul>
+            <p>Crie <code>src/lib/qr.ts</code> com a função <code>buildShortUrl(origin, slug)</code> e use-a na imagem. Ainda não há painel.</p>
+            <p>Pronto quando: eu baixo o PNG, troco <code>destination_url</code> direto no Supabase, escaneio o mesmo arquivo e caio no endereço novo, sem gerar outro QR. Desligo <code>is_active</code>, escaneio de novo e vejo "Este link está desativado".</p>
+          </div>
+        </article>
+
+        <article class="prompt" data-deck="03" data-title="Prompt 03 · O painel">
+          <p class="eyebrow">Aula 03</p>
+          <h1>O painel</h1>
+          <div class="sheet">
+            <p>Cole este texto inteiro no Cursor. Redirect e PNG da aula 2 continuam. Não implemente login. Não crie select de cliente. Não adicione histórico de scans por data, cidade ou aparelho.</p>
+            <p>Nesta aula o painel cria, edita, liga, desliga, exclui e mostra o clique. O slug continua nascendo no servidor e não vira campo.</p>
+            <h2>Lista e criação</h2>
+            <p>Crie a página <code>src/app/painel/page.tsx</code>, em português, visual simples (fundo claro, um botão de destaque, tabela). Sem biblioteca de componentes e sem o visual de outro sistema.</p>
+            <p>API, com validação (zod):</p>
+            <ul>
+              <li>GET <code>/api/qrcodes</code> — lista, mais recentes primeiro, cada item com <code>short_url</code> montada no servidor.</li>
+              <li>POST <code>/api/qrcodes</code> — body só com <code>title</code> e <code>destination_url</code> (http ou https). O servidor gera o slug a partir do título, em minúsculas, sem acento, mais um sufixo aleatório curto. O cliente não envia slug nem <code>click_count</code>.</li>
+            </ul>
+            <p>No painel:</p>
+            <ul>
+              <li>estado vazio com botão Novo QR</li>
+              <li>tabela: título, destino, URL curta, cliques, status</li>
+              <li>botão Copiar na URL curta</li>
+              <li>link Baixar PNG apontando para <code>/api/qrcodes/[id]/image</code></li>
+              <li>formulário de criação com título e URL</li>
+            </ul>
+            <p>O slug não aparece como campo editável. A prévia <code>&lt;img&gt;</code> do PNG só aparece quando o registro já tem id, porque antes de salvar não existe slug.</p>
+            <p>Use a chave do servidor nas rotas. Não exponha a service role no browser.</p>
+            <h2>Editar sem reimprimir</h2>
+            <ul>
+              <li>PATCH <code>/api/qrcodes/[id]</code> aceita <code>title</code>, <code>destination_url</code> e <code>is_active</code>. Recusa body vazio. Ignora slug se alguém enviar: o slug não muda nunca. Atualize <code>updated_at</code>.</li>
+              <li>DELETE <code>/api/qrcodes/[id]</code> apaga o registro.</li>
+              <li>No painel, editar abre o mesmo formulário já preenchido.</li>
+              <li>Um controle liga e desliga <code>is_active</code>.</li>
+              <li>Excluir pede confirmação.</li>
+            </ul>
+            <p>QR inativo continua caindo em <code>/q/indisponivel</code>. A imagem não muda quando o destino muda.</p>
+            <h2>Cliques</h2>
+            <p>No <code>supabase/migration.sql</code> (ou num SQL novo, idempotente), crie a função <code>public.increment_qr_click(link_id uuid)</code>:</p>
+            <ul>
+              <li>um único UPDATE: <code>click_count = click_count + 1</code></li>
+              <li>só se o registro existir e <code>is_active</code> for true</li>
+              <li>security definer, <code>search_path = public</code></li>
+              <li>execute apenas para service_role. Revogue de anon, authenticated e public.</li>
+            </ul>
+            <p>No GET <code>src/app/q/[slug]/route.ts</code>, depois de confirmar que o link está ativo e o destino é http(s), chame essa função com o id e espere o resultado. Se a função falhar, registre o erro e ainda assim redirecione: um clique perdido é melhor do que um QR impresso quebrado.</p>
+            <p>Proibido: ler <code>click_count</code> no JavaScript, somar 1 e gravar o número de volta. Dois scans ao mesmo tempo perderiam um clique.</p>
+            <p>O painel só mostra o número que já vem na lista. Não deixe o cliente enviar <code>click_count</code> no POST nem no PATCH.</p>
+            <p>Pronto quando: eu salvo o PNG, troco o destino no painel, escaneio o mesmo arquivo e caio no endereço novo. Desligo o QR, escaneio de novo e vejo a página de link desativado. Escaneio duas vezes e o contador sobe dois, sem eu editar nada no painel.</p>
+          </div>
+        </article>
+
+        <article class="prompt" data-deck="04" data-title="Prompt 04 · Trancado e no ar">
+          <p class="eyebrow">Aula 04</p>
+          <h1>Trancado e no ar</h1>
+          <div class="sheet">
+            <p>Cole este texto inteiro no Cursor. Redirect, PNG, painel e contador já funcionam na máquina. Esta aula tranca o painel e deixa o projeto pronto para publicar. Não adicionar feature. Não mudar o contrato do QR.</p>
+            <h2>Banco</h2>
+            <p>De forma idempotente:</p>
+            <ul>
+              <li>coluna <code>user_id</code> uuid not null references <code>auth.users(id)</code> on delete cascade. Se já houver linhas sem dono, apague-as antes de tornar a coluna obrigatória: este projeto de aula não tem dado de produção.</li>
+              <li>índice <code>(user_id, created_at desc)</code></li>
+              <li>RLS ligado</li>
+              <li>quatro policies para o papel authenticated: select, insert, update e delete somente quando <code>auth.uid() = user_id</code></li>
+              <li>não crie policy para anon. Quem escaneia não usa a chave anônima para ler a tabela.</li>
+            </ul>
+            <p>Explique num comentário curto do SQL: RLS ligado sem policy bloqueia a chave anônima. A service role ignora RLS. Por isso o redirect público continua com a service role, e o painel passa a usar a sessão.</p>
+            <h2>Login</h2>
+            <ul>
+              <li>Login e criação de conta por e-mail e senha com Supabase, na página <code>/login</code>. Texto em português: o painel pede login, quem escaneia não precisa de conta.</li>
+              <li><code>src/proxy.ts</code> exporta a função proxy (não crie <code>middleware.ts</code>). Sem sessão, <code>/painel</code> vai para <code>/login</code>. Com sessão, <code>/login</code> vai para <code>/painel</code>. O proxy renova o cookie da sessão. <code>/q/</code> e a rota da imagem ficam de fora do matcher.</li>
+              <li>GET, POST, PATCH e DELETE de <code>/api/qrcodes</code> exigem usuário. Sem sessão, 401. O insert grava <code>user_id</code> a partir da sessão, nunca do body. Liste, atualize e apague só as linhas desse <code>user_id</code>, com o client da sessão (chave anônima + cookie), para as policies valerem.</li>
+              <li>A rota da imagem continua pública e com cache longo: ela só repete a URL curta. Não coloque cookie nela.</li>
+              <li>O redirect <code>/q/[slug]</code> continua público, com service role e com <code>increment_qr_click</code>.</li>
+            </ul>
+            <p>Não invente papéis (admin, equipe, cliente). Uma pessoa vê os próprios QR Codes.</p>
+            <h2>Publicar</h2>
+            <p>Revise o projeto e corrija só o que quebrar estas regras:</p>
+            <ul>
+              <li><code>SUPABASE_SERVICE_ROLE_KEY</code> não aparece em nenhum arquivo cliente e não tem prefixo <code>NEXT_PUBLIC_</code>.</li>
+              <li>Criar, editar, excluir e listar respondem 401 sem sessão.</li>
+              <li><code>/q/[slug]</code> segue público, 307, sem cache, e soma o clique com <code>increment_qr_click</code>.</li>
+              <li>O PNG codifica a URL curta e pode ter cache longo.</li>
+            </ul>
+            <p>Crie <code>DEPLOY.md</code>, em português, com a checklist:</p>
+            <ol>
+              <li>Variáveis na Vercel: <code>NEXT_PUBLIC_SUPABASE_URL</code>, <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code>, <code>SUPABASE_SERVICE_ROLE_KEY</code>.</li>
+              <li>Rodar o SQL completo num projeto Supabase novo.</li>
+              <li>Para a turma testar sem esperar e-mail, desativar Confirm email em Authentication → Providers → Email.</li>
+              <li>Next.js 16 usa <code>src/proxy.ts</code>, não <code>middleware.ts</code>.</li>
+              <li>Teste final no celular: salvar o PNG, trocar o destino no painel publicado, escanear de novo e cair no endereço novo. Escanear outra vez e ver o clique subir.</li>
+            </ol>
+            <p>Não escreva domínio curto, logo dentro do QR, senha no link nem gráfico de scans. Isso fica fora deste curso.</p>
+            <p>Pronto quando: aba anônima em <code>/painel</code> cai no login; um POST sem cookie volta 401; o mesmo QR, escaneado no celular, ainda redireciona. O <code>DEPLOY.md</code> existe e o teste do celular passa no endereço publicado.</p>
+          </div>
+        </article>
+
+      </div>
+    </div>
+  </div>
+  <script>
+    var prompts = Array.prototype.slice.call(document.querySelectorAll(".prompt"));
+    var win = document.getElementById("win-title");
+    var copyBtn = document.getElementById("copy");
+
+    function plain(el) {
+      var lines = [];
+      Array.prototype.forEach.call(el.children, function (node) {
+        if (node.tagName === "UL" || node.tagName === "OL") {
+          Array.prototype.forEach.call(node.children, function (li, idx) {
+            var mark = node.tagName === "OL" ? (idx + 1) + ". " : "- ";
+            lines.push(mark + li.textContent);
+          });
+          lines.push("");
+        } else if (node.tagName === "H2") {
+          lines.push(node.textContent);
+          lines.push("");
+        } else {
+          lines.push(node.textContent);
+          lines.push("");
+        }
+      });
+      return lines.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+    }
+
+    function openDeck(id) {
+      prompts.forEach(function (p) {
+        var on = p.getAttribute("data-deck") === id;
+        p.classList.toggle("on", on);
+        if (on) win.textContent = p.getAttribute("data-title");
+      });
+      document.querySelectorAll(".lessons button[data-deck]").forEach(function (b) {
+        b.setAttribute("aria-selected", b.getAttribute("data-deck") === id ? "true" : "false");
+      });
+      if (location.hash !== "#" + id) history.replaceState(null, "", "#" + id);
+    }
+
+    document.querySelectorAll(".lessons button[data-deck]").forEach(function (b) {
+      b.addEventListener("click", function () { openDeck(b.getAttribute("data-deck")); });
+    });
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "1" || e.key === "2" || e.key === "3" || e.key === "4") openDeck("0" + e.key);
+    });
+    copyBtn.addEventListener("click", function () {
+      var sheet = document.querySelector(".prompt.on .sheet");
+      var text = plain(sheet);
+      var done = function () {
+        copyBtn.textContent = "Copiado";
+        copyBtn.classList.add("on");
+        setTimeout(function () { copyBtn.textContent = "Copiar prompt"; copyBtn.classList.remove("on"); }, 1200);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done, done);
+      } else {
+        done();
+      }
+    });
+    var start = (location.hash || "#01").slice(1);
+    if (start !== "01" && start !== "02" && start !== "03" && start !== "04") start = "01";
+    openDeck(start);
+  </script>
+</body>
+</html>

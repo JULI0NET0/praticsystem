@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <title>Aula 2 — O redirect</title>
+  <link rel="stylesheet" href="base.css" />
+</head>
+<body>
+  <main class="wrap">
+    <p class="kicker">Aula 2 · /q/slug</p>
+    <h1>Quem escaneia não vê o painel.</h1>
+    <div class="grid-2">
+      <article class="card pad stack">
+        <h2>Link ativo</h2>
+        <p class="muted">Resposta 307, sem cache. O celular pergunta de novo na próxima vez e descobre o destino novo.</p>
+        <p class="callout">301 ficaria gravado no aparelho. O QR deixaria de ser dinâmico.</p>
+      </article>
+      <article class="card pad stack">
+        <h2>Este link está desativado</h2>
+        <p class="muted">Slug inexistente ou QR desligado cai nesta página. O quadrado impresso continua o mesmo.</p>
+      </article>
+    </div>
+  </main>
+</body>
+</html>

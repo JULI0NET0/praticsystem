@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Aulas — Painel de QR</title>
+  <style>
+    :root {
+      --bg: #ebe6dc;
+      --ink: #1c1917;
+      --muted: #57534e;
+      --line: #e6e1d6;
+      --card: #fffcf7;
+      --accent: #0f766e;
+      --accent-ink: #115e59;
+      --ok: #047857;
+      --shadow: 0 16px 40px rgba(28, 25, 23, 0.06);
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; }
+    body {
+      display: grid;
+      place-items: center;
+      color: var(--ink);
+      font-family: "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+      background:
+        radial-gradient(900px 420px at 100% -10%, rgba(15, 118, 110, 0.16), transparent 60%),
+        var(--bg);
+    }
+    .stage {
+      position: relative;
+      width: min(100vw, calc(100vh * 16 / 9));
+      height: min(100vh, calc(100vw * 9 / 16));
+      padding: 28px;
+    }
+    .window {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      background: #f7f4ee;
+      border: 1px solid #ddd6c8;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+    .titlebar {
+      flex: none;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 16px;
+      background: #fffcf7;
+      border-bottom: 1px solid var(--line);
+    }
+    .lights { display: flex; gap: 7px; }
+    .lights i { width: 12px; height: 12px; border-radius: 50%; display: block; }
+    .lights .r { background: #ff5f57; }
+    .lights .y { background: #febc2e; }
+    .lights .g { background: #28c840; }
+    .titlebar b { font-size: 13px; font-weight: 600; color: var(--muted); }
+    .lessons { margin-left: auto; display: flex; gap: 6px; }
+    .lessons button {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+      background: transparent;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 4px 10px;
+      cursor: pointer;
+    }
+    .lessons button[aria-selected="true"] {
+      color: white;
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    .split { flex: 1; display: flex; min-height: 0; }
+    .side {
+      flex: none;
+      width: 200px;
+      overflow: auto;
+      padding: 12px 10px;
+      border-right: 1px solid var(--line);
+      background: rgba(255, 252, 247, 0.7);
+    }
+    .side button {
+      display: block;
+      width: 100%;
+      text-align: left;
+      background: transparent;
+      border: 0;
+      border-radius: 8px;
+      color: var(--muted);
+      font: inherit;
+      font-size: 13px;
+      padding: 7px 10px;
+      cursor: pointer;
+    }
+    .side button[aria-current="true"] {
+      color: var(--accent-ink);
+      background: rgba(15, 118, 110, 0.12);
+    }
+    .pane { position: relative; flex: 1; min-width: 0; }
+    .slide {
+      display: none;
+      position: absolute;
+      inset: 0;
+      padding: 28px 36px 52px;
+      flex-direction: column;
+      justify-content: center;
+      gap: 14px;
+      overflow: auto;
+    }
+    .slide.on { display: flex; }
+    .eyebrow {
+      margin: 0;
+      font-size: 12px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent-ink);
+      font-weight: 700;
+    }
+    h1, h2 { margin: 0; letter-spacing: -0.03em; line-height: 1.08; }
+    h1 { font-size: clamp(32px, 3.2vw, 48px); }
+    h2 { font-size: clamp(26px, 2.4vw, 36px); }
+    .lead { margin: 0; color: var(--muted); font-size: 18px; line-height: 1.4; max-width: 40em; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+    }
+    .pad { padding: 18px 20px; }
+    .stack { display: flex; flex-direction: column; gap: 10px; }
+    .card h2 { font-size: 20px; }
+    .muted { margin: 0; color: var(--muted); }
+    .callout {
+      margin: 0;
+      border-left: 3px solid var(--accent);
+      padding: 8px 12px;
+      color: var(--accent-ink);
+      background: rgba(15, 118, 110, 0.08);
+      border-radius: 8px;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+    th { font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+    .num { text-align: right; font-variant-numeric: tabular-nums; }
+    .badge { background: #ecfdf5; color: var(--ok); border-radius: 999px; padding: 4px 10px; font-size: 13px; }
+    .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .btn, .btn-ghost {
+      border-radius: 999px;
+      padding: 8px 14px;
+      border: 1px solid transparent;
+      display: inline-flex;
+      font-size: 14px;
+    }
+    .btn { background: var(--accent); color: white; }
+    .btn-ghost { background: transparent; border-color: var(--line); color: var(--ink); }
+    .topbar { display: flex; justify-content: space-between; align-items: center; }
+    .field { display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
+    .fake-input { border: 1px solid var(--line); background: white; border-radius: 10px; padding: 10px 12px; }
+    .qr {
+      width: 120px; height: 120px; background: white; border: 1px solid var(--line); border-radius: 12px;
+      display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; padding: 10px;
+    }
+    .qr i { display: block; background: var(--ink); border-radius: 1px; }
+    .qr i.off { background: transparent; }
+    .check { list-style: none; padding: 0; margin: 0; }
+    .check li { padding: 8px 0; border-bottom: 1px solid var(--line); }
+    .cmd {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 14px 16px;
+    }
+    .cmd pre { margin: 0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 18px; }
+    .copy {
+      flex: none;
+      font: inherit;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--accent-ink);
+      background: transparent;
+      border: 1px solid var(--accent);
+      border-radius: 999px;
+      padding: 6px 12px;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .copy.on { background: var(--accent); color: white; }
+    .path { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .path li {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .path em { font-style: normal; font-size: 12px; letter-spacing: 0.08em; color: var(--accent); font-weight: 700; }
+    .path strong { font-size: 16px; }
+    .hud {
+      position: absolute;
+      right: 40px;
+      bottom: 36px;
+      z-index: 2;
+      background: rgba(255, 252, 247, 0.92);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 4px 8px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .hud b { color: var(--ink); }
+  </style>
+</head>
+<body>
+  <div class="stage">
+    <div class="window">
+      <header class="titlebar">
+        <span class="lights" aria-hidden="true"><i class="r"></i><i class="y"></i><i class="g"></i></span>
+        <b id="win-title">Aula 01 · A ideia</b>
+        <div class="lessons" role="tablist" aria-label="Aulas">
+          <button type="button" role="tab" data-deck="01" aria-selected="true">01</button>
+          <button type="button" role="tab" data-deck="02" aria-selected="false">02</button>
+          <button type="button" role="tab" data-deck="03" aria-selected="false">03</button>
+          <button type="button" role="tab" data-deck="04" aria-selected="false">04</button>
+        </div>
+      </header>
+      <div class="split">
+        <nav class="side" id="side" aria-label="Slides"></nav>
+        <div class="pane">
+
+          <section class="slide on" data-deck="01" data-nav="Resultado" aria-label="Resultado">
+            <p class="eyebrow">Aula 01 · A ideia</p>
+            <h1>O QR impresso continua valendo.</h1>
+            <p class="lead">A imagem não guarda o site final. Ela guarda um link curto. O destino você troca quando o cartão já saiu da gráfica.</p>
+          </section>
+
+          <section class="slide" data-deck="01" data-nav="Estático" aria-label="QR estático">
+            <p class="eyebrow">Aula 01 · sem código</p>
+            <h2>A imagem aponta direto para o site.</h2>
+            <div class="grid-2">
+              <article class="card pad stack">
+                <h2>QR estático</h2>
+                <p class="muted">Mudou o link, precisa imprimir de novo. O papel morre.</p>
+              </article>
+              <article class="card pad stack">
+                <h2>O que a imagem guarda</h2>
+                <p class="muted">https://loja.exemplo/cardapio</p>
+              </article>
+            </div>
+          </section>
+
+          <section class="slide" data-deck="01" data-nav="Dinâmico" aria-label="QR dinâmico">
+            <p class="eyebrow">Aula 01 · sem código</p>
+            <h2>A imagem aponta para /q/seu-slug.</h2>
+            <div class="grid-2">
+              <article class="card pad stack">
+                <h2>QR dinâmico</h2>
+                <p class="muted">O site de destino mora no banco e pode mudar hoje.</p>
+              </article>
+              <article class="card pad stack">
+                <h2>O que a imagem guarda</h2>
+                <p class="muted">seusite.com/q/cartao-a1b2c3</p>
+              </article>
+            </div>
+          </section>
+
+          <section class="slide" data-deck="01" data-nav="A frase" aria-label="A frase">
+            <p class="eyebrow">Aula 01 · de cor</p>
+            <h1>Se eu imprimir o QR e depois mudar o link, o papel continua valendo.</h1>
+          </section>
+
+          <section class="slide" data-deck="01" data-nav="Mapa" aria-label="Mapa">
+            <p class="eyebrow">Quatro aulas</p>
+            <h2>Sempre com o pedido na tela.</h2>
+            <ol class="path">
+              <li><em>01</em><strong>A ideia</strong></li>
+              <li><em>02</em><strong>O link</strong></li>
+              <li><em>03</em><strong>O painel</strong></li>
+              <li><em>04</em><strong>No ar</strong></li>
+            </ol>
+          </section>
+
+          <section class="slide" data-deck="02" data-nav="Preparar" aria-label="Preparar">
+            <p class="eyebrow">Aula 02 · O link que muda</p>
+            <h2>Projeto vazio. Três variáveis.</h2>
+            <div class="card">
+              <table>
+                <thead><tr><th>Pronto</th><th>Onde</th></tr></thead>
+                <tbody>
+                  <tr><td>Next.js, App Router, pasta src</td><td>na máquina</td></tr>
+                  <tr><td>URL, chave anônima, service role</td><td>.env.local</td></tr>
+                  <tr><td>SQL Editor aberto</td><td>Supabase</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="callout">A service role não vai para o browser.</p>
+          </section>
+
+          <section class="slide" data-deck="02" data-nav="Pedido" aria-label="Pedido">
+            <p class="eyebrow">Aula 02 · um prompt</p>
+            <h2>Tabela, redirect e PNG.</h2>
+            <div class="cmd">
+              <pre>prompts.html · aula 02</pre>
+              <a class="copy" href="prompts.html#02">Abrir</a>
+            </div>
+            <p class="lead">Cole o arquivo inteiro. Ele mostra o que vai criar. Você aprova.</p>
+          </section>
+
+          <section class="slide" data-deck="02" data-nav="Registro" aria-label="Registro">
+            <p class="eyebrow">Aula 02 · banco</p>
+            <h2>Um registro. Dois papéis.</h2>
+            <p class="lead">O slug nasce uma vez. O destino é o campo que esta aula existe para trocar.</p>
+            <div class="card">
+              <table>
+                <thead><tr><th>Campo</th><th>Papel</th><th>Muda depois?</th></tr></thead>
+                <tbody>
+                  <tr><td>slug</td><td>pedaço da URL curta, dentro do QR</td><td>não</td></tr>
+                  <tr><td>destination_url</td><td>para onde o scan cai agora</td><td>sim</td></tr>
+                  <tr><td>is_active</td><td>ligado ou desligado</td><td>sim</td></tr>
+                  <tr><td>click_count</td><td>quantos scans passaram</td><td>só o sistema</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="slide" data-deck="02" data-nav="Redirect" aria-label="Redirect">
+            <p class="eyebrow">Aula 02 · /q/slug</p>
+            <h2>Quem escaneia não vê o painel.</h2>
+            <div class="grid-2">
+              <article class="card pad stack">
+                <h2>Link ativo</h2>
+                <p class="muted">Resposta 307, sem cache. O celular pergunta de novo e descobre o destino novo.</p>
+                <p class="callout">301 ficaria gravado no aparelho. O QR deixaria de ser dinâmico.</p>
+              </article>
+              <article class="card pad stack">
+                <h2>Este link está desativado</h2>
+                <p class="muted">Slug inexistente ou QR desligado cai nesta página. O quadrado impresso continua o mesmo.</p>
+              </article>
+            </div>
+          </section>
+
+          <section class="slide" data-deck="02" data-nav="Imagem" aria-label="Imagem">
+            <p class="eyebrow">Aula 02 · PNG</p>
+            <h2>O arquivo só conhece a URL curta.</h2>
+            <div class="grid-2">
+              <article class="card pad stack" style="align-items: center;">
+                <div class="qr" aria-hidden="true">
+                  <i></i><i></i><i></i><i class="off"></i><i></i><i></i><i></i>
+                  <i></i><i class="off"></i><i></i><i class="off"></i><i></i><i class="off"></i><i></i>
+                  <i></i><i></i><i></i><i class="off"></i><i></i><i></i><i></i>
+                  <i class="off"></i><i class="off"></i><i class="off"></i><i></i><i class="off"></i><i class="off"></i><i class="off"></i>
+                  <i></i><i></i><i></i><i class="off"></i><i></i><i></i><i></i>
+                  <i></i><i class="off"></i><i></i><i></i><i></i><i class="off"></i><i></i>
+                  <i></i><i></i><i></i><i class="off"></i><i></i><i></i><i></i>
+                </div>
+                <p class="muted">seusite.com/q/cartao-a1b2c3</p>
+              </article>
+              <article class="card pad stack">
+                <h2>Dois caches</h2>
+                <p class="muted">A imagem pode ficar em cache por um ano: o slug não muda.</p>
+                <p class="muted">O redirect não pode ter cache nenhum: o destino muda.</p>
+              </article>
+            </div>
+          </section>
+
+          <section class="slide" data-deck="02" data-nav="Gesto" aria-label="Gesto">
+            <p class="eyebrow">Aula 02 · o arquivo não muda</p>
+            <h1>Troque o destino no Supabase. Escaneie o mesmo PNG.</h1>
+            <p class="lead">Desligue is_active e a câmera cai em "Este link está desativado".</p>
+          </section>
+
+          <section class="slide" data-deck="03" data-nav="Pedido" aria-label="Pedido do painel">
+            <p class="eyebrow">Aula 03 · O painel</p>
+            <h2>O painel faz o que a tabela fazia.</h2>
+            <div class="cmd">
+              <pre>prompts.html · aula 03</pre>
+              <a class="copy" href="prompts.html#03">Abrir</a>
+            </div>
+            <p class="lead">Ainda sem login. O slug nasce no servidor e não é um campo.</p>
+          </section>
+
+          <section class="slide" data-deck="03" data-nav="Criar" aria-label="Criar">
+            <p class="eyebrow">Aula 03 · lista</p>
+            <div class="topbar">
+              <div>
+                <h2>Seus QR Codes</h2>
+                <p class="muted">Troque o destino sem gerar um QR novo.</p>
+              </div>
+              <span class="btn">Novo QR</span>
+            </div>
+            <section class="card">
+              <table>
+                <thead>
+                  <tr><th>Título</th><th>URL curta</th><th class="num">Cliques</th><th>Status</th><th></th></tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><strong>Cartão de visita</strong><div class="muted">https://loja.exemplo/cardapio</div></td>
+                    <td>seusite.com/q/cartao-a1b2c3</td>
+                    <td class="num">12</td>
+                    <td><span class="badge">Ativo</span></td>
+                    <td class="row"><span class="btn-ghost">Copiar</span><span class="btn-ghost">PNG</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </section>
+          </section>
+
+          <section class="slide" data-deck="03" data-nav="Editar" aria-label="Editar">
+            <p class="eyebrow">Aula 03 · o papel continua valendo</p>
+            <h2>Trocar o destino. Não o slug.</h2>
+            <div class="grid-2">
+              <section class="card pad stack">
+                <label class="field">Título <span class="fake-input">Cartão de visita</span></label>
+                <label class="field">URL de destino <span class="fake-input">https://loja.exemplo/promo-de-maio</span></label>
+                <p class="muted">O arquivo PNG não muda.</p>
+                <div class="row" style="justify-content: flex-end;"><span class="btn-ghost">Cancelar</span><span class="btn">Salvar</span></div>
+              </section>
+              <article class="card pad stack" style="align-items: center; justify-content: center;">
+                <div class="qr" aria-hidden="true">
+                  <i></i><i></i><i></i><i class="off"></i><i></i><i></i><i></i>
+                  <i></i><i class="off"></i><i></i><i class="off"></i><i></i><i class="off"></i><i></i>
+                  <i></i><i></i><i></i><i class="off"></i><i></i><i></i><i></i>
+                  <i class="off"></i><i class="off"></i><i class="off"></i><i></i><i class="off"></i><i class="off"></i><i class="off"></i>
+                  <i></i><i></i><i></i><i class="off"></i><i></i><i></i><i></i>
+                  <i></i><i class="off"></i><i></i><i></i><i></i><i class="off"></i><i></i>
+                  <i></i><i></i><i></i><i class="off"></i><i></i><i></i><i></i>
+                </div>
+                <p class="callout">A prévia só existe depois que o slug nasceu.</p>
+              </article>
+            </div>
+          </section>
+
+          <section class="slide" data-deck="03" data-nav="Cliques" aria-label="Cliques">
+            <p class="eyebrow">Aula 03 · contador</p>
+            <h2>Cada scan soma 1 no banco.</h2>
+            <p class="lead">O update é click_count = click_count + 1. Dois scans juntos precisam contar dois.</p>
+            <section class="card">
+              <table>
+                <thead><tr><th>Título</th><th class="num">Cliques</th></tr></thead>
+                <tbody>
+                  <tr>
+                    <td>Cartão de visita</td>
+                    <td class="num" style="font-size: 28px; color: var(--accent-ink);">128</td>
+                  </tr>
+                </tbody>
+              </table>
+            </section>
+          </section>
+
+          <section class="slide" data-deck="04" data-nav="Login" aria-label="Login">
+            <p class="eyebrow">Aula 04 · Trancado e no ar</p>
+            <section class="card pad stack" style="max-width: 420px;">
+              <h2>Entrar</h2>
+              <p class="muted">O painel pede login. Quem escaneia o QR não precisa de conta.</p>
+              <label class="field">E-mail <span class="fake-input">voce@email.com</span></label>
+              <label class="field">Senha <span class="fake-input">••••••••</span></label>
+              <div class="row"><span class="btn">Entrar</span><span class="btn-ghost">Criar uma conta</span></div>
+            </section>
+          </section>
+
+          <section class="slide" data-deck="04" data-nav="Sessão" aria-label="Sessão">
+            <p class="eyebrow">Aula 04 · o corte</p>
+            <h2>Aba anônima cai no login.</h2>
+            <div class="grid-2">
+              <article class="card pad stack">
+                <h2>Painel</h2>
+                <p class="muted">Sem sessão, /painel vai para /login. Criar, editar e listar respondem 401.</p>
+              </article>
+              <article class="card pad stack">
+                <h2>Quem escaneia</h2>
+                <p class="muted">/q/slug continua público. A service role ignora o RLS e fica só no redirect.</p>
+              </article>
+            </div>
+          </section>
+
+          <section class="slide" data-deck="04" data-nav="Publicar" aria-label="Publicar">
+            <p class="eyebrow">Aula 04 · Vercel</p>
+            <h2>Três variáveis. A service role só no servidor.</h2>
+            <section class="card pad">
+              <ol class="check">
+                <li>NEXT_PUBLIC_SUPABASE_URL e a chave anônima no ambiente da Vercel.</li>
+                <li>SUPABASE_SERVICE_ROLE_KEY sem prefixo NEXT_PUBLIC_.</li>
+                <li>Confirmação de e-mail desligada enquanto a turma testa.</li>
+                <li>Next.js 16 usa src/proxy.ts.</li>
+              </ol>
+            </section>
+            <div class="cmd">
+              <pre>prompts.html · aula 04</pre>
+              <a class="copy" href="prompts.html#04">Abrir</a>
+            </div>
+          </section>
+
+          <section class="slide" data-deck="04" data-nav="Gesto final" aria-label="Gesto final">
+            <p class="eyebrow">Aula 04 · no celular</p>
+            <h1>O mesmo quadrado. O endereço novo. O clique sobe.</h1>
+            <p class="lead">Salve o PNG, troque o destino no painel publicado, escaneie de novo. Escaneie outra vez e veja o número subir.</p>
+          </section>
+
+        </div>
+      </div>
+    </div>
+    <p class="hud"><b id="n">01</b> / <span id="t">05</span></p>
+  </div>
+  <script>
+    var titles = {
+      "01": "Aula 01 · A ideia",
+      "02": "Aula 02 · O link que muda",
+      "03": "Aula 03 · O painel",
+      "04": "Aula 04 · Trancado e no ar"
+    };
+    var slides = Array.prototype.slice.call(document.querySelectorAll(".slide"));
+    var side = document.getElementById("side");
+    var n = document.getElementById("n");
+    var t = document.getElementById("t");
+    var win = document.getElementById("win-title");
+    var deck = "01";
+    var i = 0;
+
+    function current() {
+      return slides.filter(function (s) { return s.getAttribute("data-deck") === deck; });
+    }
+
+    function show(k) {
+      var list = current();
+      i = Math.max(0, Math.min(list.length - 1, k));
+      slides.forEach(function (s) { s.classList.remove("on"); });
+      list[i].classList.add("on");
+      n.textContent = String(i + 1).padStart(2, "0");
+      t.textContent = String(list.length).padStart(2, "0");
+      side.querySelectorAll("button").forEach(function (b, idx) {
+        if (idx === i) b.setAttribute("aria-current", "true");
+        else b.removeAttribute("aria-current");
+      });
+    }
+
+    function buildSide() {
+      side.replaceChildren();
+      current().forEach(function (s, idx) {
+        var b = document.createElement("button");
+        b.type = "button";
+        b.textContent = s.getAttribute("data-nav");
+        b.addEventListener("click", function () { show(idx); });
+        side.appendChild(b);
+      });
+    }
+
+    function openDeck(id) {
+      deck = id;
+      win.textContent = titles[id];
+      document.querySelectorAll(".lessons button").forEach(function (b) {
+        b.setAttribute("aria-selected", b.getAttribute("data-deck") === id ? "true" : "false");
+      });
+      buildSide();
+      show(0);
+    }
+
+    document.querySelectorAll(".lessons button").forEach(function (b) {
+      b.addEventListener("click", function () { openDeck(b.getAttribute("data-deck")); });
+    });
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "ArrowRight" || e.key === "ArrowDown") show(i + 1);
+      if (e.key === "ArrowLeft" || e.key === "ArrowUp") show(i - 1);
+      if (e.key === "1" || e.key === "2" || e.key === "3" || e.key === "4") openDeck("0" + e.key);
+    });
+    document.querySelectorAll(".copy").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var text = b.getAttribute("data-copy");
+        var done = function () {
+          b.textContent = "Copiado";
+          b.classList.add("on");
+          setTimeout(function () { b.textContent = "Copiar"; b.classList.remove("on"); }, 1200);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(done, done);
+        } else {
+          done();
+        }
+      });
+    });
+    openDeck("01");
+  </script>
+</body>
+</html>
