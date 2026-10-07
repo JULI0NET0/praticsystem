@@ -40,10 +40,18 @@ export const WEEKDAYS_SHORT = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SÁB"]
 const WEEKDAYS_LONG = [
   "Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado",
 ];
-const MONTHS_LONG = [
+export const MONTHS_LONG = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
 ];
+
+/** O que a lista mobile mostra a partir do dia selecionado. */
+export type AgendaListScope = "day" | "week" | "nextWeek" | "month";
+
+export interface DateRange {
+  start: Date;
+  end: Date;
+}
 
 export function startOfDayLocal(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -140,6 +148,33 @@ export function compareItems(a: AgendaItem, b: AgendaItem): number {
 
 export function itemsOnDay(items: AgendaItem[], day: Date): AgendaItem[] {
   return items.filter((item) => isSameDay(item.start, day)).sort(compareItems);
+}
+
+/**
+ * Intervalo meio-aberto [start, end) do filtro da lista.
+ * Semana começa na segunda. "Próxima" é a semana seguinte à do dia.
+ */
+export function scopeRange(day: Date, scope: AgendaListScope): DateRange {
+  if (scope === "week" || scope === "nextWeek") {
+    const monday = startOfWeekMonday(day);
+    const start = scope === "nextWeek" ? addDays(monday, 7) : monday;
+    return { start, end: addDays(start, 7) };
+  }
+  if (scope === "month") {
+    const start = new Date(day.getFullYear(), day.getMonth(), 1);
+    return { start, end: new Date(day.getFullYear(), day.getMonth() + 1, 1) };
+  }
+  const start = startOfDayLocal(day);
+  return { start, end: addDays(start, 1) };
+}
+
+/** Compromissos com início em [start, end), em ordem cronológica. */
+export function itemsBetween(items: AgendaItem[], start: Date, end: Date): AgendaItem[] {
+  const from = start.getTime();
+  const until = end.getTime();
+  return items
+    .filter((item) => item.start.getTime() >= from && item.start.getTime() < until)
+    .sort((a, b) => a.start.getTime() - b.start.getTime() || compareItems(a, b));
 }
 
 /** Agrupa por dia, do mais próximo ao mais distante, só dias com compromissos. */

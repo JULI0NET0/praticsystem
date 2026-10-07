@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { isAgendaPrimarySelection } from "@/lib/agendaCategories";
 import type { AgendaItem } from "@/lib/agendaItems";
 import CategoryFilterChips from "./CategoryFilterChips";
 import DayEventList from "./DayEventList";
@@ -213,7 +214,8 @@ describe("MobileAgenda", () => {
 
   it("abre no Dia, com os compromissos de hoje", () => {
     setup();
-    expect(screen.getByRole("button", { name: "Dia" }).getAttribute("aria-pressed")).toBe("true");
+    const views = screen.getByRole("group", { name: "Visão da agenda" });
+    expect(within(views).getByRole("button", { name: "Dia" }).getAttribute("aria-pressed")).toBe("true");
     expect(screen.getByText("Alinhamento")).toBeTruthy();
     expect(screen.getByText("Captação Cavezzo")).toBeTruthy();
     expect(screen.queryByText("Entrega vídeo")).toBeNull();
@@ -284,6 +286,80 @@ describe("MobileAgenda", () => {
     setup("day", { filtersActiveCount: 2 });
     expect(screen.getByRole("button", { name: "Filtros (2 ativos)" })).toBeTruthy();
   });
+
+  function period() {
+    return screen.getByRole("group", { name: "Período da lista" });
+  }
+
+  it("dia vazio mostra os próximos compromissos", () => {
+    setup("day", {
+      items: [item({ id: "Entrega futura", start: new Date(2026, 8, 30, 10, 0), type: "demand", demandId: "d1" })],
+    });
+    expect(screen.getByText("Nada marcado para este dia.")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Próximos" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Quarta, 30 de setembro" })).toBeTruthy();
+    expect(screen.getByText("Entrega futura")).toBeTruthy();
+  });
+
+  it("mês vazio também mostra os próximos", () => {
+    setup("month", {
+      items: [item({ id: "Entrega futura", start: new Date(2026, 8, 30, 10, 0), type: "demand", demandId: "d1" })],
+    });
+    expect(screen.getByText("Nada marcado para este dia.")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Próximos" })).toBeTruthy();
+    expect(screen.getByText("Entrega futura")).toBeTruthy();
+  });
+
+  it("filtro Semana, Próxima e Mês muda o que a lista mostra", () => {
+    setup();
+    fireEvent.click(within(period()).getByRole("button", { name: "Semana" }));
+    expect(screen.getByRole("heading", { name: "Amanhã, 29 de setembro" })).toBeTruthy();
+    expect(screen.getByText("Entrega vídeo")).toBeTruthy();
+    expect(screen.getByText("Reunião mensal")).toBeTruthy();
+
+    fireEvent.click(within(period()).getByRole("button", { name: "Lista da próxima semana" }));
+    expect(screen.getByText("Nenhum compromisso neste período.")).toBeTruthy();
+    expect(screen.queryByText("Alinhamento")).toBeNull();
+
+    fireEvent.click(within(period()).getByRole("button", { name: "Mês" }));
+    expect(screen.getByText("Alinhamento")).toBeTruthy();
+    expect(screen.getByText("Reunião mensal")).toBeTruthy();
+  });
+
+  it("a seta de próxima semana move a faixa e mantém o dia da lista", () => {
+    setup();
+    fireEvent.click(screen.getByRole("button", { name: "Próxima semana" }));
+    const strip = screen.getByRole("group", { name: "Dias da semana" });
+    expect(within(strip).getAllByRole("button")[0].getAttribute("aria-label")).toMatch(/^Segunda, 5 de outubro/);
+    expect(screen.getByText("Alinhamento")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Mostrar no calendário" })).toBeTruthy();
+  });
+
+  it("Hoje marca o dia de hoje sem trocar o mês visível", () => {
+    setup("month");
+    fireEvent.click(screen.getByRole("button", { name: "Próximo mês" }));
+    fireEvent.click(screen.getByRole("button", { name: "Próximo mês" }));
+    expect(screen.getByRole("grid", { name: "Novembro 2026" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("gridcell", { name: /quarta, 4 de novembro/i }));
+    expect(screen.getByText("Nada marcado para este dia.")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Hoje" }));
+    expect(screen.getByRole("grid", { name: "Novembro 2026" })).toBeTruthy();
+    expect(screen.getByText("Alinhamento")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Mostrar no calendário" }));
+    expect(screen.getByRole("grid", { name: "Setembro 2026" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Mostrar no calendário" })).toBeNull();
+  });
+
+  it("escolher o mês move o calendário e não o dia selecionado", () => {
+    setup();
+    fireEvent.click(screen.getByRole("button", { name: "Escolher mês, Setembro 2026" }));
+    const dialog = screen.getByRole("dialog", { name: "Escolher mês" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Novembro" }));
+    expect(screen.getByRole("button", { name: "Escolher mês, Novembro 2026" })).toBeTruthy();
+    expect(screen.getByText("Alinhamento")).toBeTruthy();
+    const strip = screen.getByRole("group", { name: "Dias da semana" });
+    expect(within(strip).getAllByRole("button")[0].getAttribute("aria-label")).toMatch(/^Segunda, 26 de outubro/);
+  });
 });
 
 describe("CategoryFilterChips", () => {
@@ -314,5 +390,18 @@ describe("CategoryFilterChips", () => {
     rerender(<CategoryFilterChips active={["meeting"]} counts={counts} onToggle={vi.fn()} onReset={onReset} />);
     fireEvent.click(screen.getByRole("button", { name: "Mostrar todos" }));
     expect(onReset).toHaveBeenCalledOnce();
+  });
+
+  it("a visão limpa deixa reunião e captação ligadas e o resto pronto para ligar", () => {
+    const primary = ["meeting", "prospecting"];
+    expect(isAgendaPrimarySelection(primary)).toBe(true);
+    expect(isAgendaPrimarySelection(ALL)).toBe(false);
+    render(<CategoryFilterChips active={primary} counts={counts} onToggle={vi.fn()} onReset={vi.fn()} />);
+    expect(screen.getByRole("button", { name: /Reunião/ }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("button", { name: /Captação/ }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("button", { name: /Tarefa Interna/ }).getAttribute("aria-pressed")).toBe("false");
+    expect(screen.getByRole("button", { name: /Pagamento/ }).getAttribute("aria-pressed")).toBe("false");
+    expect(screen.getByRole("button", { name: /Demanda/ }).getAttribute("aria-pressed")).toBe("false");
+    expect(screen.getByRole("button", { name: "Mostrar todos" })).toBeTruthy();
   });
 });

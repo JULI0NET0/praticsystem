@@ -556,3 +556,41 @@ export async function createScriptNoteForPlan({
   return data as Note;
 }
 
+
+export interface NewPlanItem {
+  title: string;
+  date: string | null;
+  role: 'post' | 'captacao' | 'roteiro';
+  contentType: string | null;
+  channel: string | null;
+}
+
+/** Adiciona um item avulso a um cronograma já criado, no fim da sua trilha. */
+export async function addPlanItem(
+  plan: Pick<ContentPlan, 'id' | 'client_id'>,
+  item: NewPlanItem,
+  currentUserId: string,
+  statusId: string,
+  position: number,
+): Promise<Demand> {
+  const { data, error } = await supabase
+    .from('demands')
+    .insert({
+      title: item.title.trim() || 'Novo conteúdo',
+      client_id: plan.client_id,
+      status: statusId,
+      due_date: item.date || null,
+      plan_id: plan.id,
+      plan_role: item.role,
+      content_type: item.role === 'post' ? item.contentType : null,
+      type: item.role === 'captacao' ? 'CAPTACAO' : item.channel,
+      created_by: currentUserId,
+      assignee_ids: [] as string[],
+      position,
+    })
+    .select('*')
+    .single();
+
+  if (error || !data) throw error ?? new Error('Falha ao adicionar o item.');
+  return data as Demand;
+}

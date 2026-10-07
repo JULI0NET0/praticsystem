@@ -10,6 +10,8 @@ import {
   relativeDayLabel,
   startOfWeekMonday,
   timeLabel,
+  itemsBetween,
+  scopeRange,
   upcomingAfter,
   weekDays,
   type AgendaItem,
@@ -157,6 +159,30 @@ describe("agrupamento e próximos", () => {
     const groups = groupByDay(items);
     expect(groups.map((g) => g.day.getDate())).toEqual([28, 29, 30, 2]);
     expect(groups[1].items.map((i) => i.id)).toEqual(["dia-todo", "manha", "tarde"]);
+  });
+
+  it("scopeRange cobre o dia, a semana, a próxima semana e o mês", () => {
+    const day = new Date(2026, 8, 30, 15, 0);
+    const on = (range: { start: Date; end: Date }) =>
+      [range.start.getMonth(), range.start.getDate(), range.end.getMonth(), range.end.getDate()];
+    expect(on(scopeRange(day, "day"))).toEqual([8, 30, 9, 1]);
+    expect(on(scopeRange(day, "week"))).toEqual([8, 28, 9, 5]);
+    expect(on(scopeRange(day, "nextWeek"))).toEqual([9, 5, 9, 12]);
+    expect(on(scopeRange(day, "month"))).toEqual([8, 1, 9, 1]);
+  });
+
+  it("itemsBetween é meio-aberto e cronológico", () => {
+    const range = scopeRange(new Date(2026, 8, 28), "day");
+    expect(itemsBetween(items, range.start, range.end).map((i) => i.id)).toEqual(["hoje"]);
+    const week = scopeRange(new Date(2026, 8, 28), "week");
+    expect(itemsBetween(items, week.start, week.end).map((i) => i.id)).toEqual([
+      "hoje",
+      "dia-todo",
+      "manha",
+      "tarde",
+      "feito",
+      "depois",
+    ]);
   });
 
   it("upcomingAfter começa no dia seguinte, ignora concluídos e respeita o limite", () => {

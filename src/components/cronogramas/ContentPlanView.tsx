@@ -19,10 +19,13 @@ import {
   fetchPlanScriptNotes,
   createScriptNoteForPlan,
   unlinkNoteFromPlan,
+  addPlanItem,
+  type NewPlanItem,
 } from "@/lib/contentPlans";
 import { useDemandas } from "@/components/demandas/DemandasProvider";
 import DemandModal from "@/components/demandas/DemandModal";
 import PlanItemRow from "./PlanItemRow";
+import PlanItemModal from "./PlanItemModal";
 import PlanScriptRow from "./PlanScriptRow";
 import ScriptNoteDrawer from "./ScriptNoteDrawer";
 import LinkExistingNoteModal from "./LinkExistingNoteModal";
@@ -34,7 +37,9 @@ import {
   channelColor,
   channelLabel,
   CONTENT_PLAN_STATUS_LABELS,
+  CONTENT_CHANNELS,
   type ContentPlan,
+  type ContentPlanStatus,
 } from "@/types/cronogramas";
 import { clientLabel, type Demand } from "@/types/demandas";
 import type { Note } from "@/types/database";
@@ -84,7 +89,7 @@ function formatPdfDate(dateStr?: string | null, timeStr?: string | null): string
 export default function ContentPlanView({ planId }: { planId: string }) {
   const { currentUser } = useAuth();
   const { showToast } = useToast();
-  const { getClient, getStatus, demands: allDemands, users, clients } = useDemandas();
+  const { getClient, getStatus, statuses, demands: allDemands, users, clients, updateDemand, deleteDemand } = useDemandas();
 
   const [plan, setPlan] = useState<ContentPlan | null>(null);
   const [planDemands, setPlanDemands] = useState<Demand[]>([]);
@@ -93,6 +98,7 @@ export default function ContentPlanView({ planId }: { planId: string }) {
   const [linkModalOpen, setLinkModalOpen] = useState(false);
   const [creatingScript, setCreatingScript] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [modal, setModal] = useState<{ mode: "create" | "edit"; role: NewPlanItem["role"]; demandId?: string } | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -489,6 +495,74 @@ export default function ContentPlanView({ planId }: { planId: string }) {
     );
   };
 
+  /** Edita metadados do cronograma (status, mês, canais) com update otimista. */
+  const patchPlan = (patch: Partial<ContentPlan>) => {
+    if (!plan) return;
+    const previous = plan;
+    setPlan({ ...plan, ...patch });
+    updateContentPlan(plan.id, patch).catch((err) => {
+      setPlan(previous);
+      showToast("Erro ao salvar: " + ((err as Error)?.message ?? ""), "error");
+    });
+  };
+
+  const toggleChannel = (channel: string) => {
+    if (!plan) return;
+    const next = plan.channels.includes(channel)
+      ? plan.channels.filter((c) => c !== channel)
+      : [...plan.channels, channel];
+    patchPlan({ channels: next });
+  };
+
+  const handleAddItem = async (item: NewPlanItem) => {
+    if (!plan || !currentUser) return;
+    const statusId =
+      statuses.find((s) => s.category === "nao_iniciado")?.id ?? statuses[0]?.id ?? "pending";
+    try {
+      const created = await addPlanItem(
+        plan,
+        item,
+        currentUser.id,
+        statusId,
+        Math.max(0, ...planDemands.map((d) => d.position ?? 0)) + 1,
+      );
+      setPlanDemands((prev) => [...prev, created]);
+      setModal(null);
+      showToast("Item adicionado ao cronograma.", "success");
+    } catch (err) {
+      showToast("Erro ao adicionar: " + ((err as Error)?.message ?? ""), "error");
+    }
+  };
+
+  const openEdit = (id: string) => {
+    const role = rows.find((d) => d.id === id)?.plan_role;
+    setModal({ mode: "edit", role: role === "captacao" || role === "roteiro" ? role : "post", demandId: id });
+  };
+
+  const handleDeleteItem = async (id: string) => {
+    await deleteDemand(id);
+    setPlanDemands((prev) => prev.filter((d) => d.id !== id));
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+    setModal(null);
+  };
+
+  const handleModalSubmit = async (item: NewPlanItem) => {
+    if (modal?.mode === "edit" && modal.demandId) {
+      await updateDemand(modal.demandId, {
+        title: item.title.trim(),
+        due_date: item.date,
+        ...(item.role === "post" ? { content_type: item.contentType, type: item.channel } : {}),
+      });
+      setModal(null);
+      return;
+    }
+    await handleAddItem(item);
+  };
+
   const confirmDelete = async (deleteDemands: boolean) => {
     if (!plan) return;
     setDeleteOpen(false);
@@ -599,19 +673,26 @@ export default function ContentPlanView({ planId }: { planId: string }) {
         }`}
         actions={
           <>
-            <span
-              style={{
-                padding: "5px 12px",
-                borderRadius: "var(--radius-md)",
-                fontSize: "0.74rem",
-                fontWeight: 800,
-                color: "var(--text-secondary)",
-                background: "var(--color-surface-sunken)",
-                border: "1px solid var(--border)",
-              }}
+            <input
+              type="month"
+              value={plan.month_ref}
+              onChange={(event) => event.target.value && patchPlan({ month_ref: event.target.value })}
+              aria-label="Mês de referência"
+              title="Mês de referência"
+              style={planSelectStyle}
+            />
+            <select
+              value={plan.status}
+              onChange={(event) => patchPlan({ status: event.target.value as ContentPlanStatus })}
+              aria-label="Status do cronograma"
+              style={planSelectStyle}
             >
-              {CONTENT_PLAN_STATUS_LABELS[plan.status]}
-            </span>
+              {(Object.keys(CONTENT_PLAN_STATUS_LABELS) as ContentPlanStatus[]).map((key) => (
+                <option key={key} value={key}>
+                  {CONTENT_PLAN_STATUS_LABELS[key]}
+                </option>
+              ))}
+            </select>
             <button
               type="button"
               className="btn btn-secondary"
@@ -646,27 +727,37 @@ export default function ContentPlanView({ planId }: { planId: string }) {
         }
       />
 
-      {/* Canais do plano */}
-      {plan.channels.length > 0 && (
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-          {plan.channels.map((channel) => (
-            <span
-              key={channel}
+      {/* Canais do plano — clique para ativar/desativar */}
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+        {CONTENT_CHANNELS.map(({ value }) => {
+          const active = plan.channels.includes(value);
+          return (
+            <button
+              key={value}
+              type="button"
+              onClick={() => toggleChannel(value)}
+              aria-pressed={active}
+              title={active ? "Remover canal" : "Adicionar canal"}
               style={{
                 padding: "2px 9px",
                 borderRadius: "var(--radius-badge)",
                 fontSize: "0.7rem",
                 fontWeight: 700,
-                color: channelColor(channel),
-                background: `color-mix(in oklab, ${channelColor(channel)} 14%, transparent)`,
-                border: `1px solid color-mix(in oklab, ${channelColor(channel)} 32%, transparent)`,
+                fontFamily: "inherit",
+                cursor: "pointer",
+                opacity: active ? 1 : 0.45,
+                color: channelColor(value),
+                background: active
+                  ? `color-mix(in oklab, ${channelColor(value)} 14%, transparent)`
+                  : "transparent",
+                border: `1px ${active ? "solid" : "dashed"} color-mix(in oklab, ${channelColor(value)} 40%, transparent)`,
               }}
             >
-              {channelLabel(channel)}
-            </span>
-          ))}
-        </div>
-      )}
+              {channelLabel(value)}
+            </button>
+          );
+        })}
+      </div>
 
       <Section title="Planejamento" icon={<Lightbulb size={14} />}>
         <div style={editorBoxStyle}>
@@ -730,12 +821,21 @@ export default function ContentPlanView({ planId }: { planId: string }) {
           title="Demandas de Captação e Tarefas"
           icon={<PenLine size={14} />}
           count={producao.length}
+          action={<button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => setModal({ mode: "create", role: "captacao" })}
+            style={{ fontSize: "0.72rem", padding: "4px 10px", display: "flex", alignItems: "center", gap: 5 }}
+          >
+            <Plus size={13} /> Captação
+          </button>}
         >
           {producao.map((demand) => (
             <PlanItemRow
               key={demand.id}
               demand={demand}
               onOpen={setSelectedId}
+              onEdit={openEdit}
               selected={selectedIds.has(demand.id)}
               onSelect={toggleSelection}
             />
@@ -743,15 +843,20 @@ export default function ContentPlanView({ planId }: { planId: string }) {
         </Section>
       )}
 
-      <Section title="Conteúdos" icon={<CalendarRange size={14} />} count={posts.length}>
+      <Section
+        title="Conteúdos"
+        icon={<CalendarRange size={14} />}
+        count={posts.length}
+      >
         {posts.length === 0 ? (
-          <Empty>Nenhum conteúdo neste cronograma.</Empty>
+          <Empty>Nenhum conteúdo neste cronograma. Use o botão + no canto da tela para adicionar.</Empty>
         ) : (
           posts.map((demand) => (
             <PlanItemRow
               key={demand.id}
               demand={demand}
               onOpen={setSelectedId}
+              onEdit={openEdit}
               selected={selectedIds.has(demand.id)}
               onSelect={toggleSelection}
             />
@@ -770,6 +875,52 @@ export default function ContentPlanView({ planId }: { planId: string }) {
           />
         </div>
       </Section>
+
+      <button
+        type="button"
+        onClick={() => setModal({ mode: "create", role: "post" })}
+        aria-label="Novo conteúdo"
+        title="Novo conteúdo"
+        style={{
+          position: "fixed",
+          right: 28,
+          bottom: 104,
+          zIndex: 900,
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          padding: "0 18px",
+          height: 48,
+          borderRadius: 24,
+          border: "none",
+          cursor: "pointer",
+          fontFamily: "inherit",
+          fontSize: "0.82rem",
+          fontWeight: 800,
+          color: "#fff",
+          background: "var(--accent)",
+          boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
+        }}
+      >
+        <Plus size={18} /> Novo conteúdo
+      </button>
+
+      {modal && (
+        <PlanItemModal
+          key={`${modal.mode}-${modal.demandId ?? modal.role}`}
+          mode={modal.mode}
+          role={modal.role}
+          demand={modal.demandId ? rows.find((d) => d.id === modal.demandId) : undefined}
+          defaultChannel={plan.channels[0] ?? "FEED"}
+          onSubmit={handleModalSubmit}
+          onOpenDetails={(id) => {
+            setModal(null);
+            setSelectedId(id);
+          }}
+          onDelete={handleDeleteItem}
+          onClose={() => setModal(null)}
+        />
+      )}
 
       <DemandModal
         demandId={selectedId}
@@ -1147,6 +1298,17 @@ export default function ContentPlanView({ planId }: { planId: string }) {
 
 /** Timers de autosave por campo — fora do componente, um por montagem basta. */
 const timers: Record<string, number> = {};
+
+const planSelectStyle: React.CSSProperties = {
+  padding: "5px 10px",
+  borderRadius: "var(--radius-md)",
+  fontSize: "0.74rem",
+  fontWeight: 800,
+  fontFamily: "inherit",
+  color: "var(--text-secondary)",
+  background: "var(--color-surface-sunken)",
+  border: "1px solid var(--border)",
+};
 
 const editorBoxStyle: React.CSSProperties = {
   borderRadius: 12,
