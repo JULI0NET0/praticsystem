@@ -22,7 +22,8 @@ import http from 'node:http';
 
 const CLIENT_ID = process.env.GOOGLE_OAUTH_CLIENT_ID;
 const CLIENT_SECRET = process.env.GOOGLE_OAUTH_CLIENT_SECRET;
-const REDIRECT_URI = 'http://localhost:3000/oauth2callback';
+const REDIRECT_PATH = '/api/agenda/google-auth/callback'; // mesmo URI que o app já tem cadastrado no Google Cloud
+const REDIRECT_URI = `http://localhost:3000${REDIRECT_PATH}`;
 const SCOPE = 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/drive';
 
 if (!CLIENT_ID || !CLIENT_SECRET) {
@@ -47,7 +48,7 @@ console.log(`\nAguardando o redirecionamento em ${REDIRECT_URI} ...\n`);
 
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, REDIRECT_URI);
-  if (url.pathname !== '/oauth2callback') {
+  if (url.pathname !== REDIRECT_PATH) {
     res.writeHead(404);
     res.end();
     return;

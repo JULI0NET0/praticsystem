@@ -69,3 +69,44 @@ export async function createFolder(name: string, parentId: string): Promise<Driv
   });
   return { id: data.id, name: data.name, url: folderUrl(data.id) };
 }
+
+const GOOGLE_DRIVE_UPLOAD_API = 'https://www.googleapis.com/upload/drive/v3';
+const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+const GDOC_MIME = 'application/vnd.google-apps.document';
+// Pasta "Propostas" no Drive da agência (GOOGLE_DRIVE_PROPOSALS_FOLDER_ID sobrescreve).
+const PROPOSALS_FOLDER_ID = '1xfW5VrZLjFFewfhhEBDjolYcjIRBuNjB';
+
+export function getProposalsFolderId(): string {
+  return process.env.GOOGLE_DRIVE_PROPOSALS_FOLDER_ID || PROPOSALS_FOLDER_ID;
+}
+
+// Envia um .docx ao Drive convertendo para Google Doc.
+export async function uploadDocxAsGoogleDoc(
+  name: string,
+  docx: Buffer,
+  parentId: string
+): Promise<{ id: string; url: string }> {
+  const accessToken = await getValidAccessToken(DRIVE_ACCOUNT);
+  const boundary = `pratic-${Date.now().toString(36)}`;
+  const meta = JSON.stringify({ name, mimeType: GDOC_MIME, parents: [parentId] });
+  const body = Buffer.concat([
+    Buffer.from(
+      `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${meta}\r\n` +
+        `--${boundary}\r\nContent-Type: ${DOCX_MIME}\r\n\r\n`
+    ),
+    docx,
+    Buffer.from(`\r\n--${boundary}--`),
+  ]);
+
+  const res = await fetch(
+    `${GOOGLE_DRIVE_UPLOAD_API}/files?uploadType=multipart&supportsAllDrives=true&fields=id,webViewLink`,
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': `multipart/related; boundary=${boundary}` },
+      body,
+    }
+  );
+  if (!res.ok) throw new Error(`Google Drive upload error ${res.status}: ${await res.text()}`);
+  const data = await res.json();
+  return { id: data.id, url: data.webViewLink };
+}
