@@ -5,7 +5,7 @@ import { copyToBucket, enrichLeadFromWhatsApp, previewFor } from '@/lib/prospecc
 import { nextMessageStatus, phoneVariants } from '@/lib/prospeccao/leads';
 import { SILENT_TYPES, classifyPhone } from '@/lib/prospeccao/classify';
 import { getProvider } from '@/lib/whatsapp/provider';
-import { cancelFollowups } from '@/lib/prospeccao/scheduleServer';
+import { cancelFollowups, topUpSeries } from '@/lib/prospeccao/scheduleServer';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -158,6 +158,9 @@ async function storeMessage(supabase: Supabase, event: MessageEvent) {
       updated_at: now,
     })
     .eq('id', lead.id);
+
+  // Reabastece séries recorrentes deste lead (sem cron); falha aqui não pode derrubar o webhook.
+  await topUpSeries(supabase, { leadId: lead.id }).catch((err) => console.error('[prospeccao] topUpSeries:', err));
 
   if (created || lead.nome === event.phone) await enrichLeadFromWhatsApp(supabase, lead.id, event.phone, lead.nome);
 }

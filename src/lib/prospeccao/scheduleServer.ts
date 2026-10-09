@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getProvider, type OutboundMediaType } from '@/lib/whatsapp/provider';
-import { expandOccurrences, MAX_AHEAD } from './schedule';
+import { expandOccurrences, MAX_AHEAD, nextOccurrence } from './schedule';
 import { interpolate } from './leads';
 import type { ScheduledMessage, ScheduledRecurrence } from '@/types/database';
 
@@ -86,4 +86,49 @@ export async function cancelFollowups(supabase: SupabaseClient, leadId: string):
     .eq('status', 'pending')
     .eq('cancel_on_reply', true);
   return data?.length ? cancelScheduled(supabase, data) : 0;
+}
+
+/**
+ * Reabastece séries recorrentes que ficaram com menos de 3 ocorrências pendentes.
+ * Roda sob demanda (webhook e aba Agendadas), sem cron; `leadId` restringe a um lead.
+ */
+export async function topUpSeries(supabase: SupabaseClient, opts: { leadId?: string } = {}): Promise<number> {
+  let query = supabase
+    .from('scheduled_messages')
+    .select('*')
+    .not('series_id', 'is', null)
+    .not('recurrence', 'is', null)
+    .order('run_at', { ascending: false });
+  if (opts.leadId) query = query.eq('lead_id', opts.leadId);
+  const { data } = await query;
+
+  const bySeries = new Map<string, ScheduledMessage[]>();
+  for (const r of (data ?? []) as ScheduledMessage[]) bySeries.set(r.series_id!, [...(bySeries.get(r.series_id!) ?? []), r]);
+
+  let created = 0;
+  for (const [seriesId, rows] of bySeries) {
+    if (rows.filter((r) => r.status === 'pending').length >= 3) continue;
+    if (rows.every((r) => r.status === 'canceled')) continue; // série cancelada: não renasce
+    const last = rows[0]; // a mais recente
+    if (last.status === 'canceled') continue;
+    const { data: lead } = await supabase.from('leads').select('id, nome, empresa, telefone').eq('id', last.lead_id).single();
+    if (!lead?.telefone) continue;
+    const next = nextOccurrence(new Date(last.run_at), last.recurrence!);
+    if (next.getTime() < Date.now() + 60_000) continue; // série parada há muito tempo: não dispara atrasado
+    const { rows: made } = await createSchedule({
+      supabase,
+      lead: { ...lead, telefone: lead.telefone },
+      body: last.body,
+      media: last.media ?? undefined,
+      runAt: next,
+      recurrence: last.recurrence,
+      cancelOnReply: last.cancel_on_reply,
+      kind: last.kind,
+      userId: last.created_by,
+      seriesId,
+      alreadyCreated: rows.filter((r) => r.status !== 'canceled').length,
+    });
+    created += made.length;
+  }
+  return created;
 }

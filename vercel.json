@@ -7,10 +7,6 @@
     {
       "path": "/api/cron/reminders?type=evening",
       "schedule": "0 20 * * *"
-    },
-    {
-      "path": "/api/cron/scheduled",
-      "schedule": "0 10 * * *"
     }
   ]
 }
