@@ -3,6 +3,7 @@ import { requireTeamUser } from '@/lib/apiAuth';
 import { getSupabaseAdmin } from '@/lib/hermesAuth';
 import { getProvider, type OutboundMediaType } from '@/lib/whatsapp/provider';
 import { enrichLeadFromWhatsApp, previewFor } from '@/lib/prospeccao/server';
+import { phoneVariants } from '@/lib/prospeccao/leads';
 import type { MediaKind } from '@/lib/prospeccao/webhook';
 
 export const runtime = 'nodejs';
@@ -33,9 +34,21 @@ export async function POST(request: Request) {
   if (!lead.telefone) return NextResponse.json({ error: 'Este lead não tem telefone.' }, { status: 400 });
 
   const provider = getProvider();
-  const result = media
-    ? await provider.sendMedia(lead.telefone, { type: media.type, file: media.url, caption: text || undefined, docName: media.name })
-    : await provider.send(lead.telefone, text);
+  const sendTo = (phone: string) =>
+    media
+      ? provider.sendMedia(phone, { type: media.type, file: media.url, caption: text || undefined, docName: media.name })
+      : provider.send(phone, text);
+
+  let result = await sendTo(lead.telefone);
+  // Celular com/sem o 9º dígito: se o WhatsApp recusar, tenta a forma alternativa uma vez.
+  const alt = phoneVariants(lead.telefone).find((v) => v !== lead.telefone);
+  if (result.status === 'failed' && alt) {
+    const retry = await sendTo(alt);
+    if (retry.status !== 'failed') {
+      result = retry;
+      await supabase.from('leads').update({ telefone: alt }).eq('id', lead.id);
+    }
+  }
 
   const kind: MediaKind = media ? KIND_BY_TYPE[media.type] : 'text';
   const { data: message, error } = await supabase

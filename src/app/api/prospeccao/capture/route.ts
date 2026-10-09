@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/hermesAuth';
-import { normalizePhone } from '@/lib/prospeccao/leads';
+import { normalizePhone, phoneVariants } from '@/lib/prospeccao/leads';
 
 // Captura pública (bio/landing pages). Honeypot em `website` e limite simples por IP.
 const hits = new Map<string, number[]>();
@@ -22,7 +22,7 @@ export async function POST(request: Request) {
   if (!nome || !telefone) return NextResponse.json({ error: 'Informe nome e WhatsApp válidos.' }, { status: 400 });
 
   const supabase = getSupabaseAdmin();
-  const { data: existing } = await supabase.from('leads').select('id').eq('telefone', telefone).maybeSingle();
+  const { data: existing } = await supabase.from('leads').select('id').in('telefone', phoneVariants(telefone)).limit(1).maybeSingle();
   if (existing) return NextResponse.json({ ok: true });
 
   const { error } = await supabase.from('leads').insert({

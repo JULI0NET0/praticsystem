@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { filterLeadsForCampaign, interpolate, maskCnpj, maskPhone, nextMessageStatus, normalizePhone, parseInstagram, parseLeadsCsv, parseSegments, pipelineStats, validateCnpj } from './leads';
+import { filterLeadsForCampaign, interpolate, maskCnpj, maskPhone, nextMessageStatus, normalizePhone, parseInstagram, parseLeadsCsv, parseSegments, phoneKey, phoneVariants, pipelineStats, validateCnpj } from './leads';
 import { parseIncomingMessage, parseUazapiEvent } from './webhook';
 import type { Lead } from '@/types/database';
 
@@ -106,4 +106,22 @@ describe('parseUazapiEvent', () => {
       .toEqual({ kind: 'status', state: 'read', messageIds: ['M1'], isFromMe: true }));
   it('ignora recibo de grupo', () =>
     expect(parseUazapiEvent({ EventType: 'messages_update', type: 'GroupReceipts', event: { MessageIDs: ['M1'], IsGroup: true } })).toBeNull());
+});
+
+describe('phoneKey / phoneVariants (9º dígito)', () => {
+  it('as duas formas do mesmo celular têm a mesma chave', () => {
+    expect(phoneKey('5543999359959')).toBe(phoneKey('554399359959'));
+    expect(phoneKey('(43) 99935-9959')).toBe('554399359959'.replace(/^/, ''));
+  });
+  it('números diferentes não colidem', () => {
+    expect(phoneKey('5543999359959')).not.toBe(phoneKey('5543999359958'));
+    expect(phoneKey('5511999998888')).not.toBe(phoneKey('5543999359959'));
+  });
+  it('fixo não é alterado', () => expect(phoneKey('554333334444')).toBe('554333334444'));
+  it('variantes', () => {
+    expect(phoneVariants('5543999359959')).toEqual(['5543999359959', '554399359959']);
+    expect(phoneVariants('554399359959')).toEqual(['554399359959', '5543999359959']);
+    expect(phoneVariants('554333334444')).toEqual(['554333334444']);
+    expect(phoneVariants(null)).toEqual([]);
+  });
 });

@@ -1,9 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import { FileText } from "lucide-react";
+import ImageLightbox from "./ImageLightbox";
 import type { LeadMessage } from "@/types/database";
 
 export default function MediaBubble({ m }: { m: LeadMessage }) {
+  const [open, setOpen] = useState(false);
   if (m.message_type === "text" || !m.message_type) return m.body ? <>{m.body}</> : null;
 
   const caption = m.body ? <div>{m.body}</div> : null;
@@ -14,7 +17,15 @@ export default function MediaBubble({ m }: { m: LeadMessage }) {
   switch (m.message_type) {
     case "image":
     case "sticker":
-      return <><a href={m.media_url} target="_blank" rel="noreferrer"><img src={m.media_url} alt={m.media_name ?? "imagem"} loading="lazy" /></a>{caption}</>;
+      return (
+        <>
+          <button type="button" className="pp-media-btn" onClick={() => setOpen(true)} aria-label="Ampliar imagem">
+            <img src={m.media_url} alt={m.media_name ?? "imagem"} loading="lazy" />
+          </button>
+          {caption}
+          {open && <ImageLightbox src={m.media_url} alt={m.media_name ?? undefined} onClose={() => setOpen(false)} />}
+        </>
+      );
     case "video":
       return <><video src={m.media_url} controls preload="metadata" />{caption}</>;
     case "audio":

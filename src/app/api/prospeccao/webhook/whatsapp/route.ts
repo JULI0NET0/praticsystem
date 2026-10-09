@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/hermesAuth';
 import { parseIncomingMessage, parseUazapiEvent, type UazapiEvent } from '@/lib/prospeccao/webhook';
 import { copyToBucket, enrichLeadFromWhatsApp, previewFor } from '@/lib/prospeccao/server';
-import { nextMessageStatus } from '@/lib/prospeccao/leads';
+import { nextMessageStatus, phoneVariants } from '@/lib/prospeccao/leads';
 import { getProvider } from '@/lib/whatsapp/provider';
 
 export const runtime = 'nodejs';
@@ -64,7 +64,9 @@ async function storeMessage(supabase: Supabase, event: MessageEvent) {
   const { data: found } = await supabase
     .from('leads')
     .select('id, nome, unread_count, estagio')
-    .eq('telefone', event.phone)
+    .in('telefone', phoneVariants(event.phone))
+    .order('created_at', { ascending: true })
+    .limit(1)
     .maybeSingle();
 
   let lead = found;

@@ -2,23 +2,32 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { ArrowLeft, PanelRight, Paperclip, Search, Send } from "lucide-react";
+import { ArrowLeft, PanelRight, Paperclip, RotateCw, Search, Send } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/components/CustomToast";
 import EmptyState from "@/components/ui/EmptyState";
-import { formatPhone, interpolate } from "@/lib/prospeccao/leads";
+import { STAGES, formatPhone, interpolate } from "@/lib/prospeccao/leads";
 import { useProspeccao } from "./ProspeccaoProvider";
 import ContaWhatsApp from "./ContaWhatsApp";
 import LeadPanel from "./LeadPanel";
 import MediaBubble from "./MediaBubble";
 import AudioRecorder from "./AudioRecorder";
-import type { Lead, LeadMessage } from "@/types/database";
+import type { Lead, LeadMessage, LeadStage } from "@/types/database";
 
 const MAX_FILE_MB = 16;
 const initials = (n: string) => n.split(/\s+/).slice(0, 2).map((p) => p[0]?.toUpperCase()).join("");
 const hhmm = (iso: string) => new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 const STATUS_TITLE: Record<LeadMessage["status"], string> = { queued: "Na fila", sent: "Enviada", delivered: "Entregue", read: "Lida", played: "Reproduzida", failed: "Falhou" };
 const STATUS_MARK: Record<LeadMessage["status"], string> = { queued: "…", sent: "✓", delivered: "✓✓", read: "✓✓", played: "✓✓", failed: "!" };
+
+function dayLabel(iso: string): string {
+  const d = new Date(iso);
+  const startOf = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const diff = Math.round((startOf(new Date()) - startOf(d)) / 86_400_000);
+  if (diff === 0) return "Hoje";
+  if (diff === 1) return "Ontem";
+  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: diff > 300 ? "numeric" : undefined });
+}
 
 function mediaTypeFor(file: File): "image" | "video" | "audio" | "document" {
   if (file.type.startsWith("image/")) return "image";
@@ -37,7 +46,7 @@ function Avatar({ lead }: { lead: Lead }) {
 }
 
 export default function ConversasView() {
-  const { leads, quickReplies, updateLead } = useProspeccao();
+  const { leads, quickReplies, updateLead, moveLead } = useProspeccao();
   const { showToast } = useToast();
   const params = useSearchParams();
   const [activeId, setActiveId] = useState<string | null>(params.get("lead"));
@@ -128,6 +137,16 @@ export default function ConversasView() {
     setText("");
   };
 
+  const resend = async (m: LeadMessage) => {
+    const payload = m.message_type !== "text" && m.media_url
+      ? { body: m.body || undefined, media: { type: m.message_type === "audio" ? "ptt" : m.message_type, url: m.media_url, name: m.media_name ?? undefined, mimetype: m.media_mimetype ?? undefined, seconds: m.media_seconds ?? undefined } }
+      : { body: m.body };
+    if (await post(payload)) {
+      await supabase.from("lead_messages").delete().eq("id", m.id);
+      setMessages((prev) => prev.filter((x) => x.id !== m.id));
+    }
+  };
+
   const pickReply = (body: string) => { if (active) setText(interpolate(body, active)); setQrIndex(0); };
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -179,25 +198,37 @@ export default function ConversasView() {
                 <button className="btn btn-ghost btn-icon pp-back" onClick={() => setActiveId(null)} aria-label="Voltar"><ArrowLeft size={16} /></button>
                 <Avatar lead={active} />
                 <div style={{ minWidth: 0, flex: 1 }}>
-                  <strong>{active.nome}</strong>
-                  <div style={{ fontSize: "var(--text-caption)", color: "var(--color-text-tertiary)" }}>
-                    {formatPhone(active.telefone)}{active.wa_name && active.wa_name !== active.nome ? ` · ${active.wa_name}` : ""}
-                  </div>
+                  <strong style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{active.nome}</strong>
+                  <div style={{ fontSize: "var(--text-caption)", color: "var(--color-text-tertiary)" }}>{formatPhone(active.telefone)}</div>
                 </div>
+                <select className="pp-select pp-stage-select" aria-label="Status do lead" value={active.estagio} onChange={(e) => moveLead(active.id, e.target.value as LeadStage)}>
+                  {STAGES.map((st) => <option key={st.id} value={st.id}>{st.label}</option>)}
+                </select>
                 <button className="btn btn-secondary btn-sm pp-drawer-btn" onClick={() => setPanelOpen((o) => !o)}><PanelRight size={14} /> Cadastro</button>
               </div>
               <div className="pp-msgs">
-                {messages.map((m) => (
-                  <div key={m.id} className={`pp-bubble ${m.direction}`}>
-                    <MediaBubble m={m} />
-                    <span className="meta">
-                      {hhmm(m.created_at)}
-                      {m.direction === "out" && (
-                        <span className={m.status === "read" || m.status === "played" ? "read" : undefined} title={STATUS_TITLE[m.status]}> {STATUS_MARK[m.status]}</span>
+                {messages.map((m, i) => {
+                  const prev = messages[i - 1];
+                  const newDay = !prev || new Date(prev.created_at).toDateString() !== new Date(m.created_at).toDateString();
+                  const grouped = !newDay && prev.direction === m.direction && new Date(m.created_at).getTime() - new Date(prev.created_at).getTime() < 120_000;
+                  return (
+                    <div key={m.id} style={{ display: "contents" }}>
+                      {newDay && <div className="pp-day"><span>{dayLabel(m.created_at)}</span></div>}
+                      <div className={`pp-bubble ${m.direction}`} data-grouped={grouped} data-failed={m.status === "failed"}>
+                        <MediaBubble m={m} />
+                        <span className="meta">
+                          {hhmm(m.created_at)}
+                          {m.direction === "out" && (
+                            <span className={m.status === "read" || m.status === "played" ? "read" : undefined} title={STATUS_TITLE[m.status]}> {STATUS_MARK[m.status]}</span>
+                          )}
+                        </span>
+                      </div>
+                      {m.status === "failed" && m.direction === "out" && (
+                        <button className="pp-retry" onClick={() => resend(m)} disabled={sending}><RotateCw size={12} /> Não enviada. Tentar de novo</button>
                       )}
-                    </span>
-                  </div>
-                ))}
+                    </div>
+                  );
+                })}
                 {!messages.length && <p style={{ margin: "auto", color: "var(--color-text-tertiary)", fontSize: "var(--text-ui)" }}>Nenhuma mensagem ainda. Digite / para usar uma resposta rápida.</p>}
                 <div ref={endRef} />
               </div>

@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/components/CustomToast";
 import { useAuth } from "@/hooks/useAuth";
-import { stageLabel, type ParsedLeadRow } from "@/lib/prospeccao/leads";
+import { phoneKey, stageLabel, type ParsedLeadRow } from "@/lib/prospeccao/leads";
 import type { Campaign, Lead, LeadStage, QuickReply } from "@/types/database";
 
 type LeadInput = Partial<Omit<Lead, "id" | "created_at" | "updated_at">> & { nome: string };
@@ -81,6 +81,12 @@ export function ProspeccaoProvider({ children }: { children: React.ReactNode }) 
   );
 
   const createLead = useCallback(async (input: LeadInput) => {
+    const key = phoneKey(input.telefone);
+    const dup = key ? leads.find((l) => phoneKey(l.telefone) === key) : null;
+    if (dup) {
+      showToast(`Já existe um lead com este número: ${dup.nome}.`, "error");
+      return null;
+    }
     const { data, error } = await supabase.from("leads").insert(input).select().single();
     if (error) {
       showToast(error.code === "23505" ? "Já existe um lead com este telefone." : "Erro ao criar lead: " + error.message, "error");
@@ -89,7 +95,7 @@ export function ProspeccaoProvider({ children }: { children: React.ReactNode }) 
     setLeads((prev) => (prev.some((x) => x.id === data.id) ? prev : [data as Lead, ...prev]));
     showToast("Lead criado.", "success");
     return data as Lead;
-  }, [showToast]);
+  }, [leads, showToast]);
 
   const updateLead = useCallback(async (id: string, patch: Partial<Lead>) => {
     const before = leads;
@@ -116,8 +122,8 @@ export function ProspeccaoProvider({ children }: { children: React.ReactNode }) 
   }, [showToast]);
 
   const importRows = useCallback(async (rows: ParsedLeadRow[]) => {
-    const existing = new Set(leads.map((l) => l.telefone).filter(Boolean));
-    const fresh = rows.filter((r) => !r.telefone || !existing.has(r.telefone));
+    const existing = new Set(leads.map((l) => phoneKey(l.telefone)).filter(Boolean));
+    const fresh = rows.filter((r) => !r.telefone || !existing.has(phoneKey(r.telefone)));
     if (!fresh.length) return 0;
     const { data, error } = await supabase.from("leads").insert(fresh.map((r) => ({ ...r, origem: r.origem ?? "csv" }))).select();
     if (error) {

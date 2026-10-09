@@ -95,6 +95,28 @@ export function normalizePhone(raw: string | null | undefined): string | null {
   return digits;
 }
 
+/**
+ * Chave canônica para comparar telefones BR. O WhatsApp devolve celulares antigos sem o 9
+ * (55 + DDD + 8 dígitos) enquanto o cadastro costuma ter com ele (55 + DDD + 9 + 8):
+ * as duas formas do mesmo número geram a mesma chave.
+ */
+export function phoneKey(phone: string | null | undefined): string | null {
+  const d = normalizePhone(phone) ?? phone?.replace(/\D/g, '');
+  if (!d) return null;
+  if (d.length === 13 && d.startsWith('55') && d[4] === '9') return d.slice(0, 4) + d.slice(5);
+  return d;
+}
+
+/** Formas equivalentes do número, para consultar o banco (a original sempre vem primeiro). */
+export function phoneVariants(phone: string | null | undefined): string[] {
+  const d = normalizePhone(phone) ?? phone?.replace(/\D/g, '');
+  if (!d) return [];
+  if (d.length === 13 && d.startsWith('55') && d[4] === '9') return [d, d.slice(0, 4) + d.slice(5)];
+  // 12 dígitos com assinante começando em 6-9 é celular sem o 9; 2-5 é fixo
+  if (d.length === 12 && d.startsWith('55') && /[6-9]/.test(d[4])) return [d, `${d.slice(0, 4)}9${d.slice(4)}`];
+  return [d];
+}
+
 export function formatPhone(phone: string | null | undefined): string {
   if (!phone) return '';
   const m = phone.match(/^55(\d{2})(\d{4,5})(\d{4})$/);
