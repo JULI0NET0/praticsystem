@@ -1,10 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AlertTriangle, CheckCircle2, RefreshCw } from "lucide-react";
+import { AlertTriangle, CheckCircle2, DownloadCloud, RefreshCw } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/components/CustomToast";
 import { formatPhone } from "@/lib/prospeccao/leads";
+import { runSync } from "./useSync";
 
 interface Conta {
   provider: string;
@@ -26,6 +27,7 @@ export default function ContaWhatsApp() {
   const { showToast } = useToast();
   const [conta, setConta] = useState<Conta | null>(null);
   const [fixing, setFixing] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [open, setOpen] = useState(false);
   const boxRef = useRef<HTMLDivElement>(null);
 
@@ -47,6 +49,16 @@ export default function ContaWhatsApp() {
     document.addEventListener("keydown", onKey);
     return () => { document.removeEventListener("mousedown", onDown); document.removeEventListener("keydown", onKey); };
   }, [open]);
+
+  const syncNow = async () => {
+    setSyncing(true);
+    const r = await runSync(true);
+    setSyncing(false);
+    if (!r.ok) return showToast("Não foi possível sincronizar agora.", "error");
+    const n = (r.inserted ?? 0) + (r.updated ?? 0);
+    showToast(n ? `${r.inserted ?? 0} mensagem(ns) nova(s) e ${r.updated ?? 0} atualizada(s).` : "Tudo em dia: nenhuma mensagem de hoje faltando.", "success");
+    if (r.hasMore) showToast("Ainda há mensagens a trazer. Sincronize de novo.", "success");
+  };
 
   const registerWebhook = async () => {
     setFixing(true);
@@ -105,6 +117,11 @@ export default function ContaWhatsApp() {
               </li>
             )}
           </ul>
+          {conta.configured && conta.connected && (
+            <button className="btn btn-secondary" onClick={syncNow} disabled={syncing}>
+              <DownloadCloud size={14} className={syncing ? "spin" : undefined} /> {syncing ? "Sincronizando..." : "Sincronizar mensagens de hoje"}
+            </button>
+          )}
           {conta.configured && conta.connected && (!conta.webhookRegistered || conta.webhookOutdated) && isHttps && (
             <button className="btn btn-accent" onClick={registerWebhook} disabled={fixing}>{fixing ? "Atualizando..." : conta.webhookRegistered ? "Atualizar webhook" : "Registrar webhook"}</button>
           )}

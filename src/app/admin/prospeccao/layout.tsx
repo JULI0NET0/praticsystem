@@ -7,9 +7,11 @@ import { ProspeccaoProvider } from "@/components/prospeccao/ProspeccaoProvider";
 import ProspeccaoNav from "@/components/prospeccao/ProspeccaoNav";
 import ContaWhatsApp from "@/components/prospeccao/ContaWhatsApp";
 import { useContentWidth } from "@/hooks/useContentWidth";
+import { useAutoSync } from "@/components/prospeccao/useSync";
 
 export default function ProspeccaoLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  useAutoSync();
   // Conversas pede a tela toda por padrão; as demais abas, a coluna central. A escolha do usuário vence.
   const [width, toggleWidth] = useContentWidth(pathname.startsWith("/admin/prospeccao/conversas") ? "full" : "main");
 

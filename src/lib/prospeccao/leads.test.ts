@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { displayName, filterLeadsForCampaign, interpolate, nameSuggestions, maskCnpj, maskPhone, nextMessageStatus, normalizePhone, parseInstagram, parseLeadsCsv, parseSegments, phoneKey, phoneVariants, pipelineStats, validateCnpj } from './leads';
-import { parseIncomingMessage, parseUazapiEvent } from './webhook';
+import { eventFromFindRecord, parseIncomingMessage, parseUazapiEvent } from './webhook';
 import { classifyPhone, countsForBadge } from './classify';
 import { expandOccurrences, isOutsideBusinessHours, nextOccurrence } from './schedule';
 import type { Lead } from '@/types/database';
@@ -97,9 +97,9 @@ describe('parseUazapiEvent', () => {
   it('mídia sem texto', () =>
     expect(parseUazapiEvent({ EventType: 'messages', message: { ...msg, text: '', messageType: 'AudioMessage', content: { seconds: 7, mimetype: 'audio/ogg' } } }))
       .toMatchObject({ messageType: 'audio', seconds: 7, mimetype: 'audio/ogg', uazId: 'owner:M1' }));
-  it('ignora grupo e enviadas pela API', () => {
+  it('ignora grupo, mas aceita enviadas pela API (agendadas chegam assim)', () => {
     expect(parseUazapiEvent({ EventType: 'messages', message: { ...msg, isGroup: true } })).toBeNull();
-    expect(parseUazapiEvent({ EventType: 'messages', message: { ...msg, wasSentByApi: true } })).toBeNull();
+    expect(parseUazapiEvent({ EventType: 'messages', message: { ...msg, fromMe: true, wasSentByApi: true } })).toMatchObject({ kind: 'message', fromMe: true });
   });
   it('mensagem enviada pelo celular vira fromMe', () =>
     expect(parseUazapiEvent({ EventType: 'messages', message: { ...msg, fromMe: true } })).toMatchObject({ fromMe: true }));
@@ -192,4 +192,22 @@ describe('nome na nossa base', () => {
     expect(nameSuggestions({ ...l, wa_name: 'julio mendonça' }).map((s) => s.name)).toEqual(['Marido']);
     expect(nameSuggestions({ ...l, wa_contact_name: 'Julio Neto' }).map((s) => s.name)).toEqual(['Julio Neto']);
   });
+});
+
+describe('eventFromFindRecord (sincronização)', () => {
+  const rec = { id: 'owner:M1', messageid: 'M1', chatid: '554399359959@s.whatsapp.net', fromMe: true, wasSentByApi: true, messageType: 'ExtendedTextMessage', text: 'Podemos agendar?', status: 'Read', messageTimestamp: Date.parse('2026-10-09T19:35:00Z'), senderName: '' };
+  it('texto enviado pela API vira evento com status', () =>
+    expect(eventFromFindRecord(rec)).toMatchObject({ kind: 'message', phone: '554399359959', fromMe: true, externalId: 'M1', status: 'read', body: 'Podemos agendar?' }));
+  it('mídia recebida usa a fileURL', () =>
+    expect(eventFromFindRecord({ ...rec, fromMe: false, messageType: 'ImageMessage', text: '', fileURL: 'https://x/y.jpg', senderName: 'Ana' }))
+      .toMatchObject({ messageType: 'image', fileUrl: 'https://x/y.jpg', name: 'Ana' }));
+  it('ignora grupo, agendada ainda não enviada e anterior ao piso', () => {
+    expect(eventFromFindRecord({ ...rec, chatid: '120363@g.us' })).toBeNull();
+    expect(eventFromFindRecord({ ...rec, status: 'scheduled' })).toBeNull();
+    expect(eventFromFindRecord({ ...rec, status: 'Deleted' })).toBeNull();
+    expect(eventFromFindRecord(rec, new Date('2026-10-10T00:00:00Z'))).toBeNull();
+    expect(eventFromFindRecord(rec, new Date('2026-10-09T00:00:00Z'))).not.toBeNull();
+  });
+  it('mensagem sem texto nem mídia é ignorada', () =>
+    expect(eventFromFindRecord({ ...rec, text: '', messageType: 'ProtocolMessage' })).toBeNull());
 });

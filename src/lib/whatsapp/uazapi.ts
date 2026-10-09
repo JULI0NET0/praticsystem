@@ -1,4 +1,4 @@
-import type { ContactInfo, DownloadedMedia, OutboundMedia, ScheduleItem, ScheduleOptions, ScheduleResult, SendResult, WhatsAppProvider } from './provider';
+import type { ContactInfo, DownloadedMedia, FindMessagesResult, OutboundMedia, ScheduleItem, ScheduleOptions, ScheduleResult, SendResult, WhatsAppProvider } from './provider';
 import { phoneKey } from '@/lib/prospeccao/leads';
 
 export function uazapiConfig() {
@@ -118,6 +118,21 @@ export const uazapiProvider: WhatsAppProvider = {
     } catch (err) {
       console.error('[uazapi] falha ao cancelar agendamento:', err);
       return false;
+    }
+  },
+
+  async findMessages(opts): Promise<FindMessagesResult | null> {
+    try {
+      const json = await uazapiFetch('/message/find', {
+        limit: opts.limit ?? 100,
+        offset: opts.offset ?? 0,
+        ...(opts.chatid ? { chatid: opts.chatid } : {}),
+      });
+      const records = (Array.isArray(json.messages) ? json.messages : []) as Json[];
+      return { records, hasMore: Boolean(json.hasMore), nextOffset: Number(json.nextOffset ?? (opts.offset ?? 0) + records.length) };
+    } catch (err) {
+      console.error('[uazapi] falha em /message/find:', err);
+      return null;
     }
   },
 

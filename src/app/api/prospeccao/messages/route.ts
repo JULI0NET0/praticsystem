@@ -72,7 +72,19 @@ export async function POST(request: Request) {
     .single();
   if (error?.code === '23505' && result.externalId) {
     // O webhook já gravou esta mensagem antes de nós: usa a existente.
-    const existing = await supabase.from('lead_messages').select('*').eq('external_id', result.externalId).single();
+    const existing = await supabase
+      .from('lead_messages')
+      .update({
+        sender_id: auth.user.id,
+        media_url: media?.url ?? undefined,
+        media_mimetype: media?.mimetype ?? undefined,
+        media_name: media?.name ?? undefined,
+        media_seconds: media?.seconds ?? undefined,
+        media_size: media?.size ?? undefined,
+      })
+      .eq('external_id', result.externalId)
+      .select('*')
+      .single();
     message = existing.data;
     error = existing.error;
   }

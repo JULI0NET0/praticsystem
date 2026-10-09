@@ -24,23 +24,23 @@ export default function ClientLinker({ lead }: { lead: Lead }) {
   const { linkClient, unlinkClient, convertToClient } = useProspeccao();
   const [clients, setClients] = useState<ClientRow[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [changing, setChanging] = useState(false);
   const [picked, setPicked] = useState<ClientRow | null>(null);
   const [unlinking, setUnlinking] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  // Clientes só são buscados quando precisam: vínculo existente ou usuário abrindo o seletor.
-  const needClients = Boolean(lead.client_id) || changing;
+  // Os clientes carregam ao montar (a tabela é pequena): assim o seletor já abre com a lista pronta.
   useEffect(() => {
-    if (!needClients || loaded) return;
     let alive = true;
-    supabase.from("clients").select("id, name, nome_fantasia, phone").order("name").then(({ data }) => {
+    supabase.from("clients").select("id, name, nome_fantasia, phone").order("name").then(({ data, error }) => {
       if (!alive) return;
+      if (error) setLoadError(error.message);
       setClients((data || []) as ClientRow[]);
       setLoaded(true);
     });
     return () => { alive = false; };
-  }, [needClients, loaded]);
+  }, []);
 
   const linked = lead.client_id ? clients.find((c) => c.id === lead.client_id) : null;
   const options = useMemo<ComboboxOption[]>(
@@ -88,11 +88,13 @@ export default function ClientLinker({ lead }: { lead: Lead }) {
             options={options}
             value={null}
             onChange={(id) => { const c = clients.find((x) => x.id === id); if (c) setPicked(c); }}
-            placeholder={loaded || !needClients ? "Vincular a cliente existente" : "Carregando clientes…"}
+            placeholder={loaded ? "Vincular a cliente existente" : "Carregando clientes…"}
             searchPlaceholder="Buscar por nome, razão social ou telefone"
             searchThreshold={0}
             ariaLabel="Vincular a cliente existente"
           />
+          {loaded && loadError && <div className="pp-hint" style={{ color: "var(--color-danger)" }}>Não foi possível carregar os clientes: {loadError}</div>}
+          {loaded && !loadError && clients.length === 0 && <div className="pp-hint">Nenhum cliente cadastrado ainda.</div>}
           <div className="pp-linker-actions">
             {changing && <button className="btn btn-ghost btn-sm" onClick={() => setChanging(false)}>Cancelar</button>}
             {!lead.client_id && <button className="btn btn-ghost btn-sm" onClick={() => convertToClient(lead)}><UserCheck size={13} /> Criar novo cliente com estes dados</button>}

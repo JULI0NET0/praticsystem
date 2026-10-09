@@ -203,3 +203,9 @@
 .pp-linker-actions { display:flex; gap:8px; flex-wrap:wrap; }
 .pp-header-btn { display:inline-flex; gap:6px; align-items:center; background:none; border:0; color:inherit; font:inherit; cursor:pointer; text-align:left; padding:4px 8px; margin:-4px -8px; border-radius:10px; min-width:0; flex:1; }
 .pp-header-btn:hover { background:var(--color-surface-sunken); }
+
+/* Gatilho do calendário do sistema, no visual dos campos */
+.pp-picker { display:flex; align-items:center; gap:8px; cursor:pointer; color:var(--color-text-tertiary); min-height:40px; }
+.pp-picker[data-filled="true"] { color:var(--color-text-primary); }
+.pp-picker[data-open="true"] { border-color:var(--color-terracotta-700); }
+.pp-picker svg { color:var(--color-terracotta-700); flex-shrink:0; }

@@ -56,8 +56,14 @@ export type UazapiEvent =
       fileName: string | null;
       seconds: number | null;
       timestamp: number | null;
+      /** URL direta do arquivo (registros do /message/find); evita o /message/download. */
+      fileUrl?: string | null;
+      /** Status vindo da sincronização (Sent/Delivered/Read...), já normalizado. */
+      status?: string | null;
     }
   | { kind: 'status'; state: string; messageIds: string[]; isFromMe: boolean };
+
+export type MessageEvent = Extract<UazapiEvent, { kind: 'message' }>;
 
 export function mediaKindFromType(messageType: string | undefined): MediaKind {
   const t = (messageType ?? '').toLowerCase();
@@ -97,7 +103,7 @@ export function parseUazapiEvent(payload: unknown): UazapiEvent | null {
         content?: { mimetype?: string; mimeType?: string; fileName?: string; seconds?: number; caption?: string } | string;
       }
     | undefined;
-  if (!m || typeof m !== 'object' || m.isGroup || m.wasSentByApi) return null;
+  if (!m || typeof m !== 'object' || m.isGroup) return null;
   const phone = normalizePhone(m.chatid?.split('@')[0]);
   if (!phone) return null;
 
@@ -120,4 +126,52 @@ export function parseUazapiEvent(payload: unknown): UazapiEvent | null {
     seconds: typeof content?.seconds === 'number' ? content.seconds : null,
     timestamp: typeof m.messageTimestamp === 'number' ? m.messageTimestamp : null,
   };
+}
+
+const FIND_STATUS: Record<string, string> = {
+  queued: 'queued', sent: 'sent', delivered: 'delivered', read: 'read', played: 'played', failed: 'failed', canceled: 'failed', expired: 'failed',
+};
+
+/**
+ * Converte um registro do POST /message/find em evento de mensagem. Devolve null para grupos,
+ * newsletters, mensagens sem número, ainda agendadas ("scheduled"), apagadas ("deleted") ou anteriores ao piso.
+ */
+export function eventFromFindRecord(rec: Record<string, unknown>, since?: Date): MessageEvent | null {
+  const chatid = typeof rec.chatid === 'string' ? rec.chatid : '';
+  if (!chatid.endsWith('@s.whatsapp.net') && !chatid.endsWith('@lid')) return null;
+  const rawStatus = typeof rec.status === 'string' ? rec.status.toLowerCase() : '';
+  // ainda agendada (não saiu) ou apagada no WhatsApp: não entra no histórico
+  if (rawStatus === 'scheduled' || rawStatus === 'deleted') return null;
+  const ts = typeof rec.messageTimestamp === 'number' ? rec.messageTimestamp : null;
+  if (since && ts !== null && ts < since.getTime()) return null;
+  const phone = normalizePhone(chatid.split('@')[0]);
+  if (!phone) return null;
+
+  const kind = mediaKindFromType(typeof rec.messageType === 'string' ? rec.messageType : undefined);
+  const content = rec.content && typeof rec.content === 'object' ? (rec.content as { mimetype?: string; mimeType?: string; fileName?: string; seconds?: number; caption?: string }) : undefined;
+  const body = (typeof rec.text === 'string' && rec.text) || content?.caption || '';
+  const fileUrl = typeof rec.fileURL === 'string' && rec.fileURL ? rec.fileURL : null;
+  if (kind === 'text' && !body) return null;
+
+  return {
+    kind: 'message',
+    phone,
+    name: typeof rec.senderName === 'string' && !rec.fromMe ? rec.senderName : null,
+    body,
+    fromMe: Boolean(rec.fromMe),
+    messageType: kind,
+    uazId: typeof rec.id === 'string' ? rec.id : null,
+    externalId: typeof rec.messageid === 'string' ? rec.messageid : typeof rec.id === 'string' ? rec.id : null,
+    mimetype: content?.mimetype ?? content?.mimeType ?? null,
+    fileName: content?.fileName ?? null,
+    seconds: typeof content?.seconds === 'number' ? content.seconds : null,
+    timestamp: ts,
+    fileUrl,
+    status: FIND_STATUS[rawStatus] ?? null,
+  };
+}
+
+/** Estado de recibo -> status interno (usado também pela sincronização). */
+export function normalizeReceiptStatus(raw: string | undefined): string | null {
+  return raw ? FIND_STATUS[raw.toLowerCase()] ?? null : null;
 }
