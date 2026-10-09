@@ -45,17 +45,29 @@ export function previewFor(kind: MediaKind, body: string): string {
   return { text: '', image: '📷 Foto', audio: '🎤 Áudio', video: '🎬 Vídeo', document: '📄 Documento', sticker: 'Figurinha' }[kind];
 }
 
-/** Busca nome/foto no WhatsApp e grava no lead (silencioso se o provedor não responder). */
+/**
+ * Busca nome, foto e dados do contato no WhatsApp e grava no lead.
+ * A foto é copiada para o bucket (a URL do WhatsApp expira). Retorna o que foi gravado.
+ */
 export async function enrichLeadFromWhatsApp(supabase: SupabaseClient, leadId: string, phone: string, currentName: string) {
   const info = await getProvider().getContact(phone);
-  if (!info) return;
+  if (!info) return null;
   const best = info.name || info.waName;
+
+  let avatar: string | null = null;
+  if (info.avatarUrl) avatar = (await copyToBucket(supabase, info.avatarUrl, `${leadId}/avatar`, 'image/jpeg', 'avatar.jpg'))?.url ?? info.avatarUrl;
+
   const patch: Record<string, unknown> = {
     wa_name: info.waName,
-    wa_avatar_url: info.avatarUrl,
+    wa_contact_name: info.contactName,
+    wa_business_name: info.businessName,
+    wa_about: info.about,
+    wa_avatar_url: avatar,
     wa_is_business: info.isBusiness,
+    wa_synced_at: new Date().toISOString(),
   };
   if (best && (currentName === phone || !currentName)) patch.nome = best;
   if (info.isBusiness && info.businessName) patch.empresa = info.businessName;
-  await supabase.from('leads').update(patch).eq('id', leadId);
+  const { data } = await supabase.from('leads').update(patch).eq('id', leadId).select().single();
+  return data;
 }

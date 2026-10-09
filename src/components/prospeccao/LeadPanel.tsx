@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/components/CustomToast";
 import { useProspeccao } from "./ProspeccaoProvider";
 import LeadFields from "./LeadFields";
+import ContactCard from "./ContactCard";
 import { formFromLead, leadPatchFromForm, type LeadFormState } from "./leadForm";
 import type { Lead, LeadActivity } from "@/types/database";
 
@@ -66,11 +67,11 @@ export default function LeadPanel({ lead }: { lead: Lead }) {
 
   return (
     <>
-      {(ig || lead.wa_name) && (
-        <div style={{ fontSize: "var(--text-caption)", color: "var(--color-text-secondary)", display: "flex", flexDirection: "column", gap: 2 }}>
-          {lead.wa_name && <span>WhatsApp: {lead.wa_name}{lead.wa_is_business ? " (comercial)" : ""}</span>}
-          {ig && <a href={`https://instagram.com/${ig}`} target="_blank" rel="noreferrer" style={{ display: "inline-flex", gap: 4, alignItems: "center" }}>@{ig} <ExternalLink size={11} /></a>}
-        </div>
+      <ContactCard lead={lead} />
+      {ig && (
+        <a href={`https://instagram.com/${ig}`} target="_blank" rel="noreferrer" style={{ display: "inline-flex", gap: 4, alignItems: "center", fontSize: "var(--text-caption)" }}>
+          @{ig} <ExternalLink size={11} />
+        </a>
       )}
 
       <LeadFields form={form} onChange={(patch) => setForm((f) => ({ ...f, ...patch }))} single />

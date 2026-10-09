@@ -61,11 +61,13 @@ export const uazapiProvider: WhatsAppProvider = {
 
   async getContact(phone): Promise<ContactInfo | null> {
     try {
-      const json = await uazapiFetch('/chat/details', { number: phone, preview: true });
+      const json = await uazapiFetch('/chat/details', { number: phone, preview: false });
       return {
         name: str(json.wa_contactName) ?? str(json.name),
+        contactName: str(json.wa_contactName),
+        about: str(json.about) ?? str(json.wa_about) ?? str(json.status),
         waName: str(json.wa_name),
-        avatarUrl: str(json.imagePreview) ?? str(json.image),
+        avatarUrl: str(json.image) ?? str(json.imagePreview),
         isBusiness: Boolean(json.is_business),
         businessName: str(json.business_name),
       };

@@ -319,6 +319,10 @@ export interface Lead {
   wa_name?: string | null;
   wa_avatar_url?: string | null;
   wa_is_business?: boolean;
+  wa_contact_name?: string | null;
+  wa_business_name?: string | null;
+  wa_about?: string | null;
+  wa_synced_at?: string | null;
   last_message_preview?: string | null;
   notas?: string | null;
   perdido_motivo?: string | null;

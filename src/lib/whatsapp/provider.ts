@@ -18,6 +18,10 @@ export interface OutboundMedia {
 
 export interface ContactInfo {
   name: string | null;
+  /** Nome salvo na agenda de quem está conectado */
+  contactName: string | null;
+  /** Recado/"sobre" do perfil, quando o provedor fornece (a UAZAPI não documenta) */
+  about: string | null;
   waName: string | null;
   avatarUrl: string | null;
   isBusiness: boolean;
