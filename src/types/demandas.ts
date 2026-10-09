@@ -22,6 +22,12 @@ export type DemandListGroupBy = 'due' | 'status';
 /** Como o Kanban agrupa colunas: por status (padrão) ou por prioridade. */
 export type DemandKanbanGroupBy = 'status' | 'priority';
 
+/**
+ * Visão da lista: tarefas avulsas, ou posts dos cronogramas já cadastrados.
+ * Captação e roteiro continuam em `geral` — são coisas a fazer, não o post.
+ */
+export type DemandLane = 'geral' | 'conteudo';
+
 /** Documento TipTap, mesmo formato de notes.content. */
 export type DemandDescription = Record<string, unknown> | null;
 
@@ -121,6 +127,8 @@ export interface DemandClientRef {
 }
 
 export interface DemandFilters {
+  /** Tarefas a fazer, ou posts dos cronogramas cadastrados. */
+  lane: DemandLane;
   /** 'all' | 'client' | 'internal' */
   scope: DemandScope | 'all';
   clientId: string | null;
@@ -137,6 +145,7 @@ export interface DemandFilters {
 }
 
 export const EMPTY_DEMAND_FILTERS: DemandFilters = {
+  lane: 'geral',
   scope: 'all',
   clientId: null,
   assigneeId: null,

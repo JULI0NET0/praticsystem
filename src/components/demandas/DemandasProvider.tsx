@@ -19,6 +19,9 @@ import { deriveStatusFields } from "@/lib/demandState";
 import { computeAgendaMirror, shouldSyncGoogle } from "@/lib/demandAgendaSync";
 import { POINTS, isOnTime } from "@/lib/points";
 import { toISODate } from "@/lib/dueDate";
+import { demandMatchesFilters } from "@/lib/demandFilters";
+import { fetchContentPlans } from "@/lib/contentPlans";
+import type { ContentPlan } from "@/types/cronogramas";
 import {
   EMPTY_DEMAND_FILTERS,
   PRIORITY_ORDER,
@@ -88,6 +91,9 @@ interface DemandasContextValue {
   setFilters: (patch: Partial<DemandFilters>) => void;
   resetFilters: () => void;
   visibleDemands: Demand[];
+  /** Cronogramas cadastrados. null até a visão Conteúdos pedir a lista. */
+  contentPlans: ContentPlan[] | null;
+  contentPlansLoading: boolean;
 
   getDemand: (id: string) => Demand | undefined;
   getStatus: (id: string) => DemandStatus | undefined;
@@ -281,12 +287,13 @@ export function DemandasProvider({ children }: { children: ReactNode }) {
 
   const initializedUserRef = useRef(false);
   useEffect(() => {
-    if (currentUser?.id && !initializedUserRef.current) {
+    const userId = currentUser?.id;
+    if (userId && !initializedUserRef.current) {
       initializedUserRef.current = true;
-      setFiltersState((prev) => ({
-        ...prev,
-        assigneeId: prev.assigneeId ?? currentUser.id,
-      }));
+      setFiltersState((prev) => {
+        if (prev.lane === "conteudo" || prev.assigneeId) return prev;
+        return { ...prev, assigneeId: userId };
+      });
     }
   }, [currentUser?.id]);
 
@@ -369,7 +376,38 @@ export function DemandasProvider({ children }: { children: ReactNode }) {
     setFiltersState((f) => ({ ...f, ...patch }));
   }, []);
 
-  const resetFilters = useCallback(() => setFiltersState(EMPTY_DEMAND_FILTERS), []);
+  const resetFilters = useCallback(() => {
+    setFiltersState((prev) => ({ ...EMPTY_DEMAND_FILTERS, lane: prev.lane }));
+  }, []);
+
+  // Só a visão Conteúdos precisa dos cronogramas, para saber quais posts
+  // ainda pertencem a um plano cadastrado e para agrupar por título.
+  const [contentPlans, setContentPlans] = useState<ContentPlan[] | null>(null);
+  const contentPlansLoading = filters.lane === "conteudo" && contentPlans === null;
+
+  useEffect(() => {
+    if (filters.lane !== "conteudo" || contentPlans) return;
+    let cancelled = false;
+    fetchContentPlans()
+      .then((plans) => {
+        if (!cancelled) setContentPlans(plans);
+      })
+      .catch((err) => {
+        console.error("Erro ao carregar cronogramas:", err);
+        if (!cancelled) {
+          showToast("Erro ao carregar cronogramas: " + ((err as Error)?.message ?? ""), "error");
+          setContentPlans([]);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [filters.lane, contentPlans, showToast]);
+
+  const registeredPlanIds = useMemo(
+    () => (contentPlans ? new Set(contentPlans.map((plan) => plan.id)) : null),
+    [contentPlans],
+  );
 
   const setSoundEnabled = useCallback((enabled: boolean) => {
     writeSoundPreference(enabled);
@@ -392,29 +430,18 @@ export function DemandasProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const visibleDemands = useMemo(() => {
-    const term = filters.search.trim().toLowerCase();
     const todayIso = filters.todayOnly ? toISODate(new Date()) : null;
 
     return demands.filter((d) => {
-      if (filters.scope !== "all" && d.scope !== filters.scope) return false;
-      if (filters.clientId && d.client_id !== filters.clientId) return false;
-      if (filters.status && d.status !== filters.status) return false;
-      if (filters.priority && d.priority !== filters.priority) return false;
-      if (filters.contentType && d.content_type !== filters.contentType) return false;
-      if (filters.hideCompleted && d.status_category === "fechado") return false;
-      if (todayIso && d.due_date !== todayIso) return false;
-      if (filters.assigneeId) {
-        const mine = d.assignee_ids?.includes(filters.assigneeId) || d.assign_all_team;
-        if (!mine) return false;
-      }
-      if (term) {
-        const client = getClient(d.client_id);
-        const haystack = `${d.title} ${client?.name ?? ""} ${client?.nome_fantasia ?? ""}`;
-        if (!haystack.toLowerCase().includes(term)) return false;
-      }
-      return true;
+      const client = getClient(d.client_id);
+      const clientHaystack = `${client?.name ?? ""} ${client?.nome_fantasia ?? ""}`.toLowerCase();
+      return demandMatchesFilters(d, filters, {
+        todayIso,
+        clientHaystack,
+        registeredPlanIds,
+      });
     });
-  }, [demands, filters, getClient]);
+  }, [demands, filters, getClient, registeredPlanIds]);
 
   // -------------------------------------------------------------------------
   // Mutações de demanda — otimista com rollback
@@ -1187,6 +1214,8 @@ export function DemandasProvider({ children }: { children: ReactNode }) {
       setFilters,
       resetFilters,
       visibleDemands,
+      contentPlans,
+      contentPlansLoading,
       getDemand,
       getStatus,
       getClient,
@@ -1233,6 +1262,8 @@ export function DemandasProvider({ children }: { children: ReactNode }) {
       setFilters,
       resetFilters,
       visibleDemands,
+      contentPlans,
+      contentPlansLoading,
       getDemand,
       getStatus,
       getClient,

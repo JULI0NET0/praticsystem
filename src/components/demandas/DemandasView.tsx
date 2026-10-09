@@ -5,8 +5,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { Calendar, ListChecks, Plus, Search, SlidersHorizontal } from "lucide-react";
 import DropdownMenu from "@/components/ui/DropdownMenu";
-import type { DemandKanbanGroupBy, DemandListGroupBy, DemandScope, DemandView } from "@/types/demandas";
+import { useAuth } from "@/hooks/useAuth";
+import type { DemandKanbanGroupBy, DemandLane, DemandListGroupBy, DemandScope, DemandView } from "@/types/demandas";
 import { useDemandas } from "./DemandasProvider";
+import DemandContentsList from "./DemandContentsList";
 import DemandFilters from "./DemandFilters";
 import DemandKanbanGroupBySwitcher from "./DemandKanbanGroupBySwitcher";
 import DemandListView from "./DemandListView";
@@ -23,11 +25,32 @@ const VIEW_STORAGE_KEY = "pratic-demandas-view";
 const GROUPBY_STORAGE_KEY = "pratic-demandas-groupby";
 const KANBAN_GROUPBY_STORAGE_KEY = "pratic-demandas-kanban-groupby";
 
+const LANES: { value: DemandLane; label: string }[] = [
+  { value: "geral", label: "Gerais" },
+  { value: "conteudo", label: "Conteúdos" },
+];
+
 const SCOPES: { value: DemandScope | "all"; label: string }[] = [
   { value: "all", label: "Todas" },
   { value: "client", label: "Clientes" },
   { value: "internal", label: "Internas" },
 ];
+
+function tabStyle(active: boolean): React.CSSProperties {
+  return {
+    flexShrink: 0,
+    padding: "0 0 10px",
+    marginBottom: -1,
+    border: "none",
+    borderBottom: active ? "2px solid var(--text-primary)" : "2px solid transparent",
+    background: "none",
+    fontSize: "0.82rem",
+    fontWeight: active ? 700 : 600,
+    color: active ? "var(--text-primary)" : "var(--text-tertiary)",
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+  };
+}
 
 const LIST_GROUPBY_LABEL: Record<DemandListGroupBy, string> = {
   due: "Prazo",
@@ -67,7 +90,9 @@ function readStoredKanbanGroupBy(): DemandKanbanGroupBy {
 export default function DemandasView() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { currentUser } = useAuth();
   const { visibleDemands, loading, filters, setFilters } = useDemandas();
+  const showingContents = filters.lane === "conteudo";
 
   const [view, setView] = useState<DemandView>(readStoredView);
   const [groupBy, setGroupBy] = useState<DemandListGroupBy>(readStoredGroupBy);
@@ -218,6 +243,15 @@ export default function DemandasView() {
     }
   };
 
+  const selectLane = (lane: DemandLane) => {
+    if (lane === filters.lane) return;
+    if (lane === "conteudo") {
+      setFilters({ lane, assigneeId: null });
+      return;
+    }
+    setFilters({ lane, assigneeId: currentUser?.id ?? null });
+  };
+
   const deepLinkId = searchParams.get("d");
   const selectedId = explicitId ?? deepLinkId;
 
@@ -343,33 +377,40 @@ export default function DemandasView() {
           overflowX: "auto",
         }}
       >
-        {SCOPES.map((scope) => {
+        {LANES.map((lane) => (
+          <button
+            key={lane.value}
+            type="button"
+            onClick={() => selectLane(lane.value)}
+            aria-pressed={filters.lane === lane.value}
+            style={tabStyle(filters.lane === lane.value)}
+          >
+            {lane.label}
+          </button>
+        ))}
+
+        {!showingContents && (
+          <span
+            aria-hidden="true"
+            style={{ width: 1, height: 14, background: "var(--border)", alignSelf: "center", marginBottom: 10, flexShrink: 0 }}
+          />
+        )}
+
+        {!showingContents && SCOPES.map((scope) => {
           const active = filters.scope === scope.value;
           return (
             <button
               key={scope.value}
               type="button"
               onClick={() => setFilters({ scope: scope.value })}
-              style={{
-                flexShrink: 0,
-                padding: "0 0 10px",
-                marginBottom: -1,
-                border: "none",
-                borderBottom: active ? "2px solid var(--text-primary)" : "2px solid transparent",
-                background: "none",
-                fontSize: "0.82rem",
-                fontWeight: active ? 700 : 600,
-                color: active ? "var(--text-primary)" : "var(--text-tertiary)",
-                cursor: "pointer",
-                whiteSpace: "nowrap",
-              }}
+              style={tabStyle(active)}
             >
               {scope.label}
             </button>
           );
         })}
 
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginLeft: "auto", paddingBottom: 6, flexShrink: 0 }}>
+        {!showingContents && <div style={{ display: "flex", alignItems: "center", gap: 10, marginLeft: "auto", paddingBottom: 6, flexShrink: 0 }}>
           <div
             style={{
               display: "inline-flex",
@@ -433,10 +474,17 @@ export default function DemandasView() {
           ) : (
             <DemandKanbanGroupBySwitcher active={kanbanGroupBy} onChange={changeKanbanGroupBy} />
           )}
-        </div>
+        </div>}
       </div>
 
-      {view === "list" ? (
+      {showingContents ? (
+        <DemandContentsList
+          demands={visibleDemands}
+          onOpenDemand={setExplicitId}
+          selectedIds={selectedIds}
+          onSelectDemand={handleSelectDemand}
+        />
+      ) : view === "list" ? (
         <DemandListView
           demands={visibleDemands}
           onOpenDemand={setExplicitId}
