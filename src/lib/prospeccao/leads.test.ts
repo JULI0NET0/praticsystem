@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { filterLeadsForCampaign, interpolate, maskCnpj, maskPhone, nextMessageStatus, normalizePhone, parseInstagram, parseLeadsCsv, parseSegments, pipelineStats, validateCnpj } from './leads';
+import { filterLeadsForCampaign, interpolate, maskCnpj, maskPhone, nextMessageStatus, normalizePhone, parseInstagram, parseLeadsCsv, parseSegments, phoneKey, phoneVariants, pipelineStats, validateCnpj } from './leads';
 import { parseIncomingMessage, parseUazapiEvent } from './webhook';
+import { classifyPhone, countsForBadge } from './classify';
+import { expandOccurrences, isOutsideBusinessHours, nextOccurrence } from './schedule';
 import type { Lead } from '@/types/database';
 
 const lead = (over: Partial<Lead>): Lead => ({
   id: '1', nome: 'Ana Souza', origem: 'manual', estagio: 'novo', tags: [], unread_count: 0,
-  segmentos: [], created_at: '', updated_at: '', telefone: '5511999998888', ...over,
+  segmentos: [], tipo: 'lead', created_at: '', updated_at: '', telefone: '5511999998888', ...over,
 });
 
 describe('normalizePhone', () => {
@@ -106,4 +108,72 @@ describe('parseUazapiEvent', () => {
       .toEqual({ kind: 'status', state: 'read', messageIds: ['M1'], isFromMe: true }));
   it('ignora recibo de grupo', () =>
     expect(parseUazapiEvent({ EventType: 'messages_update', type: 'GroupReceipts', event: { MessageIDs: ['M1'], IsGroup: true } })).toBeNull());
+});
+
+describe('phoneKey / phoneVariants (9º dígito)', () => {
+  it('as duas formas do mesmo celular têm a mesma chave', () => {
+    expect(phoneKey('5543999359959')).toBe(phoneKey('554399359959'));
+    expect(phoneKey('(43) 99935-9959')).toBe('554399359959'.replace(/^/, ''));
+  });
+  it('números diferentes não colidem', () => {
+    expect(phoneKey('5543999359959')).not.toBe(phoneKey('5543999359958'));
+    expect(phoneKey('5511999998888')).not.toBe(phoneKey('5543999359959'));
+  });
+  it('fixo não é alterado', () => expect(phoneKey('554333334444')).toBe('554333334444'));
+  it('variantes', () => {
+    expect(phoneVariants('5543999359959')).toEqual(['5543999359959', '554399359959']);
+    expect(phoneVariants('554399359959')).toEqual(['554399359959', '5543999359959']);
+    expect(phoneVariants('554333334444')).toEqual(['554333334444']);
+    expect(phoneVariants(null)).toEqual([]);
+  });
+});
+
+describe('classifyPhone', () => {
+  const users = [{ id: 'u1', phone: '(43) 98888-1111' }];
+  const clients = [{ id: 'c1', phone: '5511999998888', whatsapp_financeiro: '(21) 97777-0000' }];
+  it('equipe pelo telefone do usuário (aceita máscara)', () =>
+    expect(classifyPhone({ phone: '5543988881111', users, clients })).toEqual({ tipo: 'equipe', user_id: 'u1' }));
+  it('equipe com o 9º dígito ausente', () =>
+    expect(classifyPhone({ phone: '554388881111', users, clients })).toEqual({ tipo: 'equipe', user_id: 'u1' }));
+  it('cliente pelo telefone ou pelo whatsapp financeiro', () => {
+    expect(classifyPhone({ phone: '5511999998888', users, clients })).toEqual({ tipo: 'cliente', client_id: 'c1' });
+    expect(classifyPhone({ phone: '5521977770000', users, clients })).toEqual({ tipo: 'cliente', client_id: 'c1' });
+  });
+  it('desconhecido vai para a triagem', () =>
+    expect(classifyPhone({ phone: '5541900000000', users, clients })).toEqual({ tipo: 'triagem' }));
+  it('equipe vence cliente', () =>
+    expect(classifyPhone({ phone: '5511999998888', users: [{ id: 'u2', phone: '11999998888' }], clients }).tipo).toBe('equipe'));
+  it('badge só conta lead e triagem', () => {
+    expect(countsForBadge('lead')).toBe(true);
+    expect(countsForBadge('triagem')).toBe(true);
+    expect(countsForBadge('equipe')).toBe(false);
+    expect(countsForBadge('cliente')).toBe(false);
+  });
+});
+
+describe('recorrência de agendamentos', () => {
+  const start = new Date('2026-10-12T12:00:00Z');
+  it('sem regra: só a data', () => expect(expandOccurrences(start, null)).toEqual([start]));
+  it('semanal a cada 1, respeita o máximo', () => {
+    const out = expandOccurrences(start, { freq: 'weekly', interval: 1 }, { max: 3 });
+    expect(out.map((d) => d.toISOString().slice(0, 10))).toEqual(['2026-10-12', '2026-10-19', '2026-10-26']);
+  });
+  it('diário a cada 2 dias', () =>
+    expect(nextOccurrence(start, { freq: 'daily', interval: 2 }).toISOString().slice(0, 10)).toBe('2026-10-14'));
+  it('mensal preserva o dia e ajusta fim de mês', () => {
+    const jan31 = new Date('2026-01-31T12:00:00Z');
+    expect(nextOccurrence(jan31, { freq: 'monthly', interval: 1 }).toISOString().slice(0, 10)).toBe('2026-02-28');
+  });
+  it('termina em until', () => {
+    const out = expandOccurrences(start, { freq: 'weekly', interval: 1, until: '2026-10-20T00:00:00Z' });
+    expect(out).toHaveLength(2);
+  });
+  it('count é o total da série, descontando as já criadas', () => {
+    expect(expandOccurrences(start, { freq: 'daily', interval: 1, count: 5 })).toHaveLength(5);
+    expect(expandOccurrences(start, { freq: 'daily', interval: 1, count: 5 }, { alreadyCreated: 3 })).toHaveLength(2);
+  });
+  it('horário comercial em São Paulo', () => {
+    expect(isOutsideBusinessHours(new Date('2026-10-12T15:00:00Z'))).toBe(false); // 12h BRT
+    expect(isOutsideBusinessHours(new Date('2026-10-12T02:00:00Z'))).toBe(true); // 23h BRT
+  });
 });

@@ -24,15 +24,16 @@ export async function copyToBucket(
   leadId: string,
   mimetype: string | null,
   fileName?: string | null
-): Promise<{ url: string; mimetype: string } | null> {
+): Promise<{ url: string; mimetype: string; size: number } | null> {
   try {
     const res = await fetch(sourceUrl, { signal: AbortSignal.timeout(30_000) });
     if (!res.ok) return null;
     const type = (mimetype || res.headers.get('content-type') || 'application/octet-stream').split(';')[0];
     const path = `${leadId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${extensionFor(type, fileName)}`;
-    const { error } = await supabase.storage.from(MEDIA_BUCKET).upload(path, await res.arrayBuffer(), { contentType: type });
+    const buffer = await res.arrayBuffer();
+    const { error } = await supabase.storage.from(MEDIA_BUCKET).upload(path, buffer, { contentType: type });
     if (error) return null;
-    return { url: supabase.storage.from(MEDIA_BUCKET).getPublicUrl(path).data.publicUrl, mimetype: type };
+    return { url: supabase.storage.from(MEDIA_BUCKET).getPublicUrl(path).data.publicUrl, mimetype: type, size: buffer.byteLength };
   } catch (err) {
     console.error('[prospeccao] copyToBucket:', err);
     return null;

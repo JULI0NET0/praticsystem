@@ -5,6 +5,7 @@ import { BadgeCheck, Building2, Phone, RefreshCw } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/components/CustomToast";
 import { formatPhone } from "@/lib/prospeccao/leads";
+import ImageLightbox from "./ImageLightbox";
 import type { Lead } from "@/types/database";
 
 const STALE_MS = 7 * 24 * 60 * 60 * 1000;
@@ -63,19 +64,12 @@ export default function ContactCard({ lead }: { lead: Lead }) {
         {lead.wa_name && lead.wa_name !== displayName && <div className="pp-contact-line">Nome no WhatsApp: {lead.wa_name}</div>}
         {lead.telefone && <div className="pp-contact-line"><Phone size={11} /> {formatPhone(lead.telefone)}</div>}
         {lead.wa_business_name && <div className="pp-contact-line"><Building2 size={11} /> {lead.wa_business_name}</div>}
-        <div className="pp-contact-line" style={{ fontStyle: lead.wa_about ? "normal" : "italic" }}>
-          {lead.wa_about ? `“${lead.wa_about}”` : "Recado de status indisponível neste provedor"}
-        </div>
+        {lead.wa_about && <div className="pp-contact-line">“{lead.wa_about}”</div>}
       </div>
       <button className="btn btn-ghost btn-icon" onClick={() => sync()} disabled={syncing || !lead.telefone} aria-label="Atualizar dados do contato" title="Atualizar do WhatsApp">
         <RefreshCw size={14} className={syncing ? "spin" : undefined} />
       </button>
-      {zoom && lead.wa_avatar_url && (
-        <div className="pp-lightbox" onClick={() => setZoom(false)} role="dialog" aria-label="Foto do perfil">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={lead.wa_avatar_url} alt={displayName} />
-        </div>
-      )}
+      {zoom && lead.wa_avatar_url && <ImageLightbox src={lead.wa_avatar_url} alt={displayName} onClose={() => setZoom(false)} />}
     </div>
   );
 }

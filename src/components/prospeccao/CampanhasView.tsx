@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Megaphone, Plus, Send, Trash2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/components/CustomToast";
@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import DialogShell from "@/components/DialogShell";
 import EmptyState from "@/components/ui/EmptyState";
 import { ORIGIN_LABEL, STAGES, campaignLabel, filterLeadsForCampaign, interpolate } from "@/lib/prospeccao/leads";
+import { isOutsideBusinessHours } from "@/lib/prospeccao/schedule";
 import { useProspeccao } from "./ProspeccaoProvider";
 import type { Campaign, CampaignFilter, LeadOrigin, LeadStage } from "@/types/database";
 
@@ -79,11 +80,83 @@ function CampaignModal({ onClose }: { onClose: () => void }) {
   );
 }
 
+const pad = (n: number) => String(n).padStart(2, "0");
+const toLocalInput = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+
+const PACES = [
+  { id: "normal", label: "Normal (20–60 s entre mensagens)", min: 20, max: 60 },
+  { id: "cauteloso", label: "Cauteloso (40–120 s, menor risco de bloqueio)", min: 40, max: 120 },
+] as const;
+
+function SendModal({ campaign, onClose }: { campaign: Campaign; onClose: () => void }) {
+  const { reload } = useProspeccao();
+  const { showToast } = useToast();
+  const [mode, setMode] = useState<"now" | "later">("now");
+  const [when, setWhen] = useState("");
+  const [pace, setPace] = useState<(typeof PACES)[number]["id"]>("cauteloso");
+  const [recipients, setRecipients] = useState<number | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [nowMs] = useState(() => Date.now());
+
+  useEffect(() => {
+    supabase.from("campaign_recipients").select("id", { count: "exact", head: true }).eq("campaign_id", campaign.id).eq("status", "pending").then(({ count }) => setRecipients(count ?? 0));
+  }, [campaign.id]);
+
+  const p = PACES.find((x) => x.id === pace)!;
+  const runAt = mode === "later" && when ? new Date(when) : null;
+  const outside = isOutsideBusinessHours(runAt ?? new Date());
+  const minutes = recipients ? Math.ceil((recipients * ((p.min + p.max) / 2)) / 60) : 0;
+
+  const send = async () => {
+    if (mode === "later" && (!runAt || runAt.getTime() < Date.now() + 120_000)) return showToast("Escolha um horário a partir de 2 minutos no futuro.", "error");
+    setBusy(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch("/api/prospeccao/campaigns/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token ?? ""}` },
+      body: JSON.stringify({ campaignId: campaign.id, runAt: runAt?.toISOString(), delayMin: p.min, delayMax: p.max }),
+    });
+    const json = await res.json().catch(() => ({}));
+    setBusy(false);
+    if (!res.ok) return showToast(json.error || "Falha ao disparar a campanha.", "error");
+    showToast(`Campanha agendada para ${json.recipients} contatos.`, "success");
+    await reload();
+    onClose();
+  };
+
+  return (
+    <DialogShell isOpen onClose={onClose} title={`Disparar "${campaign.nome}"`} maxWidth="520px"
+      footer={<><button className="btn btn-secondary" onClick={onClose}>Cancelar</button><button className="btn btn-accent" onClick={send} disabled={busy || !recipients}>{busy ? "Agendando..." : mode === "now" ? "Disparar agora" : "Agendar disparo"}</button></>}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <div style={{ fontSize: "var(--text-ui)" }}><strong>{recipients ?? "…"}</strong> destinatário(s) com WhatsApp. Cada um recebe a mensagem personalizada, em ordem e com intervalo aleatório.</div>
+        <div style={{ display: "flex", gap: 6 }}>
+          <button type="button" className="pp-type-chip" data-active={mode === "now"} onClick={() => setMode("now")}>Agora</button>
+          <button type="button" className="pp-type-chip" data-active={mode === "later"} onClick={() => setMode("later")}>Agendar</button>
+        </div>
+        {mode === "later" && (
+          <label className="pp-label">Data e hora
+            <input className="pp-input" type="datetime-local" min={toLocalInput(new Date(nowMs + 180_000))} value={when} onChange={(e) => setWhen(e.target.value)} />
+          </label>
+        )}
+        <label className="pp-label">Ritmo de envio
+          <select className="pp-select" value={pace} onChange={(e) => setPace(e.target.value as typeof pace)}>
+            {PACES.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}
+          </select>
+        </label>
+        <div className="pp-sched-hint">{recipients ? `Duração estimada: cerca de ${minutes} min depois de começar.` : ""}</div>
+        {outside && <div className="pp-sched-hint" data-warn="true">Fora do horário comercial (8h–20h): respostas e bloqueios tendem a piorar. Considere agendar para amanhã de manhã.</div>}
+        <div className="pp-sched-hint">Quem responder sai do envio de follow-ups e conta como resposta na campanha.</div>
+      </div>
+    </DialogShell>
+  );
+}
+
 export default function CampanhasView() {
   const { campaigns, setCampaigns } = useProspeccao();
   const { confirm } = useConfirm();
   const { showToast } = useToast();
   const [open, setOpen] = useState(false);
+  const [sending, setSending] = useState<Campaign | null>(null);
 
   const remove = async (c: Campaign) => {
     if (!(await confirm({ message: `Excluir a campanha "${c.nome}"?`, confirmText: "Excluir" }))) return;
@@ -109,7 +182,11 @@ export default function CampanhasView() {
               </div>
               <div style={{ fontSize: "var(--text-ui)", color: "var(--color-text-secondary)", whiteSpace: "pre-wrap" }}>{c.template.slice(0, 140)}</div>
               <div style={{ display: "flex", gap: 6, marginTop: "auto" }}>
-                <button className="btn btn-secondary btn-sm" disabled title="O envio em lote será ligado quando o provedor de WhatsApp for configurado"><Send size={13} /> Enviar (em breve)</button>
+                {c.status === "draft" ? (
+                  <button className="btn btn-accent btn-sm" onClick={() => setSending(c)}><Send size={13} /> Disparar</button>
+                ) : (
+                  <span className="pp-sched-hint">{c.agendada_para ? `Programada para ${new Date(c.agendada_para).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}` : ""}</span>
+                )}
                 <button className="btn btn-ghost btn-icon" style={{ marginLeft: "auto" }} onClick={() => remove(c)} aria-label="Excluir"><Trash2 size={15} /></button>
               </div>
             </div>
@@ -117,6 +194,7 @@ export default function CampanhasView() {
         </div>
       )}
       {open && <CampaignModal onClose={() => setOpen(false)} />}
+      {sending && <SendModal campaign={sending} onClose={() => setSending(null)} />}
     </>
   );
 }

@@ -1,4 +1,5 @@
-import type { ContactInfo, DownloadedMedia, OutboundMedia, SendResult, WhatsAppProvider } from './provider';
+import type { ContactInfo, DownloadedMedia, OutboundMedia, ScheduleItem, ScheduleOptions, ScheduleResult, SendResult, WhatsAppProvider } from './provider';
+import { phoneKey } from '@/lib/prospeccao/leads';
 
 export function uazapiConfig() {
   const baseUrl = (process.env.UAZAPI_BASE_URL || '').replace(/\/+$/, '');
@@ -77,6 +78,49 @@ export const uazapiProvider: WhatsAppProvider = {
     }
   },
 
+  async schedule(items: ScheduleItem[], runAt: Date, opts: ScheduleOptions = {}): Promise<ScheduleResult | null> {
+    try {
+      const messages = items.map((i) =>
+        i.media
+          ? { number: i.phone, type: i.media.type, file: i.media.file, ...(i.text ? { text: i.text } : {}), ...(i.media.docName ? { docName: i.media.docName } : {}) }
+          : { number: i.phone, type: 'text', text: i.text ?? '' }
+      );
+      const created = await uazapiFetch('/sender/advanced', {
+        delayMin: opts.delayMin ?? 3,
+        delayMax: opts.delayMax ?? 6,
+        info: opts.info ?? 'Pratic',
+        scheduled_for: runAt.getTime(),
+        messages,
+      });
+      const folderId = str(created.folder_id);
+      if (!folderId) return null;
+      // A UAZAPI já atribui o messageid de cada envio: guardamos para casar com o webhook depois.
+      const listed = await uazapiFetch('/sender/listmessages', { folder_id: folderId, limit: 500 }).catch(() => ({}) as Json);
+      const rows = (Array.isArray(listed.messages) ? listed.messages : []) as Json[];
+      const messageIds: Record<string, string> = {};
+      for (const item of items) {
+        const key = phoneKey(item.phone);
+        const row = rows.find((r) => phoneKey(String(r.chatid ?? '').split('@')[0]) === key);
+        const id = str(row?.messageid);
+        if (id) messageIds[item.phone] = id;
+      }
+      return { folderId, messageIds };
+    } catch (err) {
+      console.error('[uazapi] falha ao agendar:', err);
+      return null;
+    }
+  },
+
+  async cancelSchedule(folderId: string): Promise<boolean> {
+    try {
+      await uazapiFetch('/sender/edit', { folder_id: folderId, action: 'delete' });
+      return true;
+    } catch (err) {
+      console.error('[uazapi] falha ao cancelar agendamento:', err);
+      return false;
+    }
+  },
+
   async downloadMedia(id): Promise<DownloadedMedia | null> {
     try {
       const json = await uazapiFetch('/message/download', { id, return_base64: false });
@@ -89,13 +133,13 @@ export const uazapiProvider: WhatsAppProvider = {
   },
 };
 
-/** Registra a URL do nosso webhook (mensagens + recibos; sem as enviadas pela API nem grupos). */
+/** Registra a URL do nosso webhook (mensagens + recibos; sem grupos). Inclui as enviadas pela API: os envios agendados chegam por aqui. */
 export function configureUazapiWebhook(url: string) {
   return uazapiFetch('/webhook', {
     enabled: true,
     url,
     events: ['messages', 'messages_update'],
-    excludeMessages: ['wasSentByApi', 'isGroupYes'],
+    excludeMessages: ['isGroupYes'],
   });
 }
 

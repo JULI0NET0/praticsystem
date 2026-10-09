@@ -28,6 +28,24 @@ export interface ContactInfo {
   businessName: string | null;
 }
 
+export interface ScheduleItem {
+  phone: string;
+  text?: string;
+  media?: OutboundMedia;
+}
+
+export interface ScheduleOptions {
+  delayMin?: number;
+  delayMax?: number;
+  info?: string;
+}
+
+export interface ScheduleResult {
+  folderId: string;
+  /** messageid de cada envio por telefone (chave: dígitos do número como enviado). */
+  messageIds: Record<string, string>;
+}
+
 export interface DownloadedMedia {
   url: string;
   mimetype: string | null;
@@ -43,6 +61,9 @@ export interface WhatsAppProvider {
   sendMedia(phone: string, media: OutboundMedia): Promise<SendResult>;
   getContact(phone: string): Promise<ContactInfo | null>;
   downloadMedia(messageId: string): Promise<DownloadedMedia | null>;
+  /** Agenda envios para `runAt`; a execução fica por conta do provedor. */
+  schedule(items: ScheduleItem[], runAt: Date, opts?: ScheduleOptions): Promise<ScheduleResult | null>;
+  cancelSchedule(folderId: string): Promise<boolean>;
 }
 
 const mockProvider: WhatsAppProvider = {
@@ -58,6 +79,12 @@ const mockProvider: WhatsAppProvider = {
   },
   async downloadMedia() {
     return null;
+  },
+  async schedule(items, _runAt) {
+    return { folderId: `mock-${Date.now()}`, messageIds: Object.fromEntries(items.map((i) => [i.phone, `mock-${i.phone}-${Date.now()}`])) };
+  },
+  async cancelSchedule() {
+    return true;
   },
 };
 

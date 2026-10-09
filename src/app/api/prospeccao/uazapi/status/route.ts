@@ -21,6 +21,8 @@ export async function GET(request: Request) {
       number: status.owner,
       avatar: status.profilePicUrl,
       webhookRegistered: list.length > 0,
+      // Webhook antigo ignora mensagens enviadas pela API: os envios agendados não apareceriam no chat.
+      webhookOutdated: list.some((h: { excludeMessages?: string[]; events?: string[] }) => h.excludeMessages?.includes('wasSentByApi') || !h.events?.includes('messages_update')),
     });
   } catch (err) {
     return NextResponse.json({ provider: 'uazapi', configured: true, connected: false, error: err instanceof Error ? err.message : 'Falha ao consultar.' });
