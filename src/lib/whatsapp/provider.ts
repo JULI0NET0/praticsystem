@@ -46,6 +46,12 @@ export interface ScheduleResult {
   messageIds: Record<string, string>;
 }
 
+export interface FindMessagesResult {
+  records: Record<string, unknown>[];
+  hasMore: boolean;
+  nextOffset: number;
+}
+
 export interface DownloadedMedia {
   url: string;
   mimetype: string | null;
@@ -64,6 +70,8 @@ export interface WhatsAppProvider {
   /** Agenda envios para `runAt`; a execução fica por conta do provedor. */
   schedule(items: ScheduleItem[], runAt: Date, opts?: ScheduleOptions): Promise<ScheduleResult | null>;
   cancelSchedule(folderId: string): Promise<boolean>;
+  /** Histórico do número (mais recentes primeiro); sem `chatid` traz todas as conversas. */
+  findMessages(opts: { offset?: number; limit?: number; chatid?: string }): Promise<FindMessagesResult | null>;
 }
 
 const mockProvider: WhatsAppProvider = {
@@ -85,6 +93,9 @@ const mockProvider: WhatsAppProvider = {
   },
   async cancelSchedule() {
     return true;
+  },
+  async findMessages() {
+    return { records: [], hasMore: false, nextOffset: 0 };
   },
 };
 

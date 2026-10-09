@@ -1,16 +1,37 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AlarmClock, CalendarClock, Repeat } from "lucide-react";
+import { AlarmClock, CalendarClock, CalendarDays, Repeat } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/components/CustomToast";
+import DatePicker from "@/components/ui/DatePicker";
+import { fromISODate, toISODate } from "@/lib/dueDate";
 import { isOutsideBusinessHours } from "@/lib/prospeccao/schedule";
 import type { Lead, ScheduledRecurrence } from "@/types/database";
 
 type Mode = "agendar" | "followup";
 
 const pad = (n: number) => String(n).padStart(2, "0");
-const toLocalInput = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const toTime = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+
+/** Combina "YYYY-MM-DD" + "HH:mm" (horário local do navegador) em um Date. */
+function combine(date: string, time: string): Date | null {
+  const day = fromISODate(date);
+  if (!day || !/^\d{2}:\d{2}$/.test(time)) return null;
+  const [h, m] = time.split(":").map(Number);
+  day.setHours(h, m, 0, 0);
+  return day;
+}
+
+/** Gatilho no visual dos campos do sistema (em vez do seletor nativo do navegador). */
+function PickerTrigger({ label, filled, open }: { label: string; filled: boolean; open: boolean }) {
+  return (
+    <span className="pp-input pp-picker" data-open={open} data-filled={filled}>
+      <CalendarDays size={15} />
+      <span>{label}</span>
+    </span>
+  );
+}
 
 function quickPicks(now = new Date()): { label: string; date: Date }[] {
   const at = (days: number, h: number) => { const d = new Date(now); d.setDate(d.getDate() + days); d.setHours(h, 0, 0, 0); return d; };
@@ -35,12 +56,13 @@ export default function ScheduleButton({ lead, text, onScheduled }: Props) {
   const { showToast } = useToast();
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<Mode>("agendar");
-  const [when, setWhen] = useState("");
+  const [whenDate, setWhenDate] = useState<string | null>(null);
+  const [whenTime, setWhenTime] = useState<string | null>(null);
   const [repeat, setRepeat] = useState<"none" | ScheduledRecurrence["freq"]>("none");
   const [interval, setIntervalN] = useState(1);
   const [endBy, setEndBy] = useState<"count" | "until">("count");
   const [count, setCount] = useState(4);
-  const [until, setUntil] = useState("");
+  const [until, setUntil] = useState<string | null>(null);
   const [cancelOnReply, setCancelOnReply] = useState(false);
   const [fuN, setFuN] = useState(2);
   const [fuUnit, setFuUnit] = useState<"horas" | "dias">("dias");
@@ -50,18 +72,23 @@ export default function ScheduleButton({ lead, text, onScheduled }: Props) {
 
   useEffect(() => {
     if (!open) return;
-    const onDown = (e: MouseEvent) => { if (boxRef.current && !boxRef.current.contains(e.target as Node)) setOpen(false); };
+    const onDown = (e: MouseEvent) => {
+      const t = e.target as HTMLElement;
+      // o calendário do sistema abre num portal fora desta caixa: clicar nele não deve fechar o agendamento
+      if (t.closest?.('[data-floating-panel]')) return;
+      if (boxRef.current && !boxRef.current.contains(t)) setOpen(false);
+    };
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
     document.addEventListener("mousedown", onDown);
     document.addEventListener("keydown", onKey);
     return () => { document.removeEventListener("mousedown", onDown); document.removeEventListener("keydown", onKey); };
   }, [open]);
 
-  const picks = useMemo(() => (open ? quickPicks() : []), [open]);
+  const picks = useMemo(() => (open ? quickPicks(new Date(nowMs)) : []), [open, nowMs]);
   const runAt = useMemo(() => {
     if (mode === "followup") return new Date(nowMs + fuN * (fuUnit === "horas" ? 3_600_000 : 86_400_000));
-    return when ? new Date(when) : null;
-  }, [mode, when, fuN, fuUnit, nowMs]);
+    return whenDate && whenTime ? combine(whenDate, whenTime) : null;
+  }, [mode, whenDate, whenTime, fuN, fuUnit, nowMs]);
   const outside = runAt ? isOutsideBusinessHours(runAt) : false;
 
   const submit = async () => {
@@ -73,6 +100,7 @@ export default function ScheduleButton({ lead, text, onScheduled }: Props) {
         ? { freq: repeat, interval: Math.max(1, interval), ...(endBy === "count" ? { count } : { until: until ? new Date(`${until}T23:59:59`).toISOString() : null }) }
         : null;
     if (recurrence && endBy === "until" && !recurrence.until) return showToast("Escolha até quando repetir.", "error");
+    if (recurrence && endBy === "until" && recurrence.until && new Date(recurrence.until) < runAt) return showToast("A data final precisa ser depois do primeiro envio.", "error");
     setBusy(true);
     const { data: { session } } = await supabase.auth.getSession();
     const res = await fetch("/api/prospeccao/schedule", {
@@ -112,12 +140,22 @@ export default function ScheduleButton({ lead, text, onScheduled }: Props) {
               <>
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                   {picks.map((p) => (
-                    <button key={p.label} type="button" className="pp-type-chip" data-active={when === toLocalInput(p.date)} onClick={() => setWhen(toLocalInput(p.date))}>{p.label}</button>
+                    <button key={p.label} type="button" className="pp-type-chip" data-active={whenDate === toISODate(p.date) && whenTime === toTime(p.date)} onClick={() => { setWhenDate(toISODate(p.date)); setWhenTime(toTime(p.date)); }}>{p.label}</button>
                   ))}
                 </div>
-                <label className="pp-label">Data e hora
-                  <input className="pp-input" type="datetime-local" min={toLocalInput(new Date(nowMs + 120_000))} value={when} onChange={(e) => setWhen(e.target.value)} />
-                </label>
+                <div className="pp-label">Data e hora
+                  <DatePicker
+                    withTime
+                    clearable={false}
+                    title="Quando enviar"
+                    value={whenDate}
+                    timeValue={whenTime}
+                    onChange={(d, t) => { setWhenDate(d); setWhenTime(t ?? whenTime ?? "09:00"); }}
+                    renderTrigger={({ open: o }) => (
+                      <PickerTrigger open={o} filled={Boolean(whenDate)} label={whenDate && whenTime ? `${fromISODate(whenDate)?.toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit" })} às ${whenTime}` : "Escolher data e hora"} />
+                    )}
+                  />
+                </div>
 
                 <label className="pp-label">Repetir
                   <select className="pp-select" value={repeat} onChange={(e) => setRepeat(e.target.value as typeof repeat)}>
@@ -143,9 +181,18 @@ export default function ScheduleButton({ lead, text, onScheduled }: Props) {
                         <input className="pp-input" type="number" min={2} max={52} value={count} onChange={(e) => setCount(Number(e.target.value) || 2)} />
                       </label>
                     ) : (
-                      <label className="pp-label" style={{ flex: 1 }}>Até
-                        <input className="pp-input" type="date" value={until} onChange={(e) => setUntil(e.target.value)} />
-                      </label>
+                      <div className="pp-label" style={{ flex: 1 }}>Até
+                        <DatePicker
+                          withTime={false}
+                          clearable={false}
+                          title="Repetir até"
+                          value={until}
+                          onChange={(d) => setUntil(d)}
+                          renderTrigger={({ open: o }) => (
+                            <PickerTrigger open={o} filled={Boolean(until)} label={until ? fromISODate(until)?.toLocaleDateString("pt-BR") ?? "" : "Escolher data"} />
+                          )}
+                        />
+                      </div>
                     )}
                   </div>
                 )}

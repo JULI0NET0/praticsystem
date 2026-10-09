@@ -4,8 +4,15 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/components/CustomToast";
 import { useAuth } from "@/hooks/useAuth";
-import { phoneKey, stageLabel, type ParsedLeadRow } from "@/lib/prospeccao/leads";
-import type { Campaign, ContactType, Lead, LeadStage, QuickReply } from "@/types/database";
+import { maskCnpj, maskPhone, phoneKey, stageLabel, type ParsedLeadRow } from "@/lib/prospeccao/leads";
+import type { Campaign, Client, ContactType, Lead, LeadStage, QuickReply } from "@/types/database";
+
+export interface LinkPlan {
+  clientPatch: Partial<Client>;
+  leadPatch: Partial<Lead>;
+  notes: NonNullable<Client["notes"]>;
+  changed: number;
+}
 
 type LeadInput = Partial<Omit<Lead, "id" | "created_at" | "updated_at">> & { nome: string };
 
@@ -26,6 +33,8 @@ interface ProspeccaoContextValue {
   convertToClient: (lead: Lead) => Promise<void>;
   setQuickReplies: React.Dispatch<React.SetStateAction<QuickReply[]>>;
   setContactType: (id: string, tipo: ContactType) => Promise<void>;
+  linkClient: (leadId: string, client: Client, plan: LinkPlan) => Promise<boolean>;
+  unlinkClient: (leadId: string, backToLead: boolean) => Promise<void>;
   setCampaigns: React.Dispatch<React.SetStateAction<Campaign[]>>;
 }
 
@@ -143,13 +152,25 @@ export function ProspeccaoProvider({ children }: { children: React.ReactNode }) 
     if (lead.client_id) return;
     const { data, error } = await supabase
       .from("clients")
-      .insert({ name: lead.empresa || lead.nome, phone: lead.telefone, status: "prospect", servico_interesse: lead.servico_interesse })
+      .insert({
+        name: lead.razao_social || lead.empresa || lead.nome,
+        nome_fantasia: lead.empresa || null,
+        contact_name: lead.nome,
+        cnpj: lead.cnpj ? maskCnpj(lead.cnpj) : "",
+        email: lead.email || "",
+        phone: lead.telefone ? maskPhone(lead.telefone) : "",
+        setor: (lead.segmentos ?? []).join(", ") || null,
+        servico_interesse: lead.servico_interesse || null,
+        status: "active",
+        ...(lead.cidade || lead.uf ? { address: { cep: "", logradouro: "", numero: "", bairro: "", cidade: lead.cidade ?? "", uf: lead.uf ?? "" } } : {}),
+        ...(lead.instagram ? { social_access: { instagram: { usuario: lead.instagram } } } : {}),
+      })
       .select("id")
       .single();
-    if (error) return showToast("Erro ao converter em cliente: " + error.message, "error");
-    await updateLead(lead.id, { client_id: data.id });
-    await logActivity(lead.id, "conversao", "Convertido em cliente");
-    showToast("Cliente criado em Clientes.", "success");
+    if (error) return showToast("Erro ao criar o cliente: " + error.message, "error");
+    await updateLead(lead.id, { client_id: data.id, tipo: "cliente", estagio: "ganho", classificado_em: new Date().toISOString() });
+    await logActivity(lead.id, "conversao", "Convertido em cliente (cadastro novo criado)");
+    showToast("Cliente criado e contato movido para Clientes.", "success");
   }, [updateLead, logActivity, showToast]);
 
   const setContactType = useCallback(async (id: string, tipo: ContactType) => {
@@ -161,9 +182,42 @@ export function ProspeccaoProvider({ children }: { children: React.ReactNode }) 
     });
   }, [updateLead]);
 
+  /**
+   * Vincula o contato ao cliente: importa os dados escolhidos para o cadastro do cliente e para o lead,
+   * muda o tipo para Cliente (sai do funil) e registra a conversão. Devolve false se algo falhar.
+   */
+  const linkClient = useCallback(async (leadId: string, client: Client, plan: LinkPlan) => {
+    const clientUpdate: Partial<Client> = { ...plan.clientPatch };
+    if (plan.notes.length) clientUpdate.notes = [...(client.notes ?? []), ...plan.notes];
+    if (Object.keys(clientUpdate).length) {
+      const { error } = await supabase.from("clients").update(clientUpdate).eq("id", client.id);
+      if (error) { showToast("Erro ao atualizar o cadastro do cliente: " + error.message, "error"); return false; }
+    }
+    await updateLead(leadId, {
+      ...plan.leadPatch,
+      client_id: client.id,
+      tipo: "cliente",
+      estagio: "ganho",
+      classificado_em: new Date().toISOString(),
+    });
+    const label = client.nome_fantasia?.trim() || client.name;
+    const extra = plan.changed || plan.notes.length ? `; ${plan.changed} campo(s) e ${plan.notes.length} nota(s) importados` : "";
+    await logActivity(leadId, "conversao", `Vinculado ao cliente ${label}${extra}`);
+    showToast("Contato vinculado: agora é Cliente.", "success");
+    return true;
+  }, [updateLead, logActivity, showToast]);
+
+  const unlinkClient = useCallback(async (leadId: string, backToLead: boolean) => {
+    await updateLead(leadId, {
+      client_id: null,
+      ...(backToLead ? { tipo: "lead" as ContactType, estagio: "novo" as LeadStage, classificado_em: new Date().toISOString() } : {}),
+    });
+    await logActivity(leadId, "conversao", backToLead ? "Vínculo com o cliente removido (voltou a Lead)" : "Vínculo com o cliente removido");
+  }, [updateLead, logActivity]);
+
   const value = useMemo(
-    () => ({ leads, contacts, setContactType, quickReplies, campaigns, loading, reload, createLead, updateLead, moveLead, deleteLead, importRows, convertToClient, setQuickReplies, setCampaigns }),
-    [leads, contacts, setContactType, quickReplies, campaigns, loading, reload, createLead, updateLead, moveLead, deleteLead, importRows, convertToClient]
+    () => ({ leads, contacts, setContactType, linkClient, unlinkClient, quickReplies, campaigns, loading, reload, createLead, updateLead, moveLead, deleteLead, importRows, convertToClient, setQuickReplies, setCampaigns }),
+    [leads, contacts, setContactType, linkClient, unlinkClient, quickReplies, campaigns, loading, reload, createLead, updateLead, moveLead, deleteLead, importRows, convertToClient]
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

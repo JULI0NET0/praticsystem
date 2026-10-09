@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Megaphone, Plus, Send, Trash2 } from "lucide-react";
+import { CalendarDays, Megaphone, Plus, Send, Trash2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/components/CustomToast";
 import { useConfirm } from "@/components/ConfirmProvider";
@@ -9,6 +9,8 @@ import { useAuth } from "@/hooks/useAuth";
 import DialogShell from "@/components/DialogShell";
 import EmptyState from "@/components/ui/EmptyState";
 import { ORIGIN_LABEL, STAGES, campaignLabel, filterLeadsForCampaign, interpolate } from "@/lib/prospeccao/leads";
+import DatePicker from "@/components/ui/DatePicker";
+import { fromISODate } from "@/lib/dueDate";
 import { isOutsideBusinessHours } from "@/lib/prospeccao/schedule";
 import { useProspeccao } from "./ProspeccaoProvider";
 import type { Campaign, CampaignFilter, LeadOrigin, LeadStage } from "@/types/database";
@@ -80,8 +82,13 @@ function CampaignModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-const pad = (n: number) => String(n).padStart(2, "0");
-const toLocalInput = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+function combine(date: string | null, time: string | null): Date | null {
+  const day = date ? fromISODate(date) : null;
+  if (!day || !time || !/^\d{2}:\d{2}$/.test(time)) return null;
+  const [h, m] = time.split(":").map(Number);
+  day.setHours(h, m, 0, 0);
+  return day;
+}
 
 const PACES = [
   { id: "normal", label: "Normal (20–60 s entre mensagens)", min: 20, max: 60 },
@@ -92,18 +99,18 @@ function SendModal({ campaign, onClose }: { campaign: Campaign; onClose: () => v
   const { reload } = useProspeccao();
   const { showToast } = useToast();
   const [mode, setMode] = useState<"now" | "later">("now");
-  const [when, setWhen] = useState("");
+  const [whenDate, setWhenDate] = useState<string | null>(null);
+  const [whenTime, setWhenTime] = useState<string | null>(null);
   const [pace, setPace] = useState<(typeof PACES)[number]["id"]>("cauteloso");
   const [recipients, setRecipients] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
-  const [nowMs] = useState(() => Date.now());
 
   useEffect(() => {
     supabase.from("campaign_recipients").select("id", { count: "exact", head: true }).eq("campaign_id", campaign.id).eq("status", "pending").then(({ count }) => setRecipients(count ?? 0));
   }, [campaign.id]);
 
   const p = PACES.find((x) => x.id === pace)!;
-  const runAt = mode === "later" && when ? new Date(when) : null;
+  const runAt = mode === "later" ? combine(whenDate, whenTime) : null;
   const outside = isOutsideBusinessHours(runAt ?? new Date());
   const minutes = recipients ? Math.ceil((recipients * ((p.min + p.max) / 2)) / 60) : 0;
 
@@ -134,9 +141,22 @@ function SendModal({ campaign, onClose }: { campaign: Campaign; onClose: () => v
           <button type="button" className="pp-type-chip" data-active={mode === "later"} onClick={() => setMode("later")}>Agendar</button>
         </div>
         {mode === "later" && (
-          <label className="pp-label">Data e hora
-            <input className="pp-input" type="datetime-local" min={toLocalInput(new Date(nowMs + 180_000))} value={when} onChange={(e) => setWhen(e.target.value)} />
-          </label>
+          <div className="pp-label">Data e hora
+            <DatePicker
+              withTime
+              clearable={false}
+              title="Quando disparar"
+              value={whenDate}
+              timeValue={whenTime}
+              onChange={(d, t) => { setWhenDate(d); setWhenTime(t ?? whenTime ?? "09:00"); }}
+              renderTrigger={({ open: o }) => (
+                <span className="pp-input pp-picker" data-open={o} data-filled={Boolean(whenDate)}>
+                  <CalendarDays size={15} />
+                  <span>{whenDate && whenTime ? `${fromISODate(whenDate)?.toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit" })} às ${whenTime}` : "Escolher data e hora"}</span>
+                </span>
+              )}
+            />
+          </div>
         )}
         <label className="pp-label">Ritmo de envio
           <select className="pp-select" value={pace} onChange={(e) => setPace(e.target.value as typeof pace)}>

@@ -151,6 +151,52 @@
   height: 100%;
 }
 
+/* Barras de rolagem discretas no admin: finas e invisíveis até o ponteiro passar por cima. */
+.admin-layout-container * {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.admin-layout-container *:hover {
+  scrollbar-color: color-mix(in srgb, var(--color-text-tertiary) 40%, transparent) transparent;
+}
+
+.admin-layout-container ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.admin-layout-container ::-webkit-scrollbar-track,
+.admin-layout-container ::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+.admin-layout-container ::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  background-clip: content-box;
+  border: 2px solid transparent;
+  border-radius: 999px;
+}
+
+.admin-layout-container *:hover::-webkit-scrollbar-thumb {
+  background-color: color-mix(in srgb, var(--color-text-tertiary) 40%, transparent);
+}
+
+.admin-layout-container ::-webkit-scrollbar-thumb:hover {
+  background-color: color-mix(in srgb, var(--color-text-secondary) 65%, transparent);
+}
+
+/* Prospecção: ocupa a altura útil e cada coluna rola sozinha (sem scroll duplo da página). */
+.admin-content-area:has(#prospeccao-root) {
+  padding: 12px 16px 0;
+  overflow: hidden;
+}
+
+.admin-content-area:has(#prospeccao-root) > div {
+  max-width: none !important;
+  height: 100%;
+}
+
 /* Mobile (≤768px) */
 @media (max-width: 768px) {
   .admin-layout-container {
@@ -174,6 +220,10 @@
 
   .admin-content-area:has(#suporte-ai) {
     padding: 0 0 calc(var(--mobile-nav-height) + env(safe-area-inset-bottom, 0px));
+  }
+
+  .admin-content-area:has(#prospeccao-root) {
+    padding: 8px 8px calc(var(--mobile-nav-height) + env(safe-area-inset-bottom, 0px));
   }
 }
 

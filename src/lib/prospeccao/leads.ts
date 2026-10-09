@@ -117,6 +117,39 @@ export function phoneVariants(phone: string | null | undefined): string[] {
   return [d];
 }
 
+type NameFields = Pick<Lead, 'nome' | 'telefone'> & Partial<Pick<Lead, 'wa_name' | 'wa_contact_name'>>;
+
+/**
+ * Nome exibido: o da nossa base manda. Só quando o nome está vazio ou é o próprio telefone
+ * (lead criado pelo webhook) cai para o nome do WhatsApp, da agenda ou o número.
+ */
+export function displayName(l: NameFields): string {
+  const own = l.nome?.trim() ?? '';
+  const digits = own.replace(/\D/g, '');
+  const looksLikePhone = !own || (digits.length >= 8 && digits === own.replace(/\s/g, ''));
+  if (!looksLikePhone) return own;
+  return l.wa_name?.trim() || l.wa_contact_name?.trim() || formatPhone(l.telefone) || own;
+}
+
+export interface NameSuggestion {
+  source: 'perfil' | 'agenda';
+  label: string;
+  name: string;
+}
+
+/** Nomes vindos do WhatsApp que diferem do nosso: oferecidos como "usar este nome". */
+export function nameSuggestions(l: NameFields): NameSuggestion[] {
+  const current = displayName(l).toLowerCase();
+  const out: NameSuggestion[] = [];
+  const add = (source: NameSuggestion['source'], label: string, value?: string | null) => {
+    const name = value?.trim();
+    if (name && name.toLowerCase() !== current && !out.some((o) => o.name.toLowerCase() === name.toLowerCase())) out.push({ source, label, name });
+  };
+  add('perfil', 'Perfil', l.wa_name);
+  add('agenda', 'Na agenda', l.wa_contact_name);
+  return out;
+}
+
 export function formatPhone(phone: string | null | undefined): string {
   if (!phone) return '';
   const m = phone.match(/^55(\d{2})(\d{4,5})(\d{4})$/);

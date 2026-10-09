@@ -6,10 +6,9 @@ import { ArrowDown, ArrowLeft, PanelRight, Paperclip, RotateCw, Search, Send } f
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/components/CustomToast";
 import EmptyState from "@/components/ui/EmptyState";
-import { STAGES, formatPhone, interpolate } from "@/lib/prospeccao/leads";
+import { STAGES, displayName, formatPhone, interpolate } from "@/lib/prospeccao/leads";
 import { TYPE_LABEL, countsForBadge } from "@/lib/prospeccao/classify";
 import { useProspeccao } from "./ProspeccaoProvider";
-import ContaWhatsApp from "./ContaWhatsApp";
 import LeadPanel from "./LeadPanel";
 import MediaBubble from "./MediaBubble";
 import AudioRecorder from "./AudioRecorder";
@@ -54,7 +53,7 @@ function Avatar({ lead }: { lead: Lead }) {
     // eslint-disable-next-line @next/next/no-img-element
     <img src={lead.wa_avatar_url} alt="" className="pp-avatar" style={{ objectFit: "cover" }} />
   ) : (
-    <span className="pp-avatar">{initialsOf(lead.nome)}</span>
+    <span className="pp-avatar">{initialsOf(displayName(lead))}</span>
   );
 }
 
@@ -70,16 +69,34 @@ export default function ConversasView() {
   const [qrIndex, setQrIndex] = useState(0);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("todas");
-  const [panelOpen, setPanelOpen] = useState(false);
+  const [drawerOpen, setDrawerOpenState] = useState(false);
   const [unreadAtOpen, setUnreadAtOpen] = useState(0);
   const [atBottom, setAtBottom] = useState(true);
   const [newBelow, setNewBelow] = useState(0);
   const [schedKey, setSchedKey] = useState(0);
+  const setDrawerOpen = (open: boolean) => {
+    setDrawerOpenState(open);
+    try { window.localStorage.setItem("pratic:prospeccao:drawer", open ? "1" : "0"); } catch { /* sem armazenamento */ }
+  };
   const endRef = useRef<HTMLDivElement>(null);
   const msgsRef = useRef<HTMLDivElement>(null);
   const dividerRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const atBottomRef = useRef(true);
+
+  // lê a preferência da gaveta só no cliente
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- preferência salva, lida só no cliente (evita descompasso de SSR)
+    try { setDrawerOpenState(window.localStorage.getItem("pratic:prospeccao:drawer") === "1"); } catch { /* sem armazenamento */ }
+  }, []);
+
+  // Esc fecha a gaveta
+  useEffect(() => {
+    if (!drawerOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setDrawerOpen(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [drawerOpen]);
 
   const counts = useMemo(() => {
     const c: Record<TypeFilter, number> = { todas: 0, lead: 0, cliente: 0, equipe: 0, triagem: 0 };
@@ -251,17 +268,13 @@ export default function ConversasView() {
 
   if (!contacts.some((l) => l.telefone)) {
     return (
-      <>
-        <ContaWhatsApp />
-        <EmptyState title="Sem conversas" description="Cadastre leads com WhatsApp ou aguarde mensagens chegarem pelo webhook para conversar aqui." />
-      </>
+      <EmptyState title="Sem conversas" description="Cadastre leads com WhatsApp ou aguarde mensagens chegarem pelo webhook para conversar aqui." />
     );
   }
 
   return (
     <>
-      <ContaWhatsApp />
-      <div className="pp-chat" data-open={!!active}>
+      <div className="pp-chat" data-open={!!active} data-drawer={drawerOpen && !!active}>
         <div className="pp-chat-list">
           <div style={{ padding: 10, borderBottom: "1px solid var(--color-border-subtle)", position: "relative" }}>
             <Search size={14} style={{ position: "absolute", left: 20, top: 20, color: "var(--color-text-tertiary)" }} />
@@ -275,10 +288,10 @@ export default function ConversasView() {
             ))}
           </div>
           {conversations.map((l) => (
-            <button key={l.id} className="pp-chat-item" data-active={l.id === activeId} onClick={() => { setActiveId(l.id); setPanelOpen(false); }}>
+            <button key={l.id} className="pp-chat-item" data-active={l.id === activeId} onClick={() => setActiveId(l.id)}>
               <Avatar lead={l} />
               <span style={{ flex: 1, minWidth: 0 }}>
-                <strong style={{ display: "block", fontSize: "var(--text-ui)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{l.nome}</strong>
+                <strong style={{ display: "block", fontSize: "var(--text-ui)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{displayName(l)}</strong>
                 <span style={{ display: "flex", gap: 6, alignItems: "center", fontSize: "var(--text-caption)", color: "var(--color-text-tertiary)" }}>
                   {(l.tipo ?? "lead") !== "lead" && <span className="pp-type-tag">{TYPE_LABEL[(l.tipo ?? "lead") as ContactType]}</span>}
                   <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{l.last_message_preview || formatPhone(l.telefone)}</span>
@@ -295,11 +308,13 @@ export default function ConversasView() {
             <div className="pp-chat-main" style={{ position: "relative" }}>
               <div className="pp-chat-head">
                 <button className="btn btn-ghost btn-icon pp-back" onClick={() => setActiveId(null)} aria-label="Voltar"><ArrowLeft size={16} /></button>
-                <Avatar lead={active} />
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  <strong style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{active.nome}</strong>
-                  <div style={{ fontSize: "var(--text-caption)", color: "var(--color-text-tertiary)" }}>{formatPhone(active.telefone)}</div>
-                </div>
+                <button type="button" className="pp-header-btn" onClick={() => setDrawerOpen(!drawerOpen)} aria-expanded={drawerOpen} aria-label="Ver dados do contato" title="Ver dados do contato">
+                  <Avatar lead={active} />
+                  <span style={{ minWidth: 0, textAlign: "left" }}>
+                    <strong style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{displayName(active)}</strong>
+                    <span style={{ display: "block", fontSize: "var(--text-caption)", color: "var(--color-text-tertiary)" }}>{formatPhone(active.telefone)} · ver dados</span>
+                  </span>
+                </button>
                 {(active.tipo ?? "lead") === "lead" ? (
                   <select className="pp-select pp-stage-select" aria-label="Status do lead" value={active.estagio} onChange={(e) => moveLead(active.id, e.target.value as LeadStage)}>
                     {STAGES.map((st) => <option key={st.id} value={st.id}>{st.label}</option>)}
@@ -307,7 +322,7 @@ export default function ConversasView() {
                 ) : (
                   <span className="pp-type-tag">{TYPE_LABEL[(active.tipo ?? "lead") as ContactType]}</span>
                 )}
-                <button className="btn btn-secondary btn-sm pp-drawer-btn" onClick={() => setPanelOpen((o) => !o)}><PanelRight size={14} /> Cadastro</button>
+                <button className="btn btn-secondary btn-icon" data-active={drawerOpen} onClick={() => setDrawerOpen(!drawerOpen)} aria-pressed={drawerOpen} aria-label="Dados do contato" title="Dados do contato"><PanelRight size={15} /></button>
               </div>
               {(active.tipo ?? "lead") === "triagem" && <TriageBanner lead={active} onChoose={choose} />}
               <div className="pp-msgs" ref={msgsRef} onScroll={onScroll}>
@@ -322,7 +337,7 @@ export default function ConversasView() {
                         <div className="pp-unread-divider" ref={dividerRef}>{unreadAtOpen} {unreadAtOpen === 1 ? "mensagem não lida" : "mensagens não lidas"}</div>
                       )}
                       <div className={`pp-bubble ${m.direction}`} data-grouped={grouped} data-failed={m.status === "failed"}>
-                        <MediaBubble m={m} contactAvatar={active.wa_avatar_url} contactInitials={initialsOf(active.nome)} />
+                        <MediaBubble m={m} contactAvatar={active.wa_avatar_url} contactInitials={initialsOf(displayName(active))} />
                         <span className="meta">
                           {hhmm(m.created_at)}
                           {m.direction === "out" && (
@@ -369,12 +384,14 @@ export default function ConversasView() {
               </div>
             </div>
 
-            <aside className="pp-side" data-open={panelOpen}>
-              <LeadPanel key={active.id} lead={active} />
-            </aside>
+            {drawerOpen && (
+              <aside className="pp-side" aria-label="Dados do contato">
+                <LeadPanel key={active.id} lead={active} onClose={() => setDrawerOpen(false)} />
+              </aside>
+            )}
           </>
         ) : (
-          <div className="pp-chat-main" style={{ alignItems: "center", justifyContent: "center", color: "var(--color-text-tertiary)", gridColumn: "span 2" }}>
+          <div className="pp-chat-main" style={{ alignItems: "center", justifyContent: "center", color: "var(--color-text-tertiary)" }}>
             Selecione uma conversa
           </div>
         )}
