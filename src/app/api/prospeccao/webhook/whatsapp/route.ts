@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from '@/lib/hermesAuth';
 import { parseIncomingMessage, parseUazapiEvent, type UazapiEvent } from '@/lib/prospeccao/webhook';
 import { copyToBucket, enrichLeadFromWhatsApp, previewFor } from '@/lib/prospeccao/server';
 import { nextMessageStatus, phoneVariants } from '@/lib/prospeccao/leads';
+import { SILENT_TYPES, classifyPhone } from '@/lib/prospeccao/classify';
 import { getProvider } from '@/lib/whatsapp/provider';
 
 export const runtime = 'nodejs';
@@ -63,7 +64,7 @@ async function storeMessage(supabase: Supabase, event: MessageEvent) {
 
   const { data: found } = await supabase
     .from('leads')
-    .select('id, nome, unread_count, estagio')
+    .select('id, nome, unread_count, estagio, tipo')
     .in('telefone', phoneVariants(event.phone))
     .order('created_at', { ascending: true })
     .limit(1)
@@ -72,15 +73,25 @@ async function storeMessage(supabase: Supabase, event: MessageEvent) {
   let lead = found;
   let created = false;
   if (!lead) {
+    // Número novo: tenta reconhecer equipe/cliente; o resto vai para a Triagem.
+    const [{ data: users }, { data: clients }] = await Promise.all([
+      supabase.from('users').select('id, phone').not('phone', 'is', null),
+      supabase.from('clients').select('id, phone, whatsapp_financeiro'),
+    ]);
+    const kind = classifyPhone({ phone: event.phone, users: users ?? [], clients: clients ?? [] });
     const { data, error } = await supabase
       .from('leads')
       .insert({
         nome: (!event.fromMe && event.name) || event.phone,
         telefone: event.phone,
         origem: 'whatsapp',
-        estagio: event.fromMe ? 'contatado' : 'conversando',
+        estagio: 'novo',
+        tipo: kind.tipo,
+        user_id: kind.user_id ?? null,
+        client_id: kind.client_id ?? null,
+        classificado_em: kind.tipo === 'triagem' ? null : new Date().toISOString(),
       })
-      .select('id, nome, unread_count, estagio')
+      .select('id, nome, unread_count, estagio, tipo')
       .single();
     if (error) throw error;
     lead = data;
@@ -88,13 +99,13 @@ async function storeMessage(supabase: Supabase, event: MessageEvent) {
   }
 
   // Mídia: copia para o bucket (a URL da UAZAPI expira em 2 dias).
-  let media: { url: string; mimetype: string } | null = null;
+  let media: { url: string; mimetype: string; size: number } | null = null;
   if (event.messageType !== 'text' && event.uazId) {
     const dl = await getProvider().downloadMedia(event.uazId);
     if (dl) media = await copyToBucket(supabase, dl.url, lead.id, dl.mimetype ?? event.mimetype, event.fileName);
   }
 
-  await supabase.from('lead_messages').insert({
+  const { error: insertError } = await supabase.from('lead_messages').insert({
     lead_id: lead.id,
     direction: event.fromMe ? 'out' : 'in',
     body: event.body,
@@ -103,18 +114,25 @@ async function storeMessage(supabase: Supabase, event: MessageEvent) {
     media_mimetype: media?.mimetype ?? event.mimetype,
     media_name: event.fileName,
     media_seconds: event.seconds,
+    media_size: media?.size ?? null,
     status: event.fromMe ? 'sent' : 'delivered',
     external_id: event.externalId,
   });
+  // 23505: o envio direto já gravou esta mensagem (corrida com o webhook); nada a fazer.
+  if (insertError) {
+    if (insertError.code === '23505') return;
+    throw insertError;
+  }
 
+  const silent = SILENT_TYPES.includes(lead.tipo);
   const now = new Date().toISOString();
   await supabase
     .from('leads')
     .update({
       last_message_at: now,
       last_message_preview: previewFor(event.messageType, event.body),
-      unread_count: event.fromMe ? lead.unread_count ?? 0 : (lead.unread_count ?? 0) + 1,
-      estagio: !event.fromMe && ['novo', 'contatado'].includes(lead.estagio) ? 'conversando' : lead.estagio,
+      unread_count: event.fromMe || silent ? lead.unread_count ?? 0 : (lead.unread_count ?? 0) + 1,
+      estagio: !event.fromMe && lead.tipo === 'lead' && ['novo', 'contatado'].includes(lead.estagio) ? 'conversando' : lead.estagio,
       updated_at: now,
     })
     .eq('id', lead.id);

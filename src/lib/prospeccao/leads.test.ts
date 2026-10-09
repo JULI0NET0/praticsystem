@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { filterLeadsForCampaign, interpolate, maskCnpj, maskPhone, nextMessageStatus, normalizePhone, parseInstagram, parseLeadsCsv, parseSegments, phoneKey, phoneVariants, pipelineStats, validateCnpj } from './leads';
 import { parseIncomingMessage, parseUazapiEvent } from './webhook';
+import { classifyPhone, countsForBadge } from './classify';
 import type { Lead } from '@/types/database';
 
 const lead = (over: Partial<Lead>): Lead => ({
   id: '1', nome: 'Ana Souza', origem: 'manual', estagio: 'novo', tags: [], unread_count: 0,
-  segmentos: [], created_at: '', updated_at: '', telefone: '5511999998888', ...over,
+  segmentos: [], tipo: 'lead', created_at: '', updated_at: '', telefone: '5511999998888', ...over,
 });
 
 describe('normalizePhone', () => {
@@ -123,5 +124,28 @@ describe('phoneKey / phoneVariants (9º dígito)', () => {
     expect(phoneVariants('554399359959')).toEqual(['554399359959', '5543999359959']);
     expect(phoneVariants('554333334444')).toEqual(['554333334444']);
     expect(phoneVariants(null)).toEqual([]);
+  });
+});
+
+describe('classifyPhone', () => {
+  const users = [{ id: 'u1', phone: '(43) 98888-1111' }];
+  const clients = [{ id: 'c1', phone: '5511999998888', whatsapp_financeiro: '(21) 97777-0000' }];
+  it('equipe pelo telefone do usuário (aceita máscara)', () =>
+    expect(classifyPhone({ phone: '5543988881111', users, clients })).toEqual({ tipo: 'equipe', user_id: 'u1' }));
+  it('equipe com o 9º dígito ausente', () =>
+    expect(classifyPhone({ phone: '554388881111', users, clients })).toEqual({ tipo: 'equipe', user_id: 'u1' }));
+  it('cliente pelo telefone ou pelo whatsapp financeiro', () => {
+    expect(classifyPhone({ phone: '5511999998888', users, clients })).toEqual({ tipo: 'cliente', client_id: 'c1' });
+    expect(classifyPhone({ phone: '5521977770000', users, clients })).toEqual({ tipo: 'cliente', client_id: 'c1' });
+  });
+  it('desconhecido vai para a triagem', () =>
+    expect(classifyPhone({ phone: '5541900000000', users, clients })).toEqual({ tipo: 'triagem' }));
+  it('equipe vence cliente', () =>
+    expect(classifyPhone({ phone: '5511999998888', users: [{ id: 'u2', phone: '11999998888' }], clients }).tipo).toBe('equipe'));
+  it('badge só conta lead e triagem', () => {
+    expect(countsForBadge('lead')).toBe(true);
+    expect(countsForBadge('triagem')).toBe(true);
+    expect(countsForBadge('equipe')).toBe(false);
+    expect(countsForBadge('cliente')).toBe(false);
   });
 });

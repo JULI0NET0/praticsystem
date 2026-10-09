@@ -5,11 +5,12 @@ import { ExternalLink, Save, UserCheck } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/components/CustomToast";
+import { TYPE_LABEL } from "@/lib/prospeccao/classify";
 import { useProspeccao } from "./ProspeccaoProvider";
 import LeadFields from "./LeadFields";
 import ContactCard from "./ContactCard";
 import { formFromLead, leadPatchFromForm, type LeadFormState } from "./leadForm";
-import type { Lead, LeadActivity } from "@/types/database";
+import type { ContactType, Lead, LeadActivity } from "@/types/database";
 
 type Tab = "cadastro" | "observacoes" | "atividade";
 
@@ -21,7 +22,7 @@ const when = (iso: string) => new Date(iso).toLocaleString("pt-BR", { day: "2-di
  * sempre começa no topo.
  */
 export default function LeadPanel({ lead }: { lead: Lead }) {
-  const { updateLead, moveLead, convertToClient } = useProspeccao();
+  const { updateLead, moveLead, convertToClient, setContactType } = useProspeccao();
   const { currentUser, users } = useAuth();
   const { showToast } = useToast();
   const [tab, setTab] = useState<Tab>("cadastro");
@@ -95,6 +96,12 @@ export default function LeadPanel({ lead }: { lead: Lead }) {
     <div className="pp-panel">
       <div className="pp-panel-top">
         <ContactCard lead={lead} />
+        <label className="pp-label" style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          Tipo de contato
+          <select className="pp-select" style={{ flex: 1 }} value={lead.tipo ?? "lead"} onChange={(e) => setContactType(lead.id, e.target.value as ContactType)}>
+            {(Object.keys(TYPE_LABEL) as ContactType[]).map((t) => <option key={t} value={t}>{TYPE_LABEL[t]}</option>)}
+          </select>
+        </label>
         {ig && (
           <a href={`https://instagram.com/${ig}`} target="_blank" rel="noreferrer" style={{ display: "inline-flex", gap: 4, alignItems: "center", fontSize: "var(--text-caption)" }}>
             @{ig} <ExternalLink size={11} />

@@ -295,6 +295,7 @@ export interface Diagram {
 // Prospecção (migration_prospeccao.sql)
 // ---------------------------------------------------------------
 export type LeadStage = 'novo' | 'contatado' | 'conversando' | 'proposta' | 'ganho' | 'perdido' | 'stand_by';
+export type ContactType = 'lead' | 'cliente' | 'equipe' | 'fornecedor' | 'pessoal' | 'triagem' | 'ignorado';
 export type LeadOrigin = 'manual' | 'csv' | 'whatsapp' | 'site' | 'prospeccao_ativa' | 'indicacao' | 'instagram' | 'outro';
 
 export interface Lead {
@@ -318,6 +319,10 @@ export interface Lead {
   cnae_descricao?: string | null;
   wa_name?: string | null;
   wa_avatar_url?: string | null;
+  tipo: ContactType;
+  user_id?: string | null;
+  classificado_em?: string | null;
+  last_read_at?: string | null;
   wa_is_business?: boolean;
   wa_contact_name?: string | null;
   wa_business_name?: string | null;
@@ -343,6 +348,7 @@ export interface LeadMessage {
   media_mimetype?: string | null;
   media_name?: string | null;
   media_seconds?: number | null;
+  media_size?: number | null;
   status: 'queued' | 'sent' | 'delivered' | 'read' | 'played' | 'failed';
   campaign_id?: string | null;
   external_id?: string | null;
@@ -389,4 +395,30 @@ export interface CampaignRecipient {
   lead_id: string;
   status: 'pending' | 'sent' | 'replied' | 'failed';
   sent_at?: string | null;
+}
+
+export interface ScheduledRecurrence {
+  freq: 'daily' | 'weekly' | 'monthly';
+  interval: number;
+  until?: string | null;
+  count?: number | null;
+}
+
+export interface ScheduledMessage {
+  id: string;
+  lead_id: string;
+  body: string;
+  media?: { type: 'image' | 'video' | 'audio' | 'ptt' | 'document'; url: string; name?: string; mimetype?: string; seconds?: number } | null;
+  run_at: string;
+  status: 'pending' | 'sent' | 'failed' | 'canceled';
+  kind: 'single' | 'followup' | 'campaign';
+  cancel_on_reply: boolean;
+  recurrence?: ScheduledRecurrence | null;
+  series_id?: string | null;
+  campaign_id?: string | null;
+  uazapi_folder_id?: string | null;
+  sent_message_id?: string | null;
+  error?: string | null;
+  created_by?: string | null;
+  created_at: string;
 }
