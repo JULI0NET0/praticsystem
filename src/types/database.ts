@@ -290,3 +290,103 @@ export interface Diagram {
   client?: Pick<Client, 'id' | 'name' | 'nome_fantasia'>;
   author?: Pick<User, 'id' | 'name' | 'avatar_url'>;
 }
+
+// ---------------------------------------------------------------
+// Prospecção (migration_prospeccao.sql)
+// ---------------------------------------------------------------
+export type LeadStage = 'novo' | 'contatado' | 'conversando' | 'proposta' | 'ganho' | 'perdido' | 'stand_by';
+export type LeadOrigin = 'manual' | 'csv' | 'whatsapp' | 'site' | 'prospeccao_ativa' | 'indicacao' | 'instagram' | 'outro';
+
+export interface Lead {
+  id: string;
+  nome: string;
+  empresa?: string | null;
+  telefone?: string | null;
+  email?: string | null;
+  instagram?: string | null;
+  origem: LeadOrigin;
+  estagio: LeadStage;
+  valor_estimado?: number | null;
+  servico_interesse?: string | null;
+  responsavel_id?: string | null;
+  tags: string[];
+  segmentos: string[];
+  cnpj?: string | null;
+  razao_social?: string | null;
+  cidade?: string | null;
+  uf?: string | null;
+  cnae_descricao?: string | null;
+  wa_name?: string | null;
+  wa_avatar_url?: string | null;
+  wa_is_business?: boolean;
+  wa_contact_name?: string | null;
+  wa_business_name?: string | null;
+  wa_about?: string | null;
+  wa_synced_at?: string | null;
+  last_message_preview?: string | null;
+  notas?: string | null;
+  perdido_motivo?: string | null;
+  last_message_at?: string | null;
+  unread_count: number;
+  client_id?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LeadMessage {
+  id: string;
+  lead_id: string;
+  direction: 'in' | 'out';
+  body: string;
+  message_type: 'text' | 'image' | 'audio' | 'video' | 'document' | 'sticker';
+  media_url?: string | null;
+  media_mimetype?: string | null;
+  media_name?: string | null;
+  media_seconds?: number | null;
+  status: 'queued' | 'sent' | 'delivered' | 'read' | 'played' | 'failed';
+  campaign_id?: string | null;
+  external_id?: string | null;
+  sender_id?: string | null;
+  created_at: string;
+}
+
+export interface LeadActivity {
+  id: string;
+  lead_id: string;
+  tipo: 'estagio' | 'nota' | 'ligacao' | 'conversao';
+  descricao: string;
+  user_id?: string | null;
+  created_at: string;
+}
+
+export interface QuickReply {
+  id: string;
+  titulo: string;
+  corpo: string;
+  created_at: string;
+}
+
+export interface CampaignFilter {
+  estagios?: LeadStage[];
+  origens?: LeadOrigin[];
+  tags?: string[];
+}
+
+export interface Campaign {
+  id: string;
+  nome: string;
+  template: string;
+  filtro: CampaignFilter;
+  status: 'draft' | 'scheduled' | 'running' | 'done';
+  agendada_para?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CampaignRecipient {
+  id: string;
+  campaign_id: string;
+  lead_id: string;
+  status: 'pending' | 'sent' | 'replied' | 'failed';
+  sent_at?: string | null;
+}
