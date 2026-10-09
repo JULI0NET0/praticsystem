@@ -133,7 +133,7 @@ export default function LeadPanel({ lead, onClose }: { lead: Lead; onClose: () =
 
             <section className="pp-section">
               <div className="pp-section-title">Dados</div>
-              <LeadFields form={form} onChange={(patch) => setForm((f) => ({ ...f, ...patch }))} single />
+              <LeadFields form={form} onChange={(patch) => setForm((f) => ({ ...f, ...patch }))} single isLead={(lead.tipo ?? "lead") === "lead"} />
             </section>
           </>
         )}

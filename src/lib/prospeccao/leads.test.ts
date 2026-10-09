@@ -3,6 +3,8 @@ import { displayName, filterLeadsForCampaign, interpolate, nameSuggestions, mask
 import { eventFromFindRecord, parseIncomingMessage, parseUazapiEvent } from './webhook';
 import { classifyPhone, countsForBadge } from './classify';
 import { expandOccurrences, isOutsideBusinessHours, nextOccurrence } from './schedule';
+import { applyMerge, buildMerge, defaultChoices, notesToImport } from './clientMerge';
+import type { Client } from '@/types/database';
 import type { Lead } from '@/types/database';
 
 const lead = (over: Partial<Lead>): Lead => ({
@@ -210,4 +212,65 @@ describe('eventFromFindRecord (sincronização)', () => {
   });
   it('mensagem sem texto nem mídia é ignorada', () =>
     expect(eventFromFindRecord({ ...rec, text: '', messageType: 'ProtocolMessage' })).toBeNull());
+});
+
+describe('importar dados lead + cliente', () => {
+  const client = (over: Partial<Client> = {}): Client => ({
+    id: 'c1', name: 'COLD JOIAS LTDA', nome_fantasia: '', cnpj: '', tipo_pessoa: 'PJ', contact_name: '', email: '', phone: '(43) 99935-9959', status: 'active', created_at: '', ...over,
+  });
+  const lead1 = lead({ nome: 'Julio Mendonça', empresa: 'cold joias', email: 'j@cold.com', telefone: '554399359959', cnpj: '11222333000181', instagram: 'julioneto', segmentos: ['empresa'], cidade: 'Londrina', uf: 'pr' });
+
+  it('classifica vazio, igual e conflito', () => {
+    const f = buildMerge(lead1, client({ contact_name: 'Julio N.', email: 'j@cold.com' }));
+    const state = Object.fromEntries(f.map((x) => [x.key, x.state]));
+    expect(state.contato).toBe('conflict');
+    expect(state.email).toBe('same');
+    expect(state.empresa).toBe('fill_client');
+    expect(state.razao).toBe('fill_lead');
+    expect(state.telefone).toBe('same'); // com e sem 9º dígito / máscara
+  });
+
+  it('padrão: preenche os vazios e mantém o cliente nos conflitos', () => {
+    const c = client({ contact_name: 'Julio N.' });
+    const fields = buildMerge(lead1, c);
+    const { clientPatch, leadPatch } = applyMerge(c, fields, defaultChoices(fields));
+    expect(clientPatch.nome_fantasia).toBe('cold joias');
+    expect(clientPatch.cnpj).toBe('11.222.333/0001-81');
+    expect(clientPatch.social_access?.instagram?.usuario).toBe('julioneto');
+    expect(clientPatch.address).toMatchObject({ cidade: 'Londrina', uf: 'PR' });
+    expect(clientPatch.contact_name).toBeUndefined(); // conflito: o do cliente fica
+    expect(leadPatch.nome).toBe('Julio N.'); // e o lead passa a ter o mesmo nome
+    expect(leadPatch.razao_social).toBe('COLD JOIAS LTDA');
+  });
+
+  it('escolher o lead no conflito leva o valor ao cliente', () => {
+    const c = client({ contact_name: 'Julio N.' });
+    const fields = buildMerge(lead1, c);
+    const { clientPatch, leadPatch } = applyMerge(c, fields, { ...defaultChoices(fields), contato: 'lead' });
+    expect(clientPatch.contact_name).toBe('Julio Mendonça');
+    expect(leadPatch.nome).toBeUndefined();
+  });
+
+  it('mescla address e social_access existentes sem perder o resto', () => {
+    const c = client({ address: { cep: '86000', logradouro: 'Rua A', numero: '1', bairro: 'Centro', cidade: '', uf: '' }, social_access: { instagram: { usuario: '', senha: 'x' } } });
+    const fields = buildMerge(lead1, c);
+    const { clientPatch } = applyMerge(c, fields, defaultChoices(fields));
+    expect(clientPatch.address).toMatchObject({ cep: '86000', logradouro: 'Rua A', cidade: 'Londrina' });
+    expect(clientPatch.social_access?.instagram).toMatchObject({ usuario: 'julioneto', senha: 'x' });
+  });
+
+  it('skip não altera nada', () => {
+    const c = client();
+    const fields = buildMerge(lead1, c);
+    const none = Object.fromEntries(fields.map((f) => [f.key, 'skip' as const]));
+    expect(applyMerge(c, fields, none)).toMatchObject({ clientPatch: {}, leadPatch: {}, changed: 0 });
+  });
+
+  it('notas do atendimento viram notas do cliente sem duplicar', () => {
+    const acts = [{ id: 'a1', tipo: 'nota' as const, descricao: 'Quer proposta', created_at: '2026-10-09T10:00:00Z' }, { id: 'a2', tipo: 'estagio' as const, descricao: 'x', created_at: '' }];
+    const first = notesToImport({ id: 'L1', notas: 'Antiga' }, acts, [], 'Julio');
+    expect(first.map((n) => n.id)).toEqual(['lead-note-legacy-L1', 'lead-note-a1']);
+    expect(first[1].content).toContain('Importado do atendimento');
+    expect(notesToImport({ id: 'L1', notas: 'Antiga' }, acts, first, 'Julio')).toEqual([]);
+  });
 });

@@ -10,6 +10,7 @@ import {
   FileText,
   Share2,
   MessageSquare,
+  MessageCircle,
   CreditCard,
   Plus,
   Calendar,
@@ -70,6 +71,7 @@ import ContractDetailsModal from "@/components/admin/contracts/ContractDetailsMo
 import NoteCard from "@/components/notas/NoteCard";
 import InlineNoteEditor from "@/components/notas/InlineNoteEditor";
 import { formatPhone } from "@/utils/masks";
+import ClientAtendimento from "@/components/admin/clients/ClientAtendimento";
 
 
 const TABS = [
@@ -78,6 +80,7 @@ const TABS = [
   { id: 'briefing', label: 'Briefing', icon: FileText },
   { id: 'demandas', label: 'Demandas', icon: ClipboardList },
   { id: 'notas', label: 'Notas', icon: MessageSquare },
+  { id: 'atendimento', label: 'Atendimento', icon: MessageCircle },
   { id: 'access', label: 'Acessos', icon: ShieldCheck },
   { id: 'contracts', label: 'Contratos', icon: FileText },
   { id: 'finance', label: 'Financeiro', icon: CreditCard },
@@ -1842,6 +1845,17 @@ export default function ClientDetailPage() {
                   </Spotlight>
                 ))}
               </div>
+            </motion.div>
+          )}
+
+          {activeTab === 'atendimento' && clientData && (
+            <motion.div
+              key="atendimento"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+            >
+              <ClientAtendimento client={clientData} />
             </motion.div>
           )}
 

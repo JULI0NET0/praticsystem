@@ -29,9 +29,11 @@ interface Props {
   /** Uma coluna (painel lateral) em vez de duas. */
   single?: boolean;
   showStage?: boolean;
+  /** Esconde o estágio do funil para quem já não é lead (cliente, equipe...). */
+  isLead?: boolean;
 }
 
-export default function LeadFields({ form, onChange, single, showStage = true }: Props) {
+export default function LeadFields({ form, onChange, single, showStage = true, isLead = true }: Props) {
   const { showToast } = useToast();
   const [services, setServices] = useState<string[]>([]);
   const [looking, setLooking] = useState(false);
@@ -112,14 +114,14 @@ export default function LeadFields({ form, onChange, single, showStage = true }:
         <label className="pp-label">Valor estimado (R$)
           <input className="pp-input" inputMode="decimal" placeholder="0,00" value={form.valor_estimado} onChange={(e) => onChange({ valor_estimado: e.target.value.replace(/[^\d.,]/g, "") })} />
         </label>
-        {showStage && (
+        {showStage && isLead && (
           <div className="pp-label">Estágio
             <Combobox options={STAGE_OPTIONS} value={form.estagio} onChange={(v) => onChange({ estagio: (v ?? "novo") as LeadStage })} searchThreshold={99} />
           </div>
         )}
       </div>
 
-      {form.estagio === "perdido" && (
+      {isLead && form.estagio === "perdido" && (
         <label className="pp-label">Motivo da perda<input className="pp-input" value={form.perdido_motivo} onChange={(e) => onChange({ perdido_motivo: e.target.value })} placeholder="Preço, sem retorno, fechou com outro..." /></label>
       )}
 

@@ -2,13 +2,16 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Building2, ExternalLink, Link2Off, UserCheck } from "lucide-react";
+import { Building2, ExternalLink, GitCompare, Link2Off, UserCheck } from "lucide-react";
 import Combobox, { type ComboboxOption } from "@/components/ui/Combobox";
 import DialogShell from "@/components/DialogShell";
 import { supabase } from "@/lib/supabase";
-import { formatPhone } from "@/lib/prospeccao/leads";
-import { useProspeccao } from "./ProspeccaoProvider";
-import type { Lead } from "@/types/database";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/components/CustomToast";
+import { formatPhone, normalizePhone } from "@/lib/prospeccao/leads";
+import { useProspeccao, type LinkPlan } from "./ProspeccaoProvider";
+import ClientMergeDialog from "./ClientMergeDialog";
+import type { Client, Lead, LeadActivity } from "@/types/database";
 
 interface ClientRow {
   id: string;
@@ -17,16 +20,21 @@ interface ClientRow {
   phone?: string | null;
 }
 
-const labelOf = (c: ClientRow) => c.nome_fantasia?.trim() || c.name;
+const labelOf = (c: Pick<ClientRow, "name" | "nome_fantasia">) => c.nome_fantasia?.trim() || c.name;
 
-/** Liga o contato a um cliente já cadastrado (ou mostra o vínculo atual, com link para o cliente). */
+/**
+ * Liga o contato a um cliente já cadastrado: abre "Conferir dados", importa o que for escolhido
+ * e o contato passa a ser Cliente. Com vínculo, mostra o cliente e permite reconferir os dados.
+ */
 export default function ClientLinker({ lead }: { lead: Lead }) {
   const { linkClient, unlinkClient, convertToClient } = useProspeccao();
+  const { currentUser } = useAuth();
+  const { showToast } = useToast();
   const [clients, setClients] = useState<ClientRow[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [changing, setChanging] = useState(false);
-  const [picked, setPicked] = useState<ClientRow | null>(null);
+  const [merge, setMerge] = useState<{ client: Client; activities: LeadActivity[] } | null>(null);
   const [unlinking, setUnlinking] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -44,23 +52,37 @@ export default function ClientLinker({ lead }: { lead: Lead }) {
 
   const linked = lead.client_id ? clients.find((c) => c.id === lead.client_id) : null;
   const options = useMemo<ComboboxOption[]>(
-    () => clients.map((c) => ({
-      value: c.id,
-      label: labelOf(c),
-      keywords: `${c.name} ${c.phone ?? ""}`,
-      description: [c.name !== labelOf(c) ? c.name : null, c.phone ? formatPhone(c.phone.replace(/\D/g, "").length <= 11 ? `55${c.phone.replace(/\D/g, "")}` : c.phone.replace(/\D/g, "")) : null].filter(Boolean).join(" · ") || undefined,
-      icon: <Building2 size={14} />,
-    })),
+    () => clients.map((c) => {
+      const n = c.phone ? normalizePhone(c.phone) : null;
+      return {
+        value: c.id,
+        label: labelOf(c),
+        keywords: `${c.name} ${c.phone ?? ""}`,
+        description: [c.name !== labelOf(c) ? c.name : null, n ? formatPhone(n) : null].filter(Boolean).join(" · ") || undefined,
+        icon: <Building2 size={14} />,
+      };
+    }),
     [clients]
   );
 
-  const choose = async (moveToClients: boolean) => {
-    if (!picked) return;
+  // Carrega o cadastro completo e as observações do lead para montar a conferência.
+  const openMerge = async (clientId: string) => {
     setBusy(true);
-    await linkClient(lead.id, { id: picked.id, label: labelOf(picked) }, moveToClients);
+    const [c, a] = await Promise.all([
+      supabase.from("clients").select("*").eq("id", clientId).single(),
+      supabase.from("lead_activities").select("*").eq("lead_id", lead.id).eq("tipo", "nota"),
+    ]);
     setBusy(false);
-    setPicked(null);
-    setChanging(false);
+    if (c.error || !c.data) return showToast("Não foi possível abrir o cadastro do cliente: " + (c.error?.message ?? ""), "error");
+    setMerge({ client: c.data as Client, activities: (a.data || []) as LeadActivity[] });
+  };
+
+  const confirmMerge = async (plan: LinkPlan) => {
+    if (!merge) return;
+    setBusy(true);
+    const ok = await linkClient(lead.id, merge.client, plan);
+    setBusy(false);
+    if (ok) { setMerge(null); setChanging(false); }
   };
 
   const unlink = async (backToLead: boolean) => {
@@ -79,6 +101,7 @@ export default function ClientLinker({ lead }: { lead: Lead }) {
             <div className="pp-linker-name">{linked ? labelOf(linked) : "Cliente vinculado"}</div>
             <Link href={`/admin/clients/${lead.client_id}`} className="pp-linker-link">Abrir cadastro do cliente <ExternalLink size={11} /></Link>
           </div>
+          <button className="btn btn-ghost btn-icon" onClick={() => openMerge(lead.client_id!)} disabled={busy} aria-label="Conferir dados com o cliente" title="Conferir dados com o cliente"><GitCompare size={15} /></button>
           <button className="btn btn-ghost btn-sm" onClick={() => setChanging(true)}>Trocar</button>
           <button className="btn btn-ghost btn-icon" onClick={() => setUnlinking(true)} aria-label="Desvincular cliente" title="Desvincular"><Link2Off size={15} /></button>
         </div>
@@ -87,7 +110,7 @@ export default function ClientLinker({ lead }: { lead: Lead }) {
           <Combobox
             options={options}
             value={null}
-            onChange={(id) => { const c = clients.find((x) => x.id === id); if (c) setPicked(c); }}
+            onChange={(id) => { if (id) openMerge(id); }}
             placeholder={loaded ? "Vincular a cliente existente" : "Carregando clientes…"}
             searchPlaceholder="Buscar por nome, razão social ou telefone"
             searchThreshold={0}
@@ -99,18 +122,21 @@ export default function ClientLinker({ lead }: { lead: Lead }) {
             {changing && <button className="btn btn-ghost btn-sm" onClick={() => setChanging(false)}>Cancelar</button>}
             {!lead.client_id && <button className="btn btn-ghost btn-sm" onClick={() => convertToClient(lead)}><UserCheck size={13} /> Criar novo cliente com estes dados</button>}
           </div>
-          <div className="pp-hint">Ao vincular, você escolhe se o contato vai para <strong>Clientes</strong> ou continua como lead.</div>
+          <div className="pp-hint">Ao vincular, o contato passa a ser <strong>Cliente</strong> e você confere os dados que serão importados.</div>
         </>
       )}
 
-      {picked && (
-        <DialogShell isOpen onClose={() => setPicked(null)} title={`Vincular a ${labelOf(picked)}`} maxWidth="480px"
-          footer={<><button className="btn btn-secondary" onClick={() => setPicked(null)} disabled={busy}>Cancelar</button><button className="btn btn-secondary" onClick={() => choose(false)} disabled={busy}>Manter como lead</button><button className="btn btn-accent" onClick={() => choose(true)} disabled={busy}>Mover para Clientes</button></>}>
-          <p style={{ margin: 0, fontSize: "var(--text-ui)", lineHeight: 1.5 }}>
-            <strong>{lead.nome}</strong> será ligado ao cadastro de <strong>{labelOf(picked)}</strong>.
-            Mover para Clientes tira o contato do funil e das campanhas de leads. Manter como lead só cria o vínculo.
-          </p>
-        </DialogShell>
+      {merge && (
+        <ClientMergeDialog
+          lead={lead}
+          client={merge.client}
+          activities={merge.activities}
+          author={currentUser?.name ?? "Equipe"}
+          confirmLabel={lead.client_id === merge.client.id ? "Aplicar" : "Vincular e importar"}
+          busy={busy}
+          onCancel={() => setMerge(null)}
+          onConfirm={confirmMerge}
+        />
       )}
 
       {unlinking && (
