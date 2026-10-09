@@ -26,6 +26,8 @@ interface ProspeccaoContextValue {
   convertToClient: (lead: Lead) => Promise<void>;
   setQuickReplies: React.Dispatch<React.SetStateAction<QuickReply[]>>;
   setContactType: (id: string, tipo: ContactType) => Promise<void>;
+  linkClient: (leadId: string, client: { id: string; label: string }, moveToClients: boolean) => Promise<void>;
+  unlinkClient: (leadId: string, backToLead: boolean) => Promise<void>;
   setCampaigns: React.Dispatch<React.SetStateAction<Campaign[]>>;
 }
 
@@ -161,9 +163,26 @@ export function ProspeccaoProvider({ children }: { children: React.ReactNode }) 
     });
   }, [updateLead]);
 
+  const linkClient = useCallback(async (leadId: string, client: { id: string; label: string }, moveToClients: boolean) => {
+    await updateLead(leadId, {
+      client_id: client.id,
+      ...(moveToClients ? { tipo: "cliente" as ContactType, classificado_em: new Date().toISOString() } : {}),
+    });
+    await logActivity(leadId, "conversao", `Vinculado ao cliente ${client.label}${moveToClients ? " (movido para Clientes)" : ""}`);
+    showToast(moveToClients ? "Contato vinculado e movido para Clientes." : "Contato vinculado ao cliente.", "success");
+  }, [updateLead, logActivity, showToast]);
+
+  const unlinkClient = useCallback(async (leadId: string, backToLead: boolean) => {
+    await updateLead(leadId, {
+      client_id: null,
+      ...(backToLead ? { tipo: "lead" as ContactType, estagio: "novo" as LeadStage, classificado_em: new Date().toISOString() } : {}),
+    });
+    await logActivity(leadId, "conversao", backToLead ? "Vínculo com o cliente removido (voltou a Lead)" : "Vínculo com o cliente removido");
+  }, [updateLead, logActivity]);
+
   const value = useMemo(
-    () => ({ leads, contacts, setContactType, quickReplies, campaigns, loading, reload, createLead, updateLead, moveLead, deleteLead, importRows, convertToClient, setQuickReplies, setCampaigns }),
-    [leads, contacts, setContactType, quickReplies, campaigns, loading, reload, createLead, updateLead, moveLead, deleteLead, importRows, convertToClient]
+    () => ({ leads, contacts, setContactType, linkClient, unlinkClient, quickReplies, campaigns, loading, reload, createLead, updateLead, moveLead, deleteLead, importRows, convertToClient, setQuickReplies, setCampaigns }),
+    [leads, contacts, setContactType, linkClient, unlinkClient, quickReplies, campaigns, loading, reload, createLead, updateLead, moveLead, deleteLead, importRows, convertToClient]
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

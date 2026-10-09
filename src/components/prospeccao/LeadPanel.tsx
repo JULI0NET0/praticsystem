@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { ExternalLink, Save, UserCheck } from "lucide-react";
+import { ExternalLink, Save, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/components/CustomToast";
@@ -9,6 +9,7 @@ import { TYPE_LABEL } from "@/lib/prospeccao/classify";
 import { useProspeccao } from "./ProspeccaoProvider";
 import LeadFields from "./LeadFields";
 import ContactCard from "./ContactCard";
+import ClientLinker from "./ClientLinker";
 import { formFromLead, leadPatchFromForm, type LeadFormState } from "./leadForm";
 import type { ContactType, Lead, LeadActivity } from "@/types/database";
 
@@ -17,12 +18,11 @@ type Tab = "cadastro" | "observacoes" | "atividade";
 const when = (iso: string) => new Date(iso).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 
 /**
- * Painel de atendimento. Estrutura: cartão do contato fixo, abas, corpo rolável e rodapé
- * de salvar fora da rolagem (não cobre campos). Remonta por conversa (key), então o scroll
- * sempre começa no topo.
+ * Gaveta de contato. Estrutura: cabeçalho, abas, corpo rolável e rodapé de salvar fora da rolagem.
+ * Remonta por conversa (key), então o scroll sempre começa no topo.
  */
-export default function LeadPanel({ lead }: { lead: Lead }) {
-  const { updateLead, moveLead, convertToClient, setContactType } = useProspeccao();
+export default function LeadPanel({ lead, onClose }: { lead: Lead; onClose: () => void }) {
+  const { updateLead, moveLead, setContactType } = useProspeccao();
   const { currentUser, users } = useAuth();
   const { showToast } = useToast();
   const [tab, setTab] = useState<Tab>("cadastro");
@@ -94,19 +94,12 @@ export default function LeadPanel({ lead }: { lead: Lead }) {
 
   return (
     <div className="pp-panel">
+      <div className="pp-drawer-head">
+        <strong>Contato</strong>
+        <button className="btn btn-ghost btn-icon" onClick={onClose} aria-label="Fechar dados do contato" title="Fechar (Esc)"><X size={16} /></button>
+      </div>
+
       <div className="pp-panel-top">
-        <ContactCard lead={lead} />
-        <label className="pp-label" style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-          Tipo de contato
-          <select className="pp-select" style={{ flex: 1 }} value={lead.tipo ?? "lead"} onChange={(e) => setContactType(lead.id, e.target.value as ContactType)}>
-            {(Object.keys(TYPE_LABEL) as ContactType[]).map((t) => <option key={t} value={t}>{TYPE_LABEL[t]}</option>)}
-          </select>
-        </label>
-        {ig && (
-          <a href={`https://instagram.com/${ig}`} target="_blank" rel="noreferrer" style={{ display: "inline-flex", gap: 4, alignItems: "center", fontSize: "var(--text-caption)" }}>
-            @{ig} <ExternalLink size={11} />
-          </a>
-        )}
         <div className="pp-tabs" role="tablist">
           {tabs.map((t) => (
             <button key={t.id} role="tab" aria-selected={tab === t.id} data-active={tab === t.id} onClick={() => setTab(t.id)}>
@@ -117,7 +110,33 @@ export default function LeadPanel({ lead }: { lead: Lead }) {
       </div>
 
       <div className="pp-panel-body">
-        {tab === "cadastro" && <LeadFields form={form} onChange={(patch) => setForm((f) => ({ ...f, ...patch }))} single />}
+        {tab === "cadastro" && (
+          <>
+            <ContactCard lead={lead} />
+            {ig && (
+              <a href={`https://instagram.com/${ig}`} target="_blank" rel="noreferrer" style={{ display: "inline-flex", gap: 4, alignItems: "center", fontSize: "var(--text-caption)", marginTop: -12 }}>
+                @{ig} <ExternalLink size={11} />
+              </a>
+            )}
+
+            <section className="pp-section">
+              <div className="pp-section-title">Tipo de contato</div>
+              <select className="pp-select" value={lead.tipo ?? "lead"} onChange={(e) => setContactType(lead.id, e.target.value as ContactType)} aria-label="Tipo de contato">
+                {(Object.keys(TYPE_LABEL) as ContactType[]).map((t) => <option key={t} value={t}>{TYPE_LABEL[t]}</option>)}
+              </select>
+            </section>
+
+            <section className="pp-section">
+              <div className="pp-section-title">Cliente</div>
+              <ClientLinker lead={lead} />
+            </section>
+
+            <section className="pp-section">
+              <div className="pp-section-title">Dados</div>
+              <LeadFields form={form} onChange={(patch) => setForm((f) => ({ ...f, ...patch }))} single />
+            </section>
+          </>
+        )}
 
         {tab === "observacoes" && (
           <>
@@ -158,12 +177,9 @@ export default function LeadPanel({ lead }: { lead: Lead }) {
 
       {tab === "cadastro" && (
         <div className="pp-panel-foot">
-          <button className="btn btn-accent" style={{ flex: 1 }} onClick={save} disabled={!dirty || saving} title="Ctrl/Cmd + S">
+          <button className="btn btn-accent" style={{ flex: 1, height: 44 }} onClick={save} disabled={!dirty || saving} title="Ctrl/Cmd + S">
             <Save size={14} /> {saving ? "Salvando..." : dirty ? "Salvar alterações" : "Tudo salvo"}
           </button>
-          {!lead.client_id && (
-            <button className="btn btn-secondary btn-icon" title="Converter em cliente" aria-label="Converter em cliente" onClick={() => convertToClient(lead)}><UserCheck size={15} /></button>
-          )}
         </div>
       )}
     </div>

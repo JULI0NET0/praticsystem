@@ -151,6 +151,17 @@
   height: 100%;
 }
 
+/* Prospecção: ocupa a altura útil e cada coluna rola sozinha (sem scroll duplo da página). */
+.admin-content-area:has(#prospeccao-root) {
+  padding: 12px 16px 0;
+  overflow: hidden;
+}
+
+.admin-content-area:has(#prospeccao-root) > div {
+  max-width: none !important;
+  height: 100%;
+}
+
 /* Mobile (≤768px) */
 @media (max-width: 768px) {
   .admin-layout-container {
@@ -174,6 +185,10 @@
 
   .admin-content-area:has(#suporte-ai) {
     padding: 0 0 calc(var(--mobile-nav-height) + env(safe-area-inset-bottom, 0px));
+  }
+
+  .admin-content-area:has(#prospeccao-root) {
+    padding: 8px 8px calc(var(--mobile-nav-height) + env(safe-area-inset-bottom, 0px));
   }
 }
 

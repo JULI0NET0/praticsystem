@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { filterLeadsForCampaign, interpolate, maskCnpj, maskPhone, nextMessageStatus, normalizePhone, parseInstagram, parseLeadsCsv, parseSegments, phoneKey, phoneVariants, pipelineStats, validateCnpj } from './leads';
+import { displayName, filterLeadsForCampaign, interpolate, nameSuggestions, maskCnpj, maskPhone, nextMessageStatus, normalizePhone, parseInstagram, parseLeadsCsv, parseSegments, phoneKey, phoneVariants, pipelineStats, validateCnpj } from './leads';
 import { parseIncomingMessage, parseUazapiEvent } from './webhook';
 import { classifyPhone, countsForBadge } from './classify';
 import { expandOccurrences, isOutsideBusinessHours, nextOccurrence } from './schedule';
@@ -175,5 +175,21 @@ describe('recorrência de agendamentos', () => {
   it('horário comercial em São Paulo', () => {
     expect(isOutsideBusinessHours(new Date('2026-10-12T15:00:00Z'))).toBe(false); // 12h BRT
     expect(isOutsideBusinessHours(new Date('2026-10-12T02:00:00Z'))).toBe(true); // 23h BRT
+  });
+});
+
+describe('nome na nossa base', () => {
+  it('nosso nome vence o da agenda do celular', () =>
+    expect(displayName({ nome: 'Julio Mendonça', telefone: '5543999359959', wa_name: 'Julio Neto', wa_contact_name: 'Marido' })).toBe('Julio Mendonça'));
+  it('sem nome ou só telefone cai para o WhatsApp', () => {
+    expect(displayName({ nome: '5543999359959', telefone: '5543999359959', wa_name: 'Julio Neto' })).toBe('Julio Neto');
+    expect(displayName({ nome: '', telefone: '5543999359959', wa_contact_name: 'Marido' })).toBe('Marido');
+    expect(displayName({ nome: '5543999359959', telefone: '5543999359959' })).toBe('(43) 99935-9959');
+  });
+  it('sugestões só trazem nomes diferentes do atual, sem repetir', () => {
+    const l = { nome: 'Julio Mendonça', telefone: '5543999359959', wa_name: 'Julio Neto', wa_contact_name: 'Marido' };
+    expect(nameSuggestions(l).map((s) => s.name)).toEqual(['Julio Neto', 'Marido']);
+    expect(nameSuggestions({ ...l, wa_name: 'julio mendonça' }).map((s) => s.name)).toEqual(['Marido']);
+    expect(nameSuggestions({ ...l, wa_contact_name: 'Julio Neto' }).map((s) => s.name)).toEqual(['Julio Neto']);
   });
 });
