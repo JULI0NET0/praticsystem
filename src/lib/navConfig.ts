@@ -14,6 +14,7 @@ import {
   Trophy,
   Network,
   QrCode,
+  Target,
   Bot,
   type LucideIcon
 } from "lucide-react";
@@ -53,6 +54,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/admin/clients", label: "Clientes", icon: Users, roles: ['admin', 'board', 'social_media'] },
       { href: "/admin/services", label: "Serviços", icon: Briefcase, roles: ['admin', 'board'] },
+      { href: "/admin/prospeccao", label: "Prospecção", icon: Target, roles: ['admin', 'board', 'social_media'] },
       { href: "/admin/qrcodes", label: "QR Codes", icon: QrCode, roles: ['admin', 'board', 'social_media'] },
     ]
   },
