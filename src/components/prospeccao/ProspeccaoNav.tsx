@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Kanban, Users, MessageCircle, Megaphone, Zap } from "lucide-react";
+import { CalendarClock, Kanban, Users, MessageCircle, Megaphone, Zap } from "lucide-react";
 import { countsForBadge } from "@/lib/prospeccao/classify";
 import { useProspeccao } from "./ProspeccaoProvider";
 
@@ -10,6 +10,7 @@ const TABS = [
   { href: "/admin/prospeccao", label: "Funil", icon: Kanban, exact: true },
   { href: "/admin/prospeccao/leads", label: "Leads", icon: Users },
   { href: "/admin/prospeccao/conversas", label: "Conversas", icon: MessageCircle },
+  { href: "/admin/prospeccao/agendadas", label: "Agendadas", icon: CalendarClock },
   { href: "/admin/prospeccao/campanhas", label: "Campanhas", icon: Megaphone },
   { href: "/admin/prospeccao/respostas", label: "Respostas rápidas", icon: Zap },
 ];

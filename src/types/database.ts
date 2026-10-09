@@ -417,6 +417,7 @@ export interface ScheduledMessage {
   series_id?: string | null;
   campaign_id?: string | null;
   uazapi_folder_id?: string | null;
+  external_id?: string | null;
   sent_message_id?: string | null;
   error?: string | null;
   created_by?: string | null;

@@ -5,6 +5,7 @@ import { copyToBucket, enrichLeadFromWhatsApp, previewFor } from '@/lib/prospecc
 import { nextMessageStatus, phoneVariants } from '@/lib/prospeccao/leads';
 import { SILENT_TYPES, classifyPhone } from '@/lib/prospeccao/classify';
 import { getProvider } from '@/lib/whatsapp/provider';
+import { cancelFollowups } from '@/lib/prospeccao/scheduleServer';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -50,6 +51,9 @@ async function applyStatus(supabase: Supabase, event: Extract<UazapiEvent, { kin
     .select('id, status')
     .in('external_id', event.messageIds)
     .eq('direction', 'out');
+  if (event.state === 'failed') {
+    await supabase.from('scheduled_messages').update({ status: 'failed', error: 'O WhatsApp não entregou', updated_at: new Date().toISOString() }).in('external_id', event.messageIds).eq('status', 'pending');
+  }
   for (const row of rows ?? []) {
     const next = nextMessageStatus(row.status, event.state);
     if (next !== row.status) await supabase.from('lead_messages').update({ status: next }).eq('id', row.id);
@@ -105,7 +109,7 @@ async function storeMessage(supabase: Supabase, event: MessageEvent) {
     if (dl) media = await copyToBucket(supabase, dl.url, lead.id, dl.mimetype ?? event.mimetype, event.fileName);
   }
 
-  const { error: insertError } = await supabase.from('lead_messages').insert({
+  const { data: inserted, error: insertError } = await supabase.from('lead_messages').insert({
     lead_id: lead.id,
     direction: event.fromMe ? 'out' : 'in',
     body: event.body,
@@ -117,11 +121,29 @@ async function storeMessage(supabase: Supabase, event: MessageEvent) {
     media_size: media?.size ?? null,
     status: event.fromMe ? 'sent' : 'delivered',
     external_id: event.externalId,
-  });
+  }).select('id').single();
   // 23505: o envio direto já gravou esta mensagem (corrida com o webhook); nada a fazer.
   if (insertError) {
     if (insertError.code === '23505') return;
     throw insertError;
+  }
+
+  if (event.fromMe && event.externalId) {
+    // Envio agendado que acabou de sair: marca como enviado e liga à mensagem do chat.
+    const { data: done } = await supabase
+      .from('scheduled_messages')
+      .update({ status: 'sent', sent_message_id: inserted?.id ?? null, updated_at: new Date().toISOString() })
+      .eq('external_id', event.externalId)
+      .eq('status', 'pending')
+      .select('campaign_id');
+    for (const d of done ?? []) {
+      if (d.campaign_id) await supabase.from('campaign_recipients').update({ status: 'sent', sent_at: new Date().toISOString() }).eq('campaign_id', d.campaign_id).eq('lead_id', lead.id);
+    }
+  }
+  if (!event.fromMe) {
+    // O lead respondeu: follow-ups pendentes perdem o sentido e a campanha conta uma resposta.
+    await cancelFollowups(supabase, lead.id);
+    await supabase.from('campaign_recipients').update({ status: 'replied' }).eq('lead_id', lead.id).eq('status', 'sent');
   }
 
   const silent = SILENT_TYPES.includes(lead.tipo);

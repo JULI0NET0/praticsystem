@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS public.scheduled_messages (
     series_id        UUID,
     campaign_id      UUID REFERENCES public.campaigns(id) ON DELETE SET NULL,
     uazapi_folder_id TEXT,
+    external_id      TEXT,
     sent_message_id  UUID REFERENCES public.lead_messages(id) ON DELETE SET NULL,
     error            TEXT,
     created_by       UUID REFERENCES auth.users(id) ON DELETE SET NULL,
@@ -49,6 +50,7 @@ CREATE TABLE IF NOT EXISTS public.scheduled_messages (
 );
 CREATE INDEX IF NOT EXISTS scheduled_messages_lead_idx   ON public.scheduled_messages (lead_id, run_at);
 CREATE INDEX IF NOT EXISTS scheduled_messages_status_idx ON public.scheduled_messages (status, run_at);
+CREATE INDEX IF NOT EXISTS scheduled_messages_external_idx ON public.scheduled_messages (external_id) WHERE external_id IS NOT NULL;
 
 ALTER TABLE public.scheduled_messages ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "scheduled_messages_select" ON public.scheduled_messages;

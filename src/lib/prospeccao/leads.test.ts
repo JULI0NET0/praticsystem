@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { filterLeadsForCampaign, interpolate, maskCnpj, maskPhone, nextMessageStatus, normalizePhone, parseInstagram, parseLeadsCsv, parseSegments, phoneKey, phoneVariants, pipelineStats, validateCnpj } from './leads';
 import { parseIncomingMessage, parseUazapiEvent } from './webhook';
 import { classifyPhone, countsForBadge } from './classify';
+import { expandOccurrences, isOutsideBusinessHours, nextOccurrence } from './schedule';
 import type { Lead } from '@/types/database';
 
 const lead = (over: Partial<Lead>): Lead => ({
@@ -147,5 +148,32 @@ describe('classifyPhone', () => {
     expect(countsForBadge('triagem')).toBe(true);
     expect(countsForBadge('equipe')).toBe(false);
     expect(countsForBadge('cliente')).toBe(false);
+  });
+});
+
+describe('recorrência de agendamentos', () => {
+  const start = new Date('2026-10-12T12:00:00Z');
+  it('sem regra: só a data', () => expect(expandOccurrences(start, null)).toEqual([start]));
+  it('semanal a cada 1, respeita o máximo', () => {
+    const out = expandOccurrences(start, { freq: 'weekly', interval: 1 }, { max: 3 });
+    expect(out.map((d) => d.toISOString().slice(0, 10))).toEqual(['2026-10-12', '2026-10-19', '2026-10-26']);
+  });
+  it('diário a cada 2 dias', () =>
+    expect(nextOccurrence(start, { freq: 'daily', interval: 2 }).toISOString().slice(0, 10)).toBe('2026-10-14'));
+  it('mensal preserva o dia e ajusta fim de mês', () => {
+    const jan31 = new Date('2026-01-31T12:00:00Z');
+    expect(nextOccurrence(jan31, { freq: 'monthly', interval: 1 }).toISOString().slice(0, 10)).toBe('2026-02-28');
+  });
+  it('termina em until', () => {
+    const out = expandOccurrences(start, { freq: 'weekly', interval: 1, until: '2026-10-20T00:00:00Z' });
+    expect(out).toHaveLength(2);
+  });
+  it('count é o total da série, descontando as já criadas', () => {
+    expect(expandOccurrences(start, { freq: 'daily', interval: 1, count: 5 })).toHaveLength(5);
+    expect(expandOccurrences(start, { freq: 'daily', interval: 1, count: 5 }, { alreadyCreated: 3 })).toHaveLength(2);
+  });
+  it('horário comercial em São Paulo', () => {
+    expect(isOutsideBusinessHours(new Date('2026-10-12T15:00:00Z'))).toBe(false); // 12h BRT
+    expect(isOutsideBusinessHours(new Date('2026-10-12T02:00:00Z'))).toBe(true); // 23h BRT
   });
 });

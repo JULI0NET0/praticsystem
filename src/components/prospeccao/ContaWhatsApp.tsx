@@ -14,6 +14,7 @@ interface Conta {
   number?: string | null;
   avatar?: string | null;
   webhookRegistered?: boolean;
+  webhookOutdated?: boolean;
   error?: string;
 }
 
@@ -67,7 +68,13 @@ export default function ContaWhatsApp() {
           {isHttps && <button className="btn btn-accent btn-sm" onClick={registerWebhook} disabled={fixing}>{fixing ? "Registrando..." : "Registrar agora"}</button>}
         </span>
       )}
-      <button className="btn btn-ghost btn-icon" style={{ marginLeft: conta.webhookRegistered ? "auto" : 0 }} onClick={load} aria-label="Atualizar"><RefreshCw size={14} /></button>
+      {conta.connected && conta.webhookRegistered && conta.webhookOutdated && (
+        <span style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 8, color: "#CA8A04" }}>
+          <AlertTriangle size={14} /> Webhook desatualizado: mensagens agendadas não aparecem no chat.
+          {isHttps && <button className="btn btn-accent btn-sm" onClick={registerWebhook} disabled={fixing}>{fixing ? "Atualizando..." : "Atualizar webhook"}</button>}
+        </span>
+      )}
+      <button className="btn btn-ghost btn-icon" style={{ marginLeft: conta.webhookRegistered && !conta.webhookOutdated ? "auto" : 0 }} onClick={load} aria-label="Atualizar"><RefreshCw size={14} /></button>
     </div>
   );
 }

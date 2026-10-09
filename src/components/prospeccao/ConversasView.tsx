@@ -14,6 +14,8 @@ import LeadPanel from "./LeadPanel";
 import MediaBubble from "./MediaBubble";
 import AudioRecorder from "./AudioRecorder";
 import TriageBanner from "./TriageBanner";
+import ScheduleButton from "./ScheduleButton";
+import ScheduledStrip from "./ScheduledStrip";
 import type { ContactType, Lead, LeadMessage, LeadStage } from "@/types/database";
 
 const MAX_FILE_MB = 16;
@@ -72,6 +74,7 @@ export default function ConversasView() {
   const [unreadAtOpen, setUnreadAtOpen] = useState(0);
   const [atBottom, setAtBottom] = useState(true);
   const [newBelow, setNewBelow] = useState(0);
+  const [schedKey, setSchedKey] = useState(0);
   const endRef = useRef<HTMLDivElement>(null);
   const msgsRef = useRef<HTMLDivElement>(null);
   const dividerRef = useRef<HTMLDivElement>(null);
@@ -342,6 +345,7 @@ export default function ConversasView() {
                   {newBelow > 0 && <span className="pp-unread">{newBelow}</span>}
                 </button>
               )}
+              <ScheduledStrip leadId={active.id} refreshKey={schedKey} />
               <div className="pp-composer">
                 {qrMatches.length > 0 && (
                   <div className="pp-qr-pop">
@@ -355,6 +359,7 @@ export default function ConversasView() {
                 )}
                 <input ref={fileRef} type="file" hidden accept="image/*,video/mp4,audio/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt" onChange={(e) => { const f = e.target.files?.[0]; if (f) sendFile(f); e.target.value = ""; }} />
                 <button className="btn btn-secondary btn-icon" onClick={() => fileRef.current?.click()} disabled={sending} aria-label="Anexar arquivo" title="Foto, vídeo, documento ou áudio"><Paperclip size={16} /></button>
+                <ScheduleButton lead={active} text={text} onScheduled={() => { setText(""); setSchedKey((k) => k + 1); }} />
                 <textarea className="pp-textarea" rows={1} style={{ resize: "none", maxHeight: 120 }} placeholder="Mensagem (/ para respostas rápidas)" value={text} onChange={(e) => { setText(e.target.value); setQrIndex(0); }} onKeyDown={onKeyDown} />
                 {text.trim() ? (
                   <button className="btn btn-accent btn-icon" onClick={sendText} disabled={sending} aria-label="Enviar"><Send size={16} /></button>
