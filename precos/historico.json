@@ -1,0 +1,154 @@
+{
+  "_fonte": "PROPOSTAS PRATIC/ (pastas APROVADA, RECUSADA, STAND BY). Valores lidos dos docx.",
+  "propostas": [
+    {
+      "cliente": "Instituto de Tricologia e Transplante Capilar",
+      "status": "aprovada",
+      "modelo": "mensal",
+      "valor": 3900,
+      "unidade": "mês",
+      "inicio": "2025-10-08",
+      "vigencia": "indefinida",
+      "escopo": "Gestão de redes + 1 captação/mês (meia diária)",
+      "arquivo": "APROVADA/Contrato Pratic [Instituto de Tricologia...]"
+    },
+    {
+      "cliente": "Loom Iluminação",
+      "status": "aprovada",
+      "modelo": "mensal + projetos",
+      "valor": 2500,
+      "unidade": "mês",
+      "extras": "Identidade visual R$ 3.000 (única) + Site institucional R$ 2.000 (única)",
+      "inicio": "2025-05",
+      "vigencia": "6 meses",
+      "escopo": "3–4 posts/semana, 1 captação/mês (1 diária), roteiros e edição de vídeo",
+      "arquivo": "APROVADA/[LOOM ILUMINAÇÃO] Contrato"
+    },
+    {
+      "cliente": "Cavezzo Móveis",
+      "status": "aprovada",
+      "modelo": "mensal",
+      "valor": 2500,
+      "unidade": "mês",
+      "inicio": "2026-03-10",
+      "vigencia": "6 meses",
+      "escopo": "Gestão de redes + relatório mensal",
+      "arquivo": "APROVADA/Contrato Pratic [Cavezzo]"
+    },
+    {
+      "cliente": "Black Home",
+      "status": "aprovada",
+      "modelo": "mensal",
+      "valor": 2150,
+      "unidade": "mês",
+      "inicio": "2026-05-01",
+      "vigencia": "6 meses",
+      "escopo": "Redes sociais + Google Ads + Google Meu Negócio + relatório orgânico/pago; 1 captação/mês (meia diária); verba de mídia à parte",
+      "arquivo": "APROVADA/Contrato Pratic [BLACK HOME]",
+      "nota": "Preço estratégico (Google Ads incluso por R$ 2.150, decisão do Julio)"
+    },
+    {
+      "cliente": "Balloarts",
+      "status": "aprovada",
+      "modelo": "mensal",
+      "valor": 2000,
+      "unidade": "mês",
+      "inicio": "2026-01-08",
+      "vigencia": "3 meses",
+      "escopo": "Gestão de redes + 1 captação/mês (meia diária)",
+      "arquivo": "APROVADA/Contrato Pratic [BALLOARTS]"
+    },
+    {
+      "cliente": "Kallas Design (gestão)",
+      "status": "aprovada",
+      "modelo": "mensal",
+      "valor": 1950,
+      "unidade": "mês",
+      "inicio": "2026-02-06",
+      "vigencia": "1 mês (renovável)",
+      "escopo": "Gestão de redes + 1 captação/mês (meia diária) + imagens ambientadas com IA",
+      "arquivo": "APROVADA/_[KALLAS DESIGN]] Contrato"
+    },
+    {
+      "cliente": "Instituto Amanda Prado (gestão)",
+      "status": "aprovada",
+      "modelo": "mensal + avulso",
+      "valor": 1950,
+      "unidade": "mês",
+      "extras": "Diária de captação de evento R$ 1.200; deslocamento R$ 350/captação fora de Apucarana",
+      "escopo": "2 posts/semana, gestão completa da conta, materiais de apoio, captações inclusas",
+      "arquivo": "APROVADA/PROPOSTA_AMANDA_PRADO_GESTAO_CONTEUDO",
+      "nota": "Cliente seguiu em formato avulso: conteúdo (carrossel 80 + PDF 80) + diária de captação R$ 1.200 + R$ 300 deslocamento/alimentação = R$ 1.500 (6–10 vídeos, até 12)"
+    },
+    {
+      "cliente": "Letícia da Silva Aguiar",
+      "status": "aprovada",
+      "modelo": "mensal",
+      "valor": 1100,
+      "unidade": "mês",
+      "inicio": null,
+      "vigencia": "3 meses",
+      "escopo": "2 posts/semana no Instagram, 10 artes/mês, edição de foto/vídeo, manutenção de campanhas, relatório mensal",
+      "arquivo": "APROVADA/[Letícia da Silva Aguiar] Contrato"
+    },
+    {
+      "cliente": "Luane Aparecida Ferreira Lopes",
+      "status": "aprovada",
+      "modelo": "mensal",
+      "valor": 580,
+      "unidade": "mês",
+      "inicio": "2026-03-13",
+      "vigencia": "3 meses",
+      "escopo": "Gestão de redes + 1 captação/mês (meia diária)",
+      "arquivo": "APROVADA/Contrato Pratic [Luane...]"
+    },
+    {
+      "cliente": "Calvar (novo site)",
+      "status": "aprovada",
+      "modelo": "projeto + mensal",
+      "valor": 4500,
+      "unidade": "projeto",
+      "extras": "Manutenção R$ 450/mês; 50% na aprovação + 50% na entrega; prazo 4–6 semanas. Frentes: site+triagem 1.700, loja+checkout 1.400, painel admin 1.100, WhatsApp 300",
+      "arquivo": "APROVADA/PROPOSTA_CALVAR_NOVO_SITE"
+    },
+    {
+      "cliente": "Instituto Amanda Prado (LP + WhatsApp + domínio)",
+      "status": "aprovada",
+      "modelo": "projeto",
+      "valor": 950,
+      "unidade": "pacote",
+      "extras": "LP inicial vendida a R$ 850; repasses: domínio R$ 50/ano, API WhatsApp R$ 38/mês, sem markup",
+      "arquivo": "APROVADA/PROPOSTA AMANDA PRADO LP WHATSAPP DOMINIO-1"
+    },
+    {
+      "cliente": "Recloset Bazar",
+      "status": "recusada",
+      "modelo": "mensal",
+      "valor": 2800,
+      "unidade": "mês",
+      "extras": "12 meses sem reajuste (R$ 33.600); evento R$ 300 a custo; tráfego à parte",
+      "escopo": "3 conteúdos/semana (vídeo), assessoria, 3 mini captações de 2h/mês",
+      "arquivo": "RECUSADA/Proposta Recloset Bazar - Parceria (1)",
+      "motivo_recusa": "Preferiu seguir com serviços avulsos"
+    },
+    {
+      "cliente": "Kallas Design (site)",
+      "status": "stand by",
+      "modelo": "projeto + mensal",
+      "valor": 1500,
+      "unidade": "projeto",
+      "extras": "R$ 119,90/mês; entrada na assinatura + saldo até a publicação",
+      "arquivo": "STAND BY/Proposta-Pratic-KALLAS-Site"
+    },
+    {
+      "cliente": "Campa Inc. (Engedomus)",
+      "status": "stand by",
+      "modelo": "mensal",
+      "valor": 2300,
+      "unidade": "mês",
+      "extras": "Incorporadora 2.300; Construtora 2.300; combo 3.800; eventos/projetos cotados à parte; verba de mídia não inclusa",
+      "escopo": "Gestão estratégica, captação mensal, conteúdo com IA, tráfego pago, relatório + reunião mensal",
+      "arquivo": "STAND BY/Proposta_Pratic_CampaInc_Engedomus"
+    }
+  ]
+}

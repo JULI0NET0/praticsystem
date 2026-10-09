@@ -13,6 +13,8 @@
       "Bash(python3 -c ' *)",
       "Bash(awk '/BLOCO 11/,/BLOCO 12/' setup_database.sql)",
       "Bash(git fetch *)",
+      "Bash(python3 /Users/julioneto/.claude/skills/proposta-pratic/scripts/upload_gdoc.py *)",
+      "Bash(curl -s -F * http://localhost:3000/api/propostas/upload)",
       "mcp__vercel__get_project",
       "mcp__vercel__list_deployments"
     ]

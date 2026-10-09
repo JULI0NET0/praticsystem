@@ -1,0 +1,392 @@
+{
+  "_status": "Tabela de referência do Julio (rodada 2). 'faixa' = [mín, máx]; 'referencias' = o que já foi contratado de fato. Desconto para conhecidos/condição especial só com autorização explícita do Julio.",
+  "itens": [
+    {
+      "id": "redes-inicial",
+      "categoria": "Gestão de redes",
+      "nome": "Pacote inicial de redes",
+      "modelo": "mensal",
+      "faixa": [
+        1200,
+        1500
+      ],
+      "teto": 2800,
+      "unidade": "mês",
+      "inclui": [
+        "Conteúdo conforme complexidade do caso"
+      ],
+      "nao_inclui": [
+        "Tráfego pago"
+      ],
+      "regras": "Caso a caso; pode ficar abaixo da faixa para pessoas conhecidas ou condição especial; considera complexidade.",
+      "referencias": [
+        "Luane R$ 580",
+        "Letícia R$ 1.100"
+      ]
+    },
+    {
+      "id": "redes-2-semana",
+      "categoria": "Gestão de redes",
+      "nome": "2 conteúdos/semana (ter e qui) + captação",
+      "modelo": "mensal",
+      "faixa": [
+        1200,
+        1500
+      ],
+      "unidade": "mês",
+      "posts_mes": 8,
+      "inclui": [
+        "8 posts/mês",
+        "1 captação mensal de meia diária (não cumulativa)"
+      ],
+      "nao_inclui": [
+        "Tráfego pago"
+      ],
+      "regras": "Captação não cumulativa: mês sem gravar não gera crédito, salvo combinado prévio.",
+      "referencias": [
+        "Balloarts R$ 2.000",
+        "Kallas R$ 1.950",
+        "Amanda R$ 1.950"
+      ]
+    },
+    {
+      "id": "redes-3-semana",
+      "categoria": "Gestão de redes",
+      "nome": "3 posts/semana + assessoria offline",
+      "modelo": "mensal",
+      "faixa": [
+        2000,
+        2800
+      ],
+      "unidade": "mês",
+      "posts_mes": 12,
+      "inclui": [
+        "12 posts/mês",
+        "Meia diária de captação mensal (opcional)",
+        "Assessoria offline: campanhas, materiais, calendário editorial, análise de métricas, reunião de feedback mensal"
+      ],
+      "nao_inclui": [
+        "Verba de mídia"
+      ],
+      "regras": "Sobe com mais de uma captação mensal e com tráfego incluso.",
+      "referencias": [
+        "Cavezzo R$ 2.500",
+        "Loom R$ 2.500",
+        "Recloset R$ 2.800 (recusada)",
+        "Instituto Tricologia R$ 3.900 (acima do teto, escopo maior)"
+      ]
+    },
+    {
+      "id": "trafego-terceirizado",
+      "categoria": "Gestão de redes",
+      "nome": "Tráfego pago (terceirizado)",
+      "modelo": "mensal",
+      "valor_base": 500,
+      "unidade": "mês",
+      "inclui": [
+        "Gestão de campanhas"
+      ],
+      "nao_inclui": [
+        "Verba de mídia (sempre do cliente)"
+      ],
+      "custo_terceiro": 500,
+      "regras": "Custo do terceiro R$ 500; entra no preço do pacote ou é cobrado à parte.",
+      "referencias": [
+        "Black Home R$ 2.150 (redes + Google)",
+        "Campa R$ 2.300 (por marca)"
+      ]
+    },
+    {
+      "id": "captacao-video",
+      "categoria": "Captação",
+      "nome": "Captação de vídeos (todos os materiais, com edição)",
+      "modelo": "avulso",
+      "unidade": "diária",
+      "faixa": [
+        1100,
+        1200
+      ],
+      "meia_diaria": "não vendida",
+      "videos_por_diaria": [
+        8,
+        10
+      ],
+      "inclui": [
+        "Diária de gravação de todos os materiais",
+        "8 a 10 vídeos por diária",
+        "Edição incluída",
+        "Apoio em roteiro"
+      ],
+      "nao_inclui": [
+        "Deslocamento e alimentação (cobrados à parte, por faixa de distância)"
+      ],
+      "regras": "R$ 1.100 a R$ 1.200 conforme a complexidade. Só diária completa (meia diária de vídeo não é vendida). Se a gravação render mais vídeos que 8–10, damos andamento nos excedentes (até ~12, como na Amanda).",
+      "referencias": [
+        "Amanda Prado: diária R$ 1.200 + R$ 300 deslocamento/alimentação = R$ 1.500 (6–10 vídeos, até 12)"
+      ]
+    },
+    {
+      "id": "evento-diaria",
+      "categoria": "Captação",
+      "nome": "Cobertura de evento — diária completa (tempo real)",
+      "modelo": "avulso",
+      "unidade": "diária",
+      "valor_base": 1300,
+      "inclui": [
+        "Cobertura em tempo real",
+        "Fotos, vídeos, stories e reels finais"
+      ],
+      "nao_inclui": [
+        "Deslocamento e alimentação (cobrados à parte)"
+      ],
+      "regras": "Evento noturno: +R$ 100 (INFO INTERNA, não aparece na proposta ao cliente).",
+      "adicional_noturno_interno": 100,
+      "referencias": [
+        "Amanda Prado: diária de evento R$ 1.200 (antes da tabela atual)"
+      ]
+    },
+    {
+      "id": "evento-meia-diaria",
+      "categoria": "Captação",
+      "nome": "Cobertura de evento — meia diária (tempo real)",
+      "modelo": "avulso",
+      "unidade": "meia diária",
+      "faixa": [
+        750,
+        800
+      ],
+      "inclui": [
+        "Cobertura em tempo real (manhã, tarde ou noite)",
+        "Fotos, vídeos, stories e reels finais"
+      ],
+      "nao_inclui": [
+        "Deslocamento e alimentação (cobrados à parte)"
+      ],
+      "regras": "Evento noturno: +R$ 100 (INFO INTERNA, não aparece na proposta ao cliente).",
+      "adicional_noturno_interno": 100,
+      "referencias": []
+    },
+    {
+      "id": "conteudo-avulso",
+      "categoria": "Captação",
+      "nome": "Conteúdo avulso (carrossel / PDF informativo)",
+      "modelo": "avulso",
+      "valor_base": 80,
+      "unidade": "peça",
+      "inclui": [],
+      "nao_inclui": [],
+      "referencias": [
+        "Amanda Prado: carrossel R$ 80 + PDF R$ 80"
+      ]
+    },
+    {
+      "id": "deslocamento",
+      "categoria": "Repasse",
+      "nome": "Deslocamento + alimentação (captação presencial)",
+      "modelo": "avulso",
+      "unidade": "captação",
+      "valor_base": null,
+      "faixa": [
+        300,
+        350
+      ],
+      "inclui": [],
+      "nao_inclui": [],
+      "regras": "Por faixa de distância; faixas e valores a definir pelo Julio.",
+      "referencias": [
+        "Amanda R$ 350 fora de Apucarana",
+        "Amanda/Calvar R$ 300"
+      ]
+    },
+    {
+      "id": "landing-page",
+      "categoria": "Sites",
+      "nome": "Landing page básica",
+      "modelo": "projeto",
+      "faixa": [
+        800,
+        900
+      ],
+      "unidade": "projeto",
+      "inclui": [],
+      "nao_inclui": [
+        "Domínio"
+      ],
+      "referencias": [
+        "Amanda LP R$ 850"
+      ]
+    },
+    {
+      "id": "site-estatico",
+      "categoria": "Sites",
+      "nome": "Site com múltiplas páginas estáticas",
+      "modelo": "projeto",
+      "valor_base": 1200,
+      "unidade": "projeto",
+      "inclui": [],
+      "nao_inclui": [
+        "Domínio",
+        "Hospedagem"
+      ],
+      "referencias": [
+        "Kallas R$ 1.500 (stand by)",
+        "Loom R$ 2.000"
+      ]
+    },
+    {
+      "id": "site-login",
+      "categoria": "Sites",
+      "nome": "Site com login de usuário",
+      "modelo": "projeto",
+      "faixa": [
+        1900,
+        2200
+      ],
+      "unidade": "projeto",
+      "inclui": [],
+      "nao_inclui": [
+        "Domínio",
+        "Hospedagem"
+      ],
+      "referencias": []
+    },
+    {
+      "id": "site-sistema",
+      "categoria": "Sites",
+      "nome": "Sistema complexo (venda, pagamento, integrações)",
+      "modelo": "projeto",
+      "faixa": [
+        2800,
+        4900
+      ],
+      "unidade": "projeto",
+      "inclui": [],
+      "nao_inclui": [
+        "Hospedagem",
+        "Domínio",
+        "Taxas de gateway/frete"
+      ],
+      "regras": "Depende da complexidade. Pagamento usual: 50% na aprovação + 50% na entrega.",
+      "referencias": [
+        "Calvar R$ 4.500 + R$ 450/mês manutenção"
+      ]
+    },
+    {
+      "id": "site-manutencao",
+      "categoria": "Sites",
+      "nome": "Manutenção mensal de site",
+      "modelo": "mensal",
+      "faixa": [
+        119.9,
+        450
+      ],
+      "unidade": "mês",
+      "inclui": [
+        "Monitoramento",
+        "Correções e pequenos ajustes"
+      ],
+      "nao_inclui": [],
+      "regras": "Valor depende das integrações.",
+      "referencias": [
+        "Kallas R$ 119,90",
+        "Calvar R$ 450"
+      ]
+    },
+    {
+      "id": "imagens-volume",
+      "categoria": "Imagens",
+      "nome": "Pacote de volume (~150 imagens simples)",
+      "modelo": "avulso",
+      "faixa": [
+        15,
+        30
+      ],
+      "unidade": "imagem",
+      "inclui": [
+        "Imagens simples, baixa complexidade"
+      ],
+      "nao_inclui": [],
+      "referencias": []
+    },
+    {
+      "id": "imagens-detalhadas",
+      "categoria": "Imagens",
+      "nome": "Pacote de imagens detalhadas (10–15/mês)",
+      "modelo": "mensal",
+      "faixa": [
+        1100,
+        1200
+      ],
+      "unidade": "mês",
+      "inclui": [
+        "10 a 15 imagens por mês"
+      ],
+      "nao_inclui": [],
+      "referencias": []
+    },
+    {
+      "id": "identidade-visual",
+      "categoria": "Identidade",
+      "nome": "Identidade visual",
+      "modelo": "projeto",
+      "valor_base": 3000,
+      "unidade": "projeto",
+      "inclui": [],
+      "nao_inclui": [],
+      "referencias": [
+        "Loom, prazo 25 dias"
+      ]
+    },
+    {
+      "id": "dominio",
+      "categoria": "Repasse",
+      "nome": "Domínio",
+      "modelo": "avulso",
+      "valor_base": 50,
+      "unidade": "ano",
+      "regras": "Repasse a custo, sem markup.",
+      "inclui": [],
+      "nao_inclui": [],
+      "referencias": [
+        "Amanda"
+      ]
+    },
+    {
+      "id": "api-whatsapp",
+      "categoria": "Repasse",
+      "nome": "API de disparo de WhatsApp",
+      "modelo": "avulso",
+      "valor_base": 38,
+      "unidade": "mês",
+      "regras": "Repasse a custo, sem markup.",
+      "inclui": [],
+      "nao_inclui": [],
+      "referencias": [
+        "Amanda"
+      ]
+    },
+    {
+      "id": "evento-custo",
+      "categoria": "Repasse",
+      "nome": "Custos de evento",
+      "modelo": "avulso",
+      "valor_base": 300,
+      "unidade": "evento",
+      "regras": "Repasse a custo, sem margem.",
+      "inclui": [],
+      "nao_inclui": [],
+      "referencias": [
+        "Recloset"
+      ]
+    }
+  ],
+  "regras_gerais": [
+    "Verba de mídia (Meta/Google) sempre por conta do cliente.",
+    "Captação extra além da inclusa é avulso, combinada antes.",
+    "Captação mensal não é cumulativa, salvo acerto prévio.",
+    "Repasses (domínio, API, evento) a valor de custo, sem markup.",
+    "Desconto para conhecidos/condição especial: só quando o Julio autorizar.",
+    "Contratos: multa 2% + juros por atraso; rescisão antecipada com multa de 30% do restante; reajuste por IPCA na renovação.",
+    "Adicional de evento noturno (+R$ 100) é informação interna: embutir no valor da proposta, não listar ao cliente."
+  ]
+}
