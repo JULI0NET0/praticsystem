@@ -391,7 +391,7 @@ export default function ConversasView() {
             )}
           </>
         ) : (
-          <div className="pp-chat-main" style={{ alignItems: "center", justifyContent: "center", color: "var(--color-text-tertiary)", gridColumn: "span 2" }}>
+          <div className="pp-chat-main" style={{ alignItems: "center", justifyContent: "center", color: "var(--color-text-tertiary)" }}>
             Selecione uma conversa
           </div>
         )}
