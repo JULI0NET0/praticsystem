@@ -23,9 +23,21 @@ interface Offer {
   title: string;
   description: string;
   href: string;
+  external?: boolean;
+  featured?: boolean;
 }
 
 const offers: Offer[] = [
+  {
+    id: "curso",
+    eyebrow: "CURSO",
+    title: "Edição no Automático",
+    description:
+      "Edite vídeos com IA, só dando comando — corte, legenda, motion e 3D.",
+    href: "https://edicaonoautomatico.vercel.app/",
+    external: true,
+    featured: true,
+  },
   {
     id: "agencia",
     eyebrow: "CONTEÚDO",
@@ -126,14 +138,22 @@ export default function BioContent() {
             }}
           >
             {offers.map((offer, index) => (
-              <BioLinkCard
+              <div
                 key={offer.id}
-                index={index}
-                eyebrow={offer.eyebrow}
-                title={offer.title}
-                description={offer.description}
-                href={offer.href}
-              />
+                style={{
+                  height: "100%",
+                  ...(offer.featured ? { gridColumn: "1 / -1" } : {}),
+                }}
+              >
+                <BioLinkCard
+                  index={index}
+                  eyebrow={offer.eyebrow}
+                  title={offer.title}
+                  description={offer.description}
+                  href={offer.href}
+                  external={offer.external}
+                />
+              </div>
             ))}
           </div>
 
