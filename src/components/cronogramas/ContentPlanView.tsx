@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
-import { CalendarRange, ChevronLeft, Lightbulb, PenLine, Trash2, Trophy, Clapperboard, Plus, Link2, Printer, Loader2 } from "lucide-react";
+import { CalendarRange, ChevronLeft, Lightbulb, PenLine, Trash2, Trophy, Clapperboard, Plus, Link2, Printer, Loader2, ArrowRightLeft } from "lucide-react";
 import PageHeader from "@/components/ui/PageHeader";
 import { useToast } from "@/components/CustomToast";
 import { useAuth } from "@/hooks/useAuth";
@@ -26,6 +26,7 @@ import { useDemandas } from "@/components/demandas/DemandasProvider";
 import DemandModal from "@/components/demandas/DemandModal";
 import PlanItemRow from "./PlanItemRow";
 import PlanItemModal from "./PlanItemModal";
+import RemanejarCronogramaModal from "./RemanejarCronogramaModal";
 import PlanScriptRow from "./PlanScriptRow";
 import ScriptNoteDrawer from "./ScriptNoteDrawer";
 import LinkExistingNoteModal from "./LinkExistingNoteModal";
@@ -99,6 +100,7 @@ export default function ContentPlanView({ planId }: { planId: string }) {
   const [creatingScript, setCreatingScript] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [modal, setModal] = useState<{ mode: "create" | "edit"; role: NewPlanItem["role"]; demandId?: string } | null>(null);
+  const [remanejarOpen, setRemanejarOpen] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -550,6 +552,38 @@ export default function ContentPlanView({ planId }: { planId: string }) {
     setModal(null);
   };
 
+  const handleRemanejar = async (result: {
+    updates: { id: string; dueDate: string; position: number }[];
+    extras: { title: string; dueDate: string; contentType: string | null; channel: string | null; position: number }[];
+  }) => {
+    if (!plan || !currentUser) return;
+    const statusId =
+      statuses.find((s) => s.category === "nao_iniciado")?.id ?? statuses[0]?.id ?? "pending";
+    await Promise.all(
+      result.updates.map((item) =>
+        updateDemand(item.id, { due_date: item.dueDate, position: item.position }),
+      ),
+    );
+    for (const extra of result.extras) {
+      await addPlanItem(
+        plan,
+        {
+          title: extra.title,
+          date: extra.dueDate,
+          role: "post",
+          contentType: extra.contentType,
+          channel: extra.channel,
+        },
+        currentUser.id,
+        statusId,
+        extra.position,
+      );
+    }
+    await load();
+    setRemanejarOpen(false);
+    showToast("Cronograma remanejado.", "success");
+  };
+
   const handleModalSubmit = async (item: NewPlanItem) => {
     if (modal?.mode === "edit" && modal.demandId) {
       await updateDemand(modal.demandId, {
@@ -847,6 +881,18 @@ export default function ContentPlanView({ planId }: { planId: string }) {
         title="Conteúdos"
         icon={<CalendarRange size={14} />}
         count={posts.length}
+        action={posts.length > 0 ? (
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => setRemanejarOpen(true)}
+            disabled={plan.weekdays.length === 0}
+            title={plan.weekdays.length === 0 ? "Este cronograma não tem dias da semana." : "Reordenar conteúdos e incluir um extra"}
+            style={{ fontSize: "0.72rem", padding: "4px 10px", display: "flex", alignItems: "center", gap: 5 }}
+          >
+            <ArrowRightLeft size={13} /> Remanejar
+          </button>
+        ) : undefined}
       >
         {posts.length === 0 ? (
           <Empty>Nenhum conteúdo neste cronograma. Use o botão + no canto da tela para adicionar.</Empty>
@@ -904,6 +950,22 @@ export default function ContentPlanView({ planId }: { planId: string }) {
       >
         <Plus size={18} /> Novo conteúdo
       </button>
+
+      {remanejarOpen && (
+        <RemanejarCronogramaModal
+          plan={plan}
+          posts={posts}
+          nextPosition={Math.max(-1, ...planDemands.map((demand) => demand.position ?? 0)) + 1}
+          onConfirm={async (result) => {
+            try {
+              await handleRemanejar(result);
+            } catch (err) {
+              showToast("Erro ao remanejar: " + ((err as Error)?.message ?? ""), "error");
+            }
+          }}
+          onClose={() => setRemanejarOpen(false)}
+        />
+      )}
 
       {modal && (
         <PlanItemModal

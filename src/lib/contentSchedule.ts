@@ -199,3 +199,120 @@ export function shiftISODate(iso: string, days: number): string {
   if (!date) return iso;
   return toISODate(addDays(date, days));
 }
+
+export interface CadenceReassignInput {
+  /** Ordem desejada dos conteúdos que podem mudar de data. */
+  movableIds: string[];
+  /**
+   * Datas que esses conteúdos já ocupam. A ordem daqui não importa:
+   * as vagas são reaproveitadas em ordem cronológica. `null` não vira vaga
+   * — o conteúdo sem data recebe a próxima data gerada.
+   */
+  freeDates: (string | null | undefined)[];
+  /** Datas de conteúdos já publicados. Não são reatribuídas. */
+  pinnedDates?: (string | null | undefined)[];
+  weekdays: Weekday[];
+  postsPerWeek: number;
+  /**
+   * Só entra em cena quando não há nenhuma data na fila. A primeira vaga
+   * gerada parte daqui, inclusive.
+   */
+  anchor?: string | null;
+}
+
+export interface CadenceAssignment {
+  id: string;
+  date: string;
+}
+
+/**
+ * Remaneja a fila de conteúdos sobre a cadência do plano.
+ *
+ * Sem item novo, as datas que já existem só trocam de dono. Com item a mais,
+ * a vaga que falta é o próximo dia da semana do plano depois da última data,
+ * respeitando `postsPerWeek` na semana de segunda a domingo. Pode cair no
+ * mês seguinte.
+ */
+export function reassignCadenceDates(input: CadenceReassignInput): CadenceAssignment[] {
+  const weekdays = new Set<number>(input.weekdays);
+  const postsPerWeek = Math.max(0, input.postsPerWeek);
+  const slots = input.freeDates.filter(isISODate).sort();
+  const pinned = (input.pinnedDates ?? []).filter(isISODate);
+  const taken = [...slots, ...pinned];
+
+  while (slots.length < input.movableIds.length) {
+    const latest = latestISO(taken);
+    const next = nextCadenceDate({
+      afterExclusive: latest,
+      startInclusive: latest ? null : input.anchor ?? null,
+      weekdays,
+      postsPerWeek,
+      taken,
+    });
+    if (!next) break;
+    slots.push(next);
+    taken.push(next);
+  }
+
+  return input.movableIds.slice(0, slots.length).map((id, index) => ({
+    id,
+    date: slots[index],
+  }));
+}
+
+function isISODate(value: string | null | undefined): value is string {
+  return !!value && !!fromISODate(value);
+}
+
+function latestISO(dates: string[]): string | null {
+  if (dates.length === 0) return null;
+  return dates.reduce((latest, iso) => (iso > latest ? iso : latest));
+}
+
+/** Segunda-feira da semana calendário de `iso` (domingo pertence à semana anterior). */
+function mondayOf(iso: string): string | null {
+  const date = fromISODate(iso);
+  if (!date) return null;
+  const day = date.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  return toISODate(addDays(date, diff));
+}
+
+function cadenceCountInWeek(monday: string, taken: string[], weekdays: Set<number>): number {
+  let count = 0;
+  for (const iso of taken) {
+    if (mondayOf(iso) !== monday) continue;
+    const date = fromISODate(iso);
+    if (date && weekdays.has(date.getDay())) count += 1;
+  }
+  return count;
+}
+
+function nextCadenceDate(input: {
+  afterExclusive: string | null;
+  startInclusive: string | null;
+  weekdays: Set<number>;
+  postsPerWeek: number;
+  taken: string[];
+}): string | null {
+  if (input.weekdays.size === 0 || input.postsPerWeek <= 0) return null;
+
+  const start = input.afterExclusive
+    ? shiftISODate(input.afterExclusive, 1)
+    : input.startInclusive;
+  const cursor = start ? fromISODate(start) : null;
+  if (!cursor) return null;
+
+  const occupied = new Set(input.taken);
+  for (let step = 0; step < 800; step += 1) {
+    const day = addDays(cursor, step);
+    if (!input.weekdays.has(day.getDay())) continue;
+    const iso = toISODate(day);
+    if (occupied.has(iso)) continue;
+    const monday = mondayOf(iso);
+    if (!monday) continue;
+    if (cadenceCountInWeek(monday, input.taken, input.weekdays) >= input.postsPerWeek) continue;
+    return iso;
+  }
+  return null;
+}

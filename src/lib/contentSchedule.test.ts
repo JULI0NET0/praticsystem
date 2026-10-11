@@ -3,6 +3,7 @@ import {
   capturesPerPeriod,
   formatMonthRef,
   parseMonthRef,
+  reassignCadenceDates,
   selectCaptureDates,
   selectScheduleDates,
   shiftISODate,
@@ -227,6 +228,95 @@ describe('selectCaptureDates — notBefore', () => {
     for (const iso of selectCaptureDates(period, '2 diárias', '2026-09-15')) {
       expect(iso >= '2026-09-15').toBe(true);
     }
+  });
+});
+
+describe('reassignCadenceDates', () => {
+  // Setembro/2026: dia 7 é segunda. Cadência segunda, quarta, sexta.
+  const seg = '2026-09-07';
+  const qua = '2026-09-09';
+  const sex = '2026-09-11';
+  const segSeguinte = '2026-09-14';
+
+  const base = {
+    weekdays: SEG_QUA_SEX,
+    postsPerWeek: 3,
+  };
+
+  it('reordena sem criar data nova', () => {
+    const dates = reassignCadenceDates({
+      ...base,
+      movableIds: ['01', '03', '02'],
+      freeDates: [seg, qua, sex],
+    });
+
+    expect(dates).toEqual([
+      { id: '01', date: seg },
+      { id: '03', date: qua },
+      { id: '02', date: sex },
+    ]);
+  });
+
+  it('insere o extra na quarta e empurra o resto até a segunda seguinte', () => {
+    const dates = reassignCadenceDates({
+      ...base,
+      movableIds: ['01', 'extra', '02', '03'],
+      freeDates: [sex, seg, qua],
+    });
+
+    expect(dates).toEqual([
+      { id: '01', date: seg },
+      { id: 'extra', date: qua },
+      { id: '02', date: sex },
+      { id: '03', date: segSeguinte },
+    ]);
+  });
+
+  it('publicado fica de fora e a vaga nova não ocupa a data dele', () => {
+    const dates = reassignCadenceDates({
+      ...base,
+      movableIds: ['extra', '02', '03'],
+      freeDates: [qua, sex],
+      pinnedDates: [seg],
+    });
+
+    expect(dates.map((item) => item.id)).not.toContain('01');
+    expect(dates).toEqual([
+      { id: 'extra', date: qua },
+      { id: '02', date: sex },
+      { id: '03', date: segSeguinte },
+    ]);
+  });
+
+  it('conteúdo sem data recebe a próxima vaga da cadência', () => {
+    const dates = reassignCadenceDates({
+      ...base,
+      movableIds: ['01', '02'],
+      freeDates: [seg, null],
+    });
+
+    expect(dates).toEqual([
+      { id: '01', date: seg },
+      { id: '02', date: qua },
+    ]);
+  });
+
+  it('respeita o teto de posts na semana e atravessa o mês', () => {
+    const dates = reassignCadenceDates({
+      weekdays: SEG_QUA_SEX,
+      postsPerWeek: 2,
+      movableIds: ['a', 'b', 'c'],
+      freeDates: [seg, qua],
+    });
+
+    expect(dates[2].date).toBe(segSeguinte);
+
+    const virada = reassignCadenceDates({
+      ...base,
+      movableIds: ['a', 'b', 'c', 'd'],
+      freeDates: ['2026-10-26', '2026-10-28', '2026-10-30'],
+    });
+    expect(virada[3].date).toBe('2026-11-02');
   });
 });
 
