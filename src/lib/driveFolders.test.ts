@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatCaptureFolderName, hasApprovalFolder, matchClientsToFolders, normalizeName, parseDriveFolderId } from './driveFolders';
+import { formatCaptureFolderName, matchClientsToFolders, normalizeName, parseDriveFolderId } from './driveFolders';
 
 describe('parseDriveFolderId', () => {
   it('lê links de pasta com /u/0 e query', () => {
@@ -50,12 +50,5 @@ describe('normalizeName', () => {
   it('remove acento, emoji e pontuação', () => {
     expect(normalizeName('Pratic 🦊')).toBe('pratic');
     expect(normalizeName('Psicóloga - Thamires')).toBe('psicologa thamires');
-  });
-});
-
-describe('hasApprovalFolder', () => {
-  it('detecta PARA APROVAÇÃO sem diferenciar caixa nem acento', () => {
-    expect(hasApprovalFolder([{ name: 'para aprovacao' }])).toBe(true);
-    expect(hasApprovalFolder([{ name: 'ROTEIROS' }])).toBe(false);
   });
 });

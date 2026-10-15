@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Search, Plus, MoreHorizontal, User, X, Building2, Mail, Phone, Shield, Loader2, Briefcase, Copy, Download, CheckCircle, AlertCircle, HardDrive, FolderPlus } from "lucide-react";
+import { Search, Plus, MoreHorizontal, User, X, Building2, Mail, Phone, Shield, Loader2, Briefcase, Copy, Download, CheckCircle, AlertCircle, HardDrive } from "lucide-react";
 import Spotlight from "@/components/Spotlight";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
@@ -9,7 +9,6 @@ import { createPortal } from "react-dom";
 import { supabase } from "@/lib/supabase";
 import { Client } from "@/types/database";
 import DriveSyncModal from "@/components/admin/clients/DriveSyncModal";
-import ApprovalFoldersModal from "@/components/admin/clients/ApprovalFoldersModal";
 import SearchInput from "@/components/ui/SearchInput";
 import SortFilterMenu, { SortOption } from "@/components/ui/SortFilterMenu";
 import { useToast } from "@/components/CustomToast";
@@ -41,7 +40,6 @@ export default function ClientsPage() {
   const [asaasImportLoading, setAsaasImportLoading] = useState(false);
   const [asaasImported, setAsaasImported] = useState(false);
   const [driveSyncOpen, setDriveSyncOpen] = useState(false);
-  const [approvalOpen, setApprovalOpen] = useState(false);
 
   useEffect(() => {
     fetchClients();
@@ -205,20 +203,6 @@ export default function ClientsPage() {
             style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
           >
             <HardDrive size={18} /> <span className="hide-mobile">Sincronizar</span> Drive
-          </button>
-          <button
-            onClick={() => setApprovalOpen(true)}
-            className="btn btn-secondary"
-            style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-          >
-            <FolderPlus size={18} /> <span className="hide-mobile">Pasta</span> Para Aprovação
-          </button>
-          <button
-            onClick={() => { setAsaasModalOpen(true); setAsaasResult(null); setAsaasCpfCnpj(""); setAsaasImported(false); }}
-            className="btn btn-secondary"
-            style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-          >
-            <Download size={18} /> <span className="hide-mobile">Importar via</span> Asaas
           </button>
           <Link href="/admin/clients/create">
             <Spotlight
@@ -488,7 +472,6 @@ export default function ClientsPage() {
       </div>
 
       {driveSyncOpen && <DriveSyncModal onClose={() => setDriveSyncOpen(false)} onApplied={fetchClients} />}
-      {approvalOpen && <ApprovalFoldersModal onClose={() => setApprovalOpen(false)} />}
 
       {/* Modal: Importar cliente inativo via Asaas */}
       <AnimatePresence>

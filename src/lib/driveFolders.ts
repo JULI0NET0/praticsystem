@@ -105,9 +105,3 @@ export function matchClientsToFolders(
     return { clientId: client.id, folderId: null, folderName: null, confidence: null };
   });
 }
-
-export const APPROVAL_FOLDER_NAME = 'PARA APROVAÇÃO';
-
-export function hasApprovalFolder(folders: { name: string }[]): boolean {
-  return folders.some((f) => normalizeName(f.name) === normalizeName(APPROVAL_FOLDER_NAME));
-}
