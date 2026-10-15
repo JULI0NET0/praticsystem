@@ -255,7 +255,7 @@ export default function InstagramPostPicker({ selectedPostId, onSelectPost }: Pr
             <button
               type="button"
               onClick={() => fetchMedia(limit)}
-              className="text-xs bg-[var(--color-surface-sunken)] hover:bg-[var(--color-surface-inset)] px-3 py-1.5 rounded-md font-semibold text-[var(--color-text-primary)] inline-flex items-center gap-1.5"
+              className="btn btn-secondary btn-sm"
             >
               <RefreshCw className="w-3 h-3" /> Tentar novamente
             </button>
@@ -382,7 +382,7 @@ export default function InstagramPostPicker({ selectedPostId, onSelectPost }: Pr
           <button
             type="button"
             onClick={() => onSelectPost("")}
-            className="text-[11px] text-[var(--color-text-secondary)] hover:text-[var(--color-danger-ink)] font-medium shrink-0 px-1"
+            className="btn btn-ghost btn-sm shrink-0"
           >
             Remover
           </button>

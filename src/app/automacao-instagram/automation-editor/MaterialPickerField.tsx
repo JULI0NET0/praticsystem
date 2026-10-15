@@ -49,7 +49,7 @@ export default function MaterialPickerField({ url, linkedMaterialId, onChange }:
         <button
           type="button"
           onClick={openPicker}
-          className="flex items-center gap-1 text-[11px] font-semibold text-[var(--color-terracotta)] hover:underline"
+          className="btn btn-ghost btn-sm"
         >
           <FolderOpen className="w-3 h-3" /> Escolher da Galeria de Materiais
         </button>
@@ -76,7 +76,7 @@ export default function MaterialPickerField({ url, linkedMaterialId, onChange }:
           <div role="dialog" aria-modal="true" aria-label="Escolher Material" className="bg-[var(--color-surface-raised)] border border-[var(--color-border-default)] rounded-t-2xl sm:rounded-2xl w-full max-w-sm max-h-[70vh] flex flex-col overflow-hidden">
             <div className="px-4 py-3 border-b border-[var(--color-border-subtle)] flex items-center justify-between">
               <h4 className="font-bold text-xs text-[var(--color-text-primary)]">Escolher Material</h4>
-              <button onClick={() => setShowPicker(false)} aria-label="Fechar" className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]">
+              <button onClick={() => setShowPicker(false)} aria-label="Fechar" className="btn btn-ghost btn-icon">
                 <X className="w-4 h-4" />
               </button>
             </div>

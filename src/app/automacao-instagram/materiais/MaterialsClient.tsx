@@ -178,7 +178,7 @@ export default function MaterialsClient({ initialMaterials }: Props) {
           <div className="flex items-center gap-2">
             <button
               onClick={openCreateForm}
-              className="text-xs bg-[var(--color-terracotta)] text-[var(--color-text-on-accent)] hover:opacity-90 px-3.5 py-2 rounded-lg font-semibold transition-opacity flex items-center gap-1.5 shadow-sm"
+              className="btn btn-accent"
             >
               <Plus className="w-4 h-4" /> Novo Material
             </button>
@@ -247,14 +247,14 @@ export default function MaterialsClient({ initialMaterials }: Props) {
                     <button
                       onClick={() => copyPublicLink(material.slug)}
                       title="Copiar link público"
-                      className="p-2 rounded-lg hover:bg-[var(--color-surface-sunken)] text-[var(--color-text-secondary)]"
+                      className="btn btn-ghost btn-icon"
                     >
                       <Copy className="w-3.5 h-3.5" />
                     </button>
                     <button
                       onClick={() => handleToggleActive(material)}
                       title={material.is_active ? "Desativar" : "Ativar"}
-                      className="p-2 rounded-lg hover:bg-[var(--color-surface-sunken)] text-[var(--color-text-secondary)]"
+                      className="btn btn-ghost btn-icon"
                     >
                       {material.is_active ? (
                         <Eye className="w-3.5 h-3.5" />
@@ -265,14 +265,14 @@ export default function MaterialsClient({ initialMaterials }: Props) {
                     <button
                       onClick={() => openEditForm(material)}
                       title="Editar"
-                      className="p-2 rounded-lg hover:bg-[var(--color-surface-sunken)] text-[var(--color-text-secondary)]"
+                      className="btn btn-ghost btn-icon"
                     >
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
                     <button
                       onClick={() => handleDelete(material.id)}
                       title="Excluir"
-                      className="p-2 rounded-lg hover:bg-[var(--color-danger-wash)] text-[var(--color-danger-ink)] ml-auto"
+                      className="btn btn-ghost btn-icon hover-danger ml-auto"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -293,7 +293,7 @@ export default function MaterialsClient({ initialMaterials }: Props) {
               </h2>
               <button
                 onClick={() => setShowForm(false)}
-                className="p-1.5 rounded-lg hover:bg-[var(--color-surface-sunken)] text-[var(--color-text-secondary)]"
+                className="btn btn-ghost btn-icon"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -397,14 +397,14 @@ export default function MaterialsClient({ initialMaterials }: Props) {
             <div className="flex items-center justify-end gap-2 pt-2">
               <button
                 onClick={() => setShowForm(false)}
-                className="px-4 py-2 rounded-lg text-sm font-semibold text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-sunken)]"
+                className="btn btn-secondary"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="px-4 py-2 rounded-lg text-sm font-semibold bg-[var(--color-terracotta)] text-[var(--color-text-on-accent)] hover:opacity-90 disabled:opacity-50"
+                className="btn btn-accent"
               >
                 {saving ? "Salvando..." : "Salvar"}
               </button>

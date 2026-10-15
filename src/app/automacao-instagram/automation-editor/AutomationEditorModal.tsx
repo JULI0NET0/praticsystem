@@ -34,7 +34,7 @@ export default function AutomationEditorModal({
           <h3 className="font-bold text-base text-[var(--color-text-primary)]">
             {editingId ? "Editar Automação" : "Nova Automação de Comentários"}
           </h3>
-          <button onClick={onClose} aria-label="Fechar" className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] p-1">
+          <button onClick={onClose} aria-label="Fechar" className="btn btn-ghost btn-icon">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -56,14 +56,14 @@ export default function AutomationEditorModal({
         <div className="px-6 py-4 border-t border-[var(--color-border-subtle)] flex items-center justify-end gap-2.5 shrink-0">
           <button
             onClick={onClose}
-            className="text-xs bg-[var(--color-surface-sunken)] hover:bg-[var(--color-surface-inset)] px-4 py-2 rounded-lg font-medium text-[var(--color-text-primary)]"
+            className="btn btn-secondary"
           >
             Cancelar
           </button>
           <button
             onClick={onSave}
             disabled={saving}
-            className="text-xs bg-[var(--color-terracotta)] text-[var(--color-text-on-accent)] px-5 py-2 rounded-lg font-semibold hover:opacity-90 disabled:opacity-50"
+            className="btn btn-accent"
           >
             {saving ? "Salvando..." : "Salvar Automação"}
           </button>

@@ -551,7 +551,7 @@ export default function AutomationsClient({
 
             <button
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="hidden md:flex text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] p-1 rounded-md transition-colors"
+              className="btn btn-ghost btn-icon hidden md:flex"
               title={sidebarCollapsed ? "Expandir menu" : "Recolher menu"}
               aria-label={sidebarCollapsed ? "Expandir menu" : "Recolher menu"}
               aria-expanded={!sidebarCollapsed}
@@ -561,7 +561,7 @@ export default function AutomationsClient({
             <button
               onClick={() => setMobileMenuOpen(false)}
               aria-label="Fechar menu"
-              className="md:hidden text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] p-1"
+              className="btn btn-ghost btn-icon md:hidden"
             >
               <X className="w-5 h-5" />
             </button>
@@ -712,7 +712,7 @@ export default function AutomationsClient({
                   <button
                     onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
                     title={resolvedTheme === "dark" ? "Modo Claro" : "Modo Escuro"}
-                    className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] p-1.5 rounded-lg hover:bg-[var(--color-surface-sunken)] transition-colors"
+                    className="btn btn-ghost btn-icon"
                   >
                     {resolvedTheme === "dark" ? (
                       <Sun className="w-4 h-4 text-[var(--color-warning)]" />
@@ -724,7 +724,7 @@ export default function AutomationsClient({
                 <button
                   onClick={handleLogout}
                   title="Sair do painel"
-                  className="text-[var(--color-text-muted)] hover:text-[var(--color-danger)] p-1.5 rounded-lg hover:bg-[var(--color-surface-sunken)] transition-colors"
+                  className="btn btn-ghost btn-icon"
                 >
                   <LogOut className="w-4 h-4" />
                 </button>
@@ -736,7 +736,7 @@ export default function AutomationsClient({
                 <button
                   onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
                   title={resolvedTheme === "dark" ? "Modo Claro" : "Modo Escuro"}
-                  className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] p-1.5 rounded-lg hover:bg-[var(--color-surface-sunken)]"
+                  className="btn btn-ghost btn-icon"
                 >
                   {resolvedTheme === "dark" ? (
                     <Sun className="w-4 h-4 text-[var(--color-warning)]" />
@@ -748,7 +748,7 @@ export default function AutomationsClient({
               <button
                 onClick={handleLogout}
                 title="Sair"
-                className="text-[var(--color-text-muted)] hover:text-[var(--color-danger)] p-1.5 rounded-lg hover:bg-[var(--color-surface-sunken)]"
+                className="btn btn-ghost btn-icon"
               >
                 <LogOut className="w-4 h-4" />
               </button>
@@ -801,7 +801,7 @@ export default function AutomationsClient({
             <button
               onClick={() => setMobileMenuOpen(true)}
               aria-label="Abrir menu"
-              className="md:hidden text-[var(--color-text-primary)] p-1.5 rounded-lg border border-[var(--color-border-subtle)]"
+              className="btn btn-secondary btn-icon md:hidden"
             >
               <Menu className="w-4 h-4" />
             </button>
@@ -816,7 +816,7 @@ export default function AutomationsClient({
               <button
                 onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
                 title={resolvedTheme === "dark" ? "Modo Claro" : "Modo Escuro"}
-                className="p-1.5 rounded-lg bg-[var(--color-surface-raised)] border border-[var(--color-border-default)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface-sunken)] transition-colors"
+                className="btn btn-secondary btn-icon"
               >
                 {resolvedTheme === "dark" ? (
                   <Sun className="w-4 h-4 text-[var(--color-warning)]" />
@@ -828,14 +828,14 @@ export default function AutomationsClient({
 
             <button
               onClick={() => setShowSimulator(true)}
-              className="text-xs bg-[var(--color-surface-raised)] border border-[var(--color-border-default)] hover:bg-[var(--color-surface-sunken)] px-3.5 py-1.5 rounded-lg font-medium text-[var(--color-text-primary)] transition-colors flex items-center gap-1.5 shadow-xs"
+              className="btn btn-secondary btn-sm"
             >
               <Smartphone className="w-3.5 h-3.5 text-[var(--color-terracotta)]" />
               Testar Disparador
             </button>
             <button
               onClick={() => openCreateForm()}
-              className="text-xs bg-[var(--color-terracotta)] hover:opacity-90 text-[var(--color-text-on-accent)] px-3.5 py-1.5 rounded-lg font-semibold transition-opacity flex items-center gap-1.5 shadow-xs"
+              className="btn btn-accent btn-sm"
             >
               <Plus className="w-3.5 h-3.5" />
               Nova automação
@@ -864,7 +864,7 @@ export default function AutomationsClient({
                     <span>•</span>
                     <button
                       onClick={() => setActiveTab("results")}
-                      className="text-[var(--color-terracotta)] hover:underline font-semibold flex items-center gap-0.5"
+                      className="btn btn-ghost btn-sm"
                     >
                       Ver Insights <ChevronRight className="w-3 h-3" />
                     </button>
@@ -879,7 +879,7 @@ export default function AutomationsClient({
                     </h3>
                     <button
                       onClick={() => setActiveTab("automations")}
-                      className="text-xs text-[var(--color-terracotta)] hover:underline font-semibold"
+                      className="btn btn-ghost btn-sm"
                     >
                       Veja todos os modelos
                     </button>
@@ -1063,7 +1063,7 @@ export default function AutomationsClient({
                   </div>
                   <button
                     onClick={() => openCreateForm()}
-                    className="text-xs bg-[var(--color-terracotta)] hover:opacity-90 text-[var(--color-text-on-accent)] px-4 py-2 rounded-lg font-semibold transition-opacity flex items-center gap-1.5 shadow-xs"
+                    className="btn btn-accent"
                   >
                     <Plus className="w-4 h-4" /> Nova automação
                   </button>
@@ -1155,19 +1155,19 @@ export default function AutomationsClient({
                           <div className="flex items-center gap-2 shrink-0">
                             <button
                               onClick={() => toggleActive(a)}
-                              className="text-xs bg-[var(--color-surface-sunken)] hover:bg-[var(--color-surface-inset)] px-3 py-1.5 rounded-lg font-medium text-[var(--color-text-primary)] transition-colors"
+                              className="btn btn-secondary btn-sm"
                             >
                               {a.is_active ? "Pausar" : "Ativar"}
                             </button>
                             <button
                               onClick={() => openEditForm(a)}
-                              className="text-xs bg-[var(--color-surface-sunken)] hover:bg-[var(--color-surface-inset)] px-3 py-1.5 rounded-lg font-medium text-[var(--color-text-primary)] transition-colors"
+                              className="btn btn-secondary btn-sm"
                             >
                               Editar
                             </button>
                             <button
                               onClick={() => handleDelete(a.id)}
-                              className="text-xs text-[var(--color-text-secondary)] hover:text-[var(--color-danger)] p-1.5"
+                              className="btn btn-ghost btn-icon hover-danger"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -1266,7 +1266,7 @@ export default function AutomationsClient({
                   <button
                     onClick={handleDrainQueue}
                     disabled={drainingQueue}
-                    className="text-xs bg-[var(--color-terracotta)] text-[var(--color-text-on-accent)] px-3.5 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 disabled:opacity-50"
+                    className="btn btn-accent btn-sm"
                   >
                     <RefreshCw className={`w-3.5 h-3.5 ${drainingQueue ? "animate-spin" : ""}`} />
                     Drenar Fila Agora
@@ -1471,7 +1471,7 @@ export default function AutomationsClient({
               <h3 className="font-bold text-sm text-[var(--color-text-primary)]">
                 Simulador de Comentário
               </h3>
-              <button onClick={() => { setShowSimulator(false); setSimResult(undefined); }} aria-label="Fechar" className="text-[var(--color-text-muted)]">
+              <button onClick={() => { setShowSimulator(false); setSimResult(undefined); }} aria-label="Fechar" className="btn btn-ghost btn-icon">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -1490,7 +1490,7 @@ export default function AutomationsClient({
 
             <button
               onClick={runSimulation}
-              className="w-full bg-[var(--color-terracotta)] text-[var(--color-text-on-accent)] font-semibold py-2 rounded-lg"
+              className="btn btn-accent w-full"
             >
               Testar
             </button>

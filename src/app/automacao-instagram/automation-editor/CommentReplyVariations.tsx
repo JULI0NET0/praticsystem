@@ -41,7 +41,7 @@ export default function CommentReplyVariations({ variations, onChange }: Props) 
           type="button"
           onClick={addVariation}
           disabled={!draft.trim()}
-          className="shrink-0 flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-semibold bg-[var(--color-surface-sunken)] hover:bg-[var(--color-surface-inset)] text-[var(--color-text-primary)] disabled:opacity-40"
+          className="btn btn-secondary btn-sm shrink-0"
         >
           <Plus className="w-3.5 h-3.5" /> Adicionar
         </button>
