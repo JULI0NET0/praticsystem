@@ -4,6 +4,7 @@ import InstagramPostPicker from "../InstagramPostPicker";
 import CommentReplyVariations from "./CommentReplyVariations";
 import MaterialPickerField from "./MaterialPickerField";
 import type { AutomationFormValues } from "./types";
+import { IG_MESSAGE_VARS } from "@/lib/instagramVars";
 
 interface Props {
   form: AutomationFormValues;
@@ -73,6 +74,21 @@ export default function StepMessageForm({ form, onChange }: Props) {
           placeholder="Olá! Conforme você pediu, aqui está seu link..."
           className="w-full bg-[var(--color-surface-sunken)] border border-[var(--color-border-default)] rounded-lg px-3 py-2 text-xs text-[var(--color-text-primary)] outline-none"
         />
+        <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-[var(--color-text-muted)]">
+          <span>Variáveis:</span>
+          {IG_MESSAGE_VARS.map((v) => (
+            <button
+              key={v.tag}
+              type="button"
+              title={v.label}
+              onClick={() => onChange({ dm_message_text: `${form.dm_message_text}${v.tag}` })}
+              className="px-1.5 py-0.5 rounded border border-[var(--color-border-default)] font-mono hover:bg-[var(--color-surface-sunken)]"
+            >
+              {v.tag}
+            </button>
+          ))}
+          <span>· reserva se faltar: {'{first_name|amigo}'}</span>
+        </div>
       </div>
 
       {/* Bloco: Botão */}

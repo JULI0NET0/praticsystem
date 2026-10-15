@@ -8,6 +8,7 @@ import { useToast } from "@/components/CustomToast";
 import type { IgAutomation, IgConfig } from "@/lib/instagram";
 import AutomationEditorModal from "./automation-editor/AutomationEditorModal";
 import type { AutomationFormValues } from "./automation-editor/types";
+import { renderMessageVars } from "@/lib/instagramVars";
 import {
   Home,
   Users,
@@ -1495,7 +1496,7 @@ export default function AutomationsClient({
                 {simResult ? (
                   <div className="p-3 bg-[var(--color-success-wash)] text-[var(--color-success-ink)] rounded-lg space-y-1">
                     <p className="font-bold">✓ Acionou: &quot;{simResult.name}&quot;</p>
-                    <p className="text-[11px]">DM: {simResult.dm_message_text}</p>
+                    <p className="text-[11px]">DM: {renderMessageVars(simResult.dm_message_text, { first_name: "Maria", username: "maria.exemplo" })}</p>
                   </div>
                 ) : (
                   <div className="p-3 bg-[#422006] text-[#fef08a] rounded-lg">

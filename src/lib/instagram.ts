@@ -1,5 +1,6 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
+import { firstNameOf, type IgMessageVars } from '@/lib/instagramVars'
 
 export const IG_GRAPH_BASE = 'https://graph.instagram.com/v25.0'
 
@@ -202,6 +203,29 @@ export async function checkUserFollowsBusiness(
     })
     return true
   }
+}
+
+// Busca nome/username do contato para preencher as variáveis das mensagens.
+// Melhor esforço: sem consentimento ou com erro da API, devolve só o que já se sabe.
+export async function fetchIgContactVars(
+  igsid: string,
+  accessToken: string,
+  knownUsername?: string | null
+): Promise<IgMessageVars> {
+  const vars: IgMessageVars = { first_name: null, username: knownUsername ?? null }
+  try {
+    const res = await fetch(`${IG_GRAPH_BASE}/${igsid}?fields=name,username`, {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    })
+    const data = await res.json().catch(() => ({}))
+    if (res.ok) {
+      vars.first_name = firstNameOf(data?.name) || null
+      vars.username = data?.username || vars.username
+    }
+  } catch {
+    // mantém o fallback
+  }
+  return vars
 }
 
 export interface IgAutomation {

@@ -8,8 +8,10 @@ import {
   checkUserFollowsBusiness,
   findMatchingAutomation,
   pickRandomCommentReply,
+  fetchIgContactVars,
   type IgAutomation
 } from '@/lib/instagram'
+import { renderMessageVars } from '@/lib/instagramVars'
 
 interface IgCommentValue {
   id?: string
@@ -147,12 +149,17 @@ async function handleComment(
     { onConflict: 'igsid' }
   )
 
+  const config = await getIgConfig(supabase)
+  const vars = config
+    ? await fetchIgContactVars(fromId, config.access_token, fromUsername)
+    : { first_name: null, username: fromUsername ?? null }
+
   const dedupeKey = `${commentId}:${automation.id}`
   const { error: queueError } = await supabase.from('ig_message_queue').insert({
     automation_id: automation.id,
     igsid: fromId,
     comment_id: commentId,
-    message_text: automation.dm_message_text,
+    message_text: renderMessageVars(automation.dm_message_text, vars),
     button_text: automation.dm_button_text,
     button_url: automation.dm_button_url,
     cta_type: automation.cta_type,
@@ -164,9 +171,9 @@ async function handleComment(
     await logIgEvent('error', 'queue_insert_failed', { error: queueError.message, dedupeKey })
   }
 
-  const replyText = pickRandomCommentReply(automation)
+  const rawReply = pickRandomCommentReply(automation)
+  const replyText = rawReply ? renderMessageVars(rawReply, vars) : null
   if (replyText) {
-    const config = await getIgConfig(supabase)
     if (config) {
       try {
         await replyToComment(commentId, config.access_token, replyText)
@@ -266,11 +273,14 @@ async function handleButtonTap(
 
     if (!isFollowing) {
       // O lead NÃO segue: envia a mensagem do gate com o botão de confirmação
-      const gateText =
+      const gateVars = await fetchIgContactVars(senderId, config.access_token)
+      const gateText = renderMessageVars(
         automation?.follow_gate_message ||
         'Para liberar o seu material, você precisa seguir o perfil! Siga @' +
           (config.ig_username || '') +
-          ' e depois toque no botão abaixo:'
+          ' e depois toque no botão abaixo:',
+        gateVars
+      )
       const gateButtonText = automation?.follow_gate_button_text || 'Pronto, agora te sigo'
       const gateCtaType = automation?.cta_type === 'quick_reply' ? 'quick_reply' : 'button'
       const gatePayload = `gate:${baseQueueId || 'unknown'}:${automation?.id || ''}`
