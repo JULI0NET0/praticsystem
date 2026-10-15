@@ -1,0 +1,12 @@
+/* Séries do gráfico de atividade (paleta categórica validada nos dois temas). */
+.ig-chart {
+  --ig-series-1: #2a78d6;
+  --ig-series-2: #eb6834;
+  --ig-series-3: #1baf7a;
+}
+
+[data-theme='dark'] .ig-chart {
+  --ig-series-1: #3987e5;
+  --ig-series-2: #d95926;
+  --ig-series-3: #199e70;
+}

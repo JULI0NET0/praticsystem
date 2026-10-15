@@ -12,6 +12,7 @@ import {
   type IgAutomation
 } from '@/lib/instagram'
 import { renderMessageVars } from '@/lib/instagramVars'
+import { touchContact } from '@/lib/instagramContacts'
 
 interface IgCommentValue {
   id?: string
@@ -23,7 +24,7 @@ interface IgCommentValue {
 interface IgMessagingEvent {
   sender?: { id?: string }
   postback?: { payload?: string }
-  message?: { quick_reply?: { payload?: string } }
+  message?: { is_echo?: boolean; quick_reply?: { payload?: string } }
 }
 
 interface IgWebhookEntry {
@@ -140,16 +141,14 @@ async function handleComment(
 
   if (!automation) return
 
-  await supabase.from('ig_contacts').upsert(
-    {
-      igsid: fromId,
-      username: fromUsername ?? null,
-      last_seen_at: new Date().toISOString()
-    },
-    { onConflict: 'igsid' }
-  )
-
   const config = await getIgConfig(supabase)
+  await touchContact(supabase, {
+    igsid: fromId,
+    username: fromUsername,
+    source: 'comment',
+    accessToken: config?.access_token
+  })
+
   const vars = config
     ? await fetchIgContactVars(fromId, config.access_token, fromUsername)
     : { first_name: null, username: fromUsername ?? null }
@@ -200,18 +199,22 @@ async function handleIncomingMessage(
   const senderId = messagingEvent.sender?.id
   if (!senderId) return
 
-  await supabase.from('ig_contacts').upsert(
-    {
-      igsid: senderId,
-      last_seen_at: new Date().toISOString()
-    },
-    { onConflict: 'igsid' }
-  )
+  // Echo = mensagem enviada pelo próprio perfil; leitura/reação não são interação nova.
+  if (messagingEvent.message?.is_echo) return
+  if (!messagingEvent.message && !messagingEvent.postback) return
 
   // Botão fixo (postback) e sugestão de resposta (quick_reply) chegam em
   // formatos diferentes, mas carregam o mesmo payload — normaliza os dois
   // pra cair no mesmo tratamento.
   const tapPayload = messagingEvent.postback?.payload || messagingEvent.message?.quick_reply?.payload
+
+  const config = await getIgConfig(supabase)
+  if (config && senderId === config.ig_user_id) return
+  await touchContact(supabase, {
+    igsid: senderId,
+    source: tapPayload ? 'button' : 'dm',
+    accessToken: config?.access_token
+  })
   if (tapPayload) {
     await handleButtonTap(supabase, senderId, tapPayload)
   }

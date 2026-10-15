@@ -9,6 +9,10 @@ import type { IgAutomation, IgConfig } from "@/lib/instagram";
 import AutomationEditorModal from "./automation-editor/AutomationEditorModal";
 import type { AutomationFormValues } from "./automation-editor/types";
 import { renderMessageVars } from "@/lib/instagramVars";
+import type { AutomationStats, DailyPoint } from "@/lib/instagramStats";
+import HomeDashboard, { type DashboardCounts } from "./dashboard/HomeDashboard";
+import ContactsView from "./dashboard/ContactsView";
+import type { IgContactView } from "./dashboard/ContactAvatar";
 import {
   Home,
   Users,
@@ -23,11 +27,9 @@ import {
   AlertTriangle,
   RefreshCw,
   Search,
-  ChevronRight,
   Zap,
   Smartphone,
   LogOut,
-  Check,
   ChevronLeft,
   Clock,
   X,
@@ -45,43 +47,18 @@ interface LogRow {
   created_at: string;
 }
 
-interface QueueItem {
-  id: string;
-  automation_id: string | null;
-  igsid: string;
-  comment_id?: string | null;
-  message_text: string;
-  button_text?: string | null;
-  button_url?: string | null;
-  status: "pending" | "sending" | "sent" | "failed";
-  attempts?: number;
-  error?: string | null;
-  created_at: string;
-  sent_at?: string | null;
-}
-
-interface ContactItem {
-  id: string;
-  igsid: string;
-  username?: string | null;
-  first_seen_at: string;
-  last_seen_at: string;
-}
-
-interface ClickItem {
-  id: string;
-  queue_id: string;
-  automation_id: string | null;
-  created_at: string;
+export interface DashboardData {
+  counts: DashboardCounts;
+  series: DailyPoint[];
+  automationStats: Record<string, AutomationStats>;
 }
 
 interface Props {
   initialConfig: IgConfig | null;
   initialAutomations: IgAutomation[];
   initialLogs: LogRow[];
-  initialQueue?: QueueItem[];
-  initialContacts?: ContactItem[];
-  initialClicks?: ClickItem[];
+  initialContacts?: IgContactView[];
+  dashboard: DashboardData;
   queueStats: { pending: number; failed: number; sent?: number };
 }
 
@@ -183,9 +160,8 @@ export default function AutomationsClient({
   initialConfig,
   initialAutomations,
   initialLogs,
-  initialQueue = [],
   initialContacts = [],
-  initialClicks = [],
+  dashboard,
   queueStats,
 }: Props) {
   const router = useRouter();
@@ -201,9 +177,7 @@ export default function AutomationsClient({
   const [config] = useState(initialConfig);
   const [automations, setAutomations] = useState(initialAutomations);
   const [logs] = useState(initialLogs);
-  const [queue] = useState(initialQueue);
   const [contacts] = useState(initialContacts);
-  const [clicks] = useState(initialClicks);
   const [stats] = useState(queueStats);
 
   // Form & Modals
@@ -244,27 +218,11 @@ export default function AutomationsClient({
   }, [searchParams, router, showToast]);
 
   // Overall analytics
-  const totalComments = queue.length;
-  const totalSent = stats.sent ?? queue.filter((q) => q.status === "sent").length;
-  const totalClicks = clicks.length;
+  const totalComments = dashboard.counts.comments;
+  const totalSent = dashboard.counts.sent;
+  const totalClicks = dashboard.counts.clicks;
   const overallConversionRate = totalComments > 0 ? Math.round((totalClicks / totalComments) * 100) : 0;
 
-  const topAutomation = useMemo(() => {
-    if (automations.length === 0) return null;
-    const clicksByAutomation = new Map<string, number>();
-    for (const click of clicks) {
-      if (!click.automation_id) continue;
-      clicksByAutomation.set(click.automation_id, (clicksByAutomation.get(click.automation_id) || 0) + 1);
-    }
-    let best: { name: string; clicks: number } | null = null;
-    for (const automation of automations) {
-      const count = clicksByAutomation.get(automation.id) || 0;
-      if (count > 0 && (!best || count > best.clicks)) {
-        best = { name: automation.name, clicks: count };
-      }
-    }
-    return best;
-  }, [automations, clicks]);
 
   // Onboarding Actions List (PraticChat Checklist)
   const checklistItems = useMemo(() => {
@@ -292,14 +250,6 @@ export default function AutomationsClient({
         },
       },
       {
-        id: "step3",
-        title: "Aumente seus seguidores com respostas em stories",
-        completed: automations.some((a) =>
-          (a.keywords || []).some((k) => ["cupom", "material", "ebook", "vip"].includes(k.toLowerCase()))
-        ),
-        onClick: () => openCreateForm(TEMPLATES[1].defaultForm),
-      },
-      {
         id: "step4",
         title: "Configurar Resposta Padrão & Botão de Destino",
         completed: hasButtonUrl,
@@ -310,8 +260,6 @@ export default function AutomationsClient({
       },
     ];
   }, [config, automations]);
-
-  const completedCount = checklistItems.filter((i) => i.completed).length;
 
   function openCreateForm(templateData?: Partial<typeof emptyForm>) {
     setForm(templateData ? { ...emptyForm, ...templateData } : emptyForm);
@@ -844,207 +792,27 @@ export default function AutomationsClient({
         </header>
 
         {/* SCROLLABLE BODY */}
-        <main className="flex-1 overflow-y-auto px-6 py-6 sm:px-10 sm:py-8">
-          <div className="max-w-5xl mx-auto space-y-8">
+        <main className="flex-1 overflow-y-auto px-4 py-5 sm:px-5 lg:px-6 lg:py-6">
+          <div className="w-full space-y-8">
             {/* --------------------------------------------------
                 VIEW: INICIAL (Home Screen)
                -------------------------------------------------- */}
             {activeTab === "home" && (
-              <div className="space-y-8">
-                {/* Greeting Title */}
-                <div>
-                  <h1 className="text-3xl sm:text-4xl font-extrabold text-[var(--color-text-primary)] tracking-tight">
-                    Olá, {displayName}!
-                  </h1>
-                  <div className="flex items-center gap-4 mt-2 text-xs text-[var(--color-text-secondary)] font-medium">
-                    <span className="flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-[var(--color-success)]" />
-                      1 canal conectado ({displayHandle})
-                    </span>
-                    <span>•</span>
-                    <button
-                      onClick={() => setActiveTab("results")}
-                      className="btn btn-ghost btn-sm"
-                    >
-                      Ver Insights <ChevronRight className="w-3 h-3" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Section: "Comece aqui" (Quick Automations) */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-bold text-lg text-[var(--color-text-primary)]">
-                      Comece aqui
-                    </h3>
-                    <button
-                      onClick={() => setActiveTab("automations")}
-                      className="btn btn-ghost btn-sm"
-                    >
-                      Veja todos os modelos
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {TEMPLATES.map((tpl) => (
-                      <div
-                        key={tpl.id}
-                        onClick={() => openCreateForm(tpl.defaultForm)}
-                        className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] hover:border-[var(--color-terracotta)] rounded-2xl p-5 flex flex-col justify-between cursor-pointer transition-all duration-200 hover:shadow-md group min-h-[150px]"
-                      >
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <div className="p-2 rounded-lg bg-[var(--color-surface-sunken)] w-fit">
-                              {tpl.icon}
-                            </div>
-                            {tpl.badge && (
-                              <span
-                                className={`text-[11px] font-extrabold uppercase px-2 py-0.5 rounded-full ${
-                                  tpl.badgeType === "popular"
-                                    ? "bg-[var(--color-terracotta-100)] text-[var(--color-terracotta-ink)]"
-                                    : tpl.badgeType === "new"
-                                    ? "bg-[var(--color-info-wash)] text-[var(--color-info-ink)]"
-                                    : "bg-[var(--color-success-wash)] text-[var(--color-success-ink)]"
-                                }`}
-                              >
-                                {tpl.badge}
-                              </span>
-                            )}
-                          </div>
-                          <h4 className="font-bold text-sm text-[var(--color-text-primary)] leading-snug group-hover:text-[var(--color-terracotta)] transition-colors">
-                            {tpl.title}
-                          </h4>
-                          <p className="text-xs text-[var(--color-text-secondary)] line-clamp-2">
-                            {tpl.description}
-                          </p>
-                        </div>
-
-                        <div className="mt-4 pt-3 border-t border-[var(--color-border-subtle)] flex items-center justify-between text-xs font-semibold text-[var(--color-terracotta)]">
-                          <span>Usar modelo</span>
-                          <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Section: "Primeiros passos" — só aparece antes de conectar/criar a 1ª automação */}
-                {(!config || automations.length === 0) && (
-                  <div className="space-y-3">
-                    <h3 className="font-bold text-lg text-[var(--color-text-primary)]">
-                      Primeiros passos
-                    </h3>
-
-                    <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-2xl p-6 max-w-xl space-y-4 shadow-sm">
-                      <div>
-                        <p className="font-bold text-sm text-[var(--color-text-primary)] leading-snug">
-                          Conecte sua conta e crie sua primeira automação pra começar a acompanhar os números aqui.
-                        </p>
-
-                        {/* Progress bar */}
-                        <div className="mt-3 space-y-1.5">
-                          <div className="w-full bg-[var(--color-surface-sunken)] rounded-full h-2 overflow-hidden">
-                            <div
-                              className="h-full bg-[var(--color-terracotta)] rounded-full transition-all duration-300"
-                              style={{ width: `${Math.round((completedCount / checklistItems.length) * 100)}%` }}
-                            />
-                          </div>
-                          <span className="text-[11px] text-[var(--color-text-secondary)] font-medium">
-                            {completedCount} de {checklistItems.length} completadas
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Checklist Rows */}
-                      <div className="space-y-2 pt-1">
-                        {checklistItems.map((item) => (
-                          <button
-                            key={item.id}
-                            onClick={item.onClick}
-                            className="w-full flex items-center justify-between p-3 rounded-xl border border-[var(--color-border-subtle)] bg-[var(--color-surface-sunken)]/40 hover:bg-[var(--color-surface-sunken)] text-left transition-colors"
-                          >
-                            <div className="flex items-center gap-3 min-w-0 pr-2">
-                              <div
-                                className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${
-                                  item.completed
-                                    ? "bg-[var(--color-success-wash)] text-[var(--color-success)]"
-                                    : "border border-[var(--color-border-strong)]"
-                                }`}
-                              >
-                                {item.completed && <Check className="w-2.5 h-2.5" />}
-                              </div>
-                              <span
-                                className={`text-xs font-medium truncate ${
-                                  item.completed ? "text-[var(--color-text-secondary)]" : "text-[var(--color-text-primary)] font-semibold"
-                                }`}
-                              >
-                                {item.title}
-                              </span>
-                            </div>
-                            <ChevronRight className="w-4 h-4 text-[var(--color-text-muted)] shrink-0" />
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Section: Números da automação */}
-                <div className="space-y-3">
-                  <h3 className="font-bold text-lg text-[var(--color-text-primary)]">
-                    Seus números
-                  </h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                    <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-xl p-4">
-                      <span className="text-xs text-[var(--color-text-secondary)] font-medium">Automações Ativas</span>
-                      <p className="text-2xl font-bold text-[var(--color-text-primary)] mt-1">
-                        {automations.filter((a) => a.is_active).length}
-                      </p>
-                    </div>
-                    <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-xl p-4">
-                      <span className="text-xs text-[var(--color-text-secondary)] font-medium">DMs Entregues</span>
-                      <p className="text-2xl font-bold text-[var(--color-success)] mt-1">
-                        {totalSent}
-                      </p>
-                    </div>
-                    <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-xl p-4">
-                      <span className="text-xs text-[var(--color-text-secondary)] font-medium">Cliques no Link</span>
-                      <p className="text-2xl font-bold text-[var(--color-terracotta)] mt-1">
-                        {totalClicks}
-                      </p>
-                    </div>
-                    <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-xl p-4">
-                      <span className="text-xs text-[var(--color-text-secondary)] font-medium">Na Fila (Pendente)</span>
-                      <p className="text-2xl font-bold text-[var(--color-warning-ink)] mt-1">
-                        {stats.pending}
-                      </p>
-                    </div>
-                    <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-xl p-4">
-                      <span className="text-xs text-[var(--color-text-secondary)] font-medium">Taxa de Conversão</span>
-                      <p className="text-2xl font-bold text-[var(--color-text-primary)] mt-1">
-                        {overallConversionRate}%
-                      </p>
-                    </div>
-                    <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-xl p-4">
-                      <span className="text-xs text-[var(--color-text-secondary)] font-medium">Contatos</span>
-                      <p className="text-2xl font-bold text-[var(--color-text-primary)] mt-1">
-                        {contacts.length}
-                      </p>
-                    </div>
-                    <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-xl p-4 col-span-2">
-                      <span className="text-xs text-[var(--color-text-secondary)] font-medium">Automação com Melhor Desempenho</span>
-                      <p className="text-sm font-bold text-[var(--color-text-primary)] mt-1.5 truncate">
-                        {topAutomation ? topAutomation.name : "—"}
-                      </p>
-                      {topAutomation && (
-                        <p className="text-[11px] text-[var(--color-text-secondary)]">
-                          {topAutomation.clicks} clique{topAutomation.clicks === 1 ? "" : "s"}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <HomeDashboard
+                displayName={displayName}
+                displayHandle={displayHandle}
+                connected={!!config}
+                counts={dashboard.counts}
+                series={dashboard.series}
+                automations={automations}
+                automationStats={dashboard.automationStats}
+                contacts={contacts}
+                logs={logs}
+                checklist={checklistItems}
+                onOpenTab={setActiveTab}
+                onEditAutomation={openEditForm}
+                onCreateAutomation={() => openCreateForm()}
+              />
             )}
 
             {/* --------------------------------------------------
@@ -1116,95 +884,131 @@ export default function AutomationsClient({
                   </div>
                 </div>
 
-                {/* List */}
-                <div className="space-y-3">
-                  {filteredAutomations.length === 0 ? (
-                    <div className="text-center py-12 bg-[var(--color-surface-raised)] border border-dashed border-[var(--color-border-default)] rounded-xl p-8 space-y-2">
-                      <Workflow className="w-8 h-8 text-[var(--color-text-muted)] mx-auto" />
-                      <p className="text-sm font-semibold text-[var(--color-text-primary)]">
-                        Nenhuma automação encontrada.
-                      </p>
-                    </div>
-                  ) : (
-                    filteredAutomations.map((a) => (
-                      <div
-                        key={a.id}
-                        className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-xl p-4 sm:p-5 space-y-3"
-                      >
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <h4 className="font-bold text-sm text-[var(--color-text-primary)] truncate">
-                              {a.name}
-                            </h4>
-                            <span
-                              className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
-                                a.is_active
-                                  ? "bg-[var(--color-success-wash)] text-[var(--color-success-ink)]"
-                                  : "bg-[var(--color-surface-inset)] text-[var(--color-text-muted)]"
-                              }`}
-                            >
-                              {a.is_active ? "Ativa" : "Pausada"}
-                            </span>
-                            {a.require_follow && (
-                              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-[var(--color-terracotta)]/15 text-[var(--color-terracotta)]">
-                                🔒 Exclusivo seguidores
+                {/* Galeria */}
+                {filteredAutomations.length === 0 ? (
+                  <div className="text-center py-12 bg-[var(--color-surface-raised)] border border-dashed border-[var(--color-border-default)] rounded-xl p-8 space-y-2">
+                    <Workflow className="w-8 h-8 text-[var(--color-text-muted)] mx-auto" />
+                    <p className="text-sm font-semibold text-[var(--color-text-primary)]">
+                      Nenhuma automação encontrada.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
+                    {filteredAutomations.map((a) => {
+                      const s = dashboard.automationStats[a.id] ?? { comments: 0, sent: 0, clicks: 0 };
+                      const conversion = s.comments > 0 ? Math.round((s.clicks / s.comments) * 100) : 0;
+                      return (
+                        <article
+                          key={a.id}
+                          className="surface p-4 flex flex-col gap-3"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <h4 className="font-bold text-sm text-[var(--color-text-primary)] truncate">{a.name}</h4>
+                              <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">
+                                {a.post_id ? "Post específico" : "Todos os posts e reels"} ·{" "}
+                                {a.match_mode === "exact" ? "comentário exato" : "contém a palavra"}
+                              </p>
+                            </div>
+                            <div className="flex flex-wrap justify-end gap-1.5 shrink-0">
+                              <span
+                                className={`badge ${
+                                  a.is_active
+                                    ? "bg-[var(--color-success-wash)] text-[var(--color-success-ink)]"
+                                    : "bg-[var(--color-surface-inset)] text-[var(--color-text-secondary)]"
+                                }`}
+                              >
+                                {a.is_active ? "Ativa" : "Pausada"}
                               </span>
-                            )}
+                              {a.require_follow && (
+                                <span className="badge bg-[var(--color-terracotta-100)] text-[var(--color-terracotta-ink)]">
+                                  Só seguidores
+                                </span>
+                              )}
+                            </div>
                           </div>
 
-                          <div className="flex items-center gap-2 shrink-0">
-                            <button
-                              onClick={() => toggleActive(a)}
-                              className="btn btn-secondary btn-sm"
-                            >
-                              {a.is_active ? "Pausar" : "Ativar"}
-                            </button>
-                            <button
-                              onClick={() => openEditForm(a)}
-                              className="btn btn-secondary btn-sm"
-                            >
-                              Editar
-                            </button>
-                            <button
-                              onClick={() => handleDelete(a.id)}
-                              className="btn btn-ghost btn-icon hover-danger"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* Details */}
-                        <div className="bg-[var(--color-surface-sunken)] rounded-lg p-3 text-xs space-y-1.5">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="text-[11px] text-[var(--color-text-secondary)]">Palavras-chave:</span>
+                          <div className="flex flex-wrap gap-1.5">
                             {(a.keywords || []).map((k, i) => (
-                              <span key={i} className="bg-[var(--color-surface-inset)] px-1.5 py-0.5 rounded text-[11px] font-semibold">
+                              <span key={i} className="bg-[var(--color-surface-sunken)] px-1.5 py-0.5 rounded text-[11px] font-semibold text-[var(--color-text-primary)]">
                                 #{k}
                               </span>
                             ))}
                           </div>
-                          <p className="text-[var(--color-text-secondary)]">
-                            <strong className="text-[var(--color-text-primary)]">DM:</strong> {a.dm_message_text}
-                          </p>
-                          {a.dm_button_text && (
-                            <div className="flex items-center gap-1 text-[11px] text-[var(--color-info-ink)] font-medium">
-                              <ExternalLink className="w-3 h-3" />
-                              <span>
-                                {a.dm_button_text} ({a.dm_button_url}) —{" "}
-                                {a.cta_type === "link"
-                                  ? "link direto"
-                                  : a.cta_type === "quick_reply"
-                                  ? "sugestão de resposta"
-                                  : "botão fixo"}
-                              </span>
-                            </div>
-                          )}
+
+                          <div className="rounded-lg bg-[var(--color-surface-sunken)] p-3 text-xs space-y-1.5">
+                            <p className="text-[var(--color-text-primary)] line-clamp-2">{a.dm_message_text}</p>
+                            {a.dm_button_text && (
+                              <p className="flex items-center gap-1 text-[var(--color-info-ink)] font-medium truncate">
+                                <ExternalLink className="w-3 h-3 shrink-0" />
+                                <span className="truncate">
+                                  {a.dm_button_text} ·{" "}
+                                  {a.cta_type === "link"
+                                    ? "link direto"
+                                    : a.cta_type === "quick_reply"
+                                    ? "sugestão de resposta"
+                                    : "botão fixo"}
+                                </span>
+                              </p>
+                            )}
+                          </div>
+
+                          <dl className="grid grid-cols-4 gap-2 text-xs">
+                            {[
+                              ["Comentários", s.comments],
+                              ["DMs", s.sent],
+                              ["Cliques", s.clicks],
+                              ["Conversão", `${conversion}%`],
+                            ].map(([label, value]) => (
+                              <div key={label as string}>
+                                <dt className="text-[var(--color-text-secondary)]">{label}</dt>
+                                <dd className="font-semibold tabular-nums text-[var(--color-text-primary)]">{value}</dd>
+                              </div>
+                            ))}
+                          </dl>
+
+                          <div className="mt-auto flex items-center gap-2 pt-3 border-t border-[var(--color-border-subtle)]">
+                            <button onClick={() => openEditForm(a)} className="btn btn-secondary btn-sm">
+                              Editar
+                            </button>
+                            <button onClick={() => toggleActive(a)} className="btn btn-ghost btn-sm">
+                              {a.is_active ? "Pausar" : "Ativar"}
+                            </button>
+                            <button
+                              onClick={() => handleDelete(a.id)}
+                              aria-label={`Excluir ${a.name}`}
+                              className="btn btn-ghost btn-icon hover-danger ml-auto"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Modelos prontos */}
+                <section className="space-y-3">
+                  <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">Começar de um modelo</h2>
+                  <div className="grid gap-4 md:grid-cols-3">
+                    {TEMPLATES.map((tpl) => (
+                      <button
+                        key={tpl.id}
+                        type="button"
+                        onClick={() => openCreateForm(tpl.defaultForm)}
+                        className="surface p-4 text-left flex flex-col gap-2 hover:border-[var(--color-terracotta)]"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="p-2 rounded-lg bg-[var(--color-surface-sunken)]">{tpl.icon}</span>
+                          <span className="text-[11px] font-bold uppercase text-[var(--color-text-secondary)]">{tpl.badge}</span>
                         </div>
-                      </div>
-                    ))
-                  )}
-                </div>
+                        <span className="font-semibold text-[13px] text-[var(--color-text-primary)] leading-snug">{tpl.title}</span>
+                        <span className="text-xs text-[var(--color-text-secondary)] line-clamp-2">{tpl.description}</span>
+                      </button>
+                    ))}
+                  </div>
+                </section>
               </div>
             )}
 
@@ -1212,41 +1016,7 @@ export default function AutomationsClient({
                 VIEW: CONTATOS
                -------------------------------------------------- */}
             {activeTab === "contacts" && (
-              <div className="space-y-6">
-                <div>
-                  <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">
-                    Contatos ({contacts.length})
-                  </h1>
-                  <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">
-                    Histórico de usuários que interagiram com as automações.
-                  </p>
-                </div>
-
-                <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-xl overflow-hidden">
-                  {contacts.length === 0 ? (
-                    <div className="p-12 text-center text-xs text-[var(--color-text-secondary)]">
-                      Nenhum contato registrado ainda.
-                    </div>
-                  ) : (
-                    <div className="divide-y divide-[var(--color-border-subtle)]">
-                      <div className="bg-[var(--color-surface-sunken)] px-4 py-2 text-[11px] font-bold text-[var(--color-text-secondary)] uppercase grid grid-cols-12">
-                        <span className="col-span-6">Usuário</span>
-                        <span className="col-span-6">Última Interação</span>
-                      </div>
-                      {contacts.map((c) => (
-                        <div key={c.id} className="px-4 py-3 text-xs grid grid-cols-12 items-center">
-                          <span className="col-span-6 font-semibold text-[var(--color-text-primary)]">
-                            {c.username ? `@${c.username}` : `IGSID: ${c.igsid}`}
-                          </span>
-                          <span className="col-span-6 text-[var(--color-text-secondary)]">
-                            {new Date(c.last_seen_at).toLocaleString("pt-BR")}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
+              <ContactsView contacts={contacts} total={dashboard.counts.contacts} />
             )}
 
             {/* --------------------------------------------------
