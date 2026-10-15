@@ -91,10 +91,11 @@ function isMissingColumn(error: { code?: string } | null): boolean {
 }
 
 // Registra uma interação do contato, completando @, nome e foto quando faltam.
+// Devolve `isNew` quando é a primeira vez que essa pessoa aparece.
 export async function touchContact(
   supabase: SupabaseClient,
   params: { igsid: string; username?: string | null; source: IgContactSource; accessToken?: string | null }
-): Promise<void> {
+): Promise<{ isNew: boolean }> {
   const nowIso = new Date().toISOString()
 
   const { data: existing, error: selectError } = await supabase
@@ -110,7 +111,7 @@ export async function touchContact(
         { igsid: params.igsid, username: params.username ?? null, last_seen_at: nowIso },
         { onConflict: 'igsid' }
       )
-    return
+    return { isNew: false }
   }
 
   const profile =
@@ -120,4 +121,5 @@ export async function touchContact(
 
   const row = buildContactRow(params.igsid, existing, params, profile, nowIso)
   await supabase.from('ig_contacts').upsert(row, { onConflict: 'igsid' })
+  return { isNew: !existing && !selectError }
 }

@@ -1,11 +1,13 @@
 "use client";
 
-import { Check, ChevronRight, MessageCircle, MousePointerClick, Send, Users, Workflow, Percent } from "lucide-react";
+import { Check, ChevronRight, Eye, Heart, MessageCircle, MousePointerClick, Radio, Send, Users, Workflow, Percent } from "lucide-react";
 import StatCard from "@/components/ui/StatCard";
 import Badge from "@/components/ui/Badge";
 import type { IgAutomation } from "@/lib/instagram";
 import { describeLogEvent, type AutomationStats, type DailyPoint } from "@/lib/instagramStats";
 import ActivityChart from "./ActivityChart";
+import FollowersChart from "./FollowersChart";
+import type { ProfileInsights } from "@/lib/instagramInsights";
 import ContactAvatar, { contactTitle, SOURCE_LABEL, type IgContactView } from "./ContactAvatar";
 import "./dashboard.css";
 
@@ -30,6 +32,7 @@ interface Props {
   connected: boolean;
   counts: DashboardCounts;
   series: DailyPoint[];
+  profile: ProfileInsights | null;
   automations: IgAutomation[];
   automationStats: Record<string, AutomationStats>;
   contacts: IgContactView[];
@@ -62,6 +65,7 @@ export default function HomeDashboard({
   connected,
   counts,
   series,
+  profile,
   automations,
   automationStats,
   contacts,
@@ -91,6 +95,36 @@ export default function HomeDashboard({
           </p>
         </div>
       </div>
+
+      {profile && (
+        <div className="grid gap-4 xl:grid-cols-3">
+          <section aria-label="Seu perfil" className="grid grid-cols-2 gap-3 content-start">
+            <StatCard label="Seguidores" value={profile.followers.toLocaleString("pt-BR")} icon={<Heart size={15} />} />
+            <StatCard
+              label="Novos seguidores"
+              value={`${profile.newFollowers30d >= 0 ? "+" : ""}${profile.newFollowers30d}`}
+              icon={<Users size={15} />}
+              subtitle="últimos 30 dias"
+            />
+            <StatCard
+              label="Alcance"
+              value={profile.reach30d !== null ? profile.reach30d.toLocaleString("pt-BR") : "—"}
+              icon={<Radio size={15} />}
+              subtitle="contas alcançadas em 30 dias"
+            />
+            <StatCard
+              label="Visitas ao perfil"
+              value={profile.profileViews30d !== null ? profile.profileViews30d.toLocaleString("pt-BR") : "—"}
+              icon={<Eye size={15} />}
+              subtitle="últimos 30 dias"
+            />
+          </section>
+          <section className="surface p-4 xl:col-span-2 space-y-1">
+            <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">Novos seguidores por dia</h2>
+            <FollowersChart data={profile.days} />
+          </section>
+        </div>
+      )}
 
       <section aria-label="Números" className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
         <StatCard

@@ -14,6 +14,7 @@ import {
 import { renderMessageVars } from '@/lib/instagramVars'
 import { touchContact } from '@/lib/instagramContacts'
 import { parseWebhookMessage, recordIgMessage } from '@/lib/instagramInbox'
+import { getIgSettings, sendWelcome, shouldWelcome } from '@/lib/instagramWelcome'
 
 interface IgCommentValue {
   id?: string
@@ -249,11 +250,20 @@ async function handleIncomingMessage(
     })
   }
 
-  await touchContact(supabase, {
+  const contact = await touchContact(supabase, {
     igsid: senderId,
     source: tapPayload ? 'button' : 'dm',
     accessToken: config?.access_token
   })
+
+  // Boas-vindas: primeira DM de alguém que nunca falou com o perfil.
+  if (!tapPayload && config) {
+    const settings = await getIgSettings(supabase)
+    if (settings && shouldWelcome(settings, contact)) {
+      await sendWelcome(supabase, config, settings, senderId)
+    }
+  }
+
   if (tapPayload) {
     await handleButtonTap(supabase, senderId, tapPayload)
   }

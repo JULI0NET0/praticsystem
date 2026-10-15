@@ -10,6 +10,8 @@ import AutomationEditorModal from "./automation-editor/AutomationEditorModal";
 import type { AutomationFormValues } from "./automation-editor/types";
 import { renderMessageVars } from "@/lib/instagramVars";
 import type { AutomationStats, DailyPoint } from "@/lib/instagramStats";
+import type { ProfileInsights } from "@/lib/instagramInsights";
+import WelcomeSettings from "./dashboard/WelcomeSettings";
 import HomeDashboard, { type DashboardCounts } from "./dashboard/HomeDashboard";
 import ContactsView from "./dashboard/ContactsView";
 import InboxView from "./dashboard/InboxView";
@@ -52,6 +54,7 @@ export interface DashboardData {
   counts: DashboardCounts;
   series: DailyPoint[];
   automationStats: Record<string, AutomationStats>;
+  profile: ProfileInsights | null;
 }
 
 interface Props {
@@ -812,6 +815,7 @@ export default function AutomationsClient({
                 connected={!!config}
                 counts={dashboard.counts}
                 series={dashboard.series}
+                profile={dashboard.profile}
                 automations={automations}
                 automationStats={dashboard.automationStats}
                 contacts={contacts}
@@ -1165,6 +1169,8 @@ export default function AutomationsClient({
                     </a>
                   </div>
                 </div>
+
+                <WelcomeSettings />
 
                 <section className="space-y-3">
                   <div className="flex items-center justify-between gap-3">

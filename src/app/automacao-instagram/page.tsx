@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { getIgConfig, getSupabaseAdmin, type IgAutomation } from "@/lib/instagram";
 import { buildDailySeries, statsByAutomation } from "@/lib/instagramStats";
+import { fetchProfileInsights } from "@/lib/instagramInsights";
 import AutomationsClient, { type DashboardData } from "./AutomationsClient";
 
 export const dynamic = "force-dynamic";
@@ -69,6 +70,8 @@ export default async function InstagramAutomationPage() {
   const contacts = allContacts.filter((c) => !isOwnAccount(c));
   const ownRows = allContacts.length - contacts.length;
 
+  const profile = config ? await fetchProfileInsights(config.access_token) : null;
+
   const clickRows = clickRowsRes.data || [];
   const dashboard: DashboardData = {
     counts: {
@@ -88,6 +91,7 @@ export default async function InstagramAutomationPage() {
       now
     ),
     automationStats: statsByAutomation(queueStatsRes.data || [], clickRows),
+    profile,
   };
 
   return (
