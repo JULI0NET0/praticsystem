@@ -39,151 +39,55 @@ export default function InstagramAutomationLoginPage() {
   }
 
   return (
-    <div
-      data-theme="dark"
-      style={{
-        position: "relative",
-        minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        backgroundColor: "#141413",
-        color: "#F5F4EF",
-        overflow: "hidden",
-        padding: "24px",
-      }}
-    >
-      {/* Halo de luz terracota sutil no topo */}
-      <div
-        style={{
-          position: "absolute",
-          top: "-150px",
-          left: "50%",
-          transform: "translateX(-50%)",
-          width: "600px",
-          height: "400px",
-          borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(217, 119, 87, 0.16) 0%, rgba(217, 119, 87, 0) 70%)",
-          pointerEvents: "none",
-          zIndex: 1,
-        }}
-      />
-
-      <div
-        style={{
-          width: "100%",
-          maxWidth: "400px",
-          position: "relative",
-          zIndex: 2,
-        }}
-      >
-        <div style={{ textAlign: "center", marginBottom: "24px" }}>
-          <div style={{ display: "flex", justifyContent: "center", marginBottom: "16px" }}>
-            <ThemeLogo width={220} height={52} forceTheme="dark" />
-          </div>
+    <div className="min-h-screen flex items-center justify-center p-6 bg-[var(--color-surface-canvas)] text-[var(--color-text-primary)]">
+      <div className="w-full max-w-[400px]">
+        <div className="flex justify-center mb-6">
+          <ThemeLogo width={220} height={52} />
         </div>
 
         <form
           onSubmit={handleSubmit}
-          style={{
-            backgroundColor: "rgba(26, 25, 23, 0.9)",
-            backdropFilter: "blur(20px)",
-            WebkitBackdropFilter: "blur(20px)",
-            borderRadius: "20px",
-            padding: "32px 28px",
-            border: "1px solid rgba(255, 255, 255, 0.08)",
-            boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.04)",
-            display: "flex",
-            flexDirection: "column",
-            gap: "20px",
-          }}
+          className="flex flex-col gap-5 rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-raised)] p-7"
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <div
-              style={{
-                width: "40px",
-                height: "40px",
-                borderRadius: "12px",
-                background: "linear-gradient(135deg, #D97757 0%, #C96442 100%)",
-                color: "#FFFFFF",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                boxShadow: "0 4px 12px rgba(217, 119, 87, 0.3)",
-              }}
-            >
-              <Workflow size={20} />
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[var(--color-terracotta)] text-[var(--color-text-on-accent)] flex items-center justify-center">
+              <Workflow size={20} aria-hidden="true" />
             </div>
             <div>
-              <h1 style={{ fontSize: "1.1rem", fontWeight: 700, margin: 0, color: "#F5F4EF" }}>
-                Automação Instagram
-              </h1>
-              <p style={{ fontSize: "0.8rem", color: "#96948B", margin: "2px 0 0" }}>
-                Acesso ao Painel de Gatilhos
-              </p>
+              <h1 className="m-0 text-[17px] font-bold">Automação Instagram</h1>
+              <p className="mt-0.5 text-xs text-[var(--color-text-secondary)]">Acesso ao Painel de Gatilhos</p>
             </div>
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "7px" }}>
-            <label style={{ fontSize: "0.825rem", fontWeight: 500, color: "#B5B2A8" }}>
+          <div className="flex flex-col gap-2">
+            <label htmlFor="ig-password" className="text-[13px] font-medium text-[var(--color-text-secondary)]">
               Senha de acesso
             </label>
-            <div style={{ position: "relative" }}>
+            <div className="relative">
               <Lock
                 size={15}
-                style={{
-                  position: "absolute",
-                  left: "14px",
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  color: "#D97757",
-                }}
+                aria-hidden="true"
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-terracotta-ink)]"
               />
               <input
+                id="ig-password"
                 type="password"
                 autoFocus
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Digite a senha..."
-                style={{
-                  width: "100%",
-                  boxSizing: "border-box",
-                  backgroundColor: "#181715",
-                  border: "1px solid #33312C",
-                  borderRadius: "12px",
-                  padding: "12px 14px 12px 38px",
-                  color: "#F5F4EF",
-                  fontSize: "0.95rem",
-                  outline: "none",
-                  transition: "border-color 0.2s, box-shadow 0.2s",
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = "#D97757";
-                  e.currentTarget.style.boxShadow = "0 0 0 3px rgba(217, 119, 87, 0.15)";
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = "#33312C";
-                  e.currentTarget.style.boxShadow = "none";
-                }}
+                aria-invalid={error ? true : undefined}
+                className="w-full box-border rounded-xl border border-[var(--color-border-default)] bg-[var(--color-surface-sunken)] py-3 pl-10 pr-3.5 text-[15px] text-[var(--color-text-primary)] outline-none focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--color-info)]"
               />
             </div>
           </div>
 
           {error && (
             <div
-              style={{
-                padding: "12px",
-                backgroundColor: "rgba(178, 59, 46, 0.15)",
-                border: "1px solid rgba(178, 59, 46, 0.35)",
-                borderRadius: "12px",
-                color: "#E0897A",
-                fontSize: "0.825rem",
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-              }}
+              role="alert"
+              className="flex items-center gap-2 rounded-xl border border-[var(--color-danger)] bg-[var(--color-danger-wash)] p-3 text-[13px] text-[var(--color-danger-ink)]"
             >
-              <AlertCircle size={15} style={{ flexShrink: 0 }} />
+              <AlertCircle size={15} className="shrink-0" aria-hidden="true" />
               <span>{error}</span>
             </div>
           )}
@@ -191,34 +95,17 @@ export default function InstagramAutomationLoginPage() {
           <button
             type="submit"
             disabled={loading || !password}
-            style={{
-              width: "100%",
-              padding: "12px",
-              borderRadius: "12px",
-              border: "none",
-              background: "linear-gradient(135deg, #D97757 0%, #C96442 100%)",
-              color: "#FFFFFF",
-              fontSize: "0.925rem",
-              fontWeight: 600,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "8px",
-              cursor: loading || !password ? "not-allowed" : "pointer",
-              opacity: loading || !password ? 0.6 : 1,
-              boxShadow: "0 6px 20px -4px rgba(217, 119, 87, 0.4)",
-              transition: "transform 0.15s ease, filter 0.15s ease",
-            }}
+            className="flex w-full min-h-11 items-center justify-center gap-2 rounded-xl border-0 bg-[var(--color-terracotta)] px-3 py-3 text-[15px] font-semibold text-[var(--color-text-on-accent)] hover:bg-[var(--color-terracotta-hover-solid)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-info)] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading ? (
               <>
-                <Loader2 size={17} className="animate-spin" />
+                <Loader2 size={17} className="animate-spin" aria-hidden="true" />
                 <span>Entrando...</span>
               </>
             ) : (
               <>
                 <span>Entrar no Painel</span>
-                <ArrowRight size={16} />
+                <ArrowRight size={16} aria-hidden="true" />
               </>
             )}
           </button>
