@@ -72,11 +72,11 @@ export default function MaterialPickerField({ url, linkedMaterialId, onChange }:
       )}
 
       {showPicker && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[60]">
-          <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-default)] rounded-2xl w-full max-w-sm max-h-[70vh] flex flex-col overflow-hidden shadow-2xl">
+        <div className="fixed inset-0 bg-[var(--color-scrim)] flex items-end sm:items-center justify-center p-0 sm:p-4 z-[60]">
+          <div role="dialog" aria-modal="true" aria-label="Escolher Material" className="bg-[var(--color-surface-raised)] border border-[var(--color-border-default)] rounded-t-2xl sm:rounded-2xl w-full max-w-sm max-h-[70vh] flex flex-col overflow-hidden">
             <div className="px-4 py-3 border-b border-[var(--color-border-subtle)] flex items-center justify-between">
               <h4 className="font-bold text-xs text-[var(--color-text-primary)]">Escolher Material</h4>
-              <button onClick={() => setShowPicker(false)} className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]">
+              <button onClick={() => setShowPicker(false)} aria-label="Fechar" className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]">
                 <X className="w-4 h-4" />
               </button>
             </div>

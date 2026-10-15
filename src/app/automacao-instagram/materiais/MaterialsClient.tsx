@@ -285,8 +285,8 @@ export default function MaterialsClient({ initialMaterials }: Props) {
       </div>
 
       {showForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-[var(--color-surface-raised)] rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 space-y-4 shadow-xl">
+        <div className="fixed inset-0 bg-[var(--color-scrim)] flex items-end sm:items-center justify-center p-0 sm:p-4 z-50">
+          <div role="dialog" aria-modal="true" aria-label={editingId ? "Editar Material" : "Novo Material"} className="bg-[var(--color-surface-raised)] border border-[var(--color-border-default)] rounded-t-2xl sm:rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="font-bold text-lg text-[var(--color-text-primary)]">
                 {editingId ? "Editar Material" : "Novo Material"}

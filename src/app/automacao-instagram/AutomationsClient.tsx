@@ -518,7 +518,7 @@ export default function AutomationsClient({
       <aside
         className={`h-full shrink-0 border-r border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] flex flex-col justify-between transition-all duration-200 z-30 ${
           sidebarCollapsed ? "w-16" : "w-64 min-w-[256px]"
-        } ${mobileMenuOpen ? "fixed inset-y-0 left-0 shadow-2xl" : "hidden md:flex"}`}
+        } ${mobileMenuOpen ? "fixed inset-y-0 left-0" : "hidden md:flex"}`}
       >
         {/* Top Header & Workspace */}
         <div className="flex flex-col">
@@ -1461,13 +1461,13 @@ export default function AutomationsClient({
           MODAL: TESTAR DISPARADOR
          ======================================================== */}
       {showSimulator && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-default)] rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl text-xs">
+        <div className="fixed inset-0 bg-[var(--color-scrim)] flex items-end sm:items-center justify-center p-0 sm:p-4 z-50">
+          <div role="dialog" aria-modal="true" aria-label="Simulador de Comentário" className="bg-[var(--color-surface-raised)] border border-[var(--color-border-default)] rounded-t-2xl sm:rounded-2xl w-full max-w-md p-6 space-y-4 text-xs">
             <div className="flex items-center justify-between">
               <h3 className="font-bold text-sm text-[var(--color-text-primary)]">
                 Simulador de Comentário
               </h3>
-              <button onClick={() => { setShowSimulator(false); setSimResult(undefined); }} className="text-[var(--color-text-muted)]">
+              <button onClick={() => { setShowSimulator(false); setSimResult(undefined); }} aria-label="Fechar" className="text-[var(--color-text-muted)]">
                 <X className="w-4 h-4" />
               </button>
             </div>

@@ -28,13 +28,13 @@ export default function AutomationEditorModal({
   onSave,
 }: Props) {
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-      <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-default)] rounded-2xl w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden shadow-2xl">
+    <div className="fixed inset-0 bg-[var(--color-scrim)] flex items-end sm:items-center justify-center p-0 sm:p-4 z-50">
+      <div role="dialog" aria-modal="true" aria-label={editingId ? "Editar Automação" : "Nova Automação de Comentários"} className="bg-[var(--color-surface-raised)] border border-[var(--color-border-default)] rounded-t-2xl sm:rounded-2xl w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden">
         <div className="px-6 py-4 border-b border-[var(--color-border-subtle)] flex items-center justify-between shrink-0">
           <h3 className="font-bold text-base text-[var(--color-text-primary)]">
             {editingId ? "Editar Automação" : "Nova Automação de Comentários"}
           </h3>
-          <button onClick={onClose} className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] p-1">
+          <button onClick={onClose} aria-label="Fechar" className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] p-1">
             <X className="w-5 h-5" />
           </button>
         </div>

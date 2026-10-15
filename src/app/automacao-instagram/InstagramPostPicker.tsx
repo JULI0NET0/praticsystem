@@ -317,11 +317,11 @@ export default function InstagramPostPicker({ selectedPostId, onSelectPost }: Pr
                   {/* Selo Superior Direito: Reel ou Carrossel */}
                   <div className="absolute top-1.5 right-1.5 pointer-events-none drop-shadow-md">
                     {isReel ? (
-                      <div className="bg-black/60 backdrop-blur-xs p-1 rounded text-white flex items-center justify-center">
+                      <div className="bg-black/60 p-1 rounded text-white flex items-center justify-center">
                         <Film className="w-3 h-3" />
                       </div>
                     ) : isCarousel ? (
-                      <div className="bg-black/60 backdrop-blur-xs p-1 rounded text-white flex items-center justify-center">
+                      <div className="bg-black/60 p-1 rounded text-white flex items-center justify-center">
                         <Layers className="w-3 h-3" />
                       </div>
                     ) : null}
