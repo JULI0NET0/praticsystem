@@ -7,6 +7,7 @@ import {
   sendInstagramMessage,
   requireIgSession
 } from '@/lib/instagram'
+import { recordIgMessage } from '@/lib/instagramInbox'
 
 export async function POST(request: Request) {
   const authHeader = request.headers.get('authorization') || ''
@@ -63,7 +64,7 @@ export async function POST(request: Request) {
       // 'button' / 'quick_reply': o payload é o id da fila; quando a
       // pessoa tocar, o webhook usa esse id pra achar o link real,
       // registrar o clique e mandar a 2ª DM na hora.
-      await sendInstagramMessage({
+      const delivery = await sendInstagramMessage({
         igUserId: config.ig_user_id,
         accessToken: config.access_token,
         recipient,
@@ -76,6 +77,19 @@ export async function POST(request: Request) {
             : null,
         payload: item.button_text && item.cta_type !== 'link' ? item.id : null
       })
+
+      await recordIgMessage(
+        supabase,
+        {
+          mid: delivery?.message_id ?? null,
+          igsid: item.igsid,
+          direction: 'out',
+          text: item.message_text,
+          source: 'automation',
+          automation_id: item.automation_id ?? null
+        },
+        { overwrite: true }
+      )
 
       await supabase
         .from('ig_message_queue')

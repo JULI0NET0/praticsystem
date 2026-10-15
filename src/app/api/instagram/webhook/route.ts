@@ -13,6 +13,7 @@ import {
 } from '@/lib/instagram'
 import { renderMessageVars } from '@/lib/instagramVars'
 import { touchContact } from '@/lib/instagramContacts'
+import { parseWebhookMessage, recordIgMessage } from '@/lib/instagramInbox'
 
 interface IgCommentValue {
   id?: string
@@ -23,8 +24,18 @@ interface IgCommentValue {
 
 interface IgMessagingEvent {
   sender?: { id?: string }
+  recipient?: { id?: string }
+  timestamp?: number
   postback?: { payload?: string }
-  message?: { is_echo?: boolean; quick_reply?: { payload?: string } }
+  message?: {
+    mid?: string
+    text?: string
+    is_echo?: boolean
+    is_deleted?: boolean
+    quick_reply?: { payload?: string }
+    attachments?: Array<{ type?: string; payload?: { url?: string } }>
+    reply_to?: { story?: unknown }
+  }
 }
 
 interface IgWebhookEntry {
@@ -199,9 +210,26 @@ async function handleIncomingMessage(
   const senderId = messagingEvent.sender?.id
   if (!senderId) return
 
-  // Echo = mensagem enviada pelo próprio perfil; leitura/reação não são interação nova.
-  if (messagingEvent.message?.is_echo) return
-  if (!messagingEvent.message && !messagingEvent.postback) return
+  const message = messagingEvent.message
+  const createdAt = new Date(messagingEvent.timestamp ?? Date.now()).toISOString()
+
+  // Echo = mensagem enviada pelo próprio perfil (app do Instagram ou API): vai para a
+  // caixa de entrada como saída, mas não é interação do contato.
+  if (message?.is_echo) {
+    const recipientId = messagingEvent.recipient?.id
+    if (recipientId && !message.is_deleted) {
+      await recordIgMessage(supabase, {
+        ...parseWebhookMessage(message),
+        igsid: recipientId,
+        direction: 'out',
+        source: 'instagram',
+        created_at: createdAt
+      })
+    }
+    return
+  }
+  // Leitura/reação não são interação nova.
+  if (!message && !messagingEvent.postback) return
 
   // Botão fixo (postback) e sugestão de resposta (quick_reply) chegam em
   // formatos diferentes, mas carregam o mesmo payload — normaliza os dois
@@ -210,6 +238,17 @@ async function handleIncomingMessage(
 
   const config = await getIgConfig(supabase)
   if (config && senderId === config.ig_user_id) return
+
+  if (message && !message.is_deleted) {
+    await recordIgMessage(supabase, {
+      ...parseWebhookMessage(message),
+      igsid: senderId,
+      direction: 'in',
+      source: 'instagram',
+      created_at: createdAt
+    })
+  }
+
   await touchContact(supabase, {
     igsid: senderId,
     source: tapPayload ? 'button' : 'dm',
@@ -305,7 +344,7 @@ async function handleButtonTap(
 
       if (!queueError && gateMsg) {
         try {
-          await sendInstagramMessage({
+          const sent = await sendInstagramMessage({
             igUserId: config.ig_user_id,
             accessToken: config.access_token,
             recipient: { id: senderId },
@@ -314,6 +353,18 @@ async function handleButtonTap(
             ctaType: gateCtaType,
             payload: gatePayload
           })
+          await recordIgMessage(
+            supabase,
+            {
+              mid: sent?.message_id ?? null,
+              igsid: senderId,
+              direction: 'out',
+              text: gateText,
+              source: 'automation',
+              automation_id: automation?.id ?? null
+            },
+            { overwrite: true }
+          )
           await supabase
             .from('ig_message_queue')
             .update({ status: 'sent', sent_at: new Date().toISOString() })
@@ -375,12 +426,24 @@ async function handleButtonTap(
       }
     } else if (followUp && config) {
       try {
-        await sendInstagramMessage({
+        const sent = await sendInstagramMessage({
           igUserId: config.ig_user_id,
           accessToken: config.access_token,
           recipient: { id: senderId },
           text: followUp.message_text
         })
+        await recordIgMessage(
+          supabase,
+          {
+            mid: sent?.message_id ?? null,
+            igsid: senderId,
+            direction: 'out',
+            text: followUp.message_text,
+            source: 'automation',
+            automation_id: followUp.automation_id ?? null
+          },
+          { overwrite: true }
+        )
         await supabase
           .from('ig_message_queue')
           .update({ status: 'sent', sent_at: new Date().toISOString() })

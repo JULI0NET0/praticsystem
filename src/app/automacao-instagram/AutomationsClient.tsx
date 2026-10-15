@@ -12,6 +12,7 @@ import { renderMessageVars } from "@/lib/instagramVars";
 import type { AutomationStats, DailyPoint } from "@/lib/instagramStats";
 import HomeDashboard, { type DashboardCounts } from "./dashboard/HomeDashboard";
 import ContactsView from "./dashboard/ContactsView";
+import InboxView from "./dashboard/InboxView";
 import type { IgContactView } from "./dashboard/ContactAvatar";
 import {
   Home,
@@ -446,6 +447,11 @@ export default function AutomationsClient({
       return true;
     });
   }, [automations, statusFilter, searchFilter]);
+
+  const automationNames = useMemo(
+    () => Object.fromEntries(automations.map((a) => [a.id, a.name])),
+    [automations]
+  );
 
   const tabTitleMap: Record<TabType, string> = {
     home: "Inicial",
@@ -1024,59 +1030,7 @@ export default function AutomationsClient({
             {/* --------------------------------------------------
                 VIEW: CAIXA DE ENTRADA & FILA
                -------------------------------------------------- */}
-            {activeTab === "inbox" && (
-              <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">
-                      Caixa de Entrada & Fila de Mensagens
-                    </h1>
-                    <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">
-                      Status de envio e fila de processamento da API do Instagram.
-                    </p>
-                  </div>
-                  <button
-                    onClick={handleDrainQueue}
-                    disabled={drainingQueue}
-                    className="btn btn-accent btn-sm"
-                  >
-                    <RefreshCw className={`w-3.5 h-3.5 ${drainingQueue ? "animate-spin" : ""}`} />
-                    Drenar Fila Agora
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-xl p-4">
-                    <span className="text-xs text-[var(--color-text-secondary)]">Na fila</span>
-                    <p className="text-xl font-bold text-[var(--color-warning-ink)] mt-1">{stats.pending}</p>
-                  </div>
-                  <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-xl p-4">
-                    <span className="text-xs text-[var(--color-text-secondary)]">Enviadas</span>
-                    <p className="text-xl font-bold text-[var(--color-success)] mt-1">{totalSent}</p>
-                  </div>
-                  <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-xl p-4">
-                    <span className="text-xs text-[var(--color-text-secondary)]">Falharam</span>
-                    <p className="text-xl font-bold text-[var(--color-danger)] mt-1">{stats.failed}</p>
-                  </div>
-                </div>
-
-                <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-xl p-5 space-y-3">
-                  <h4 className="font-bold text-sm text-[var(--color-text-primary)]">Eventos Recentes</h4>
-                  <div className="divide-y divide-[var(--color-border-subtle)] max-h-72 overflow-y-auto">
-                    {logs.map((log) => (
-                      <div key={log.id} className="py-2.5 flex items-center justify-between text-xs">
-                        <span className={log.level === "error" ? "text-[var(--color-danger)] font-semibold" : "text-[var(--color-text-primary)]"}>
-                          {log.event}
-                        </span>
-                        <span className="text-[11px] text-[var(--color-text-secondary)]">
-                          {new Date(log.created_at).toLocaleTimeString("pt-BR")}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
+            {activeTab === "inbox" && <InboxView automationNames={automationNames} />}
 
             {/* --------------------------------------------------
                 VIEW: RESULTADOS
@@ -1211,6 +1165,51 @@ export default function AutomationsClient({
                     </a>
                   </div>
                 </div>
+
+                <section className="space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">Fila de envio &amp; logs</h2>
+                      <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">
+                        DMs das automações aguardando envio pela API do Instagram (até {"60"} por hora).
+                      </p>
+                    </div>
+                    <button onClick={handleDrainQueue} disabled={drainingQueue} className="btn btn-secondary btn-sm">
+                      <RefreshCw className={`w-3.5 h-3.5 ${drainingQueue ? "animate-spin" : ""}`} />
+                      Processar fila agora
+                    </button>
+                  </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-xl p-4">
+                    <span className="text-xs text-[var(--color-text-secondary)]">Na fila</span>
+                    <p className="text-xl font-bold text-[var(--color-warning-ink)] mt-1">{stats.pending}</p>
+                  </div>
+                  <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-xl p-4">
+                    <span className="text-xs text-[var(--color-text-secondary)]">Enviadas</span>
+                    <p className="text-xl font-bold text-[var(--color-success)] mt-1">{totalSent}</p>
+                  </div>
+                  <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-xl p-4">
+                    <span className="text-xs text-[var(--color-text-secondary)]">Falharam</span>
+                    <p className="text-xl font-bold text-[var(--color-danger)] mt-1">{stats.failed}</p>
+                  </div>
+                </div>
+
+                <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-xl p-5 space-y-3">
+                  <h4 className="font-bold text-sm text-[var(--color-text-primary)]">Eventos recentes (técnico)</h4>
+                  <div className="divide-y divide-[var(--color-border-subtle)] max-h-72 overflow-y-auto">
+                    {logs.map((log) => (
+                      <div key={log.id} className="py-2.5 flex items-center justify-between text-xs">
+                        <span className={log.level === "error" ? "text-[var(--color-danger)] font-semibold" : "text-[var(--color-text-primary)]"}>
+                          {log.event}
+                        </span>
+                        <span className="text-[11px] text-[var(--color-text-secondary)]">
+                          {new Date(log.created_at).toLocaleTimeString("pt-BR")}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                </section>
               </div>
             )}
           </div>
