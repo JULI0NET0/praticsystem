@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { findPraticSubfolders, formatCaptureFolderName, hasApprovalFolder, matchClientsToFolders, normalizeName, parseDriveFolderId } from './driveFolders';
+import { formatCaptureFolderName, hasApprovalFolder, matchClientsToFolders, normalizeName, parseDriveFolderId } from './driveFolders';
 
 describe('parseDriveFolderId', () => {
   it('lê links de pasta com /u/0 e query', () => {
@@ -53,11 +53,7 @@ describe('normalizeName', () => {
   });
 });
 
-describe('findPraticSubfolders / hasApprovalFolder', () => {
-  it('acha a subpasta Pratic mesmo com emoji e caixa diferente', () => {
-    const found = findPraticSubfolders([{ name: 'Fotos' }, { name: 'Pratic 🦊' }, { name: 'PRATIC' }]);
-    expect(found.map((f) => f.name)).toEqual(['Pratic 🦊', 'PRATIC']);
-  });
+describe('hasApprovalFolder', () => {
   it('detecta PARA APROVAÇÃO sem diferenciar caixa nem acento', () => {
     expect(hasApprovalFolder([{ name: 'para aprovacao' }])).toBe(true);
     expect(hasApprovalFolder([{ name: 'ROTEIROS' }])).toBe(false);

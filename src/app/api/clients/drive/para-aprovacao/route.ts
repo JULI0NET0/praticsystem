@@ -2,12 +2,12 @@ import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/hermesAuth';
 import { requireTeamUser } from '@/lib/apiAuth';
 import { createFolder, listChildFolders } from '@/lib/googleDrive';
-import { APPROVAL_FOLDER_NAME, findPraticSubfolders, hasApprovalFolder, parseDriveFolderId } from '@/lib/driveFolders';
+import { APPROVAL_FOLDER_NAME, hasApprovalFolder, parseDriveFolderId } from '@/lib/driveFolders';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
-type Action = 'criar' | 'criada' | 'ja_existe' | 'sem_pasta' | 'sem_pratic' | 'ambiguo' | 'erro';
+type Action = 'criar' | 'criada' | 'ja_existe' | 'sem_pasta' | 'erro';
 
 interface Row {
   clientId: string;
@@ -29,15 +29,10 @@ async function inspect(
     const clientFolderId = parseDriveFolderId(client.google_drive_url);
     if (!clientFolderId) return { ...base, action: 'sem_pasta' };
 
-    const praticMatches = findPraticSubfolders(await listChildFolders(clientFolderId));
-    if (praticMatches.length === 0) return { ...base, action: 'sem_pratic' };
-    if (praticMatches.length > 1) return { ...base, action: 'ambiguo', detail: praticMatches.map((f) => f.name).join(' | ') };
+    if (hasApprovalFolder(await listChildFolders(clientFolderId))) return { ...base, action: 'ja_existe' };
+    if (!apply) return { ...base, action: 'criar' };
 
-    const pratic = praticMatches[0];
-    if (hasApprovalFolder(await listChildFolders(pratic.id))) return { ...base, action: 'ja_existe', url: pratic.url };
-    if (!apply) return { ...base, action: 'criar', url: pratic.url };
-
-    const created = await createFolder(APPROVAL_FOLDER_NAME, pratic.id);
+    const created = await createFolder(APPROVAL_FOLDER_NAME, clientFolderId);
     return { ...base, action: 'criada', url: created.url };
   } catch (err: unknown) {
     return { ...base, action: 'erro', detail: err instanceof Error ? err.message : 'Erro no Drive.' };
@@ -67,7 +62,7 @@ export async function GET(request: Request) {
   return run(request, false);
 }
 
-// Cria "PARA APROVAÇÃO" dentro da subpasta Pratic de cada cliente que ainda não tem.
+// Cria "PARA APROVAÇÃO" dentro da pasta de cada cliente (já fica dentro de "01 PRATIC") que ainda não tem.
 export async function POST(request: Request) {
   return run(request, true);
 }
