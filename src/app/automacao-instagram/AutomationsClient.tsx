@@ -553,11 +553,14 @@ export default function AutomationsClient({
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
               className="hidden md:flex text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] p-1 rounded-md transition-colors"
               title={sidebarCollapsed ? "Expandir menu" : "Recolher menu"}
+              aria-label={sidebarCollapsed ? "Expandir menu" : "Recolher menu"}
+              aria-expanded={!sidebarCollapsed}
             >
               <ChevronLeft className={`w-4 h-4 transition-transform duration-200 ${sidebarCollapsed ? "rotate-180" : ""}`} />
             </button>
             <button
               onClick={() => setMobileMenuOpen(false)}
+              aria-label="Fechar menu"
               className="md:hidden text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] p-1"
             >
               <X className="w-5 h-5" />
@@ -593,7 +596,7 @@ export default function AutomationsClient({
           )}
 
           {/* Navigation Items */}
-          <nav className="p-2.5 space-y-1">
+          <nav aria-label="Seções da automação" className="p-2.5 space-y-1">
             <NavItem
               icon={<Home className="w-4 h-4" />}
               label="Inicial"
@@ -797,6 +800,7 @@ export default function AutomationsClient({
           <div className="flex items-center gap-3">
             <button
               onClick={() => setMobileMenuOpen(true)}
+              aria-label="Abrir menu"
               className="md:hidden text-[var(--color-text-primary)] p-1.5 rounded-lg border border-[var(--color-border-subtle)]"
             >
               <Menu className="w-4 h-4" />
@@ -1533,11 +1537,13 @@ function NavItem({
     <button
       onClick={onClick}
       title={collapsed ? label : undefined}
+      aria-label={collapsed ? label : undefined}
+      aria-current={active ? "page" : undefined}
       className={`w-full flex items-center ${collapsed ? "justify-center px-0" : "justify-between px-3"} py-2.5 rounded-xl text-xs font-medium transition-colors ${
         active
           ? "bg-[var(--color-surface-inset)] text-[var(--color-text-primary)] font-bold shadow-xs"
           : "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface-sunken)]"
-      }`}
+      } focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--color-info)]`}
     >
       <div className="flex items-center gap-2.5 truncate">
         <span className={active ? "text-[var(--color-text-primary)]" : "text-[var(--color-text-muted)]"}>
