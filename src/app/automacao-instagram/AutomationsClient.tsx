@@ -1433,7 +1433,7 @@ export default function AutomationsClient({
                     </div>
                     <a
                       href="/api/instagram/oauth/start"
-                      className="text-xs bg-[var(--color-terracotta)] text-[var(--color-text-on-accent)] px-3.5 py-2 rounded-lg font-semibold hover:opacity-90"
+                      className="btn btn-accent btn-sm"
                     >
                       {config ? "Reconectar Conta" : "Conectar Instagram"}
                     </a>

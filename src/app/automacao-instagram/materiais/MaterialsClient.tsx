@@ -184,7 +184,7 @@ export default function MaterialsClient({ initialMaterials }: Props) {
             </button>
             <Link
               href="/automacao-instagram"
-              className="text-xs bg-[var(--color-surface-raised)] border border-[var(--color-border-default)] hover:bg-[var(--color-surface-sunken)] px-3.5 py-2 rounded-lg font-semibold text-[var(--color-text-primary)] transition-colors flex items-center gap-1.5 shadow-sm"
+              className="btn btn-secondary"
             >
               <ArrowLeft className="w-4 h-4" /> Voltar ao Painel
             </Link>
