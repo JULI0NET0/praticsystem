@@ -53,7 +53,7 @@ export default function PhonePreview({ username, handle, messageText, ctaType, b
               {hasButton && ctaType !== "quick_reply" && (
                 <button
                   type="button"
-                  className="w-full px-3 py-2 text-[11px] font-semibold text-center border-t border-[var(--color-border-subtle)] text-blue-500"
+                  className="w-full px-3 py-2 text-[11px] font-semibold text-center border-t border-[var(--color-border-subtle)] text-[var(--color-info-ink)]"
                 >
                   {buttonText}
                   {ctaType === "link" && " ↗"}
@@ -70,7 +70,7 @@ export default function PhonePreview({ username, handle, messageText, ctaType, b
 
           {hasButton && ctaType === "quick_reply" && (
             <div className="flex justify-start">
-              <span className="text-[10px] font-semibold px-3 py-1.5 rounded-full border border-blue-400 text-blue-500">
+              <span className="text-[10px] font-semibold px-3 py-1.5 rounded-full border border-[var(--color-info)] text-[var(--color-info-ink)]">
                 {buttonText}
               </span>
             </div>

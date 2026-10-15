@@ -163,19 +163,19 @@ export default function InstagramPostPicker({ selectedPostId, onSelectPost }: Pr
           AVISO DE RECONEXÃO PARA INSIGHTS (SE NECESSÁRIO)
          ======================================================== */}
       {!hasInsightsPermission && (
-        <div className="flex items-start gap-2.5 p-2.5 bg-amber-500/10 border border-amber-500/30 rounded-lg text-xs text-amber-200">
-          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
+        <div className="flex items-start gap-2.5 p-2.5 bg-[var(--color-warning-wash)] border border-[var(--color-warning)] rounded-lg text-xs text-[var(--color-warning-ink)]">
+          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-[var(--color-warning-ink)]" />
           <div className="flex-1 min-w-0">
-            <span className="font-semibold block text-amber-300">
+            <span className="font-semibold block">
               Visualizações de vídeo em modo de compatibilidade
             </span>
-            <p className="text-[11px] text-amber-200/90 mt-0.5">
+            <p className="text-[11px] mt-0.5">
               Para carregar as métricas exatas de visualizações de cada Reel, é necessário reconectar a conta com a nova permissão de Insights.
             </p>
           </div>
           <a
             href="/api/instagram/oauth/start"
-            className="shrink-0 text-[10px] font-bold uppercase tracking-wider bg-amber-500 hover:bg-amber-600 text-black px-2.5 py-1 rounded transition-colors self-center"
+            className="shrink-0 text-[10px] font-bold uppercase tracking-wider bg-[var(--color-terracotta)] hover:bg-[var(--color-terracotta-hover-solid)] text-[var(--color-text-on-accent)] px-2.5 py-1 rounded transition-colors self-center"
           >
             Reconectar
           </a>
@@ -250,8 +250,8 @@ export default function InstagramPostPicker({ selectedPostId, onSelectPost }: Pr
         </div>
 
         {error ? (
-          <div className="p-4 bg-[var(--color-surface-raised)] border border-red-500/20 rounded-lg text-center space-y-2">
-            <p className="text-xs text-red-400">{error}</p>
+          <div className="p-4 bg-[var(--color-surface-raised)] border border-[var(--color-danger)] rounded-lg text-center space-y-2">
+            <p className="text-xs text-[var(--color-danger-ink)]">{error}</p>
             <button
               type="button"
               onClick={() => fetchMedia(limit)}
@@ -382,7 +382,7 @@ export default function InstagramPostPicker({ selectedPostId, onSelectPost }: Pr
           <button
             type="button"
             onClick={() => onSelectPost("")}
-            className="text-[11px] text-[var(--color-text-muted)] hover:text-red-400 font-medium shrink-0 px-1"
+            className="text-[11px] text-[var(--color-text-muted)] hover:text-[var(--color-danger-ink)] font-medium shrink-0 px-1"
           >
             Remover
           </button>

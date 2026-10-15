@@ -272,7 +272,7 @@ export default function MaterialsClient({ initialMaterials }: Props) {
                     <button
                       onClick={() => handleDelete(material.id)}
                       title="Excluir"
-                      className="p-2 rounded-lg hover:bg-red-500/10 text-red-500 ml-auto"
+                      className="p-2 rounded-lg hover:bg-[var(--color-danger-wash)] text-[var(--color-danger-ink)] ml-auto"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>

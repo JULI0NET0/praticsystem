@@ -134,7 +134,7 @@ const TEMPLATES = [
     title: "Gere leads com stories e materiais gratuitos",
     badge: "NOVO",
     badgeType: "new",
-    icon: <Zap className="w-4 h-4 text-blue-400" />,
+    icon: <Zap className="w-4 h-4 text-[var(--color-info)]" />,
     description: "Converta visualizações dos Stories em contatos qualificados entregando cupons, ebooks ou materiais por direct.",
     defaultForm: {
       name: "Captura de Leads via Stories",
@@ -526,7 +526,7 @@ export default function AutomationsClient({
           <div className="h-14 px-4 flex items-center justify-between border-b border-[var(--color-border-subtle)]">
             {!sidebarCollapsed ? (
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[var(--color-terracotta)] to-[#b84627] text-white flex items-center justify-center font-black text-sm shadow-sm">
+                <div className="w-8 h-8 rounded-xl bg-[var(--color-terracotta)] text-[var(--color-text-on-accent)] flex items-center justify-center font-black text-sm shadow-sm">
                   P
                 </div>
                 <div>
@@ -544,7 +544,7 @@ export default function AutomationsClient({
                 </div>
               </div>
             ) : (
-              <div className="w-8 h-8 rounded-xl bg-[var(--color-terracotta)] text-white flex items-center justify-center font-bold text-xs mx-auto">
+              <div className="w-8 h-8 rounded-xl bg-[var(--color-terracotta)] text-[var(--color-text-on-accent)] flex items-center justify-center font-bold text-xs mx-auto">
                 P
               </div>
             )}
@@ -712,7 +712,7 @@ export default function AutomationsClient({
                     className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] p-1.5 rounded-lg hover:bg-[var(--color-surface-sunken)] transition-colors"
                   >
                     {resolvedTheme === "dark" ? (
-                      <Sun className="w-4 h-4 text-amber-400" />
+                      <Sun className="w-4 h-4 text-[var(--color-warning)]" />
                     ) : (
                       <Moon className="w-4 h-4" />
                     )}
@@ -736,7 +736,7 @@ export default function AutomationsClient({
                   className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] p-1.5 rounded-lg hover:bg-[var(--color-surface-sunken)]"
                 >
                   {resolvedTheme === "dark" ? (
-                    <Sun className="w-4 h-4 text-amber-400" />
+                    <Sun className="w-4 h-4 text-[var(--color-warning)]" />
                   ) : (
                     <Moon className="w-4 h-4" />
                   )}
@@ -760,32 +760,32 @@ export default function AutomationsClient({
       <div className="flex-1 h-full min-w-0 flex flex-col overflow-hidden">
         {/* TOP NOTICE BANNER (Yellow Alert Banner) */}
         {!config ? (
-          <div className="bg-[#422006] border-b border-[#713f12] text-[#fef08a] px-6 py-2.5 text-xs flex items-center justify-between gap-3 shrink-0">
+          <div className="bg-[var(--color-warning-wash)] border-b border-[var(--color-warning)] text-[var(--color-warning-ink)] px-6 py-2.5 text-xs flex items-center justify-between gap-3 shrink-0">
             <div className="flex items-center gap-2 max-w-4xl">
-              <AlertTriangle className="w-4 h-4 shrink-0 text-[#facc15]" />
+              <AlertTriangle className="w-4 h-4 shrink-0 text-[var(--color-warning-ink)]" />
               <span>
                 A conexão do Instagram com esta conta foi perdida. Para resolver isso, o administrador da conta precisa no Instagram{" "}
-                <a href="/api/instagram/oauth/start" className="underline font-bold hover:text-white">
+                <a href="/api/instagram/oauth/start" className="underline font-bold hover:opacity-80">
                   Atualizar Permissões
                 </a>
               </span>
             </div>
             <a
               href="/api/instagram/oauth/start"
-              className="bg-[#ca8a04] hover:bg-[#eab308] text-black px-3 py-1 rounded-md font-bold text-xs shrink-0 transition-colors"
+              className="bg-[var(--color-terracotta)] hover:bg-[var(--color-terracotta-hover-solid)] text-[var(--color-text-on-accent)] px-3 py-1 rounded-md font-bold text-xs shrink-0 transition-colors"
             >
               Conectar Conta
             </a>
           </div>
         ) : tokenExpiresInDays !== null && tokenExpiresInDays <= 7 ? (
-          <div className="bg-[#422006] border-b border-[#713f12] text-[#fef08a] px-6 py-2 text-xs flex items-center justify-between gap-3 shrink-0">
+          <div className="bg-[var(--color-warning-wash)] border-b border-[var(--color-warning)] text-[var(--color-warning-ink)] px-6 py-2 text-xs flex items-center justify-between gap-3 shrink-0">
             <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 shrink-0 text-[#facc15]" />
+              <Clock className="w-4 h-4 shrink-0 text-[var(--color-warning-ink)]" />
               <span>Seu token do Instagram expira em {tokenExpiresInDays} dias. Atualize as permissões.</span>
             </div>
             <a
               href="/api/instagram/oauth/start"
-              className="underline font-bold text-xs hover:text-white"
+              className="underline font-bold text-xs hover:opacity-80"
             >
               Renovar Token
             </a>
@@ -815,7 +815,7 @@ export default function AutomationsClient({
                 className="p-1.5 rounded-lg bg-[var(--color-surface-raised)] border border-[var(--color-border-default)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface-sunken)] transition-colors"
               >
                 {resolvedTheme === "dark" ? (
-                  <Sun className="w-4 h-4 text-amber-400" />
+                  <Sun className="w-4 h-4 text-[var(--color-warning)]" />
                 ) : (
                   <Moon className="w-4 h-4" />
                 )}
@@ -899,8 +899,8 @@ export default function AutomationsClient({
                                   tpl.badgeType === "popular"
                                     ? "bg-[var(--color-terracotta-100)] text-[var(--color-terracotta-ink)]"
                                     : tpl.badgeType === "new"
-                                    ? "bg-blue-500/15 text-blue-400"
-                                    : "bg-green-500/15 text-green-400"
+                                    ? "bg-[var(--color-info-wash)] text-[var(--color-info-ink)]"
+                                    : "bg-[var(--color-success-wash)] text-[var(--color-success-ink)]"
                                 }`}
                               >
                                 {tpl.badge}
@@ -1011,7 +1011,7 @@ export default function AutomationsClient({
                     </div>
                     <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-xl p-4">
                       <span className="text-xs text-[var(--color-text-muted)] font-medium">Na Fila (Pendente)</span>
-                      <p className="text-2xl font-bold text-[#eab308] mt-1">
+                      <p className="text-2xl font-bold text-[var(--color-warning-ink)] mt-1">
                         {stats.pending}
                       </p>
                     </div>
@@ -1184,7 +1184,7 @@ export default function AutomationsClient({
                             <strong className="text-[var(--color-text-primary)]">DM:</strong> {a.dm_message_text}
                           </p>
                           {a.dm_button_text && (
-                            <div className="flex items-center gap-1 text-[11px] text-blue-500 font-medium">
+                            <div className="flex items-center gap-1 text-[11px] text-[var(--color-info-ink)] font-medium">
                               <ExternalLink className="w-3 h-3" />
                               <span>
                                 {a.dm_button_text} ({a.dm_button_url}) —{" "}
@@ -1272,7 +1272,7 @@ export default function AutomationsClient({
                 <div className="grid grid-cols-3 gap-3">
                   <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-xl p-4">
                     <span className="text-xs text-[var(--color-text-muted)]">Na fila</span>
-                    <p className="text-xl font-bold text-[#eab308] mt-1">{stats.pending}</p>
+                    <p className="text-xl font-bold text-[var(--color-warning-ink)] mt-1">{stats.pending}</p>
                   </div>
                   <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-xl p-4">
                     <span className="text-xs text-[var(--color-text-muted)]">Enviadas</span>
@@ -1323,8 +1323,8 @@ export default function AutomationsClient({
                       <span>{totalComments}</span>
                     </div>
                     <div className="w-full bg-[var(--color-surface-sunken)] rounded-full h-7 relative overflow-hidden flex items-center px-3">
-                      <div className="absolute inset-0 bg-blue-600 rounded-full" />
-                      <span className="relative z-10 text-xs font-bold text-white">{totalComments} comentários (100%)</span>
+                      <div className="absolute inset-0 bg-[var(--color-info)] rounded-full" />
+                      <span className="relative z-10 text-xs font-bold text-[var(--color-text-primary)]">{totalComments} comentários (100%)</span>
                     </div>
                   </div>
 
@@ -1338,7 +1338,7 @@ export default function AutomationsClient({
                         className="absolute inset-y-0 left-0 bg-[var(--color-success)] rounded-full"
                         style={{ width: `${Math.max(totalComments > 0 ? (totalSent / totalComments) * 100 : 0, 5)}%` }}
                       />
-                      <span className="relative z-10 text-xs font-bold text-white">{totalSent} enviadas</span>
+                      <span className="relative z-10 text-xs font-bold text-[var(--color-text-primary)]">{totalSent} enviadas</span>
                     </div>
                   </div>
 
@@ -1352,7 +1352,7 @@ export default function AutomationsClient({
                         className="absolute inset-y-0 left-0 bg-[var(--color-terracotta)] rounded-full"
                         style={{ width: `${Math.max(overallConversionRate, 5)}%` }}
                       />
-                      <span className="relative z-10 text-xs font-bold text-white">{totalClicks} cliques ({overallConversionRate}%)</span>
+                      <span className="relative z-10 text-xs font-bold text-[var(--color-text-primary)]">{totalClicks} cliques ({overallConversionRate}%)</span>
                     </div>
                   </div>
                 </div>
@@ -1499,7 +1499,7 @@ export default function AutomationsClient({
                     <p className="text-[11px]">DM: {renderMessageVars(simResult.dm_message_text, { first_name: "Maria", username: "maria.exemplo" })}</p>
                   </div>
                 ) : (
-                  <div className="p-3 bg-[#422006] text-[#fef08a] rounded-lg">
+                  <div className="p-3 bg-[var(--color-warning-wash)] text-[var(--color-warning-ink)] rounded-lg">
                     Nenhuma automação ativa correspondeu ao comentário.
                   </div>
                 )}
@@ -1549,7 +1549,7 @@ function NavItem({
       {!collapsed && badge && (
         <span
           className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded-full ${
-            badgeColor === "blue" ? "bg-blue-600 text-white" : "bg-[var(--color-surface-inset)] text-[var(--color-text-muted)]"
+            badgeColor === "blue" ? "bg-[var(--color-info-wash)] text-[var(--color-info-ink)]" : "bg-[var(--color-surface-inset)] text-[var(--color-text-muted)]"
           }`}
         >
           {badge}
