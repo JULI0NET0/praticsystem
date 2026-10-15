@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useStandaloneMode } from "@/hooks/useStandaloneMode";
 import KPICard from "@/components/KPICard";
 import RevenueChart from "@/components/RevenueChart";
 import ActivityTable from "@/components/ActivityTable";
@@ -12,6 +14,8 @@ import { motion } from "framer-motion";
 import { supabase } from "@/lib/supabase";
 
 export default function DashboardPage() {
+  const router = useRouter();
+  const { isStandalone, ready } = useStandaloneMode();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     mrr: 0,
@@ -21,8 +25,14 @@ export default function DashboardPage() {
   const [todayEvents, setTodayEvents] = useState<any[]>([]);
 
   useEffect(() => {
+    if (!ready) return;
+    const mobile = window.matchMedia("(max-width: 768px)").matches;
+    if (isStandalone && mobile) {
+      router.replace("/admin/demandas");
+      return;
+    }
     fetchDashboardData();
-  }, []);
+  }, [ready, isStandalone, router]);
 
   const fetchDashboardData = async () => {
     try {

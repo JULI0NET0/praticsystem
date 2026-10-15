@@ -75,16 +75,16 @@ import ClientAtendimento from "@/components/admin/clients/ClientAtendimento";
 
 
 const TABS = [
-  { id: 'dashboard', label: 'Dashboard', icon: Layout },
+  { id: 'docs', label: 'Documentos', icon: Folder },
   { id: 'dados', label: 'Dados', icon: User },
+  { id: 'access', label: 'Acessos', icon: ShieldCheck },
   { id: 'briefing', label: 'Briefing', icon: FileText },
+  { id: 'dashboard', label: 'Dashboard', icon: Layout },
   { id: 'demandas', label: 'Demandas', icon: ClipboardList },
   { id: 'notas', label: 'Notas', icon: MessageSquare },
   { id: 'atendimento', label: 'Atendimento', icon: MessageCircle },
-  { id: 'access', label: 'Acessos', icon: ShieldCheck },
   { id: 'contracts', label: 'Contratos', icon: FileText },
   { id: 'finance', label: 'Financeiro', icon: CreditCard },
-  { id: 'docs', label: 'Documentos', icon: Folder },
 ];
 
 export default function ClientDetailPage() {
@@ -94,7 +94,7 @@ export default function ClientDetailPage() {
   const { showToast } = useToast();
   const { confirm } = useConfirm();
   const { currentUser } = useAuth();
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState('docs');
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
   const [dateRange, setDateRange] = useState({
     start: "",

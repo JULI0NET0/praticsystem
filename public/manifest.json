@@ -3,7 +3,7 @@
   "short_name": "Pratic",
   "description": "Plataforma completa de gestão para a Agência Pratic",
   "id": "/admin/dashboard",
-  "start_url": "/admin/dashboard",
+  "start_url": "/admin/demandas",
   "scope": "/",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui"],
