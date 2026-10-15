@@ -4,12 +4,12 @@ export const metadata = {
 
 export default function DataDeletionPage() {
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-200 px-4 py-12 sm:px-8">
+    <div className="min-h-screen bg-[var(--color-surface-canvas)] text-[var(--color-text-primary)] px-4 py-12 sm:px-8">
       <div className="max-w-2xl mx-auto">
-        <h1 className="text-2xl font-semibold text-white mb-2">Exclusão de Dados</h1>
-        <p className="text-sm text-neutral-500 mb-8">Automação de Instagram — @juli0net0</p>
+        <h1 className="font-[family-name:var(--font-serif)] text-[26px] font-medium text-[var(--color-text-primary)] mb-2">Exclusão de Dados</h1>
+        <p className="text-sm text-[var(--color-text-secondary)] mb-8">Automação de Instagram — @juli0net0</p>
 
-        <div className="space-y-6 text-sm leading-relaxed text-neutral-300">
+        <div className="space-y-6 text-sm leading-relaxed text-[var(--color-text-secondary)]">
           <p>
             Se você comentou ou enviou mensagem para a conta @juli0net0 e quer que seus dados
             (ID do Instagram, nome de usuário e histórico de mensagens automáticas) sejam
@@ -17,10 +17,10 @@ export default function DataDeletionPage() {
           </p>
 
           <section>
-            <h2 className="text-white font-medium mb-2">Como solicitar a exclusão</h2>
+            <h2 className="text-[var(--color-text-primary)] font-semibold mb-2">Como solicitar a exclusão</h2>
             <p>
               Envie uma mensagem para{" "}
-              <a href="mailto:juliomneto20@gmail.com" className="text-blue-400 underline">
+              <a href="mailto:juliomneto20@gmail.com" className="text-[var(--color-info-ink)] underline focus-visible:outline-2 focus-visible:outline-[var(--color-info)]">
                 juliomneto20@gmail.com
               </a>{" "}
               com o assunto &ldquo;Exclusão de dados Instagram&rdquo; e informe o seu @ do Instagram.
@@ -29,7 +29,7 @@ export default function DataDeletionPage() {
           </section>
 
           <section>
-            <h2 className="text-white font-medium mb-2">Outra forma: revogar o acesso pelo Instagram</h2>
+            <h2 className="text-[var(--color-text-primary)] font-semibold mb-2">Outra forma: revogar o acesso pelo Instagram</h2>
             <p>
               Você também pode remover o acesso do aplicativo diretamente pelo Instagram, em
               Configurações → Aplicativos e sites → Ativos, removendo o aplicativo vinculado a
@@ -38,10 +38,10 @@ export default function DataDeletionPage() {
           </section>
 
           <section>
-            <h2 className="text-white font-medium mb-2">Contato</h2>
+            <h2 className="text-[var(--color-text-primary)] font-semibold mb-2">Contato</h2>
             <p>
               Dúvidas:{" "}
-              <a href="mailto:juliomneto20@gmail.com" className="text-blue-400 underline">
+              <a href="mailto:juliomneto20@gmail.com" className="text-[var(--color-info-ink)] underline focus-visible:outline-2 focus-visible:outline-[var(--color-info)]">
                 juliomneto20@gmail.com
               </a>
             </p>
