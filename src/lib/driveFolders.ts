@@ -105,3 +105,14 @@ export function matchClientsToFolders(
     return { clientId: client.id, folderId: null, folderName: null, confidence: null };
   });
 }
+
+export const APPROVAL_FOLDER_NAME = 'PARA APROVAÇÃO';
+
+/** Subpastas da pasta do cliente cujo nome é "Pratic" (ignora emoji, caixa e acento). */
+export function findPraticSubfolders<T extends { name: string }>(folders: T[]): T[] {
+  return folders.filter((f) => normalizeName(f.name) === 'pratic');
+}
+
+export function hasApprovalFolder(folders: { name: string }[]): boolean {
+  return folders.some((f) => normalizeName(f.name) === normalizeName(APPROVAL_FOLDER_NAME));
+}
