@@ -92,10 +92,27 @@ export async function POST(request: Request) {
     imported = inserted?.length ?? 0
   }
 
-  // Quem só existe na DM também vira contato (sem sobrescrever quem já existe).
+  // Quem só existe na DM também vira contato (sem sobrescrever quem já existe), com as datas
+  // reais da conversa — senão todos apareceriam como "novos hoje" no painel.
   if (contacts.size) {
+    const span = new Map<string, { first: string; last: string }>()
+    for (const r of rows) {
+      const cur = span.get(r.igsid)
+      if (!cur) span.set(r.igsid, { first: r.created_at, last: r.created_at })
+      else {
+        if (r.created_at < cur.first) cur.first = r.created_at
+        if (r.created_at > cur.last) cur.last = r.created_at
+      }
+    }
+    const now = new Date().toISOString()
     await supabase.from('ig_contacts').upsert(
-      [...contacts].map(([igsid, username]) => ({ igsid, username, source: 'dm' })),
+      [...contacts].map(([igsid, username]) => ({
+        igsid,
+        username,
+        source: 'dm',
+        first_seen_at: span.get(igsid)?.first ?? now,
+        last_seen_at: span.get(igsid)?.last ?? now
+      })),
       { onConflict: 'igsid', ignoreDuplicates: true }
     )
   }
