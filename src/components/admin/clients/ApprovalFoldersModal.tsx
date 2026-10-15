@@ -6,7 +6,7 @@ import { Loader2, X, FolderPlus } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/components/CustomToast";
 
-type Action = "criar" | "criada" | "ja_existe" | "sem_pasta" | "sem_pratic" | "ambiguo" | "erro";
+type Action = "criar" | "criada" | "ja_existe" | "sem_pasta" | "erro";
 
 interface Row {
   clientId: string;
@@ -21,8 +21,6 @@ const LABEL: Record<Action, string> = {
   criada: "Criada",
   ja_existe: "Já existe",
   sem_pasta: "Sem pasta do Drive vinculada",
-  sem_pratic: "Sem subpasta Pratic",
-  ambiguo: "Mais de uma subpasta Pratic",
   erro: "Erro",
 };
 
@@ -32,7 +30,7 @@ async function authHeaders(): Promise<Record<string, string>> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-/** Cria "PARA APROVAÇÃO" dentro da subpasta Pratic de cada cliente, depois de mostrar a simulação. */
+/** Cria "PARA APROVAÇÃO" dentro da pasta de cada cliente, depois de mostrar a simulação. */
 export default function ApprovalFoldersModal({ onClose }: { onClose: () => void }) {
   const { showToast } = useToast();
   const [loading, setLoading] = useState(true);
@@ -93,7 +91,7 @@ export default function ApprovalFoldersModal({ onClose }: { onClose: () => void 
             <div>
               <h2 style={{ fontSize: "1.1rem", fontWeight: 700, margin: 0 }}>Criar pasta PARA APROVAÇÃO</h2>
               <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginTop: "4px" }}>
-                Dentro da subpasta Pratic de cada cliente. Confira antes de criar.
+                Dentro da pasta de cada cliente no Drive. Confira antes de criar.
               </p>
             </div>
           </div>
