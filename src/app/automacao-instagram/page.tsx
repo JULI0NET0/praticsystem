@@ -62,10 +62,17 @@ export default async function InstagramAutomationPage() {
       .limit(1000),
   ]);
 
+  // O próprio perfil chegou a virar contato pelos echoes antigos: fica fora da lista e da contagem.
+  const isOwnAccount = (c: { igsid: string; username?: string | null }) =>
+    !!config && (c.igsid === config.ig_user_id || (!!config.ig_username && c.username === config.ig_username));
+  const allContacts = contactsRes.data || [];
+  const contacts = allContacts.filter((c) => !isOwnAccount(c));
+  const ownRows = allContacts.length - contacts.length;
+
   const clickRows = clickRowsRes.data || [];
   const dashboard: DashboardData = {
     counts: {
-      contacts: contactsCountRes.count || 0,
+      contacts: Math.max(0, (contactsCountRes.count || 0) - ownRows),
       newContacts7d: newContactsRes.count || 0,
       comments: commentsCountRes.count || 0,
       sent: sentCountRes.count || 0,
@@ -89,7 +96,7 @@ export default async function InstagramAutomationPage() {
         initialConfig={config}
         initialAutomations={(automationsRes.data || []) as IgAutomation[]}
         initialLogs={logsRes.data || []}
-        initialContacts={contactsRes.data || []}
+        initialContacts={contacts}
         dashboard={dashboard}
         queueStats={{
           pending: pendingCountRes.count || 0,

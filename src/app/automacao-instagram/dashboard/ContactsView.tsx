@@ -156,7 +156,8 @@ export default function ContactsView({ contacts, total }: { contacts: IgContactV
             key: "interactions",
             header: "Interações",
             numeric: true,
-            render: (c) => c.interactions ?? "—",
+            // Contatos anteriores à contagem de interações ficam sem número.
+            render: (c) => (c.interactions ? c.interactions : "—"),
           },
           {
             key: "first",

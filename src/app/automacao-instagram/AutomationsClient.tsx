@@ -174,11 +174,13 @@ export default function AutomationsClient({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const [config] = useState(initialConfig);
+  // Só as automações têm edição otimista no cliente; o resto vem direto das props
+  // para refletir o router.refresh() (ex.: depois de "Atualizar perfis").
+  const config = initialConfig;
   const [automations, setAutomations] = useState(initialAutomations);
-  const [logs] = useState(initialLogs);
-  const [contacts] = useState(initialContacts);
-  const [stats] = useState(queueStats);
+  const logs = initialLogs;
+  const contacts = initialContacts;
+  const stats = queueStats;
 
   // Form & Modals
   const [showForm, setShowForm] = useState(false);

@@ -21,21 +21,33 @@ export interface IgContactRow {
   profile_synced_at?: string | null
 }
 
+const PROFILE_FIELDS = ['name,username,profile_pic,is_user_follow_business', 'name,username']
+
 // Perfil de quem já interagiu com a conta (comentou ou mandou DM).
 // Melhor esforço: sem consentimento ou com erro da API, devolve null.
+
 export async function fetchIgProfile(igsid: string, accessToken: string): Promise<IgProfile | null> {
   try {
-    const res = await fetch(
-      `${IG_GRAPH_BASE}/${igsid}?fields=name,username,profile_pic,is_user_follow_business`,
-      { headers: { Authorization: `Bearer ${accessToken}` } }
-    )
-    const data = await res.json().catch(() => ({}))
-    if (!res.ok) return null
+    // Contas profissionais não têm profile_pic/is_user_follow_business (erro 100):
+    // tenta de novo só com @ e nome.
+    let data: Record<string, unknown> | null = null
+    for (const fields of PROFILE_FIELDS) {
+      const res = await fetch(`${IG_GRAPH_BASE}/${igsid}?fields=${fields}`, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      })
+      const body = await res.json().catch(() => ({}))
+      if (res.ok) {
+        data = body
+        break
+      }
+      if (body?.error?.code !== 100) return null
+    }
+    if (!data) return null
     return {
-      username: data?.username || null,
-      name: data?.name || null,
-      profile_pic_url: data?.profile_pic || null,
-      is_follower: typeof data?.is_user_follow_business === 'boolean' ? data.is_user_follow_business : null
+      username: (data.username as string) || null,
+      name: (data.name as string) || null,
+      profile_pic_url: (data.profile_pic as string) || null,
+      is_follower: typeof data.is_user_follow_business === 'boolean' ? data.is_user_follow_business : null
     }
   } catch {
     return null
