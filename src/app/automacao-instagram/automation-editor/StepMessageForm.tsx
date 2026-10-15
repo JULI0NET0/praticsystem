@@ -64,7 +64,7 @@ export default function StepMessageForm({ form, onChange }: Props) {
 
       {/* Bloco: Texto da mensagem */}
       <div className="border border-[var(--color-border-subtle)] rounded-xl p-4 space-y-3">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
+        <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">
           Texto da mensagem (DM)
         </p>
         <textarea
@@ -74,7 +74,7 @@ export default function StepMessageForm({ form, onChange }: Props) {
           placeholder="Olá! Conforme você pediu, aqui está seu link..."
           className="w-full bg-[var(--color-surface-sunken)] border border-[var(--color-border-default)] rounded-lg px-3 py-2 text-xs text-[var(--color-text-primary)] outline-none"
         />
-        <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-[var(--color-text-muted)]">
+        <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-[var(--color-text-secondary)]">
           <span>Variáveis:</span>
           {IG_MESSAGE_VARS.map((v) => (
             <button
@@ -93,7 +93,7 @@ export default function StepMessageForm({ form, onChange }: Props) {
 
       {/* Bloco: Botão */}
       <div className="border border-[var(--color-border-subtle)] rounded-xl p-4 space-y-3">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
+        <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">
           + Botão Adicionar (opcional)
         </p>
         <div className="grid grid-cols-2 gap-3">
@@ -155,7 +155,7 @@ export default function StepMessageForm({ form, onChange }: Props) {
                 Sugestão de resposta
               </button>
             </div>
-            <p className="text-[11px] text-[var(--color-text-muted)] mt-1.5">
+            <p className="text-[11px] text-[var(--color-text-secondary)] mt-1.5">
               {form.cta_type === "link"
                 ? "Abre o link direto ao tocar — mais rápido, sem esperar uma 2ª mensagem."
                 : form.cta_type === "button"
@@ -168,7 +168,7 @@ export default function StepMessageForm({ form, onChange }: Props) {
 
       {/* Bloco: Resposta pública no comentário */}
       <div className="border border-[var(--color-border-subtle)] rounded-xl p-4 space-y-3">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
+        <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">
           Resposta pública no comentário (opcional)
         </p>
         <CommentReplyVariations
@@ -188,11 +188,11 @@ export default function StepMessageForm({ form, onChange }: Props) {
               >
                 Conteúdo exclusivo para seguidores
               </label>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[var(--color-terracotta)]/15 text-[var(--color-terracotta)]">
+              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-[var(--color-terracotta)]/15 text-[var(--color-terracotta)]">
                 Follow Gate
               </span>
             </div>
-            <p className="text-[11px] text-[var(--color-text-muted)]">
+            <p className="text-[11px] text-[var(--color-text-secondary)]">
               Só libera o material depois que a pessoa seguir o seu perfil no Instagram.
             </p>
           </div>

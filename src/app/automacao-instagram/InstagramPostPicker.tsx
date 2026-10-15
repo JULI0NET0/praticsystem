@@ -175,7 +175,7 @@ export default function InstagramPostPicker({ selectedPostId, onSelectPost }: Pr
           </div>
           <a
             href="/api/instagram/oauth/start"
-            className="shrink-0 text-[10px] font-bold uppercase tracking-wider bg-[var(--color-terracotta)] hover:bg-[var(--color-terracotta-hover-solid)] text-[var(--color-text-on-accent)] px-2.5 py-1 rounded transition-colors self-center"
+            className="shrink-0 text-[11px] font-bold uppercase tracking-wider bg-[var(--color-terracotta)] hover:bg-[var(--color-terracotta-hover-solid)] text-[var(--color-text-on-accent)] px-2.5 py-1 rounded transition-colors self-center"
           >
             Reconectar
           </a>
@@ -200,7 +200,7 @@ export default function InstagramPostPicker({ selectedPostId, onSelectPost }: Pr
             <span>Todos os posts & reels (Gatilho Global)</span>
           </div>
           {isGlobalSelected && (
-            <span className="w-4 h-4 rounded-full bg-[var(--color-terracotta)] text-[var(--color-text-on-accent)] flex items-center justify-center text-[10px]">
+            <span className="w-4 h-4 rounded-full bg-[var(--color-terracotta)] text-[var(--color-text-on-accent)] flex items-center justify-center text-[11px]">
               ✓
             </span>
           )}
@@ -243,7 +243,7 @@ export default function InstagramPostPicker({ selectedPostId, onSelectPost }: Pr
             Ou escolha um Post / Reel específico:
           </span>
           {selectedPostId && (
-            <span className="text-[10px] text-[var(--color-terracotta)] font-medium">
+            <span className="text-[11px] text-[var(--color-terracotta)] font-medium">
               1 post selecionado
             </span>
           )}
@@ -273,7 +273,7 @@ export default function InstagramPostPicker({ selectedPostId, onSelectPost }: Pr
             ))}
           </div>
         ) : mediaList.length === 0 ? (
-          <div className="p-6 bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-lg text-center text-xs text-[var(--color-text-muted)]">
+          <div className="p-6 bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-lg text-center text-xs text-[var(--color-text-secondary)]">
             Nenhuma publicação recente encontrada.
           </div>
         ) : (
@@ -336,14 +336,14 @@ export default function InstagramPostPicker({ selectedPostId, onSelectPost }: Pr
 
                   {/* Visualizações no Canto Inferior (Ícone de Olho + Formato Instagram) */}
                   <div className="absolute bottom-1.5 left-1.5 right-1.5 flex items-center justify-between text-white pointer-events-none">
-                    <div className="flex items-center gap-1 text-[10px] sm:text-[11px] font-semibold drop-shadow-md">
+                    <div className="flex items-center gap-1 text-[11px] sm:text-[11px] font-semibold drop-shadow-md">
                       <Eye className="w-3 h-3 drop-shadow text-white/90" />
                       <span>{formatInstagramViews(item.views)}</span>
                     </div>
                   </div>
 
                   {/* Hover Overlay com tooltip de resumo do caption */}
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity p-2 flex flex-col justify-end text-white text-[10px] pointer-events-none pb-7">
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity p-2 flex flex-col justify-end text-white text-[11px] pointer-events-none pb-7">
                     <p className="line-clamp-2 leading-tight drop-shadow font-medium">
                       {item.caption || "Sem legenda"}
                     </p>
@@ -374,7 +374,7 @@ export default function InstagramPostPicker({ selectedPostId, onSelectPost }: Pr
               <span className="font-semibold text-[var(--color-text-primary)] block truncate">
                 {selectedMediaItem.caption?.slice(0, 50) || `Post ID: ${selectedMediaItem.id}`}
               </span>
-              <span className="text-[10px] text-[var(--color-text-muted)]">
+              <span className="text-[11px] text-[var(--color-text-secondary)]">
                 {formatInstagramViews(selectedMediaItem.views)} visualizações
               </span>
             </div>
@@ -382,7 +382,7 @@ export default function InstagramPostPicker({ selectedPostId, onSelectPost }: Pr
           <button
             type="button"
             onClick={() => onSelectPost("")}
-            className="text-[11px] text-[var(--color-text-muted)] hover:text-[var(--color-danger-ink)] font-medium shrink-0 px-1"
+            className="text-[11px] text-[var(--color-text-secondary)] hover:text-[var(--color-danger-ink)] font-medium shrink-0 px-1"
           >
             Remover
           </button>

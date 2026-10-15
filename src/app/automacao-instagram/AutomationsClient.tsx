@@ -534,11 +534,11 @@ export default function AutomationsClient({
                     <span className="font-extrabold text-base tracking-tight text-[var(--color-text-primary)]">
                       PraticChat
                     </span>
-                    <span className="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded bg-[var(--color-terracotta-100)] text-[var(--color-terracotta-ink)]">
+                    <span className="text-[11px] uppercase font-bold px-1.5 py-0.5 rounded bg-[var(--color-terracotta-100)] text-[var(--color-terracotta-ink)]">
                       PRO
                     </span>
                   </div>
-                  <span className="text-[10px] text-[var(--color-text-muted)] block -mt-0.5">
+                  <span className="text-[11px] text-[var(--color-text-secondary)] block -mt-0.5">
                     Automação Instagram
                   </span>
                 </div>
@@ -698,7 +698,7 @@ export default function AutomationsClient({
                   <p className="text-xs font-bold text-[var(--color-text-primary)] truncate">
                     {displayName}
                   </p>
-                  <p className="text-[10px] text-[var(--color-text-muted)] truncate">
+                  <p className="text-[11px] text-[var(--color-text-secondary)] truncate">
                     {displayHandle}
                   </p>
                 </div>
@@ -895,7 +895,7 @@ export default function AutomationsClient({
                             </div>
                             {tpl.badge && (
                               <span
-                                className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full ${
+                                className={`text-[11px] font-extrabold uppercase px-2 py-0.5 rounded-full ${
                                   tpl.badgeType === "popular"
                                     ? "bg-[var(--color-terracotta-100)] text-[var(--color-terracotta-ink)]"
                                     : tpl.badgeType === "new"
@@ -945,7 +945,7 @@ export default function AutomationsClient({
                               style={{ width: `${Math.round((completedCount / checklistItems.length) * 100)}%` }}
                             />
                           </div>
-                          <span className="text-[11px] text-[var(--color-text-muted)] font-medium">
+                          <span className="text-[11px] text-[var(--color-text-secondary)] font-medium">
                             {completedCount} de {checklistItems.length} completadas
                           </span>
                         </div>
@@ -992,48 +992,48 @@ export default function AutomationsClient({
                   </h3>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-xl p-4">
-                      <span className="text-xs text-[var(--color-text-muted)] font-medium">Automações Ativas</span>
+                      <span className="text-xs text-[var(--color-text-secondary)] font-medium">Automações Ativas</span>
                       <p className="text-2xl font-bold text-[var(--color-text-primary)] mt-1">
                         {automations.filter((a) => a.is_active).length}
                       </p>
                     </div>
                     <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-xl p-4">
-                      <span className="text-xs text-[var(--color-text-muted)] font-medium">DMs Entregues</span>
+                      <span className="text-xs text-[var(--color-text-secondary)] font-medium">DMs Entregues</span>
                       <p className="text-2xl font-bold text-[var(--color-success)] mt-1">
                         {totalSent}
                       </p>
                     </div>
                     <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-xl p-4">
-                      <span className="text-xs text-[var(--color-text-muted)] font-medium">Cliques no Link</span>
+                      <span className="text-xs text-[var(--color-text-secondary)] font-medium">Cliques no Link</span>
                       <p className="text-2xl font-bold text-[var(--color-terracotta)] mt-1">
                         {totalClicks}
                       </p>
                     </div>
                     <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-xl p-4">
-                      <span className="text-xs text-[var(--color-text-muted)] font-medium">Na Fila (Pendente)</span>
+                      <span className="text-xs text-[var(--color-text-secondary)] font-medium">Na Fila (Pendente)</span>
                       <p className="text-2xl font-bold text-[var(--color-warning-ink)] mt-1">
                         {stats.pending}
                       </p>
                     </div>
                     <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-xl p-4">
-                      <span className="text-xs text-[var(--color-text-muted)] font-medium">Taxa de Conversão</span>
+                      <span className="text-xs text-[var(--color-text-secondary)] font-medium">Taxa de Conversão</span>
                       <p className="text-2xl font-bold text-[var(--color-text-primary)] mt-1">
                         {overallConversionRate}%
                       </p>
                     </div>
                     <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-xl p-4">
-                      <span className="text-xs text-[var(--color-text-muted)] font-medium">Contatos</span>
+                      <span className="text-xs text-[var(--color-text-secondary)] font-medium">Contatos</span>
                       <p className="text-2xl font-bold text-[var(--color-text-primary)] mt-1">
                         {contacts.length}
                       </p>
                     </div>
                     <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-xl p-4 col-span-2">
-                      <span className="text-xs text-[var(--color-text-muted)] font-medium">Automação com Melhor Desempenho</span>
+                      <span className="text-xs text-[var(--color-text-secondary)] font-medium">Automação com Melhor Desempenho</span>
                       <p className="text-sm font-bold text-[var(--color-text-primary)] mt-1.5 truncate">
                         {topAutomation ? topAutomation.name : "—"}
                       </p>
                       {topAutomation && (
-                        <p className="text-[11px] text-[var(--color-text-muted)]">
+                        <p className="text-[11px] text-[var(--color-text-secondary)]">
                           {topAutomation.clicks} clique{topAutomation.clicks === 1 ? "" : "s"}
                         </p>
                       )}
@@ -1133,7 +1133,7 @@ export default function AutomationsClient({
                               {a.name}
                             </h4>
                             <span
-                              className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                              className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
                                 a.is_active
                                   ? "bg-[var(--color-success-wash)] text-[var(--color-success-ink)]"
                                   : "bg-[var(--color-surface-inset)] text-[var(--color-text-muted)]"
@@ -1142,7 +1142,7 @@ export default function AutomationsClient({
                               {a.is_active ? "Ativa" : "Pausada"}
                             </span>
                             {a.require_follow && (
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[var(--color-terracotta)]/15 text-[var(--color-terracotta)]">
+                              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-[var(--color-terracotta)]/15 text-[var(--color-terracotta)]">
                                 🔒 Exclusivo seguidores
                               </span>
                             )}
@@ -1163,7 +1163,7 @@ export default function AutomationsClient({
                             </button>
                             <button
                               onClick={() => handleDelete(a.id)}
-                              className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-danger)] p-1.5"
+                              className="text-xs text-[var(--color-text-secondary)] hover:text-[var(--color-danger)] p-1.5"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -1173,9 +1173,9 @@ export default function AutomationsClient({
                         {/* Details */}
                         <div className="bg-[var(--color-surface-sunken)] rounded-lg p-3 text-xs space-y-1.5">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="text-[11px] text-[var(--color-text-muted)]">Palavras-chave:</span>
+                            <span className="text-[11px] text-[var(--color-text-secondary)]">Palavras-chave:</span>
                             {(a.keywords || []).map((k, i) => (
-                              <span key={i} className="bg-[var(--color-surface-inset)] px-1.5 py-0.5 rounded text-[10px] font-semibold">
+                              <span key={i} className="bg-[var(--color-surface-inset)] px-1.5 py-0.5 rounded text-[11px] font-semibold">
                                 #{k}
                               </span>
                             ))}
@@ -1220,12 +1220,12 @@ export default function AutomationsClient({
 
                 <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-xl overflow-hidden">
                   {contacts.length === 0 ? (
-                    <div className="p-12 text-center text-xs text-[var(--color-text-muted)]">
+                    <div className="p-12 text-center text-xs text-[var(--color-text-secondary)]">
                       Nenhum contato registrado ainda.
                     </div>
                   ) : (
                     <div className="divide-y divide-[var(--color-border-subtle)]">
-                      <div className="bg-[var(--color-surface-sunken)] px-4 py-2 text-[11px] font-bold text-[var(--color-text-muted)] uppercase grid grid-cols-12">
+                      <div className="bg-[var(--color-surface-sunken)] px-4 py-2 text-[11px] font-bold text-[var(--color-text-secondary)] uppercase grid grid-cols-12">
                         <span className="col-span-6">Usuário</span>
                         <span className="col-span-6">Última Interação</span>
                       </div>
@@ -1271,15 +1271,15 @@ export default function AutomationsClient({
 
                 <div className="grid grid-cols-3 gap-3">
                   <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-xl p-4">
-                    <span className="text-xs text-[var(--color-text-muted)]">Na fila</span>
+                    <span className="text-xs text-[var(--color-text-secondary)]">Na fila</span>
                     <p className="text-xl font-bold text-[var(--color-warning-ink)] mt-1">{stats.pending}</p>
                   </div>
                   <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-xl p-4">
-                    <span className="text-xs text-[var(--color-text-muted)]">Enviadas</span>
+                    <span className="text-xs text-[var(--color-text-secondary)]">Enviadas</span>
                     <p className="text-xl font-bold text-[var(--color-success)] mt-1">{totalSent}</p>
                   </div>
                   <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-xl p-4">
-                    <span className="text-xs text-[var(--color-text-muted)]">Falharam</span>
+                    <span className="text-xs text-[var(--color-text-secondary)]">Falharam</span>
                     <p className="text-xl font-bold text-[var(--color-danger)] mt-1">{stats.failed}</p>
                   </div>
                 </div>
@@ -1292,7 +1292,7 @@ export default function AutomationsClient({
                         <span className={log.level === "error" ? "text-[var(--color-danger)] font-semibold" : "text-[var(--color-text-primary)]"}>
                           {log.event}
                         </span>
-                        <span className="text-[10px] text-[var(--color-text-muted)]">
+                        <span className="text-[11px] text-[var(--color-text-secondary)]">
                           {new Date(log.created_at).toLocaleTimeString("pt-BR")}
                         </span>
                       </div>
@@ -1385,7 +1385,7 @@ export default function AutomationsClient({
                       <span className="font-bold text-xs text-[var(--color-text-primary)]">
                         ⚡ Disparo de Link em Lançamentos
                       </span>
-                      <p className="text-[11px] text-[var(--color-text-muted)] mt-1">
+                      <p className="text-[11px] text-[var(--color-text-secondary)] mt-1">
                         Gatilho para posts de carrossel e reels convidando para evento ou oferta.
                       </p>
                     </div>
@@ -1396,7 +1396,7 @@ export default function AutomationsClient({
                       <span className="font-bold text-xs text-[var(--color-text-primary)]">
                         💼 Triagem de Contato & WhatsApp
                       </span>
-                      <p className="text-[11px] text-[var(--color-text-muted)] mt-1">
+                      <p className="text-[11px] text-[var(--color-text-secondary)] mt-1">
                         Redirecionamento ágil para canal comercial sem perda de lead.
                       </p>
                     </div>
@@ -1422,7 +1422,7 @@ export default function AutomationsClient({
                 <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-2xl p-6 space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <span className="text-xs text-[var(--color-text-muted)]">Conta do Instagram</span>
+                      <span className="text-xs text-[var(--color-text-secondary)]">Conta do Instagram</span>
                       <p className="text-lg font-bold text-[var(--color-text-primary)]">
                         {displayName} ({displayHandle})
                       </p>
@@ -1548,7 +1548,7 @@ function NavItem({
 
       {!collapsed && badge && (
         <span
-          className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded-full ${
+          className={`text-[11px] font-extrabold px-1.5 py-0.5 rounded-full ${
             badgeColor === "blue" ? "bg-[var(--color-info-wash)] text-[var(--color-info-ink)]" : "bg-[var(--color-surface-inset)] text-[var(--color-text-muted)]"
           }`}
         >

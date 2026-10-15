@@ -81,9 +81,9 @@ export default function MaterialPickerField({ url, linkedMaterialId, onChange }:
               </button>
             </div>
             <div className="flex-1 overflow-y-auto p-2">
-              {loading && <p className="text-[11px] text-[var(--color-text-muted)] p-3">Carregando...</p>}
+              {loading && <p className="text-[11px] text-[var(--color-text-secondary)] p-3">Carregando...</p>}
               {!loading && materials?.length === 0 && (
-                <p className="text-[11px] text-[var(--color-text-muted)] p-3">
+                <p className="text-[11px] text-[var(--color-text-secondary)] p-3">
                   Nenhum material ativo cadastrado ainda.
                 </p>
               )}

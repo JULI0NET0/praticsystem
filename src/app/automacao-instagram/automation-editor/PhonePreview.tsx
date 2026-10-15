@@ -18,14 +18,14 @@ export default function PhonePreview({ username, handle, messageText, ctaType, b
 
   return (
     <div className="sticky top-0">
-      <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--color-text-muted)] mb-3 text-center">
+      <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--color-text-secondary)] mb-3 text-center">
         Prévia no Instagram
       </p>
 
       {/* Phone chrome */}
       <div className="mx-auto w-[260px] rounded-[2.25rem] border-[6px] border-[var(--color-surface-inset)] bg-[var(--color-surface-canvas)] shadow-xl overflow-hidden">
         {/* Status bar */}
-        <div className="flex items-center justify-between px-4 pt-2.5 pb-1 text-[10px] font-semibold text-[var(--color-text-primary)]">
+        <div className="flex items-center justify-between px-4 pt-2.5 pb-1 text-[11px] font-semibold text-[var(--color-text-primary)]">
           <span>9:41</span>
           <div className="flex items-center gap-1">
             <div className="w-3 h-2 rounded-sm bg-[var(--color-text-primary)]" />
@@ -39,7 +39,7 @@ export default function PhonePreview({ username, handle, messageText, ctaType, b
           </div>
           <div className="min-w-0">
             <p className="text-[11px] font-bold text-[var(--color-text-primary)] truncate">{username}</p>
-            <p className="text-[9px] text-[var(--color-text-muted)] truncate">{handle}</p>
+            <p className="text-[11px] text-[var(--color-text-secondary)] truncate">{handle}</p>
           </div>
         </div>
 
@@ -62,7 +62,7 @@ export default function PhonePreview({ username, handle, messageText, ctaType, b
             </div>
           ) : (
             <div className="max-w-[85%] rounded-2xl rounded-bl-sm bg-[var(--color-surface-raised)] border border-dashed border-[var(--color-border-default)] px-3 py-2">
-              <p className="text-[11px] text-[var(--color-text-muted)] italic">
+              <p className="text-[11px] text-[var(--color-text-secondary)] italic">
                 Sua mensagem aparece aqui...
               </p>
             </div>
@@ -70,7 +70,7 @@ export default function PhonePreview({ username, handle, messageText, ctaType, b
 
           {hasButton && ctaType === "quick_reply" && (
             <div className="flex justify-start">
-              <span className="text-[10px] font-semibold px-3 py-1.5 rounded-full border border-[var(--color-info)] text-[var(--color-info-ink)]">
+              <span className="text-[11px] font-semibold px-3 py-1.5 rounded-full border border-[var(--color-info)] text-[var(--color-info-ink)]">
                 {buttonText}
               </span>
             </div>

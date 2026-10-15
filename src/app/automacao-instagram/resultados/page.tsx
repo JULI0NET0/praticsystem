@@ -104,7 +104,7 @@ export default async function ResultsPage() {
         </div>
 
         <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-2xl p-6 shadow-sm">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--color-text-muted)] mb-4">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)] mb-4">
             Total Consolidado (Todas as Automações)
           </h2>
           <Funnel
@@ -117,7 +117,7 @@ export default async function ResultsPage() {
         </div>
 
         {automations.length === 0 && (
-          <p className="text-[var(--color-text-muted)] text-xs py-8 text-center bg-[var(--color-surface-raised)] border border-dashed border-[var(--color-border-default)] rounded-2xl">
+          <p className="text-[var(--color-text-secondary)] text-xs py-8 text-center bg-[var(--color-surface-raised)] border border-dashed border-[var(--color-border-default)] rounded-2xl">
             Nenhuma automação criada ainda.
           </p>
         )}
@@ -135,7 +135,7 @@ export default async function ResultsPage() {
                     {automation.name}
                   </h3>
                   <span
-                    className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                    className={`text-[11px] px-2 py-0.5 rounded-full font-bold ${
                       automation.is_active
                         ? "bg-[var(--color-success-wash)] text-[var(--color-success-ink)]"
                         : "bg-[var(--color-surface-inset)] text-[var(--color-text-muted)]"

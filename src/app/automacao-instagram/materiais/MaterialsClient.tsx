@@ -192,7 +192,7 @@ export default function MaterialsClient({ initialMaterials }: Props) {
         </div>
 
         {materials.length === 0 ? (
-          <p className="text-[var(--color-text-muted)] text-xs py-12 text-center bg-[var(--color-surface-raised)] border border-dashed border-[var(--color-border-default)] rounded-2xl">
+          <p className="text-[var(--color-text-secondary)] text-xs py-12 text-center bg-[var(--color-surface-raised)] border border-dashed border-[var(--color-border-default)] rounded-2xl">
             Nenhum material cadastrado ainda. Crie o primeiro pra usar como CTA nas automações.
           </p>
         ) : (
@@ -220,14 +220,14 @@ export default function MaterialsClient({ initialMaterials }: Props) {
                     )}
                     {!material.is_active && (
                       <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                        <span className="text-[10px] font-bold uppercase text-white bg-black/60 px-2 py-1 rounded-full">
+                        <span className="text-[11px] font-bold uppercase text-white bg-black/60 px-2 py-1 rounded-full">
                           Inativo
                         </span>
                       </div>
                     )}
                   </div>
                   <div className="p-4 flex flex-col gap-2 flex-1">
-                    <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-[var(--color-terracotta)]">
+                    <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-[var(--color-terracotta)]">
                       {typeMeta.icon}
                       {typeMeta.label}
                     </span>
@@ -239,7 +239,7 @@ export default function MaterialsClient({ initialMaterials }: Props) {
                         {material.description}
                       </p>
                     )}
-                    <span className="text-[10px] text-[var(--color-text-muted)] mt-auto pt-1">
+                    <span className="text-[11px] text-[var(--color-text-secondary)] mt-auto pt-1">
                       {material.view_count} visualizaç{material.view_count === 1 ? "ão" : "ões"}
                     </span>
                   </div>

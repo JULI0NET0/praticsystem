@@ -67,7 +67,7 @@ export default function CommentReplyVariations({ variations, onChange }: Props) 
         </div>
       )}
 
-      <p className="text-[11px] text-[var(--color-text-muted)]">
+      <p className="text-[11px] text-[var(--color-text-secondary)]">
         {variations.length > 1
           ? `${variations.length} variações cadastradas — o sistema escolhe uma aleatoriamente a cada resposta, pra não parecer repetitivo.`
           : "Cadastre mais de uma variação pra evitar responder sempre com o mesmo texto."}

@@ -5,7 +5,7 @@ import { MessageSquare, Plus } from "lucide-react";
 export default function StepsList() {
   return (
     <div className="w-full sm:w-40 shrink-0 space-y-2 border-b sm:border-b-0 sm:border-r border-[var(--color-border-subtle)] pb-4 sm:pb-0 sm:pr-4">
-      <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)] mb-1">
+      <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--color-text-secondary)] mb-1">
         Passo Inicial
       </p>
       <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl border-2 border-[var(--color-terracotta)] bg-[var(--color-terracotta-100)] text-[var(--color-terracotta-ink)]">
