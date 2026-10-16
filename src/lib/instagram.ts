@@ -136,6 +136,63 @@ export async function sendInstagramMessage(params: SendMessageParams) {
   return data
 }
 
+interface PublishReelParams {
+  igUserId: string
+  accessToken: string
+  videoUrl: string
+  caption?: string | null
+  coverUrl?: string | null
+  shareToFeed?: boolean
+}
+
+async function igJson(res: Response) {
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    throw new Error(data?.error?.message || `Instagram API respondeu ${res.status}`)
+  }
+  return data
+}
+
+// Publica um Reel pela API oficial: cria o container, espera o Instagram
+// processar o vídeo (status_code FINISHED) e então chama media_publish.
+// videoUrl precisa ser pública: a Meta baixa o arquivo pelos servidores dela.
+export async function publishInstagramReel(params: PublishReelParams) {
+  const { igUserId, accessToken, videoUrl, caption, coverUrl, shareToFeed } = params
+  const headers = { Authorization: `Bearer ${accessToken}` }
+
+  const body = new URLSearchParams({ media_type: 'REELS', video_url: videoUrl })
+  if (caption) body.set('caption', caption)
+  if (coverUrl) body.set('cover_url', coverUrl)
+  if (shareToFeed !== undefined) body.set('share_to_feed', String(shareToFeed))
+
+  const container = await igJson(
+    await fetch(`${IG_GRAPH_BASE}/${igUserId}/media`, { method: 'POST', headers, body })
+  )
+  const containerId: string = container.id
+
+  // Vídeos grandes levam tempo: consulta a cada 5 s por até ~5 min.
+  for (let attempt = 0; attempt < 60; attempt++) {
+    const status = await igJson(
+      await fetch(`${IG_GRAPH_BASE}/${containerId}?fields=status_code,status`, { headers })
+    )
+    if (status.status_code === 'FINISHED') break
+    if (status.status_code === 'ERROR' || status.status_code === 'EXPIRED') {
+      throw new Error(`Instagram não processou o vídeo (${status.status_code}): ${status.status ?? ''}`)
+    }
+    if (attempt === 59) throw new Error('Tempo esgotado esperando o Instagram processar o vídeo.')
+    await new Promise((r) => setTimeout(r, 5000))
+  }
+
+  const published = await igJson(
+    await fetch(`${IG_GRAPH_BASE}/${igUserId}/media_publish`, {
+      method: 'POST',
+      headers,
+      body: new URLSearchParams({ creation_id: containerId })
+    })
+  )
+  return { containerId, mediaId: published.id as string }
+}
+
 export async function subscribeToWebhooks(igUserId: string, accessToken: string) {
   const res = await fetch(`${IG_GRAPH_BASE}/${igUserId}/subscribed_apps`, {
     method: 'POST',

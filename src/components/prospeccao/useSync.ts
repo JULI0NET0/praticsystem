@@ -26,16 +26,31 @@ export async function runSync(force = false): Promise<SyncResult> {
   return { ok: true, throttled: json.throttled, ...(json.summary ?? {}) };
 }
 
-/** Sincroniza ao abrir a Prospecção e sempre que a aba volta ao foco. */
+/** Sincroniza ao abrir a Prospecção e sempre que a aba volta ao foco. A primeira rodada espera a tela pintar. */
 export function useAutoSync() {
   useEffect(() => {
-    runSync();
-    const onFocus = () => { if (document.visibilityState === "visible") runSync(); };
-    document.addEventListener("visibilitychange", onFocus);
-    window.addEventListener("focus", onFocus);
+    let stop = false;
+    let detach = () => {};
+    const arm = () => {
+      if (stop) return;
+      runSync();
+      const onFocus = () => { if (document.visibilityState === "visible") runSync(); };
+      document.addEventListener("visibilitychange", onFocus);
+      window.addEventListener("focus", onFocus);
+      detach = () => {
+        document.removeEventListener("visibilitychange", onFocus);
+        window.removeEventListener("focus", onFocus);
+      };
+    };
+    let idle = 0;
+    let timer = 0;
+    if (typeof window.requestIdleCallback === "function") idle = window.requestIdleCallback(arm, { timeout: 2000 });
+    else timer = window.setTimeout(arm, 700);
     return () => {
-      document.removeEventListener("visibilitychange", onFocus);
-      window.removeEventListener("focus", onFocus);
+      stop = true;
+      detach();
+      if (idle && typeof window.cancelIdleCallback === "function") window.cancelIdleCallback(idle);
+      window.clearTimeout(timer);
     };
   }, []);
 }

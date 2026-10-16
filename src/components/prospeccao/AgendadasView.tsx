@@ -1,12 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { AlarmClock, CalendarClock, MessageCircle, Megaphone, Repeat, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/components/CustomToast";
 import EmptyState from "@/components/ui/EmptyState";
 import { describeRecurrence } from "@/lib/prospeccao/schedule";
+import { prospeccaoBase } from "@/lib/prospeccao/paths";
 import { useProspeccao } from "./ProspeccaoProvider";
 import { cancelScheduleRequest } from "./ScheduledStrip";
 import type { ScheduledMessage } from "@/types/database";
@@ -25,6 +26,7 @@ export default function AgendadasView() {
   const { contacts } = useProspeccao();
   const { showToast } = useToast();
   const router = useRouter();
+  const pathname = usePathname();
   const [rows, setRows] = useState<ScheduledMessage[]>([]);
   const [filter, setFilter] = useState<Filter>("pending");
   const [loading, setLoading] = useState(true);
@@ -91,7 +93,7 @@ export default function AgendadasView() {
                   <td style={{ maxWidth: 420, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.body || "Anexo"}{r.error && <div style={{ color: "var(--color-danger)", fontSize: "var(--text-caption)" }}>{r.error}</div>}</td>
                   <td>{r.recurrence ? <span className="pp-badge"><Repeat size={11} /> {describeRecurrence(r.recurrence)}</span> : "—"}</td>
                   <td style={{ whiteSpace: "nowrap", textAlign: "right" }}>
-                    <button className="btn btn-ghost btn-icon" onClick={() => router.push(`/admin/prospeccao/conversas?lead=${r.lead_id}`)} aria-label="Abrir conversa" title="Abrir conversa"><MessageCircle size={15} /></button>
+                    <button className="btn btn-ghost btn-icon" onClick={() => router.push(`${prospeccaoBase(pathname)}/conversas?lead=${r.lead_id}`)} aria-label="Abrir conversa" title="Abrir conversa"><MessageCircle size={15} /></button>
                     {r.status === "pending" && (
                       <>
                         <button className="btn btn-ghost btn-icon" onClick={() => cancel(r, "one")} aria-label="Cancelar" title="Cancelar este envio"><X size={15} /></button>

@@ -1,12 +1,13 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { MessageCircle, Plus, Upload, Trash2, UserCheck } from "lucide-react";
 import SearchInput from "@/components/ui/SearchInput";
 import { useConfirm } from "@/components/ConfirmProvider";
 import { useToast } from "@/components/CustomToast";
 import { ORIGIN_LABEL, STAGES, formatPhone, parseLeadsCsv } from "@/lib/prospeccao/leads";
+import { prospeccaoBase } from "@/lib/prospeccao/paths";
 import { useProspeccao } from "./ProspeccaoProvider";
 import LeadFormModal from "./LeadFormModal";
 import type { Lead, LeadStage } from "@/types/database";
@@ -16,6 +17,7 @@ export default function LeadsTable() {
   const { confirm } = useConfirm();
   const { showToast } = useToast();
   const router = useRouter();
+  const pathname = usePathname();
   const fileRef = useRef<HTMLInputElement>(null);
   const [q, setQ] = useState("");
   const [stage, setStage] = useState<LeadStage | "all">("all");
@@ -66,7 +68,7 @@ export default function LeadsTable() {
                 <td>{l.segmentos?.map((s) => <span key={s} className="pp-badge" style={{ marginRight: 4 }}>{s}</span>)}</td>
                 <td>{l.valor_estimado ? l.valor_estimado.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "—"}</td>
                 <td style={{ whiteSpace: "nowrap", textAlign: "right" }} onClick={(e) => e.stopPropagation()}>
-                  {l.telefone && <button className="btn btn-ghost btn-icon" title="Abrir conversa" onClick={() => router.push(`/admin/prospeccao/conversas?lead=${l.id}`)}><MessageCircle size={15} /></button>}
+                  {l.telefone && <button className="btn btn-ghost btn-icon" title="Abrir conversa" onClick={() => router.push(`${prospeccaoBase(pathname)}/conversas?lead=${l.id}`)}><MessageCircle size={15} /></button>}
                   {!l.client_id && <button className="btn btn-ghost btn-icon" title="Converter em cliente" onClick={() => convertToClient(l)}><UserCheck size={15} /></button>}
                   <button className="btn btn-ghost btn-icon" title="Excluir" onClick={async () => { if (await confirm({ message: `Excluir ${l.nome}?`, confirmText: "Excluir" })) deleteLead(l.id); }}><Trash2 size={15} /></button>
                 </td>

@@ -1,11 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Plus, Users, Wallet, Percent, MessageCircle } from "lucide-react";
 import StatCard from "@/components/ui/StatCard";
 import EmptyState from "@/components/ui/EmptyState";
 import { STAGES, formatPhone, pipelineStats } from "@/lib/prospeccao/leads";
+import { prospeccaoBase } from "@/lib/prospeccao/paths";
 import { useProspeccao } from "./ProspeccaoProvider";
 import LeadFormModal from "./LeadFormModal";
 import type { Lead, LeadStage } from "@/types/database";
@@ -15,6 +16,7 @@ const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", curren
 export default function FunilBoard() {
   const { leads, moveLead, loading } = useProspeccao();
   const router = useRouter();
+  const pathname = usePathname();
   const [dragId, setDragId] = useState<string | null>(null);
   const [over, setOver] = useState<LeadStage | null>(null);
   const [creating, setCreating] = useState<LeadStage | null>(null);
@@ -36,7 +38,7 @@ export default function FunilBoard() {
         <StatCard label="Novos" value={stats.novos} icon={<Plus size={14} />} />
         <StatCard label="Valor em aberto" value={brl(stats.emAberto)} icon={<Wallet size={14} />} />
         <StatCard label="Conversão" value={stats.conversao} unit="%" icon={<Percent size={14} />} />
-        <StatCard label="Não lidas" value={stats.naoLidas} icon={<MessageCircle size={14} />} onClick={() => router.push("/admin/prospeccao/conversas")} />
+        <StatCard label="Não lidas" value={stats.naoLidas} icon={<MessageCircle size={14} />} onClick={() => router.push(`${prospeccaoBase(pathname)}/conversas`)} />
       </div>
 
       <div className="pp-board">

@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Lock, User, ArrowRight, Eye, EyeOff, AlertCircle, ShieldCheck, Loader2 } from "lucide-react";
 import ThemeLogo from "@/components/ThemeLogo";
 import { supabase } from "@/lib/supabase";
+import { safeProspeccaoNext } from "@/lib/prospeccao/paths";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -66,7 +67,8 @@ export default function LoginPage() {
         .single();
 
       if (staffData) {
-        router.push("/admin/workspace");
+        const next = safeProspeccaoNext(new URLSearchParams(window.location.search).get("next"));
+        router.push(next ?? "/admin/workspace");
       } else {
         router.push("/client/dashboard");
       }

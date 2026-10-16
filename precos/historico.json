@@ -149,6 +149,29 @@
       "extras": "Incorporadora 2.300; Construtora 2.300; combo 3.800; eventos/projetos cotados à parte; verba de mídia não inclusa",
       "escopo": "Gestão estratégica, captação mensal, conteúdo com IA, tráfego pago, relatório + reunião mensal",
       "arquivo": "STAND BY/Proposta_Pratic_CampaInc_Engedomus"
+    },
+    {
+      "cliente": "FUNCART",
+      "status": "enviada",
+      "modelo": "projeto",
+      "valor": 1100,
+      "unidade": "projeto",
+      "extras": "Condição especial (abaixo da tabela, autorizada por Julio); 50% no aceite + 50% na entrega; sem deslocamento",
+      "inicio": "2026-10",
+      "vigencia": "7 dias",
+      "escopo": "Cobertura do espetáculo de ballet 26 e 27/11 (18:30–22:30): backstage, fotos, stories em tempo real, teaser recap; visita de 2h ao backstage, 3 posts no feed, 5 stories",
+      "arquivo": "propostas/Proposta - FUNCART.docx"
+    },
+    {
+      "cliente": "Hangar 43",
+      "status": "enviada",
+      "modelo": "projeto",
+      "valor": 960,
+      "unidade": "projeto",
+      "extras": "Artes avulsas a R$ 60–80 por peça; sem custo de impressão; prazo e pagamento a combinar",
+      "inicio": "2026-10",
+      "escopo": "10 peças gráficas: cartão de visita + marca-página, envelopes (2 modelos), pasta A4, bloco, caixa de presente + agenda, catálogo físico, adesivo, sacola, cartão postal, cartão textura + mini envelope",
+      "arquivo": "propostas/Proposta - Hangar 43.docx"
     }
   ]
 }

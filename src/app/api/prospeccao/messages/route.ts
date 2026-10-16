@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { after, NextResponse } from 'next/server';
 import { requireTeamUser } from '@/lib/apiAuth';
 import { getSupabaseAdmin } from '@/lib/hermesAuth';
 import { getProvider, type OutboundMediaType } from '@/lib/whatsapp/provider';
@@ -100,7 +100,12 @@ export async function POST(request: Request) {
         updated_at: new Date().toISOString(),
       })
       .eq('id', lead.id);
-    if (!lead.wa_avatar_url) await enrichLeadFromWhatsApp(supabase, lead.id, lead.telefone, lead.nome);
+    if (!lead.wa_avatar_url) {
+      const leadId = lead.id;
+      const phone = lead.telefone;
+      const nome = lead.nome;
+      after(() => enrichLeadFromWhatsApp(supabase, leadId, phone, nome));
+    }
   }
 
   if (result.status === 'failed') {
