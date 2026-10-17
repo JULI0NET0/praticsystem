@@ -16,6 +16,7 @@ import HomeDashboard, { type DashboardCounts } from "./dashboard/HomeDashboard";
 import ContactsView from "./dashboard/ContactsView";
 import InboxView from "./dashboard/InboxView";
 import MaterialsManager from "./dashboard/MaterialsManager";
+import PublicationsManager from "./dashboard/PublicationsManager";
 import type { IgContactView } from "./dashboard/ContactAvatar";
 import PraticLabsLogo from "@/components/PraticLabsLogo";
 import {
@@ -42,6 +43,7 @@ import {
   Sun,
   Moon,
   FolderOpen,
+  CalendarClock,
 } from "lucide-react";
 
 interface LogRow {
@@ -68,7 +70,7 @@ interface Props {
   queueStats: { pending: number; failed: number; sent?: number };
 }
 
-type TabType = "home" | "contacts" | "automations" | "materials" | "ai" | "inbox" | "results" | "settings";
+type TabType = "home" | "contacts" | "automations" | "materials" | "publications" | "ai" | "inbox" | "results" | "settings";
 
 const emptyForm: AutomationFormValues = {
   name: "",
@@ -464,6 +466,7 @@ export default function AutomationsClient({
     contacts: "Contatos",
     automations: "Automação",
     materials: "Materiais",
+    publications: "Publicações",
     ai: "Pratic AI",
     inbox: "Caixa de Entrada",
     results: "Resultados & Insights",
@@ -580,6 +583,16 @@ export default function AutomationsClient({
               active={activeTab === "materials"}
               onClick={() => {
                 setActiveTab("materials");
+                setMobileMenuOpen(false);
+              }}
+            />
+            <NavItem
+              icon={<CalendarClock className="w-4 h-4" />}
+              label="Publicações"
+              active={activeTab === "publications"}
+              collapsed={sidebarCollapsed}
+              onClick={() => {
+                setActiveTab("publications");
                 setMobileMenuOpen(false);
               }}
             />
@@ -1023,6 +1036,8 @@ export default function AutomationsClient({
             {activeTab === "inbox" && <InboxView automationNames={automationNames} />}
 
             {activeTab === "materials" && <MaterialsManager />}
+
+            {activeTab === "publications" && <PublicationsManager />}
 
             {/* --------------------------------------------------
                 VIEW: RESULTADOS
