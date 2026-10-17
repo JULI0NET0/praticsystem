@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Workflow, Lock, ArrowRight, Loader2, AlertCircle } from "lucide-react";
+import { Lock, ArrowRight, Loader2, AlertCircle } from "lucide-react";
 import ThemeLogo from "@/components/ThemeLogo";
+import PraticLabsLogo from "@/components/PraticLabsLogo";
 
 export default function InstagramAutomationLoginPage() {
   const router = useRouter();
@@ -49,15 +50,12 @@ export default function InstagramAutomationLoginPage() {
           onSubmit={handleSubmit}
           className="flex flex-col gap-5 rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-raised)] p-7"
         >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[var(--color-terracotta)] text-[var(--color-text-on-accent)] flex items-center justify-center">
-              <Workflow size={20} aria-hidden="true" />
-            </div>
-            <div>
-              <h1 className="m-0 text-[17px] font-bold">Automação Instagram</h1>
-              <p className="mt-0.5 text-xs text-[var(--color-text-secondary)]">Acesso ao Painel de Gatilhos</p>
-            </div>
-          </div>
+          <PraticLabsLogo
+            variant="cobrand"
+            iconStyle="eye-accent"
+            size="lg"
+            subtitle="Automação Instagram"
+          />
 
           <div className="flex flex-col gap-2">
             <label htmlFor="ig-password" className="text-[13px] font-medium text-[var(--color-text-secondary)]">

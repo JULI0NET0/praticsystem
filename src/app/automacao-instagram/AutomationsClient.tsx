@@ -16,6 +16,7 @@ import HomeDashboard, { type DashboardCounts } from "./dashboard/HomeDashboard";
 import ContactsView from "./dashboard/ContactsView";
 import InboxView from "./dashboard/InboxView";
 import type { IgContactView } from "./dashboard/ContactAvatar";
+import PraticLabsLogo from "@/components/PraticLabsLogo";
 import {
   Home,
   Users,
@@ -483,30 +484,11 @@ export default function AutomationsClient({
         <div className="flex flex-col">
           {/* Logo Bar */}
           <div className="h-14 px-4 flex items-center justify-between border-b border-[var(--color-border-subtle)]">
-            {!sidebarCollapsed ? (
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-[var(--color-terracotta)] text-[var(--color-text-on-accent)] flex items-center justify-center font-black text-sm shadow-sm">
-                  P
-                </div>
-                <div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-extrabold text-base tracking-tight text-[var(--color-text-primary)]">
-                      PraticChat
-                    </span>
-                    <span className="text-[11px] uppercase font-bold px-1.5 py-0.5 rounded bg-[var(--color-terracotta-100)] text-[var(--color-terracotta-ink)]">
-                      PRO
-                    </span>
-                  </div>
-                  <span className="text-[11px] text-[var(--color-text-secondary)] block -mt-0.5">
-                    Automação Instagram
-                  </span>
-                </div>
-              </div>
-            ) : (
-              <div className="w-8 h-8 rounded-xl bg-[var(--color-terracotta)] text-[var(--color-text-on-accent)] flex items-center justify-center font-bold text-xs mx-auto">
-                P
-              </div>
-            )}
+            <PraticLabsLogo
+              variant="cobrand"
+              iconStyle="eye-accent"
+              collapsed={sidebarCollapsed}
+            />
 
             <button
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
