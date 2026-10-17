@@ -15,6 +15,7 @@ import WelcomeSettings from "./dashboard/WelcomeSettings";
 import HomeDashboard, { type DashboardCounts } from "./dashboard/HomeDashboard";
 import ContactsView from "./dashboard/ContactsView";
 import InboxView from "./dashboard/InboxView";
+import MaterialsManager from "./dashboard/MaterialsManager";
 import type { IgContactView } from "./dashboard/ContactAvatar";
 import PraticLabsLogo from "@/components/PraticLabsLogo";
 import {
@@ -67,7 +68,7 @@ interface Props {
   queueStats: { pending: number; failed: number; sent?: number };
 }
 
-type TabType = "home" | "contacts" | "automations" | "ai" | "inbox" | "results" | "settings";
+type TabType = "home" | "contacts" | "automations" | "materials" | "ai" | "inbox" | "results" | "settings";
 
 const emptyForm: AutomationFormValues = {
   name: "",
@@ -175,7 +176,8 @@ export default function AutomationsClient({
   const { theme, setTheme, resolvedTheme } = useTheme();
 
   const [mounted, setMounted] = useState(false);
-  const [activeTab, setActiveTab] = useState<TabType>("home");
+  // Links antigos (/automacao-instagram/materiais) chegam com ?tab=materials.
+  const [activeTab, setActiveTab] = useState<TabType>(searchParams.get("tab") === "materials" ? "materials" : "home");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -461,6 +463,7 @@ export default function AutomationsClient({
     home: "Inicial",
     contacts: "Contatos",
     automations: "Automação",
+    materials: "Materiais",
     ai: "Pratic AI",
     inbox: "Caixa de Entrada",
     results: "Resultados & Insights",
@@ -574,8 +577,9 @@ export default function AutomationsClient({
               icon={<FolderOpen className="w-4 h-4" />}
               label="Materiais"
               collapsed={sidebarCollapsed}
+              active={activeTab === "materials"}
               onClick={() => {
-                router.push("/automacao-instagram/materiais");
+                setActiveTab("materials");
                 setMobileMenuOpen(false);
               }}
             />
@@ -1017,6 +1021,8 @@ export default function AutomationsClient({
                 VIEW: CAIXA DE ENTRADA & FILA
                -------------------------------------------------- */}
             {activeTab === "inbox" && <InboxView automationNames={automationNames} />}
+
+            {activeTab === "materials" && <MaterialsManager />}
 
             {/* --------------------------------------------------
                 VIEW: RESULTADOS
