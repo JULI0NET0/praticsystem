@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getSupabaseAdmin, getMaterialPublicUrl, type IgMaterial } from '@/lib/instagram'
+import { incrementMaterialViews } from '@/lib/instagramMaterials'
 
 const FALLBACK_URL = '/materiais'
 
@@ -32,10 +33,7 @@ export async function GET(
     return NextResponse.redirect(new URL(`/materiais/${slug}`, _request.url))
   }
 
-  await supabase
-    .from('ig_materials')
-    .update({ view_count: material.view_count + 1 })
-    .eq('id', material.id)
+  await incrementMaterialViews(supabase, material)
 
   return NextResponse.redirect(destination)
 }

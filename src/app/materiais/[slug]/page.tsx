@@ -1,10 +1,17 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Download, ExternalLink } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { getSupabaseAdmin, getMaterialPublicUrl, type IgMaterial } from "@/lib/instagram";
+import {
+  formatFileSize,
+  incrementMaterialViews,
+  MATERIAL_TYPE_LABEL,
+  materialAction,
+} from "@/lib/instagramMaterials";
+import { Cover, TypeIcon, type PublicMaterial } from "../MaterialsGallery";
 import CopyButton from "./CopyButton";
+import "@/styles/materiais.css";
 
 export const dynamic = "force-dynamic";
 
@@ -26,19 +33,19 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const { supabase, material } = await getMaterial(slug);
-  if (!material) return { title: "Material não encontrado — Pratic" };
+  if (!material) return { title: "Material não encontrado — Julio Neto" };
 
   const coverUrl = material.cover_image_path
     ? getMaterialPublicUrl(supabase, material.cover_image_path)
-    : undefined;
+    : "/og-image.png";
 
   return {
-    title: `${material.title} — Pratic`,
-    description: material.description || undefined,
+    title: `${material.title} — Julio Neto`,
+    description: material.description || "Material gratuito do @juli0net0.",
     openGraph: {
       title: material.title,
       description: material.description || undefined,
-      images: coverUrl ? [coverUrl] : undefined,
+      images: [coverUrl],
     },
   };
 }
@@ -57,77 +64,113 @@ export default async function MaterialPage({
   // aqui na página). Arquivo/link contam no clique real, via /api/materiais/[slug]/download,
   // pra não duplicar a métrica (abrir a página + clicar no botão).
   if (material.material_type === "text") {
-    void supabase
-      .from("ig_materials")
-      .update({ view_count: material.view_count + 1 })
-      .eq("id", material.id)
-      .then(() => {});
+    void incrementMaterialViews(supabase, material).then(() => {});
   }
 
-  const coverUrl = material.cover_image_path
-    ? getMaterialPublicUrl(supabase, material.cover_image_path)
-    : null;
+  const { data: moreData } = await supabase
+    .from("ig_materials")
+    .select("*")
+    .eq("is_active", true)
+    .neq("id", material.id)
+    .order("created_at", { ascending: false })
+    .limit(3);
+
+  const more: PublicMaterial[] = ((moreData || []) as IgMaterial[]).map((m) => ({
+    id: m.id,
+    slug: m.slug,
+    title: m.title,
+    description: m.description,
+    material_type: m.material_type,
+    created_at: m.created_at,
+    coverUrl: m.cover_image_path ? getMaterialPublicUrl(supabase, m.cover_image_path) : null,
+  }));
+
+  const current: PublicMaterial = {
+    id: material.id,
+    slug: material.slug,
+    title: material.title,
+    description: material.description,
+    material_type: material.material_type,
+    created_at: material.created_at,
+    coverUrl: material.cover_image_path ? getMaterialPublicUrl(supabase, material.cover_image_path) : null,
+  };
+  const action = materialAction(material);
+  const size = formatFileSize(material.file_size_bytes);
 
   return (
-    <div className="min-h-screen bg-[var(--color-surface-sunken)] px-4 py-12 sm:px-8">
-      <div className="max-w-2xl mx-auto">
-        <Link
-          href="/materiais"
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--color-text-secondary)] hover:text-[var(--color-terracotta)] mb-6 transition-colors"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          Ver todos os materiais
-        </Link>
+    <main className="mat-root">
+      <div className="mat-wrap">
+        <div className="mat-narrow mat-detail">
+          <Link href="/materiais" className="mat-back">
+            <ArrowLeft size={14} aria-hidden="true" />
+            Ver todos os materiais
+          </Link>
 
-        {coverUrl && (
-          <div className="relative aspect-[16/9] rounded-2xl overflow-hidden mb-6 bg-[var(--color-surface-raised)]">
-            <Image src={coverUrl} alt={material.title} fill unoptimized className="object-cover" />
-          </div>
-        )}
-
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-[var(--color-text-primary)] tracking-tight mb-2">
-          {material.title}
-        </h1>
-
-        {material.description && (
-          <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed mb-6">
-            {material.description}
-          </p>
-        )}
-
-        <div className="bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] rounded-2xl p-6">
-          {material.material_type === "text" && material.copy_text && (
-            <div className="space-y-4">
-              <pre className="whitespace-pre-wrap text-sm text-[var(--color-text-primary)] font-mono leading-relaxed bg-[var(--color-surface-sunken)] rounded-xl p-4 max-h-96 overflow-y-auto">
-                {material.copy_text}
-              </pre>
-              <CopyButton text={material.copy_text} />
+          {current.coverUrl && (
+            <div className="mat-detail-cover">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={current.coverUrl} alt="" />
             </div>
           )}
 
-          {material.material_type === "file" && (
-            <a
-              href={`/api/materiais/${material.slug}/download`}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm bg-[var(--color-terracotta)] text-white hover:opacity-90 transition-opacity"
-            >
-              <Download className="w-4 h-4" />
-              Baixar {material.file_name || "arquivo"}
-            </a>
-          )}
+          <span className="mat-type">
+            <TypeIcon type={material.material_type} size={13} />
+            {MATERIAL_TYPE_LABEL[material.material_type]}
+          </span>
+          <h1>{material.title}</h1>
+          {material.description && <p>{material.description}</p>}
 
-          {material.material_type === "link" && (
-            <a
-              href={`/api/materiais/${material.slug}/download`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm bg-[var(--color-terracotta)] text-white hover:opacity-90 transition-opacity"
-            >
-              <ExternalLink className="w-4 h-4" />
-              Abrir link
-            </a>
+          <div className="mat-panel">
+            {material.material_type === "text" && material.copy_text && (
+              <>
+                <pre className="mat-pre" tabIndex={0} aria-label="Texto do material">
+                  {material.copy_text}
+                </pre>
+                <CopyButton text={material.copy_text} />
+              </>
+            )}
+
+            {material.material_type === "file" && (
+              <div className="mat-actions" style={{ marginTop: 0 }}>
+                <a className="mat-btn mat-btn-primary" href={action.href}>
+                  Baixar {material.file_name || "arquivo"}
+                </a>
+                {size && <span className="mat-meta">{size}</span>}
+              </div>
+            )}
+
+            {material.material_type === "link" && (
+              <div className="mat-actions" style={{ marginTop: 0 }}>
+                <a className="mat-btn mat-btn-primary" href={action.href} target="_blank" rel="noopener noreferrer">
+                  Acessar agora
+                </a>
+              </div>
+            )}
+          </div>
+
+          {more.length > 0 && (
+            <section className="mat-more" aria-labelledby="mat-more-title">
+              <h2 id="mat-more-title" className="mat-section-title">
+                Outros materiais
+              </h2>
+              <div className="mat-grid">
+                {more.map((m) => (
+                  <Link key={m.id} href={`/materiais/${m.slug}`} className="mat-card">
+                    <Cover material={m} />
+                    <div className="mat-card-body">
+                      <span className="mat-type">
+                        <TypeIcon type={m.material_type} size={13} />
+                        {MATERIAL_TYPE_LABEL[m.material_type]}
+                      </span>
+                      <h3>{m.title}</h3>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </section>
           )}
         </div>
       </div>
-    </div>
+    </main>
   );
 }
