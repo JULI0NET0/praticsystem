@@ -16,8 +16,13 @@ let package = Package(
                 .product(name: "Supabase", package: "supabase-swift"),
             ],
             path: "Sources/PraticSystem",
-            // Copiados direto para Contents/Resources pelo Scripts/package_app.sh
-            exclude: ["Resources"]
+            exclude: [
+                // Copiados direto para Contents/Resources pelo Scripts/package_app.sh
+                "Resources",
+                // Rascunho da sessão de Prospecção, interrompida no meio; volta
+                // para o build quando essa etapa for retomada.
+                "Prospeccao",
+            ]
         ),
         .testTarget(
             name: "PraticSystemTests",
