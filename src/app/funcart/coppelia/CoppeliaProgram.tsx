@@ -204,26 +204,6 @@ export default function CoppeliaProgram({
         <p className={styles.presenter}>{EVENT.presenter}</p>
         <h1 className={styles.title}>{EVENT.title}</h1>
         <p className={styles.kicker}>Programa do espetáculo</p>
-        <dl className={styles.facts}>
-          <div>
-            <dt>Datas</dt>
-            <dd>{EVENT.dates}</dd>
-          </div>
-          <div>
-            <dt>Horário</dt>
-            <dd>{EVENT.time}</dd>
-          </div>
-          <div>
-            <dt>Local</dt>
-            <dd>{EVENT.venue}</dd>
-          </div>
-          <div>
-            <dt>Classificação</dt>
-            <dd>
-              <span className={styles.rating}>L</span> {EVENT.rating}
-            </dd>
-          </div>
-        </dl>
       </header>
 
       <ProgramSwitch

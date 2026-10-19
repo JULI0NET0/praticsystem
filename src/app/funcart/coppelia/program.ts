@@ -32,10 +32,6 @@ export interface Program {
 export const EVENT = {
   presenter: "Escola Municipal de Dança de Londrina apresenta",
   title: "Coppélia",
-  dates: "26 a 29 de novembro",
-  time: "20h",
-  venue: "Cine Teatro Ouro Verde",
-  rating: "Livre",
 };
 
 const CHARACTERS_1: Program["characters"] = [
