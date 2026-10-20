@@ -155,7 +155,7 @@ DADOS DO BRIEFING:
     `.trim();
 
     try {
-      const { error } = await supabase
+      let { error } = await supabase
         .from('clients')
         .update({
           briefing: briefingText,
@@ -164,9 +164,19 @@ DADOS DO BRIEFING:
         })
         .eq('id', id);
 
+      // 42703 = coluna inexistente (migration_briefing.sql ainda não rodou):
+      // grava só o texto consolidado para não perder a resposta do cliente.
+      if (error?.code === '42703') {
+        ({ error } = await supabase
+          .from('clients')
+          .update({ briefing: briefingText })
+          .eq('id', id));
+      }
+
       if (!error) {
         setStep(9);
       } else {
+        console.error(error);
         showToast('Erro ao salvar briefing. Tente novamente.', 'error');
       }
     } catch (err) {
@@ -179,7 +189,7 @@ DADOS DO BRIEFING:
 
   if (loading) {
     return (
-      <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-surface-canvas)' }}>
+      <div data-theme="dark" style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-surface-canvas)' }}>
         <Loader2 className="animate-spin" color="var(--accent)" size={32} />
       </div>
     );
@@ -187,7 +197,7 @@ DADOS DO BRIEFING:
 
   if (!client) {
     return (
-      <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-surface-canvas)', color: 'var(--color-text-secondary)' }}>
+      <div data-theme="dark" style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-surface-canvas)', color: 'var(--color-text-secondary)' }}>
         <p>Cliente não encontrado.</p>
       </div>
     );
@@ -202,7 +212,7 @@ DADOS DO BRIEFING:
 
 
   return (
-    <div style={{
+    <div data-theme="dark" style={{
       minHeight: '100vh',
       background: 'var(--color-surface-canvas)',
       color: 'var(--color-text-primary)',
