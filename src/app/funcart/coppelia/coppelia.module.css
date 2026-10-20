@@ -195,13 +195,32 @@
 }
 .chooserName {
   font-family: var(--cp-serif), Georgia, serif;
-  font-size: 1.45rem;
+  font-size: 1.3rem;
   font-weight: 700;
   line-height: 1.1;
 }
 .chooserDates {
-  font-size: 0.82rem;
+  font-size: 0.78rem;
+  line-height: 1.35;
   opacity: 0.85;
+}
+.chooserTime {
+  margin-top: 4px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: rgba(184, 146, 90, 0.18);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.chooserTab[aria-selected="true"] .chooserTime {
+  background: rgba(255, 255, 255, 0.2);
+}
+@media (min-width: 640px) {
+  .chooserTabs {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 .today {
   position: absolute;
@@ -302,8 +321,71 @@
   text-transform: uppercase;
   color: var(--plum);
 }
-.pending {
+/* Abertura: A Casa de Brinquedos, em moldura própria com o azul do ingresso */
+.opening {
+  margin-top: 0;
+  padding: 30px 16px 22px;
+  background:
+    radial-gradient(90% 60% at 50% 0%, rgba(143, 179, 201, 0.22), transparent 70%),
+    var(--paper);
+  border: 1.5px solid var(--blue);
+  border-radius: 22px;
+  box-shadow: inset 0 0 0 6px var(--paper), inset 0 0 0 7px rgba(95, 138, 166, 0.35);
+}
+.opening .dance {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.6), transparent 40%),
+    #eef3f5;
+  border-color: rgba(95, 138, 166, 0.35);
+}
+.opening .dance::before {
+  border-color: rgba(95, 138, 166, 0.35);
+}
+.opening .characters li {
+  border-left-color: var(--blue);
+}
+.eyebrow {
+  margin: 0 0 4px;
   text-align: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #2f5670;
+}
+.scriptTitle {
+  margin: 0;
+  text-align: center;
+  font-family: var(--cp-script), cursive;
+  font-weight: 400;
+  font-size: clamp(2.8rem, 13vw, 4.2rem);
+  line-height: 1.1;
+  color: var(--plum);
+}
+.subTitle {
+  margin: 26px 0 12px;
+  text-align: center;
+  font-family: var(--cp-serif), Georgia, serif;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--plum);
+}
+.openingTeachers {
+  margin: 20px 0 0;
+  text-align: center;
+  font-family: var(--cp-serif), Georgia, serif;
+  font-size: 1.05rem;
+  color: var(--ink);
+}
+.openingTeachers span {
+  display: block;
+  font-family: var(--font-inter), sans-serif;
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 .poster {
   margin: 0 0 8px;

@@ -22,8 +22,6 @@ export interface Program {
   id: "1" | "2";
   label: string;
   dates: string;
-  /** Dias de novembro em que este elenco se apresenta. */
-  days: number[];
   poster: { src: string; alt: string };
   characters: { role: string; name: string }[];
   acts: Act[];
@@ -489,7 +487,6 @@ export const PROGRAMS: Program[] = [
     id: "1",
     label: "Programa 1",
     dates: "26 e 28 de novembro",
-    days: [26, 28],
     poster: {
       src: "/funcart/coppelia/capa-p1-braco-erguido.webp",
       alt: "Cartaz de Coppélia: bailarina de braço erguido e o Doutor Coppelius escutando atrás dela, em cenário com engrenagens e relógios dourados",
@@ -501,7 +498,6 @@ export const PROGRAMS: Program[] = [
     id: "2",
     label: "Programa 2",
     dates: "27 e 29 de novembro",
-    days: [27, 29],
     poster: {
       src: "/funcart/coppelia/capa-p2-bracos-cruzados.webp",
       alt: "Cartaz de Coppélia: bailarina de vestido branco com laços rosa e o Doutor Coppelius lendo um livro, em cenário com engrenagens e relógios dourados",
@@ -511,8 +507,310 @@ export const PROGRAMS: Program[] = [
   },
 ];
 
-/** Programa em cartaz na data (horário de Brasília); null fora dos dias de sessão. */
-export function programForDate(date: Date): Program["id"] | null {
+/** Abertura da noite: "A Casa de Brinquedos", com as turmas menores. */
+export interface Opening {
+  id: string;
+  title: string;
+  /** Turma que apresenta a abertura nesta noite. */
+  cohort: string;
+  synopsis: string[];
+  characters: { role: string; name: string }[];
+  dances: Dance[];
+  teachers: string;
+}
+
+/** Uma sessão do dia: ou o Coppélia (com seu programa), ou A Casa de Brinquedos, em horário separado. */
+export interface Session {
+  /** "28" = Coppélia do dia 28; "28-casa" = A Casa de Brinquedos do dia 28. */
+  id: string;
+  day: number;
+  kind: "coppelia" | "casa";
+  /** Horário como aparece no programa: a Casa de Brinquedos é à tarde, o Coppélia às 20h. */
+  time: string;
+  programId?: Program["id"];
+  opening?: Opening;
+}
+
+const CASA_SYNOPSIS = [
+  "Em uma aldeia no interior da Polônia vive o Doutor Coppelius, um fabricante de brinquedos que mora em uma casa com alpendre onde está uma graciosa boneca chamada Coppélia.",
+  "Certo dia, ao fechar a porta distraidamente, ele perde a chave. Um grupo de crianças sapecas e curiosas, lideradas por Swanilda, vê o ocorrido, apanha a chave e abre o local. Maravilhadas, elas andam por tudo e investigam todos os brinquedos: Bonecas Chinesas, Bonecas Espanholas, Arlequins, Marionetes, Bonecas Escocesas, e Bailarinas de caixinha de música. Num clima de magia, os brinquedos interagem com as crianças e começam a dançar. Enquanto elas se divertem, perdem a noção das horas completamente.",
+  "Coppelius percebe que perdeu a chave e volta para procurar quando encontra as crianças dentro da casa. Ele fica furioso e expulsa todas elas de lá. As crianças se arrependem de terem invadido a casa sem autorização e pedem desculpas a Doutor Coppelius. Ele aceita as desculpas e as convida para frequentarem a casa sempre que desejarem.",
+];
+
+const CASA_CRIANCAS = [
+  "Ana Sara Andrade Moretão Cunha",
+  "Beatriz Brito da Silva",
+  "Beatriz Pereira de Souza",
+  "Emanuelly Vitoria Imes",
+  "Gabriela Teixeira Ernegas",
+  "Heloisa Pereira Correia",
+  "Maria Alice Rodrigues Pereira",
+  "Maria Eduarda de Souza Bino",
+  "Maria Eduarda Fagundes de Melo",
+  "Maria Luiza Rodrigues Ivasita",
+];
+
+const CASA_MARIONETES = [
+  "Alice Ribeiro Lopes",
+  "Emanuelly Dedin de Oliveira",
+  "Kauane de Lima Lucas",
+  "Pietra Chenso Pedroso",
+  "Yasmin Soares Luz Castilho",
+];
+
+const CASA_FELICIDADE = ["Milaine Raquel Cruciol Caobianco", "Beatriz Pereira de Souza"];
+
+const CASA_1_ANO: Opening = {
+  id: "casa-de-brinquedos",
+  title: "A Casa de Brinquedos",
+  cohort: "1º ano",
+  synopsis: CASA_SYNOPSIS,
+  characters: [
+    { role: "Swanilda", name: "Lorena Brito Macedo" },
+    { role: "Doutor Coppelius", name: "Marciano Boletti" },
+  ],
+  dances: [
+    {
+      id: "casa-criancas",
+      title: "As Crianças",
+      group: "7º ano, 8º ano e Aperfeiçoamento – Professores Marciano Boletti e Renata Doi",
+      cast: CASA_CRIANCAS,
+    },
+    {
+      id: "casa-bonecas-chinesas",
+      title: "Bonecas Chinesas",
+      group: "1º ano noturno – Professora Eduarda Nishikawa",
+      cast: [
+        "Briana Gibin Kruega",
+        "Luana Ferreira da Fonseca",
+        "Marcella Calabrez Rosa",
+        "Maria Clara Torchetti",
+        "Pyetra Alexsandra Rodrigues",
+        "Verena de Souza Lima",
+      ],
+    },
+    {
+      id: "casa-bonecas-espanholas",
+      title: "Bonecas Espanholas",
+      group: "1º ano vespertino – Professora Eduarda Nishikawa",
+      soloist: "Carol Caramori Aparecido (Aperfeiçoamento)",
+      cast: [
+        "Alexia Mendes Augusto",
+        "Clara Bianquini Munhoz",
+        "Emilly de Souza",
+        "Lara Martins Borges",
+        "Leticia Cassoli Batilani",
+        "Mariana Lameo Semprebom",
+        "Milena Miyadera Fazolo",
+        "Sofia Gonçalves Lopes",
+        "Sophie Ayumi Torres",
+        "Yara Vedovati Inacio",
+      ],
+    },
+    {
+      id: "casa-arlequin",
+      title: "Arlequin",
+      group: "1º ano – Professor Claudio de Souza",
+      cast: [
+        "Ana Julia Antunes Basso",
+        "Kyara Reginaldo Basilio",
+        "Lívia de Souza Moraes",
+        "Valentina Vitoria Veronez Borges de Souza",
+      ],
+    },
+    {
+      id: "casa-marionetes",
+      title: "Marionetes",
+      group: "5º e 6º ano – Professor Marciano Boletti",
+      cast: CASA_MARIONETES,
+    },
+    {
+      id: "casa-marionetes-1-ano",
+      title: "Marionetes",
+      group: "1º ano – Professora Rosangela Homem",
+      cast: [
+        "Elisa Jasmin Liberati Guabette",
+        "Elizabeth Borges Ruiz",
+        "Isabela Trindade Chiconato",
+        "Isis Ramazotte da Silva",
+        "Lara Monteiro Martins",
+        "Luiza Caetano Alves Seret Lion",
+        "Maria Clara Roth Clausen",
+        "Yasmin Mirella Forim",
+      ],
+    },
+    {
+      id: "casa-bonecas-escocesas",
+      title: "Bonecas Escocesas",
+      group: "1º ano – Professor Marciano Boletti",
+      cast: [
+        "Ana Laura Sobral da Silva",
+        "Carolina Ayu Megumi Nakano Kataoka",
+        "Cecília Broto Oliveira",
+        "Eloisa de Souza Detoni",
+        "Giullia Elisa Candido Valeez Pires",
+        "Laura Stabile de Farias",
+        "Liz Solcia Brazão",
+        "Luiza de Brito",
+        "Sara Lopes Martinelli",
+      ],
+    },
+    {
+      id: "casa-felicidade",
+      title: "Solista da Felicidade",
+      alternating: true,
+      cast: CASA_FELICIDADE,
+    },
+    {
+      id: "casa-soldadinho",
+      title: "O Soldadinho e as Bailarinas",
+      group: "1º ano – Professora Thayná Rodrigues",
+      cast: [
+        "Clara Rolandi Arruda",
+        "Giovana Manuelly Pereira Barbosa",
+        "Heitor Duarte Mendes",
+        "Isadora Araujo de Souza",
+        "Maria Alice Gomes de Sousa",
+      ],
+    },
+  ],
+  teachers:
+    "Claudio de Souza, Eduarda Nishikawa, Marciano Boletti, Renata Doi, Rosangela Homem, Thacyane Vargas e Thayná Rodrigues",
+};
+
+const CASA_PRE: Opening = {
+  id: "casa-de-brinquedos",
+  title: "A Casa de Brinquedos",
+  cohort: "Pré-ballet",
+  synopsis: CASA_SYNOPSIS,
+  characters: [
+    { role: "Swanilda", name: "Fernanda Cereda Dale Vedove" },
+    { role: "Doutor Coppelius", name: "Marciano Boletti" },
+  ],
+  dances: [
+    {
+      id: "casa-criancas",
+      title: "As Crianças",
+      group: "7º e 8º ano e Aperfeiçoamento – Professores Marciano Boletti e Renata Doi",
+      cast: CASA_CRIANCAS,
+    },
+    {
+      id: "casa-bonecas-chinesas",
+      title: "Bonecas Chinesas",
+      group: "Pré-ballet 3ª e 5ª noturno – Professora Thacyane Vargas",
+      cast: [
+        "Alice Costa do Carmo",
+        "Alice Gotardo Lazzari",
+        "Anabella Modena de Morais",
+        "Erina Lopes Zolinger Zanin",
+        "Lavínia Yumi Osug Couto",
+        "Livia Carvalho Silva",
+        "Lívia Moreira de Melo",
+        "Liz Lozano Galetti",
+        "Liz Modena de Morais",
+        "Luna Catai Di Pietro",
+        "Maria Helena Celerino do Amaral",
+        "Maria Luiza Nakao",
+        "Olivia Bersalini Ribero de Souza",
+        "Teresa Duarte Alves",
+        "Yara Akemi Miyamoto",
+        "Ysadora Hemanuelly Cardoso Lima",
+      ],
+    },
+    {
+      id: "casa-bonecas-espanholas",
+      title: "Bonecas Espanholas",
+      group: "Pré-ballet 2ª e 4ª – Professora Thayná Rodrigues",
+      soloist: "Carol Caramori Aparecido (Aperfeiçoamento)",
+      cast: [
+        "Cecilia Passone Martins",
+        "Liz Orchel de Almeida",
+        "Lorena Alves Sardi",
+        "Luísa Martins Silva",
+        "Maria Clara Valentin",
+        "Valentina Santos de Souza",
+        "Yasmin Vitoria Bueno da Silva",
+      ],
+    },
+    {
+      id: "casa-arlequin",
+      title: "Arlequin",
+      group: "Pré-ballet – Professor Edmeia Lima",
+      cast: [
+        "Aurora Caetano Rosa",
+        "Elena Liz Truber Fagotti",
+        "Helena Pagano Silva",
+        "Isadora Nascimento Gobetti",
+        "Lara Almendra Blume Nakayama",
+        "Livia Yumi Nagamatsu Alicio",
+        "Luanda Piaza Cerqueira",
+        "Luna Farias Coelho Alves Guilherme",
+        "Maria Beatriz Tamega Marzabal",
+        "Maria Clara Tamega Marzabal",
+        "Melissa Romano Manzini",
+        "Olívia Biolada Cavalcante",
+        "Sophia de Andrade Boberg",
+      ],
+    },
+    {
+      id: "casa-marionetes",
+      title: "Marionetes",
+      group: "5º e 6º ano – Professor Marciano Boletti",
+      cast: CASA_MARIONETES,
+    },
+    {
+      id: "casa-bonecas-escocesas",
+      title: "Bonecas Escocesas",
+      group: "Pré-ballet 3ª e 5ª – Professora Thayná Rodrigues",
+      cast: [
+        "Agnes Costa Rocha",
+        "Angelina Giroto Delci",
+        "Bella Sophia Padilha Stabile",
+        "Eliza Boiani Souza",
+        "Julia Polonha Santos",
+        "Késia Emanueli Seret de França",
+        "Manuella Valentina Souza",
+      ],
+    },
+    {
+      id: "casa-felicidade",
+      title: "Solo da Felicidade",
+      alternating: true,
+      cast: CASA_FELICIDADE,
+    },
+    {
+      id: "casa-bailarinas",
+      title: "Bailarinas",
+      group: "Pré-ballet matutino – Professora Thacyane Vargas",
+      cast: [
+        "Giovanna de Oliveira Moreira",
+        "Isabela Martina Yoshinaga Bernardi",
+        "Laura Rocha Pereira",
+        "Maite Barcelos Sakai",
+        "Maitê Mendonça Zana",
+        "Manuela Marchleuski Tirapelle",
+        "Maria Laura Capocci da Silva",
+        "Maria Rafaella Ferreira Silva da Cruz",
+        "Martina Lopes Ceribelli Colto",
+        "Pietra Kluiber Lino",
+      ],
+    },
+  ],
+  teachers: "Edmeia Lima, Marciano Boletti, Renata Doi, Thacyane Vargas e Thayná Rodrigues",
+};
+
+/** Em 28 e 29 a Casa de Brinquedos (à tarde) vem antes do Coppélia (20h). */
+export const SESSIONS: Session[] = [
+  { id: "26", day: 26, kind: "coppelia", time: "20h", programId: "1" },
+  { id: "27", day: 27, kind: "coppelia", time: "20h", programId: "2" },
+  { id: "28-casa", day: 28, kind: "casa", time: "À tarde", opening: CASA_1_ANO },
+  { id: "28", day: 28, kind: "coppelia", time: "20h", programId: "1" },
+  { id: "29-casa", day: 29, kind: "casa", time: "À tarde", opening: CASA_PRE },
+  { id: "29", day: 29, kind: "coppelia", time: "20h", programId: "2" },
+];
+
+/** Sessões em cartaz na data (horário de Brasília); vazio fora dos dias do espetáculo. */
+export function sessionsForDate(date: Date): string[] {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: "America/Sao_Paulo",
     month: "numeric",
@@ -520,8 +818,7 @@ export function programForDate(date: Date): Program["id"] | null {
   }).formatToParts(date);
   const month = Number(parts.find((p) => p.type === "month")?.value);
   const day = Number(parts.find((p) => p.type === "day")?.value);
-  const match = month === 11 && PROGRAMS.find((p) => p.days.includes(day));
-  return match ? match.id : null;
+  return month === 11 ? SESSIONS.filter((x) => x.day === day).map((x) => x.id) : [];
 }
 
 export const ORIGINAL_WORK =

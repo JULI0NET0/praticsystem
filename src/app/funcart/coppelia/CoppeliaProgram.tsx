@@ -1,16 +1,19 @@
 import Image from "next/image";
 import { Cormorant_Garamond, Pinyon_Script } from "next/font/google";
-import ProgramSwitch, { type ProgramTab } from "./ProgramSwitch";
+import ProgramSwitch, { type SessionTab } from "./ProgramSwitch";
 import {
   CREDITS,
   EVENT,
   FUNCART_UNITS,
   GRADUATES,
   INSTAGRAM,
+  SESSIONS,
   ORIGINAL_WORK,
   PROGRAMS,
   SUPPORTERS,
   type Dance,
+  type Session,
+  type Opening,
   type Program,
 } from "./program";
 import styles from "./coppelia.module.css";
@@ -108,8 +111,51 @@ function DanceCard({ dance }: { dance: Dance }) {
   );
 }
 
-function ProgramPanel({ program }: { program: Program }) {
-  const ready = program.acts.length > 0;
+function CharacterList({ characters }: { characters: Program["characters"] }) {
+  return (
+    <ul className={styles.characters}>
+      {characters.map((c) => (
+        <li key={c.role}>
+          <span className={styles.role}>{c.role}</span>
+          <span className={styles.performer}>{c.name}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function OpeningSection({ opening }: { opening: Opening }) {
+  return (
+    <section id={opening.id} className={`${styles.opening}`}>
+      <p className={styles.eyebrow}>Escola Municipal de Dança · {opening.cohort}</p>
+      <h2 className={styles.scriptTitle}>{opening.title}</h2>
+      <Flourish />
+      <div className={styles.synopsis}>
+        {opening.synopsis.map((p, i) => (
+          <p key={i}>{p}</p>
+        ))}
+      </div>
+      <h3 id="casa-personagens" className={styles.subTitle}>
+        Personagens principais
+      </h3>
+      <CharacterList characters={opening.characters} />
+      <h3 id="casa-elenco" className={styles.subTitle}>
+        Elenco
+      </h3>
+      <div className={styles.dances}>
+        {opening.dances.map((d) => (
+          <DanceCard key={d.id} dance={d} />
+        ))}
+      </div>
+      <p className={styles.openingTeachers}>
+        <span>Professores</span>
+        {opening.teachers}
+      </p>
+    </section>
+  );
+}
+
+function CoppeliaPanel({ program }: { program: Program }) {
   return (
     <>
       <figure className={styles.poster}>
@@ -123,30 +169,11 @@ function ProgramPanel({ program }: { program: Program }) {
         />
       </figure>
 
-      {!ready && (
-        <section className={`${styles.section} ${styles.pending}`}>
-          <h2 className={styles.sectionTitle}>Elenco em breve</h2>
-          <Flourish />
-          <p className={styles.prose}>
-            O elenco das sessões de {program.dates} será publicado aqui em breve.
-          </p>
-        </section>
-      )}
-
-      {program.characters.length > 0 && (
-        <section id="personagens" className={styles.section}>
-          <h2 className={styles.sectionTitle}>Personagens principais</h2>
-          <Flourish />
-          <ul className={styles.characters}>
-            {program.characters.map((c) => (
-              <li key={c.role}>
-                <span className={styles.role}>{c.role}</span>
-                <span className={styles.performer}>{c.name}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+      <section id="personagens" className={styles.section}>
+        <h2 className={styles.sectionTitle}>Personagens principais</h2>
+        <Flourish />
+        <CharacterList characters={program.characters} />
+      </section>
 
       {program.acts.map((act) => (
         <section key={act.id} id={act.id} className={styles.section}>
@@ -171,16 +198,35 @@ function ProgramPanel({ program }: { program: Program }) {
   );
 }
 
-function programTab(program: Program): ProgramTab {
+function sessionTab(session: Session): SessionTab {
+  const dayLabel = `${session.day} de novembro`;
+  if (session.kind === "casa" && session.opening) {
+    return {
+      id: session.id,
+      label: dayLabel,
+      detail: `${session.opening.title} · ${session.opening.cohort}`,
+      time: session.time,
+      short: `${session.day} Casa`,
+      sections: [
+        { href: "#casa-personagens", label: "Personagens" },
+        { href: "#casa-elenco", label: "Elenco" },
+      ],
+      panel: <OpeningSection opening={session.opening} />,
+    };
+  }
+  const program = PROGRAMS.find((p) => p.id === session.programId) ?? PROGRAMS[0];
+  const hasCasa = SESSIONS.some((x) => x.day === session.day && x.kind === "casa");
   return {
-    id: program.id,
-    label: program.label,
-    dates: program.dates,
+    id: session.id,
+    label: dayLabel,
+    detail: `Coppélia · ${program.label}`,
+    time: session.time,
+    short: hasCasa ? `${session.day} Coppélia` : String(session.day),
     sections: [
-      ...(program.characters.length ? [{ href: "#personagens", label: "Personagens" }] : []),
+      { href: "#personagens", label: "Personagens" },
       ...program.acts.map((a) => ({ href: `#${a.id}`, label: a.label })),
     ],
-    panel: <ProgramPanel program={program} />,
+    panel: <CoppeliaPanel program={program} />,
   };
 }
 
@@ -188,8 +234,8 @@ export default function CoppeliaProgram({
   initial,
   today,
 }: {
-  initial: Program["id"];
-  today: Program["id"] | null;
+  initial: string;
+  today: string[];
 }) {
   return (
     <div className={`${styles.page} ${script.variable} ${serif.variable}`}>
@@ -207,7 +253,7 @@ export default function CoppeliaProgram({
       </header>
 
       <ProgramSwitch
-        tabs={PROGRAMS.map(programTab)}
+        tabs={SESSIONS.map(sessionTab)}
         initial={initial}
         today={today}
         sharedSections={SHARED_SECTIONS}
