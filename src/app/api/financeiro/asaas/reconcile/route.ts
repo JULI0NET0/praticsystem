@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import { findConfidentConfirmation } from '@/lib/asaasGroups';
 import type { AsaasTransaction, Invoice } from '@/types/database';
+import { requireStaffUser } from '@/lib/apiAuth';
 
 function getSupabase() {
   return createClient(
@@ -12,7 +13,9 @@ function getSupabase() {
 
 // Auto-reconcilia "Cobrança recebida" sem vínculo com o payment transaction
 // correspondente (mesmo cliente + valor + mês), marcando-a como confirmação bancária.
-export async function POST() {
+export async function POST(request: Request) {
+  const staff = await requireStaffUser(request);
+  if (staff.error) return staff.error;
   try {
     const supabase = getSupabase();
 

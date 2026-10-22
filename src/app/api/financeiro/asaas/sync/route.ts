@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import { getAllTransactions } from '@/lib/asaas';
+import { requireStaffUser } from '@/lib/apiAuth';
 
 function getSupabase() {
   return createClient(
@@ -10,6 +11,8 @@ function getSupabase() {
 }
 
 export async function POST(request: Request) {
+  const staff = await requireStaffUser(request);
+  if (staff.error) return staff.error;
   try {
     const { startDate, endDate } = await request.json();
 

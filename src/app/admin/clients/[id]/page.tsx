@@ -72,6 +72,7 @@ import NoteCard from "@/components/notas/NoteCard";
 import InlineNoteEditor from "@/components/notas/InlineNoteEditor";
 import { formatPhone } from "@/utils/masks";
 import ClientAtendimento from "@/components/admin/clients/ClientAtendimento";
+import { authHeaders } from "@/lib/authHeaders";
 
 
 const TABS = [
@@ -195,7 +196,7 @@ export default function ClientDetailPage() {
   }, [activeTab, clientData?.id]);
 
   const fetchAvailableServices = async () => {
-    const res = await fetch('/api/services');
+    const res = await fetch('/api/services', { headers: await authHeaders() });
     if (res.ok) setAvailableServices(await res.json());
   };
 
@@ -203,7 +204,7 @@ export default function ClientDetailPage() {
     try {
       setLoading(true);
 
-      const res = await fetch(`/api/clients/${id}`);
+      const res = await fetch(`/api/clients/${id}`, { headers: await authHeaders() });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const payload = await res.json();
 
@@ -220,7 +221,7 @@ export default function ClientDetailPage() {
       if (client.status === 'prospect' && payload.contracts.some((c: any) => c.status === 'active')) {
         await fetch(`/api/clients/${id}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
           body: JSON.stringify({ status: 'active' }),
         });
         setClientData({ ...client, status: 'active' });
@@ -252,7 +253,7 @@ export default function ClientDetailPage() {
     try {
       const res = await fetch(`/api/clients/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
         body: JSON.stringify({ status: newStatus }),
       });
       if (!res.ok) throw new Error('Falha ao atualizar status');
@@ -390,7 +391,7 @@ export default function ClientDetailPage() {
     try {
       const res = await fetch('/api/financeiro/asaas/sync-client-invoices', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
         body: JSON.stringify({ clientId: clientData.id }),
       });
       const data = await res.json();
@@ -411,7 +412,7 @@ export default function ClientDetailPage() {
 
   const handleOpenAsaasLink = async (asaasPaymentId: string) => {
     try {
-      const res = await fetch(`/api/financeiro/asaas/payment/${asaasPaymentId}`);
+      const res = await fetch(`/api/financeiro/asaas/payment/${asaasPaymentId}`, { headers: await authHeaders() });
       const payment = await res.json();
       const url = payment.invoiceUrl || payment.bankSlipUrl;
       if (url) {
@@ -429,7 +430,7 @@ export default function ClientDetailPage() {
     try {
       const res = await fetch('/api/financeiro/asaas/create-payment', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
         body: JSON.stringify({ invoiceId, billingType: 'UNDEFINED' }),
       });
       const data = await res.json();
@@ -524,7 +525,7 @@ export default function ClientDetailPage() {
     try {
       const res = await fetch(`/api/clients/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
         body: JSON.stringify({
           name: editFormData.name,
           nome_fantasia: editFormData.nome_fantasia,
@@ -654,7 +655,7 @@ export default function ClientDetailPage() {
   const handleDeleteClient = async () => {
     setIsDeleting(true);
     try {
-      const res = await fetch(`/api/clients/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/clients/${id}`, { method: 'DELETE', headers: await authHeaders() });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'Falha ao excluir cliente');
 

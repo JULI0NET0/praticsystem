@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
+import { requireStaffUser } from '@/lib/apiAuth';
 
 function getSupabase() {
   return createClient(
@@ -10,6 +11,8 @@ function getSupabase() {
 
 // Desvincula uma transação Asaas de um expense_entry / invoice e recalcula o status do alvo
 export async function POST(request: Request) {
+  const staff = await requireStaffUser(request);
+  if (staff.error) return staff.error;
   try {
     const supabase = getSupabase();
     const { asaas_transaction_id } = await request.json();

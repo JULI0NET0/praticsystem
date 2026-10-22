@@ -51,29 +51,25 @@ CREATE TRIGGER trigger_diagrams_updated_at
 -- Row Level Security (RLS)
 ALTER TABLE public.diagrams ENABLE ROW LEVEL SECURITY;
 
+-- ATENÇÃO: o portal do cliente usa o MESMO client anon da equipe, então
+-- `auth.uid() IS NOT NULL` deixaria clientes logados ler/editar/apagar
+-- diagramas internos. Restringe à equipe (linha em public.users), como em
+-- `demands`. Requer public.is_team_member() (setup_database.sql, bloco 11.6).
 DROP POLICY IF EXISTS "diagrams_select" ON public.diagrams;
 CREATE POLICY "diagrams_select" ON public.diagrams
-    FOR SELECT USING (
-        auth.uid() IS NOT NULL
-    );
+    FOR SELECT USING (public.is_team_member());
 
 DROP POLICY IF EXISTS "diagrams_insert" ON public.diagrams;
 CREATE POLICY "diagrams_insert" ON public.diagrams
-    FOR INSERT WITH CHECK (
-        auth.uid() IS NOT NULL
-    );
+    FOR INSERT WITH CHECK (public.is_team_member());
 
 DROP POLICY IF EXISTS "diagrams_update" ON public.diagrams;
 CREATE POLICY "diagrams_update" ON public.diagrams
-    FOR UPDATE USING (
-        auth.uid() IS NOT NULL
-    );
+    FOR UPDATE USING (public.is_team_member());
 
 DROP POLICY IF EXISTS "diagrams_delete" ON public.diagrams;
 CREATE POLICY "diagrams_delete" ON public.diagrams
-    FOR DELETE USING (
-        auth.uid() IS NOT NULL
-    );
+    FOR DELETE USING (public.is_team_member());
 
 -- Habilita Realtime no Supabase para a tabela diagrams
 DO $$

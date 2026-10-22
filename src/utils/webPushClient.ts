@@ -1,3 +1,5 @@
+import { authHeaders } from '@/lib/authHeaders'
+
 /**
  * Helper client-side para disparar notificações Web Push para destinatários específicos.
  * Roda de forma assíncrona sem bloquear a UI.
@@ -14,7 +16,7 @@ export async function sendPushNotification(params: {
   try {
     const res = await fetch('/api/push/send', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
       body: JSON.stringify(params)
     })
     return await res.json()

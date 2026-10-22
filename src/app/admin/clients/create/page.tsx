@@ -26,6 +26,7 @@ import { formatCPFOrCNPJ, formatCEP, formatPhone } from "@/utils/masks";
 import ThemeLogo from "@/components/ThemeLogo";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/components/CustomToast";
+import { authHeaders } from "@/lib/authHeaders";
 import { 
   InstagramIcon, 
   FacebookIcon, 
@@ -252,7 +253,7 @@ export default function CreateClientPage() {
       // 1. Criar usuário no Supabase Auth via API
       const authResponse = await fetch('/api/auth/create-client', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
         body: JSON.stringify({ email: formData.email, password: finalPassword })
       });
 

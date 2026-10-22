@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
+import { requireStaffUser } from '@/lib/apiAuth';
 
 export async function POST(request: Request) {
   try {
@@ -20,7 +21,11 @@ export async function POST(request: Request) {
       auth: { autoRefreshToken: false, persistSession: false }
     });
 
-    // Tenta criar o usuário no Auth; se já existir, reutiliza o existente
+    // Rota pública (usada pelo /onboarding). Só a equipe pode reaproveitar
+    // uma conta que já existe; sem token de equipe, e-mail repetido é 409.
+    const isStaff = request.headers.has('authorization') && !(await requireStaffUser(request)).error;
+
+    // Tenta criar o usuário no Auth; se já existir, reutiliza o existente (só equipe)
     let userId: string;
     const { data: createData, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email,
@@ -31,6 +36,9 @@ export async function POST(request: Request) {
     if (createError) {
       const msg = createError.message.toLowerCase();
       if (msg.includes('already been registered') || msg.includes('already registered') || msg.includes('already exists')) {
+        if (!isStaff) {
+          return NextResponse.json({ error: 'Já existe uma conta com este e-mail.' }, { status: 409 });
+        }
         // Busca o usuário existente pelo e-mail
         const { data: listData } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
         const existing = listData?.users?.find(u => u.email === email);

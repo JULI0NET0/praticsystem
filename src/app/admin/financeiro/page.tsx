@@ -14,6 +14,7 @@ import { DespesasVariaveis } from "@/components/financeiro/DespesasVariaveis";
 import { Repasses } from "@/components/financeiro/Repasses";
 import RoleGuard from "@/components/auth/RoleGuard";
 import type { Expense, ExpenseEntry, AsaasTransaction, Invoice } from "@/types/database";
+import { authHeaders } from "@/lib/authHeaders";
 
 type Tab = "dashboard" | "despesas" | "lancamentos" | "fluxo" | "asaas" | "variaveis" | "repasses";
 
@@ -144,7 +145,7 @@ export default function FinanceiroPage() {
 
   const fetchBalance = useCallback(async () => {
     try {
-      const res = await fetch("/api/financeiro/asaas/balance");
+      const res = await fetch("/api/financeiro/asaas/balance", { headers: await authHeaders() });
       if (res.ok) {
         const data = await res.json();
         setAsaasBalance(data);
@@ -285,12 +286,12 @@ export default function FinanceiroPage() {
     try {
       const res = await fetch("/api/financeiro/asaas/sync", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(await authHeaders()) },
         body: JSON.stringify({ startDate: start, endDate: end }),
       });
       const result = await res.json();
       // Auto-reconcilia cobranças recebidas com o pagamento correspondente
-      await fetch("/api/financeiro/asaas/reconcile", { method: "POST" }).catch(() => {});
+      await fetch("/api/financeiro/asaas/reconcile", { method: "POST", headers: await authHeaders() }).catch(() => {});
       const { data } = await supabase.from("asaas_transactions").select("*").order("date", { ascending: false });
       if (data) setAsaasTransactions(data);
       const { data: invData } = await supabase.from("invoices").select("*");
@@ -304,7 +305,7 @@ export default function FinanceiroPage() {
   async function handleLinkTransaction(asaasId: string, expenseEntryId?: string, invoiceId?: string, notes?: string) {
     await fetch("/api/financeiro/asaas/link", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...(await authHeaders()) },
       body: JSON.stringify({ asaas_transaction_id: asaasId, expense_entry_id: expenseEntryId, invoice_id: invoiceId, notes }),
     });
     const [txnRes, entRes] = await Promise.all([
@@ -345,7 +346,7 @@ export default function FinanceiroPage() {
   async function handleSetTransactionClient(asaasId: string, clientId: string | null) {
     await fetch("/api/financeiro/asaas/link", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...(await authHeaders()) },
       body: JSON.stringify({ asaas_transaction_id: asaasId, client_id: clientId }),
     });
     const { data } = await supabase.from("asaas_transactions").select("*").order("date", { ascending: false });
@@ -357,7 +358,7 @@ export default function FinanceiroPage() {
   async function handleSetPassthrough(asaasId: string, isPassthrough: boolean, clientId?: string | null, offsets?: boolean) {
     await fetch("/api/financeiro/asaas/link", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...(await authHeaders()) },
       body: JSON.stringify({
         asaas_transaction_id: asaasId,
         is_passthrough: isPassthrough,
@@ -370,7 +371,7 @@ export default function FinanceiroPage() {
   }
 
   async function handleReconcile() {
-    const res = await fetch("/api/financeiro/asaas/reconcile", { method: "POST" });
+    const res = await fetch("/api/financeiro/asaas/reconcile", { method: "POST", headers: await authHeaders() });
     const result = await res.json().catch(() => ({}));
     const [txnRes, invRes] = await Promise.all([
       supabase.from("asaas_transactions").select("*").order("date", { ascending: false }),
@@ -392,7 +393,7 @@ export default function FinanceiroPage() {
   async function handleMarkAsConfirmation(confirmationTxnId: string, paymentTxnId: string) {
     await fetch("/api/financeiro/asaas/link", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...(await authHeaders()) },
       body: JSON.stringify({ asaas_transaction_id: confirmationTxnId, confirms_asaas_transaction_id: paymentTxnId }),
     });
     const { data } = await supabase.from("asaas_transactions").select("*").order("date", { ascending: false });
@@ -402,7 +403,7 @@ export default function FinanceiroPage() {
   async function handleUnlinkTransaction(asaasId: string) {
     await fetch("/api/financeiro/asaas/unlink", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...(await authHeaders()) },
       body: JSON.stringify({ asaas_transaction_id: asaasId }),
     });
     const [txnRes, invRes, entRes] = await Promise.all([

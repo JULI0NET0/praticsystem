@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type DragEvent, type KeyboardEvent } from "react";
 import { ArrowUp, Menu, Palette, Paperclip, SquarePen, X } from "lucide-react";
 import { useTheme } from "next-themes";
-import { supabase } from "@/lib/supabase";
+import { authHeaders } from "@/lib/authHeaders";
 import { useAuth } from "@/hooks/useAuth";
 import { KevinSvg, useKevin } from "./Kevin";
 import styles from "./suporte.module.css";
@@ -37,12 +37,6 @@ const SEMENTE: Conversa[] = [
   { id: "s2", titulo: "Prazo padrão de Reels", msgs: [] },
   { id: "s3", titulo: "Acesso ao Drive do cliente", msgs: [] },
 ];
-
-async function authHeaders(): Promise<Record<string, string>> {
-  const { data } = await supabase.auth.getSession();
-  const token = data.session?.access_token;
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
 
 function lerSalvo(): Partial<Salvo> | null {
   try { return JSON.parse(window.localStorage.getItem(CHAVE) || "null"); } catch { return null; }

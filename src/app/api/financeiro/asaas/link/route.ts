@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
+import { requireStaffUser } from '@/lib/apiAuth';
 
 function getSupabase() {
   return createClient(
@@ -10,6 +11,8 @@ function getSupabase() {
 
 // Vincula uma transação Asaas a um expense_entry ou invoice existente
 export async function POST(request: Request) {
+  const staff = await requireStaffUser(request);
+  if (staff.error) return staff.error;
   try {
     const supabase = getSupabase();
     const { asaas_transaction_id, expense_entry_id, invoice_id, client_id, notes, confirms_asaas_transaction_id, is_passthrough, passthrough_offsets } = await request.json();

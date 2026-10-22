@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getAsaasPaymentById } from '@/lib/asaas';
+import { requireStaffUser } from '@/lib/apiAuth';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
@@ -14,6 +15,8 @@ function mapStatus(asaasStatus: string): 'paid' | 'pending' | 'overdue' {
 }
 
 export async function POST(req: NextRequest) {
+  const staff = await requireStaffUser(req);
+  if (staff.error) return staff.error;
   try {
     const { clientId } = await req.json();
 

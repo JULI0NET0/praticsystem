@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAsaasCustomerByCpfCnpj, getAllAsaasPaymentsByCustomer } from '@/lib/asaas';
+import { requireStaffUser } from '@/lib/apiAuth';
 
 export async function POST(req: NextRequest) {
+  const staff = await requireStaffUser(req);
+  if (staff.error) return staff.error;
   try {
     const { cpfCnpj } = await req.json();
 

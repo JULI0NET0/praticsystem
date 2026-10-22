@@ -49,7 +49,7 @@ function normalizeKey(str: string): string {
 /**
  * Converte um nó em um rótulo amigável (ex: "[WhatsApp] Disparo de Mensagem")
  */
-function getNodeTypeBadge(node: Node): string {
+export function getNodeTypeBadge(node: Node): string {
   if (node.type === "startEnd") {
     const cat = (node.data as CustomNodeData)?.category;
     return cat === "end" ? "Fim" : "Início";
@@ -618,7 +618,7 @@ function layoutStepsToFlowchart(steps: ParsedStep[]): { nodes: Node[]; edges: Ed
 /**
  * Resolve o tipo de nó a partir da tag ou do texto da etapa
  */
-function resolveNodeType(typeTag?: string, label: string = ""): { type: FlowNodeType; category?: string } {
+export function resolveNodeType(typeTag?: string, label: string = ""): { type: FlowNodeType; category?: string } {
   if (typeTag) {
     const norm = normalizeKey(typeTag);
     if (NODE_TYPE_LABELS[norm]) {

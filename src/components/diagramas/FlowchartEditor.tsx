@@ -22,7 +22,8 @@ import {
   FinalConnectionState,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { nodeTypes, CustomNodeData } from "./CustomNodes";
+import { nodeTypes, CustomNodeData, FlowActionsContext, FlowDirection } from "./CustomNodes";
+import { defaultNodeData, edgeStyle, normalizeEdges, placeConnectedNode, OPPOSITE } from "@/lib/flowGraph";
 import { 
   Play, 
   Layers, 
@@ -56,6 +57,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { MarkdownViewModal } from "./MarkdownViewModal";
+import type { DiagramEditorApi } from "./editorApi";
 
 export type FlowNodeType =
   | "startEnd"
@@ -79,6 +81,7 @@ interface FlowchartEditorProps {
     edges?: Edge[];
   };
   onChange?: (data: { nodes: Node[]; edges: Edge[] }) => void;
+  apiRef?: React.Ref<DiagramEditorApi>;
 }
 
 const DEFAULT_NODES: Node[] = [
@@ -176,13 +179,30 @@ const DEFAULT_EDGES: Edge[] = [
   },
 ];
 
-function FlowchartCanvas({ initialData, onChange }: FlowchartEditorProps) {
+// Assinatura do que importa salvar: ignora seleção, medição, arrasto em andamento
+// e o nonce de edição. Sem isso cada frame de arrasto virava um passo do undo.
+function graphSignature(ns: Node[], es: Edge[]) {
+  return JSON.stringify([
+    ns.map((n) => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { editNonce, ...data } = (n.data || {}) as Record<string, unknown>;
+      return [n.id, n.type, Math.round(n.position.x), Math.round(n.position.y), data];
+    }),
+    es.map((e) => [e.id, e.source, e.target, e.sourceHandle, e.targetHandle, e.label]),
+  ]);
+}
+
+function FlowchartCanvas({ initialData, onChange, apiRef }: FlowchartEditorProps) {
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
   const { fitView, zoomIn, zoomOut, setCenter, screenToFlowPosition } = useReactFlow();
 
-  const initialNodes = initialData?.nodes && initialData.nodes.length > 0 ? initialData.nodes : DEFAULT_NODES;
-  const initialEdges = initialData?.edges && initialData.edges.length > 0 ? initialData.edges : DEFAULT_EDGES;
+  // Calculado uma vez na montagem; o editor é dono do estado depois disso
+  const [{ initialNodes, initialEdges }] = useState(() => {
+    const ns = initialData?.nodes && initialData.nodes.length > 0 ? initialData.nodes : DEFAULT_NODES;
+    const es = initialData?.edges && initialData.edges.length > 0 ? initialData.edges : DEFAULT_EDGES;
+    return { initialNodes: ns, initialEdges: normalizeEdges(ns, es) };
+  });
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
@@ -211,6 +231,7 @@ function FlowchartCanvas({ initialData, onChange }: FlowchartEditorProps) {
   const isPerformingHistoryActionRef = useRef<boolean>(false);
 
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const canvasWrapperRef = useRef<HTMLDivElement>(null);
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
 
   // Modal de Visão de Texto / Markdown
@@ -227,6 +248,19 @@ function FlowchartCanvas({ initialData, onChange }: FlowchartEditorProps) {
     }, 100);
   }, [setNodes, setEdges, fitView]);
 
+  // Texto do outline aplicado de fora (página do editor)
+  React.useImperativeHandle(
+    apiRef,
+    () => ({
+      applyData: (data) => {
+        const ns = (data.nodes as Node[]) || [];
+        setNodes(ns);
+        setEdges(normalizeEdges(ns, (data.edges as Edge[]) || []));
+      },
+    }),
+    [setNodes, setEdges]
+  );
+
   const selectedNode = nodes.find((n) => n.id === selectedNodeId);
   const selectedEdge = edges.find((e) => e.id === selectedEdgeId);
 
@@ -235,14 +269,19 @@ function FlowchartCanvas({ initialData, onChange }: FlowchartEditorProps) {
     onChangeRef.current = onChange;
   }, [onChange]);
 
-  const isFirstRender = useRef(true);
+  const lastSignatureRef = useRef<string | null>(null);
 
-  // Emite alterações após o ciclo de renderização e salva histórico
+  // Emite alterações e grava histórico só quando o grafo muda de fato (e não no meio de um arrasto)
   useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
+    if (nodes.some((n) => n.dragging)) return;
+    const sig = graphSignature(nodes, edges);
+    if (lastSignatureRef.current === null) {
+      // Primeira passada: estado carregado, nada a salvar
+      lastSignatureRef.current = sig;
       return;
     }
+    if (sig === lastSignatureRef.current) return;
+    lastSignatureRef.current = sig;
 
     if (!isPerformingHistoryActionRef.current) {
       const currentHistory = historyRef.current.slice(0, historyIndexRef.current + 1);
@@ -309,11 +348,11 @@ function FlowchartCanvas({ initialData, onChange }: FlowchartEditorProps) {
 
   const onConnect = useCallback(
     (params: Connection) => {
+      if (params.source === params.target) return;
       const newEdge: Edge = {
         ...params,
         id: `e-${Date.now()}`,
-        markerEnd: { type: MarkerType.ArrowClosed, color: "var(--color-terracotta, #e05d38)" },
-        style: { stroke: "var(--color-terracotta, #e05d38)", strokeWidth: 2 },
+        ...edgeStyle(),
       };
       setEdges((eds) => addEdge(newEdge, eds));
     },
@@ -373,299 +412,148 @@ function FlowchartCanvas({ initialData, onChange }: FlowchartEditorProps) {
     [screenToFlowPosition]
   );
 
-  // Criação e conexão automática ao escolher o bloco no menu do fio
-  const handleCreateNodeFromDrop = useCallback(
-    (type: FlowNodeType, category?: string) => {
-      if (!quickConnectDrop) return;
+  // Cria um bloco já conectado a `fromId` na direção pedida (botões "+", Tab, fio solto).
+  // O bloco novo nasce selecionado e com o título em edição.
+  const createConnectedNode = useCallback(
+    (
+      fromId: string,
+      direction: FlowDirection,
+      opts: { type?: FlowNodeType; category?: string; position?: { x: number; y: number } } = {}
+    ) => {
+      const from = nodes.find((n) => n.id === fromId);
+      if (!from) return;
 
-      const { sourceNodeId, sourceHandleId, flowPosition } = quickConnectDrop;
+      // Herda o tipo do bloco de origem, exceto Início/Fim/Decisão/Nota, que viram Etapa
+      const inherit = from.type && !["startEnd", "decision", "note"].includes(from.type) ? (from.type as FlowNodeType) : "process";
+      const type = opts.type ?? inherit;
       const newId = `node-${Date.now()}`;
-      const sourceNode = nodes.find((n) => n.id === sourceNodeId);
+      const position = opts.position ?? placeConnectedNode(from, direction, nodes);
 
-      // Determina a direção exata de acordo com o lado puxado:
-      // - Puxou da DIREITA -> entra pela lateral ESQUERDA do novo bloco
-      // - Puxou para BAIXO -> entra por CIMA do novo bloco
-      // - Puxou da ESQUERDA -> entra pela lateral DIREITA do novo bloco
-      // - Puxou para CIMA -> entra por BAIXO do novo bloco
-      let direction: "right" | "bottom" | "left" | "top" = "bottom";
-
-      if (sourceHandleId === "right" || sourceHandleId === "yes") {
-        direction = "right";
-      } else if (sourceHandleId === "bottom" || sourceHandleId === "default") {
-        direction = "bottom";
-      } else if (sourceHandleId === "left" || sourceHandleId === "no") {
-        direction = "left";
-      } else if (sourceHandleId === "top") {
-        direction = "top";
-      } else if (sourceNode) {
-        const dx = flowPosition.x - sourceNode.position.x;
-        const dy = flowPosition.y - sourceNode.position.y;
-        if (Math.abs(dx) >= Math.abs(dy)) {
-          direction = dx >= 0 ? "right" : "left";
-        } else {
-          direction = dy >= 0 ? "bottom" : "top";
-        }
-      }
-
-      let sourceHandle: string = direction;
-      let targetHandle: string = "top";
-      let nodePos = { x: flowPosition.x, y: flowPosition.y };
-
-      switch (direction) {
-        case "right":
-          sourceHandle = "right";
-          targetHandle = "left";
-          nodePos = { x: flowPosition.x + 10, y: flowPosition.y - 35 };
-          break;
-        case "bottom":
-          sourceHandle = "bottom";
-          targetHandle = "top";
-          nodePos = { x: flowPosition.x - 90, y: flowPosition.y + 10 };
-          break;
-        case "left":
-          sourceHandle = "left";
-          targetHandle = "right";
-          nodePos = { x: flowPosition.x - 210, y: flowPosition.y - 35 };
-          break;
-        case "top":
-          sourceHandle = "top";
-          targetHandle = "bottom";
-          nodePos = { x: flowPosition.x - 90, y: flowPosition.y - 80 };
-          break;
-      }
-
-      let defaultLabel = "Nova Etapa";
-      let defaultDesc: string | undefined = undefined;
-
-      switch (type) {
-        case "startEnd":
-          defaultLabel = category === "end" ? "Fim do Processo" : "Início";
-          break;
-        case "process":
-          defaultLabel = "Etapa do Processo";
-          defaultDesc = "Descrição do procedimento";
-          break;
-        case "decision":
-          defaultLabel = "Condição / Decisão?";
-          break;
-        case "automation":
-          defaultLabel = "Disparo Automático";
-          defaultDesc = "Disparo de evento / webhook";
-          break;
-        case "whatsapp":
-          defaultLabel = "Mensagem WhatsApp";
-          defaultDesc = "Disparo de template";
-          break;
-        case "social":
-          defaultLabel = "Instagram / Social";
-          defaultDesc = "Direct ou interação";
-          break;
-        case "email":
-          defaultLabel = "Envio de E-mail";
-          defaultDesc = "E-mail de follow-up";
-          break;
-        case "meeting":
-          defaultLabel = "Reunião / Call";
-          defaultDesc = "Call de apresentação";
-          break;
-        case "payment":
-          defaultLabel = "Cobrança / Pagamento";
-          defaultDesc = "Link de pagamento";
-          break;
-        case "delay":
-          defaultLabel = "Aguardar / Delay";
-          defaultDesc = "Aguardar 24 horas";
-          break;
-        case "approval":
-          defaultLabel = "Aprovação do Cliente";
-          defaultDesc = "Validação da entrega";
-          break;
-        case "document":
-          defaultLabel = "Contrato / Briefing";
-          defaultDesc = "Assinatura ou documento";
-          break;
-        case "note":
-          defaultLabel = "Nota explicativa...";
-          break;
-      }
+      // Saindo de uma decisão pela direita/esquerda, já rotula Sim/Não
+      const label = from.type === "decision" ? (direction === "right" ? "Sim" : direction === "left" ? "Não" : undefined) : undefined;
 
       const newNode: Node = {
         id: newId,
         type,
-        position: nodePos,
-        data: {
-          label: defaultLabel,
-          description: defaultDesc,
-          category: category || (type === "startEnd" ? (category || "start") : undefined),
-        },
+        position,
+        data: { ...defaultNodeData(type, opts.category), editNonce: Date.now() },
         selected: true,
       };
-
       const newEdge: Edge = {
-        id: `e-${sourceNodeId}-${newId}-${Date.now()}`,
-        source: sourceNodeId,
+        id: `e-${fromId}-${newId}`,
+        source: fromId,
         target: newId,
-        sourceHandle: sourceHandle,
-        targetHandle: targetHandle,
-        markerEnd: { type: MarkerType.ArrowClosed, color: "var(--color-terracotta, #e05d38)" },
-        style: { stroke: "var(--color-terracotta, #e05d38)", strokeWidth: 2 },
+        sourceHandle: direction,
+        targetHandle: OPPOSITE[direction],
+        label,
+        ...edgeStyle(label),
       };
 
       setNodes((prev) => [...prev.map((n) => ({ ...n, selected: false })), newNode]);
       setEdges((prev) => [...prev, newEdge]);
       setSelectedNodeId(newId);
       setSelectedEdgeId(null);
-      setQuickConnectDrop(null);
     },
-    [quickConnectDrop, nodes, setNodes, setEdges]
+    [nodes, setNodes, setEdges]
   );
 
-  // Adicionar novo nó genérico
+  // Centraliza a tela num bloco específico (botão da barra do nó)
+  const centerOn = useCallback(
+    (id: string) => {
+      const node = nodes.find((n) => n.id === id);
+      if (!node) return;
+      const w = node.measured?.width ?? 240;
+      const h = node.measured?.height ?? 90;
+      setCenter(node.position.x + w / 2, node.position.y + h / 2, { duration: 300, zoom: 1 });
+    },
+    [nodes, setCenter]
+  );
+
+  const flowActions = React.useMemo(
+    () => ({ addConnected: (id: string, dir: FlowDirection) => createConnectedNode(id, dir), centerOn }),
+    [createConnectedNode, centerOn]
+  );
+
+  // Criação e conexão automática ao escolher o bloco no menu do fio solto
+  const handleCreateNodeFromDrop = useCallback(
+    (type: FlowNodeType, category?: string) => {
+      if (!quickConnectDrop) return;
+
+      const { sourceNodeId, sourceHandleId, flowPosition } = quickConnectDrop;
+      const sourceNode = nodes.find((n) => n.id === sourceNodeId);
+
+      // Direção pelo handle puxado; sem handle conhecido, pela posição do drop
+      const byHandle: Record<string, FlowDirection> = { right: "right", yes: "right", bottom: "bottom", default: "bottom", left: "left", no: "left", top: "top" };
+      let direction: FlowDirection = (sourceHandleId && byHandle[sourceHandleId]) || "bottom";
+      if (!(sourceHandleId && byHandle[sourceHandleId]) && sourceNode) {
+        const dx = flowPosition.x - sourceNode.position.x;
+        const dy = flowPosition.y - sourceNode.position.y;
+        direction = Math.abs(dx) >= Math.abs(dy) ? (dx >= 0 ? "right" : "left") : dy >= 0 ? "bottom" : "top";
+      }
+
+      // Posiciona o bloco onde o fio foi solto, com a ponta de entrada encostando no cursor
+      const offsets: Record<FlowDirection, { x: number; y: number }> = {
+        right: { x: 10, y: -45 },
+        left: { x: -250, y: -45 },
+        bottom: { x: -120, y: 10 },
+        top: { x: -120, y: -100 },
+      };
+      const position = { x: flowPosition.x + offsets[direction].x, y: flowPosition.y + offsets[direction].y };
+
+      createConnectedNode(sourceNodeId, direction, { type, category, position });
+      setQuickConnectDrop(null);
+    },
+    [quickConnectDrop, nodes, createConnectedNode]
+  );
+
+  // Adicionar bloco solto pela paleta, no centro da área visível
   const addNode = useCallback((type: FlowNodeType, category?: string) => {
     const id = `node-${Date.now()}`;
-    const offset = (nodes.length % 5) * 30;
-
-    let defaultLabel = "Nova Etapa";
-    let defaultDesc: string | undefined = undefined;
-
-    switch (type) {
-      case "startEnd":
-        defaultLabel = category === "end" ? "Fim do Processo" : "Início";
-        break;
-      case "process":
-        defaultLabel = "Etapa do Processo";
-        defaultDesc = "Descrição do procedimento";
-        break;
-      case "decision":
-        defaultLabel = "Condição / Decisão?";
-        break;
-      case "automation":
-        defaultLabel = "Disparo Automático";
-        defaultDesc = "Disparo de evento / webhook";
-        break;
-      case "whatsapp":
-        defaultLabel = "Mensagem WhatsApp";
-        defaultDesc = "Mensagem de texto ou template";
-        break;
-      case "social":
-        defaultLabel = "Instagram / Social";
-        defaultDesc = "Direct, post ou interação";
-        break;
-      case "email":
-        defaultLabel = "Envio de E-mail";
-        defaultDesc = "E-mail com proposta ou boas-vindas";
-        break;
-      case "meeting":
-        defaultLabel = "Reunião / Call";
-        defaultDesc = "Call de alinhamento ou demonstração";
-        break;
-      case "payment":
-        defaultLabel = "Cobrança / Pagamento";
-        defaultDesc = "Link de pagamento, Pix ou boleto";
-        break;
-      case "delay":
-        defaultLabel = "Aguardar / Delay";
-        defaultDesc = "Aguardar 24h ou resposta";
-        break;
-      case "approval":
-        defaultLabel = "Aprovação do Cliente";
-        defaultDesc = "Validação de entrega ou etapa";
-        break;
-      case "document":
-        defaultLabel = "Contrato / Briefing";
-        defaultDesc = "Documento ou assinatura digital";
-        break;
-      case "note":
-        defaultLabel = "Nota explicativa...";
-        break;
-    }
+    const offset = (nodes.length % 5) * 24;
+    const rect = canvasWrapperRef.current?.getBoundingClientRect();
+    const center = rect
+      ? screenToFlowPosition({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 })
+      : { x: 280, y: 220 };
 
     const newNode: Node = {
       id,
       type,
-      position: { x: 280 + offset, y: 220 + offset },
-      data: {
-        label: defaultLabel,
-        description: defaultDesc,
-        category: category || (type === "startEnd" ? (category || "start") : undefined),
-      },
+      position: { x: Math.round(center.x - 120 + offset), y: Math.round(center.y - 45 + offset) },
+      data: { ...defaultNodeData(type, category), editNonce: Date.now() },
       selected: true,
     };
 
     setNodes((prev) => [...prev.map((n) => ({ ...n, selected: false })), newNode]);
     setSelectedNodeId(id);
     setSelectedEdgeId(null);
-  }, [nodes.length, setNodes]);
+  }, [nodes.length, setNodes, screenToFlowPosition]);
 
-  // Atalho 1: Criar Próxima Etapa / Filho (Tab) conectado automaticamente
+  // Atalho Tab: próxima etapa conectada abaixo do bloco selecionado
   const handleAddNextStep = useCallback(() => {
-    const parentNode = nodes.find((n) => n.id === selectedNodeId) || nodes[nodes.length - 1];
+    const parentNode = nodes.find((n) => n.id === selectedNodeId);
     if (!parentNode) {
       addNode("process");
       return;
     }
+    createConnectedNode(parentNode.id, "bottom");
+  }, [nodes, selectedNodeId, addNode, createConnectedNode]);
 
-    const newId = `node-${Date.now()}`;
-    const newPosition = {
-      x: parentNode.position.x,
-      y: parentNode.position.y + 130,
-    };
-
-    const newNode: Node = {
-      id: newId,
-      type: "process",
-      position: newPosition,
-      data: {
-        label: "Nova Etapa",
-        description: "",
-      },
-      selected: true,
-    };
-
-    const newEdge: Edge = {
-      id: `e-${parentNode.id}-${newId}`,
-      source: parentNode.id,
-      target: newId,
-      markerEnd: { type: MarkerType.ArrowClosed, color: "var(--color-terracotta, #e05d38)" },
-      style: { stroke: "var(--color-terracotta, #e05d38)", strokeWidth: 2 },
-    };
-
-    setNodes((prev) => [...prev.map((n) => ({ ...n, selected: false })), newNode]);
-    setEdges((prev) => [...prev, newEdge]);
-    setSelectedNodeId(newId);
-    setSelectedEdgeId(null);
-  }, [nodes, selectedNodeId, addNode, setNodes, setEdges]);
-
-  // Atalho 2: Criar Etapa Paralela / Irmão (Enter)
+  // Atalho Enter: etapa paralela (irmã), ligada ao mesmo bloco de origem do selecionado
   const handleAddSibling = useCallback(() => {
-    const parentNode = nodes.find((n) => n.id === selectedNodeId) || nodes[nodes.length - 1];
-    if (!parentNode) {
+    const current = nodes.find((n) => n.id === selectedNodeId);
+    if (!current) {
       addNode("process");
       return;
     }
-
-    const newId = `node-${Date.now()}`;
-    const newPosition = {
-      x: parentNode.position.x + 220,
-      y: parentNode.position.y,
-    };
-
-    const newNode: Node = {
-      id: newId,
-      type: parentNode.type || "process",
-      position: newPosition,
-      data: {
-        label: "Nova Etapa",
-        description: "",
-        category: (parentNode.data as CustomNodeData)?.category,
-      },
-      selected: true,
-    };
-
-    setNodes((prev) => [...prev.map((n) => ({ ...n, selected: false })), newNode]);
-    setSelectedNodeId(newId);
-    setSelectedEdgeId(null);
-  }, [nodes, selectedNodeId, addNode, setNodes]);
+    const incoming = edges.find((e) => e.target === current.id);
+    if (incoming) {
+      createConnectedNode(incoming.source, (incoming.sourceHandle as FlowDirection) || "bottom", {
+        type: (current.type as FlowNodeType) || "process",
+      });
+    } else {
+      createConnectedNode(current.id, "right", { type: (current.type as FlowNodeType) || "process" });
+    }
+  }, [nodes, edges, selectedNodeId, addNode, createConnectedNode]);
 
   // Atalhos de teclado (Tab = Filho, Enter = Irmão, Cmd+Z = Undo, Cmd+Shift+Z = Redo)
   useEffect(() => {
@@ -779,14 +667,23 @@ function FlowchartCanvas({ initialData, onChange }: FlowchartEditorProps) {
   };
 
   return (
+    <FlowActionsContext.Provider value={flowActions}>
     <div
+      ref={canvasWrapperRef}
       style={{
         width: "100%",
         height: "100%",
         position: "relative",
-        background: isDark ? "#0f172a" : "#f8fafc",
+        background: "var(--color-surface-canvas, #faf9f5)",
       }}
     >
+      {/* Botões "+" dos blocos: visíveis no hover ou com o bloco selecionado.
+          O atraso no visibility dá tempo de levar o mouse do bloco até o botão. */}
+      <style>{`
+        .flow-add-btn { opacity: 0; visibility: hidden; transition: opacity .15s ease, visibility 0s linear .35s, transform .15s ease; }
+        .react-flow__node:hover .flow-add-btn, .flow-add-btn[data-visible="true"] { opacity: 1; visibility: visible; transition: opacity .15s ease, transform .15s ease; }
+        .flow-add-btn:hover { background: var(--color-terracotta, #d97757) !important; color: #1b1c1a !important; border-color: transparent !important; }
+      `}</style>
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -829,6 +726,8 @@ function FlowchartCanvas({ initialData, onChange }: FlowchartEditorProps) {
         />
         <MiniMap
           nodeStrokeWidth={3}
+          nodeColor="#1b1c1a"
+          nodeStrokeColor="#d97757"
           zoomable
           pannable
           style={{
@@ -1792,6 +1691,7 @@ function FlowchartCanvas({ initialData, onChange }: FlowchartEditorProps) {
         onApplyMarkdown={handleApplyMarkdown}
       />
     </div>
+    </FlowActionsContext.Provider>
   );
 }
 

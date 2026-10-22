@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Network, GitBranch, Layers, ArrowRight } from "lucide-react";
+import { X, Network, GitBranch, Layers, PenTool, ArrowRight } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { DiagramType } from "@/types/database";
 
@@ -164,7 +164,7 @@ export default function NewDiagramModal({ isOpen, onClose, onSubmit }: NewDiagra
               <label style={{ display: "block", fontSize: "12px", fontWeight: 600, marginBottom: "8px" }}>
                 Tipo de Diagrama
               </label>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px" }}>
                 <button
                   type="button"
                   onClick={() => setType("flowchart")}
@@ -244,6 +244,46 @@ export default function NewDiagramModal({ isOpen, onClose, onSubmit }: NewDiagra
                     </div>
                   </div>
                 </button>
+
+                <button
+                  type="button"
+                  onClick={() => setType("whiteboard")}
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: "10px",
+                    padding: "12px 14px",
+                    borderRadius: "12px",
+                    border: type === "whiteboard" ? "2px solid var(--color-terracotta, #e05d38)" : "1px solid var(--color-border-subtle, #e2e8f0)",
+                    backgroundColor: type === "whiteboard" ? "var(--color-terracotta-100, #fbeee9)" : "var(--color-surface-sunken, #f8fafc)",
+                    cursor: "pointer",
+                    textAlign: "left",
+                    transition: "all 0.15s ease",
+                  }}
+                >
+                  <div
+                    style={{
+                      marginTop: "2px",
+                      color: type === "whiteboard" ? "var(--color-terracotta-ink, #c2410c)" : "var(--color-text-secondary, #64748b)",
+                    }}
+                  >
+                    <PenTool size={18} />
+                  </div>
+                  <div>
+                    <div
+                      style={{
+                        fontSize: "13px",
+                        fontWeight: 600,
+                        color: type === "whiteboard" ? "var(--color-terracotta-ink, #c2410c)" : "var(--color-text-primary, #0f172a)",
+                      }}
+                    >
+                      Quadro Livre
+                    </div>
+                    <div style={{ fontSize: "11px", color: "var(--color-text-secondary, #64748b)", marginTop: "2px" }}>
+                      Desenho livre, wireframes e rascunhos à mão.
+                    </div>
+                  </div>
+                </button>
               </div>
             </div>
 
@@ -254,7 +294,7 @@ export default function NewDiagramModal({ isOpen, onClose, onSubmit }: NewDiagra
               </label>
               <input
                 type="text"
-                placeholder={type === "flowchart" ? "Ex: Funil de Conversão - Lançamento Q3" : "Ex: Planejamento Editorial de Março"}
+                placeholder={type === "flowchart" ? "Ex: Funil de Conversão - Lançamento Q3" : type === "whiteboard" ? "Ex: Wireframe da Landing Page" : "Ex: Planejamento Editorial de Março"}
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 required
@@ -324,7 +364,7 @@ export default function NewDiagramModal({ isOpen, onClose, onSubmit }: NewDiagra
                 }}
               >
                 <option value="blank">Em branco</option>
-                {type === "flowchart" ? (
+                {type === "whiteboard" ? null : type === "flowchart" ? (
                   <>
                     <option value="funnel">Funil de Vendas (Inbound & WhatsApp)</option>
                     <option value="onboarding">Onboarding de Novo Cliente</option>

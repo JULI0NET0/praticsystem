@@ -172,6 +172,17 @@
       "inicio": "2026-10",
       "escopo": "10 peças gráficas: cartão de visita + marca-página, envelopes (2 modelos), pasta A4, bloco, caixa de presente + agenda, catálogo físico, adesivo, sacola, cartão postal, cartão textura + mini envelope",
       "arquivo": "propostas/Proposta - Hangar 43.docx"
+    },
+    {
+      "cliente": "Hangar 43 (gestão de redes)",
+      "status": "enviada",
+      "modelo": "mensal",
+      "valor": 2800,
+      "unidade": "mês",
+      "extras": "Opção Basic R$ 1.900/mês. Black Friday: 15% off no 1º mês (Premium R$ 2.380, Basic R$ 1.615). Tráfego: verba à parte",
+      "inicio": "2026-10",
+      "escopo": "Premium: 3 posts/semana, 1 captação/mês, planejamento, relatório, tráfego. Basic: 2 posts/semana, 1 captação/mês",
+      "arquivo": "propostas/Proposta - Hangar 43 - Gestão de Redes.docx"
     }
   ]
 }

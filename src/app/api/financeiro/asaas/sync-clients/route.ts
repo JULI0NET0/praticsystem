@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getAsaasCustomerByCpfCnpj, getAllAsaasPaymentsByCustomer } from '@/lib/asaas';
+import { requireStaffUser } from '@/lib/apiAuth';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
@@ -130,6 +131,8 @@ async function syncClientPayments(
 }
 
 export async function POST(req: NextRequest) {
+  const staff = await requireStaffUser(req);
+  if (staff.error) return staff.error;
   try {
     const body = await req.json().catch(() => ({}));
     const dueDateStart: string = body.startDate ?? '2025-01-01';

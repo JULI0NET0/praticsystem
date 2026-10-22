@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
+import { requireStaffUser } from '@/lib/apiAuth';
 
 function getAdminClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -9,7 +10,9 @@ function getAdminClient() {
   });
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const staff = await requireStaffUser(request);
+  if (staff.error) return staff.error;
   try {
     const supabase = getAdminClient();
     const { data, error } = await supabase

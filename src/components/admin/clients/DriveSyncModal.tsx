@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Loader2, X, HardDrive } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { authHeaders } from "@/lib/authHeaders";
 import { useToast } from "@/components/CustomToast";
 
 interface SyncRow {
@@ -16,12 +16,6 @@ interface SyncRow {
 }
 
 interface DriveFolder { id: string; name: string }
-
-async function authHeaders(): Promise<Record<string, string>> {
-  const { data } = await supabase.auth.getSession();
-  const token = data.session?.access_token;
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
 
 /** Casa cada cliente com a pasta dele em "01 PRATIC" e atualiza google_drive_url. */
 export default function DriveSyncModal({ onClose, onApplied }: { onClose: () => void; onApplied: () => void }) {

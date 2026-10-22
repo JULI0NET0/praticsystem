@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Camera, ExternalLink, FolderPlus, Plus, Trash2, X, Loader2, ChevronDown } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { authHeaders } from "@/lib/authHeaders";
 import DatePicker from "@/components/ui/DatePicker";
 import { useToast } from "@/components/CustomToast";
 import {
@@ -12,12 +12,6 @@ import {
   formatCaptureFolderName,
   type CaptureFolderRecord,
 } from "@/lib/driveFolders";
-
-async function authHeaders(): Promise<Record<string, string>> {
-  const { data } = await supabase.auth.getSession();
-  const token = data.session?.access_token;
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
 
 function todayIso(): string {
   const d = new Date();

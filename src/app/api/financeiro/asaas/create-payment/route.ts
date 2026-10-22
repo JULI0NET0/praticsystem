@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getAsaasCustomerByCpfCnpj, createAsaasPayment } from '@/lib/asaas';
+import { requireStaffUser } from '@/lib/apiAuth';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
@@ -8,6 +9,8 @@ const supabase = createClient(
 );
 
 export async function POST(req: NextRequest) {
+  const staff = await requireStaffUser(req);
+  if (staff.error) return staff.error;
   try {
     const { invoiceId, billingType = 'UNDEFINED' } = await req.json();
 

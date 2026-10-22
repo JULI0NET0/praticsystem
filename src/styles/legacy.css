@@ -151,6 +151,23 @@
   height: 100%;
 }
 
+/* Editor de diagramas: tela cheia. Esconde sidebar, header mobile, busca, nav e chat,
+   e o canvas ocupa toda a área sem padding nem a coluna de 1400px. */
+.admin-layout-container:has(#diagram-editor) > :not(.admin-main-card),
+.admin-layout-container:has(#diagram-editor) .admin-main-card > :not(main) {
+  display: none !important;
+}
+
+.admin-content-area:has(#diagram-editor) {
+  padding: 0 !important;
+  overflow: hidden;
+}
+
+.admin-content-area:has(#diagram-editor) > div {
+  max-width: none !important;
+  height: 100%;
+}
+
 /* Barras de rolagem discretas no admin: finas e invisíveis até o ponteiro passar por cima. */
 .admin-layout-container * {
   scrollbar-width: thin;

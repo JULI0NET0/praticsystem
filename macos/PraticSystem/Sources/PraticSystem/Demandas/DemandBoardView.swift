@@ -148,7 +148,8 @@ private struct DemandCard: View {
                 .lineLimit(3)
 
             HStack(spacing: 10) {
-                if let color = demand.priority.color {
+                if demand.priority != .none {
+                    let color = demand.priority.color
                     Label(demand.priority.label, systemImage: "flag.fill")
                         .foregroundStyle(color)
                 }

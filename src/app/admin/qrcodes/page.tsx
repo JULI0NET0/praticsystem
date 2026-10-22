@@ -14,6 +14,7 @@ import Skeleton from "@/components/ui/Skeleton";
 import { useToast } from "@/components/CustomToast";
 import RoleGuard from "@/components/auth/RoleGuard";
 import type { Client } from "@/types/database";
+import { authHeaders } from "@/lib/authHeaders";
 
 const ALLOWED_ROLES = ["admin", "board", "social_media"];
 
@@ -65,7 +66,7 @@ function QrCodesContent() {
       setLoading(true);
       const [linksRes, clientsRes] = await Promise.all([
         fetch("/api/qrcodes"),
-        fetch("/api/clients").catch(() => null)
+        fetch("/api/clients", { headers: await authHeaders() }).catch(() => null)
       ]);
 
       if (!linksRes.ok) throw new Error(`Erro ao buscar QR Codes: ${linksRes.status}`);

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -11,6 +12,9 @@ import {
   Download,
   Layers,
   GitBranch,
+  PenTool,
+  Columns2,
+  ListTree,
   Trash2,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
@@ -19,6 +23,13 @@ import { useToast } from "@/components/CustomToast";
 import { useConfirm } from "@/components/ConfirmProvider";
 import FlowchartEditor from "@/components/diagramas/FlowchartEditor";
 import MindMapEditor from "@/components/diagramas/MindMapEditor";
+import OutlinePanel from "@/components/diagramas/OutlinePanel";
+import type { DiagramEditorApi } from "@/components/diagramas/editorApi";
+
+// Excalidraw depende de window/canvas: só carrega no cliente e só quando o tipo é whiteboard
+const WhiteboardEditor = dynamic(() => import("@/components/diagramas/WhiteboardEditor"), {
+  ssr: false,
+});
 
 export default function DiagramEditorPage() {
   const params = useParams();
@@ -35,6 +46,12 @@ export default function DiagramEditorPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
+  // Canvas, só texto (outline) ou os dois lado a lado — fluxograma e mapa mental
+  const [viewMode, setViewMode] = useState<"canvas" | "text" | "split">("canvas");
+  // Cópia do estado do canvas para o outline acompanhar (só usada fora do modo canvas)
+  const [liveData, setLiveData] = useState<Record<string, unknown> | null>(null);
+  const editorApiRef = useRef<DiagramEditorApi>(null);
 
   // Armazena os dados mais recentes do canvas
   const currentDataRef = useRef<Record<string, unknown> | null>(null);
@@ -122,11 +139,22 @@ export default function DiagramEditorPage() {
     [diagramId, title, clientId, showToast]
   );
 
+  const viewModeRef = useRef(viewMode);
+  useEffect(() => {
+    viewModeRef.current = viewMode;
+  }, [viewMode]);
+
+  const changeViewMode = (mode: "canvas" | "text" | "split") => {
+    if (mode !== "canvas") setLiveData(currentDataRef.current);
+    setViewMode(mode);
+  };
+
   // Dispara alteração do canvas com debounce para autosave
   const handleDataChange = useCallback(
     (newData: Record<string, unknown>) => {
       currentDataRef.current = newData;
       setHasUnsavedChanges(true);
+      if (viewModeRef.current !== "canvas") setLiveData(newData);
 
       if (autoSaveTimeoutRef.current) {
         clearTimeout(autoSaveTimeoutRef.current);
@@ -138,6 +166,37 @@ export default function DiagramEditorPage() {
     },
     [saveDiagram]
   );
+
+  // Espelha o estado mais recente para o flush ao sair da página
+  const saveRef = useRef(saveDiagram);
+  const dirtyRef = useRef(false);
+  useEffect(() => {
+    saveRef.current = saveDiagram;
+  }, [saveDiagram]);
+  useEffect(() => {
+    dirtyRef.current = hasUnsavedChanges;
+  }, [hasUnsavedChanges]);
+
+  // Não perde o que ainda está no debounce: salva ao trocar de aba, fechar ou sair da rota
+  useEffect(() => {
+    const flush = () => {
+      if (!dirtyRef.current) return;
+      if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current);
+      dirtyRef.current = false;
+      saveRef.current();
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") flush();
+    };
+
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("beforeunload", flush);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("beforeunload", flush);
+      flush();
+    };
+  }, []);
 
   // Alteração de título
   const handleTitleBlur = () => {
@@ -155,28 +214,49 @@ export default function DiagramEditorPage() {
     }, 100);
   };
 
-  // Exportar imagem PNG usando html2canvas
-  const handleExportPNG = async () => {
+  // Exporta PNG/SVG/JSON. html-to-image serializa o DOM como SVG (foreignObject),
+  // o que preserva as arestas do React Flow que o html2canvas perdia.
+  const downloadFile = (href: string, ext: string) => {
+    const link = document.createElement("a");
+    link.href = href;
+    link.download = `${title.toLowerCase().trim().replace(/\s+/g, "_") || "diagrama"}.${ext}`;
+    link.click();
+  };
+
+  const handleExport = async (format: "png" | "svg" | "json") => {
+    setExportOpen(false);
+
+    if (format === "json") {
+      const json = JSON.stringify(currentDataRef.current ?? diagram?.data ?? {}, null, 2);
+      const url = URL.createObjectURL(new Blob([json], { type: "application/json" }));
+      downloadFile(url, "json");
+      URL.revokeObjectURL(url);
+      showToast("JSON exportado com sucesso!", "success");
+      return;
+    }
+
     if (!canvasContainerRef.current) return;
 
     try {
       showToast("Gerando exportação...", "info");
-      const html2canvasModule = await import("html2canvas");
-      const html2canvas = html2canvasModule.default || html2canvasModule;
-
-      const canvas = await html2canvas(canvasContainerRef.current, {
-        backgroundColor: null,
-        scale: 2,
-        useCORS: true,
-        logging: false,
-      });
-
-      const image = canvas.toDataURL("image/png");
-      const link = document.createElement("a");
-      link.href = image;
-      link.download = `${title.toLowerCase().replace(/\s+/g, "_") || "diagrama"}.png`;
-      link.click();
-      showToast("Imagem exportada com sucesso!", "success");
+      const { toPng, toSvg } = await import("html-to-image");
+      const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+      const options = {
+        pixelRatio: 2,
+        cacheBust: true,
+        backgroundColor: isDark ? "#0f172a" : "#f8fafc",
+        // Remove controles de UI do export (minimapa, zoom, painéis)
+        filter: (node: HTMLElement) => {
+          const cls = typeof node.className === "string" ? node.className : "";
+          return !/react-flow__(minimap|controls|panel|attribution)|map-container .*toolbar/.test(cls);
+        },
+      };
+      const dataUrl =
+        format === "png"
+          ? await toPng(canvasContainerRef.current, options)
+          : await toSvg(canvasContainerRef.current, options);
+      downloadFile(dataUrl, format);
+      showToast(`${format.toUpperCase()} exportado com sucesso!`, "success");
     } catch (err) {
       console.error("Erro ao exportar diagrama:", err);
       showToast("Erro ao exportar imagem", "error");
@@ -211,7 +291,7 @@ export default function DiagramEditorPage() {
       <div
         style={{
           width: "100%",
-          height: "calc(100vh - var(--header-height, 64px))",
+          height: "100dvh",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
@@ -226,13 +306,23 @@ export default function DiagramEditorPage() {
   }
 
   const isFlow = diagram.type === "flowchart";
+  const hasOutline = diagram.type === "flowchart" || diagram.type === "mindmap";
+  const mode = hasOutline ? viewMode : "canvas";
+  const typeBadge =
+    diagram.type === "flowchart"
+      ? { label: "Fluxograma", icon: <Layers size={12} />, bg: "rgba(224, 93, 56, 0.1)", color: "var(--color-terracotta-ink, #c2410c)" }
+      : diagram.type === "mindmap"
+      ? { label: "Mapa Mental", icon: <GitBranch size={12} />, bg: "rgba(59, 130, 246, 0.1)", color: "#2563eb" }
+      : { label: "Quadro Livre", icon: <PenTool size={12} />, bg: "rgba(16, 185, 129, 0.1)", color: "#047857" };
 
   return (
+    // id usado em legacy.css para esconder o shell do admin (tela cheia)
     <div
+      id="diagram-editor"
       style={{
         display: "flex",
         flexDirection: "column",
-        height: "calc(100vh - var(--header-height, 64px))",
+        height: "100dvh",
         width: "100%",
         overflow: "hidden",
         backgroundColor: "var(--color-surface-canvas, #f8fafc)",
@@ -286,13 +376,13 @@ export default function DiagramEditorPage() {
               fontSize: "11px",
               fontWeight: 700,
               textTransform: "uppercase",
-              backgroundColor: isFlow ? "rgba(224, 93, 56, 0.1)" : "rgba(59, 130, 246, 0.1)",
-              color: isFlow ? "var(--color-terracotta-ink, #c2410c)" : "#2563eb",
+              backgroundColor: typeBadge.bg,
+              color: typeBadge.color,
               flexShrink: 0,
             }}
           >
-            {isFlow ? <Layers size={12} /> : <GitBranch size={12} />}
-            {isFlow ? "Fluxograma" : "Mapa Mental"}
+            {typeBadge.icon}
+            {typeBadge.label}
           </span>
 
           {/* Input de Título */}
@@ -322,8 +412,49 @@ export default function DiagramEditorPage() {
           />
         </div>
 
-        {/* Direita: Cliente, Status, Salvar, Exportar, Excluir */}
+        {/* Direita: Visão, Cliente, Status, Salvar, Exportar, Excluir */}
         <div style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 }}>
+          {hasOutline && (
+            <div
+              style={{
+                display: "flex",
+                padding: "3px",
+                borderRadius: "8px",
+                backgroundColor: "var(--color-surface-sunken, #f1f5f9)",
+                border: "1px solid var(--color-border-subtle, #e2e8f0)",
+              }}
+            >
+              {([
+                ["canvas", "Canvas", <Layers key="c" size={13} />],
+                ["split", "Lado a lado", <Columns2 key="s" size={13} />],
+                ["text", "Texto", <ListTree key="t" size={13} />],
+              ] as const).map(([mode, label, icon]) => (
+                <button
+                  key={mode}
+                  onClick={() => changeViewMode(mode)}
+                  title={label}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "5px",
+                    padding: "4px 9px",
+                    borderRadius: "6px",
+                    border: "none",
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    backgroundColor: viewMode === mode ? "var(--color-surface-raised, #ffffff)" : "transparent",
+                    color: viewMode === mode ? "var(--color-text-primary, #0f172a)" : "var(--color-text-secondary, #64748b)",
+                    boxShadow: viewMode === mode ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
+                  }}
+                >
+                  {icon}
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* Seletor de Cliente */}
           <select
             value={clientId}
@@ -412,27 +543,66 @@ export default function DiagramEditorPage() {
             Salvar
           </button>
 
-          {/* Botão Exportar Imagem */}
-          <button
-            onClick={handleExportPNG}
-            title="Exportar Imagem PNG"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-              padding: "7px 12px",
-              borderRadius: "8px",
-              border: "1px solid var(--color-border-subtle, #e2e8f0)",
-              backgroundColor: "var(--color-surface-raised, #ffffff)",
-              color: "var(--color-text-primary, #0f172a)",
-              fontSize: "12px",
-              fontWeight: 600,
-              cursor: "pointer",
-            }}
-          >
-            <Download size={14} />
-            Exportar PNG
-          </button>
+          {/* Menu Exportar */}
+          <div style={{ position: "relative" }}>
+            <button
+              onClick={() => setExportOpen((o) => !o)}
+              title="Exportar diagrama"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                padding: "7px 12px",
+                borderRadius: "8px",
+                border: "1px solid var(--color-border-subtle, #e2e8f0)",
+                backgroundColor: "var(--color-surface-raised, #ffffff)",
+                color: "var(--color-text-primary, #0f172a)",
+                fontSize: "12px",
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              <Download size={14} />
+              Exportar
+            </button>
+            {exportOpen && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: "calc(100% + 6px)",
+                  right: 0,
+                  minWidth: "140px",
+                  backgroundColor: "var(--color-surface-raised, #ffffff)",
+                  border: "1px solid var(--color-border-subtle, #e2e8f0)",
+                  borderRadius: "8px",
+                  boxShadow: "0 6px 20px rgba(0,0,0,0.12)",
+                  overflow: "hidden",
+                  zIndex: 30,
+                }}
+              >
+                {(["png", "svg", "json"] as const).map((f) => (
+                  <button
+                    key={f}
+                    onClick={() => handleExport(f)}
+                    style={{
+                      display: "block",
+                      width: "100%",
+                      textAlign: "left",
+                      padding: "8px 12px",
+                      border: "none",
+                      background: "transparent",
+                      color: "var(--color-text-primary, #0f172a)",
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {f === "json" ? "Dados (JSON)" : `Imagem ${f.toUpperCase()}`}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* Excluir */}
           <button
@@ -454,27 +624,47 @@ export default function DiagramEditorPage() {
         </div>
       </div>
 
-      {/* Canvas Container com 100% de preenchimento */}
-      <div
-        ref={canvasContainerRef}
-        style={{
-          flex: 1,
-          width: "100%",
-          position: "relative",
-          overflow: "hidden",
-        }}
-      >
-        {isFlow ? (
-          <FlowchartEditor
-            initialData={diagram.data}
-            onChange={handleDataChange}
-          />
-        ) : (
-          <MindMapEditor
-            initialData={diagram.data}
-            onChange={handleDataChange}
-          />
+      <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
+        {mode !== "canvas" && (
+          <div style={{ width: mode === "text" ? "100%" : "min(42%, 520px)", flexShrink: 0, minHeight: 0 }}>
+            <OutlinePanel
+              kind={isFlow ? "flowchart" : "mindmap"}
+              data={liveData}
+              onApply={(data) => editorApiRef.current?.applyData(data)}
+            />
+          </div>
         )}
+
+        {/* Canvas: continua montado no modo Texto (escondido) para não perder estado */}
+        <div
+          ref={canvasContainerRef}
+          style={{
+            flex: 1,
+            minWidth: 0,
+            position: "relative",
+            overflow: "hidden",
+            display: mode === "text" ? "none" : "block",
+          }}
+        >
+          {isFlow ? (
+            <FlowchartEditor
+              initialData={diagram.data}
+              onChange={handleDataChange}
+              apiRef={editorApiRef}
+            />
+          ) : diagram.type === "mindmap" ? (
+            <MindMapEditor
+              initialData={diagram.data}
+              onChange={handleDataChange}
+              apiRef={editorApiRef}
+            />
+          ) : (
+            <WhiteboardEditor
+              initialData={diagram.data}
+              onChange={handleDataChange}
+            />
+          )}
+        </div>
       </div>
     </div>
   );

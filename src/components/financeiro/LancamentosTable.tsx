@@ -8,6 +8,7 @@ import DialogShell from "@/components/DialogShell";
 import { buildLancamentoStages } from "@/lib/asaasGroups";
 import type { Invoice, AsaasTransaction } from "@/types/database";
 import { tint } from "@/lib/tint";
+import { authHeaders } from "@/lib/authHeaders";
 
 function billingCycleLabel(cycle?: string): string {
   if (cycle === "monthly") return "Mensalidade";
@@ -126,7 +127,7 @@ export function LancamentosTable({
   const openAsaasLink = async (asaasId: string) => {
     setOpeningAsaas(asaasId);
     try {
-      const res = await fetch(`/api/financeiro/asaas/payment/${asaasId}`);
+      const res = await fetch(`/api/financeiro/asaas/payment/${asaasId}`, { headers: await authHeaders() });
       const payment = await res.json();
       const url = payment.invoiceUrl || payment.bankSlipUrl;
       if (url) window.open(url, '_blank', 'noopener');

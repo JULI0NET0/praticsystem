@@ -1,6 +1,7 @@
 import webpush from 'web-push'
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { requireStaffUser } from '@/lib/apiAuth'
 
 const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
 const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY
@@ -15,6 +16,8 @@ if (vapidPublicKey && vapidPrivateKey) {
 }
 
 export async function POST(request: Request) {
+  const staff = await requireStaffUser(request)
+  if (staff.error) return staff.error
   try {
     const {
       userId,

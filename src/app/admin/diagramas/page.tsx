@@ -8,6 +8,7 @@ import {
   Plus,
   Layers,
   GitBranch,
+  PenTool,
   Star,
   Copy,
   Trash2,
@@ -25,7 +26,7 @@ import SearchInput from "@/components/ui/SearchInput";
 import NewDiagramModal from "@/components/diagramas/NewDiagramModal";
 import { getInitialDiagramData } from "@/lib/diagramTemplates";
 
-type FilterTab = "all" | "flowchart" | "mindmap" | "favorites";
+type FilterTab = "all" | "flowchart" | "mindmap" | "whiteboard" | "favorites";
 
 export default function DiagramasPage() {
   const router = useRouter();
@@ -221,49 +222,6 @@ export default function DiagramasPage() {
     }
   };
 
-  // Copiar SQL de Migração
-  const handleCopySQL = async () => {
-    const sql = `-- PRATIC SYSTEM: Migration Diagramas
-CREATE TABLE IF NOT EXISTS public.diagrams (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-    client_id UUID REFERENCES public.clients(id) ON DELETE SET NULL,
-    title TEXT NOT NULL DEFAULT 'Sem título',
-    description TEXT,
-    type TEXT NOT NULL CHECK (type IN ('flowchart', 'mindmap', 'whiteboard')) DEFAULT 'flowchart',
-    data JSONB NOT NULL DEFAULT '{}'::jsonb,
-    is_favorite BOOLEAN NOT NULL DEFAULT false,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS diagrams_user_id_idx ON public.diagrams (user_id);
-CREATE INDEX IF NOT EXISTS diagrams_client_id_idx ON public.diagrams (client_id);
-CREATE INDEX IF NOT EXISTS diagrams_type_idx ON public.diagrams (type);
-CREATE INDEX IF NOT EXISTS diagrams_updated_at_idx ON public.diagrams (updated_at DESC);
-
-ALTER TABLE public.diagrams ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "diagrams_select" ON public.diagrams;
-CREATE POLICY "diagrams_select" ON public.diagrams FOR SELECT USING (auth.uid() IS NOT NULL);
-
-DROP POLICY IF EXISTS "diagrams_insert" ON public.diagrams;
-CREATE POLICY "diagrams_insert" ON public.diagrams FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
-
-DROP POLICY IF EXISTS "diagrams_update" ON public.diagrams;
-CREATE POLICY "diagrams_update" ON public.diagrams FOR UPDATE USING (auth.uid() IS NOT NULL);
-
-DROP POLICY IF EXISTS "diagrams_delete" ON public.diagrams;
-CREATE POLICY "diagrams_delete" ON public.diagrams FOR DELETE USING (auth.uid() IS NOT NULL);`;
-
-    try {
-      await navigator.clipboard.writeText(sql);
-      showToast("SQL copiado para a área de transferência!", "success");
-    } catch {
-      showToast("Não foi possível copiar automaticamente", "info");
-    }
-  };
-
   // Filtros combinados
   const filteredDiagrams = diagrams.filter((d) => {
     // Busca por texto no título
@@ -274,6 +232,7 @@ CREATE POLICY "diagrams_delete" ON public.diagrams FOR DELETE USING (auth.uid() 
     // Filtro por abas
     if (activeTab === "flowchart" && d.type !== "flowchart") return false;
     if (activeTab === "mindmap" && d.type !== "mindmap") return false;
+    if (activeTab === "whiteboard" && d.type !== "whiteboard") return false;
     if (activeTab === "favorites" && !d.is_favorite) return false;
 
     // Filtro por cliente
@@ -288,6 +247,7 @@ CREATE POLICY "diagrams_delete" ON public.diagrams FOR DELETE USING (auth.uid() 
     all: diagrams.length,
     flowchart: diagrams.filter((d) => d.type === "flowchart").length,
     mindmap: diagrams.filter((d) => d.type === "mindmap").length,
+    whiteboard: diagrams.filter((d) => d.type === "whiteboard").length,
     favorites: diagrams.filter((d) => d.is_favorite).length,
   };
 
@@ -481,6 +441,38 @@ CREATE POLICY "diagrams_delete" ON public.diagrams FOR DELETE USING (auth.uid() 
           </button>
 
           <button
+            onClick={() => setActiveTab("whiteboard")}
+            style={{
+              padding: "7px 14px",
+              borderRadius: "8px",
+              border: "none",
+              fontSize: "13px",
+              fontWeight: 600,
+              cursor: "pointer",
+              backgroundColor: activeTab === "whiteboard" ? "var(--color-surface-raised, #ffffff)" : "transparent",
+              color: activeTab === "whiteboard" ? "var(--color-text-primary, #0f172a)" : "var(--color-text-secondary, #64748b)",
+              boxShadow: activeTab === "whiteboard" ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+            }}
+          >
+            <PenTool size={14} />
+            Quadros Livres
+            <span
+              style={{
+                fontSize: "11px",
+                padding: "2px 6px",
+                borderRadius: "9999px",
+                backgroundColor: activeTab === "whiteboard" ? "var(--color-terracotta-100, #fbeee9)" : "transparent",
+                color: activeTab === "whiteboard" ? "var(--color-terracotta-ink, #c2410c)" : "var(--color-text-tertiary, #94a3b8)",
+              }}
+            >
+              {countByType.whiteboard}
+            </span>
+          </button>
+
+          <button
             onClick={() => setActiveTab("favorites")}
             style={{
               padding: "7px 14px",
@@ -584,31 +576,10 @@ CREATE POLICY "diagrams_delete" ON public.diagrams FOR DELETE USING (auth.uid() 
                 Configuração do Banco de Dados Pendente
               </h3>
               <p style={{ fontSize: "13px", color: "var(--color-text-secondary, #64748b)", margin: "0 0 16px 0", lineHeight: 1.5 }}>
-                A tabela <code>public.diagrams</code> ainda não foi criada no banco de dados do Supabase. Para ativar a criação e o salvamento dos diagramas, basta rodar a migração no <b>SQL Editor</b> do seu painel Supabase.
+                A tabela <code>public.diagrams</code> ainda não foi criada no banco de dados do Supabase. Para ativar a criação e o salvamento dos diagramas, basta rodar o arquivo <code>migration_diagrams.sql</code> (raiz do projeto) no <b>SQL Editor</b> do seu painel Supabase.
               </p>
 
               <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-                <button
-                  onClick={handleCopySQL}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    padding: "9px 16px",
-                    borderRadius: "10px",
-                    border: "none",
-                    backgroundColor: "var(--color-terracotta, #e05d38)",
-                    color: "#ffffff",
-                    fontSize: "13px",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    boxShadow: "0 2px 8px rgba(224, 93, 56, 0.25)",
-                  }}
-                >
-                  <Copy size={14} />
-                  Copiar Script SQL
-                </button>
-
                 <button
                   onClick={refreshDiagrams}
                   style={{
@@ -720,7 +691,12 @@ CREATE POLICY "diagrams_delete" ON public.diagrams FOR DELETE USING (auth.uid() 
         >
           <AnimatePresence>
             {filteredDiagrams.map((diagram) => {
-              const isFlow = diagram.type === "flowchart";
+              const badge =
+                diagram.type === "flowchart"
+                  ? { label: "Fluxograma", icon: <Layers size={12} />, bg: "rgba(224, 93, 56, 0.1)", color: "var(--color-terracotta-ink, #c2410c)" }
+                  : diagram.type === "mindmap"
+                  ? { label: "Mapa Mental", icon: <GitBranch size={12} />, bg: "rgba(59, 130, 246, 0.1)", color: "#2563eb" }
+                  : { label: "Quadro Livre", icon: <PenTool size={12} />, bg: "rgba(16, 185, 129, 0.1)", color: "#047857" };
 
               return (
                 <motion.div
@@ -770,12 +746,12 @@ CREATE POLICY "diagrams_delete" ON public.diagrams FOR DELETE USING (auth.uid() 
                           fontWeight: 700,
                           textTransform: "uppercase",
                           letterSpacing: "0.04em",
-                          backgroundColor: isFlow ? "rgba(224, 93, 56, 0.1)" : "rgba(59, 130, 246, 0.1)",
-                          color: isFlow ? "var(--color-terracotta-ink, #c2410c)" : "#2563eb",
+                          backgroundColor: badge.bg,
+                          color: badge.color,
                         }}
                       >
-                        {isFlow ? <Layers size={12} /> : <GitBranch size={12} />}
-                        {isFlow ? "Fluxograma" : "Mapa Mental"}
+                        {badge.icon}
+                        {badge.label}
                       </span>
 
                       {/* Botão Favoritar */}

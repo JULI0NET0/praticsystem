@@ -1,6 +1,10 @@
 import { DiagramType } from "@/types/database";
 
 export function getInitialDiagramData(type: DiagramType, template: string = "blank", title: string = "Novo Diagrama") {
+  if (type === "whiteboard") {
+    return { elements: [], appState: { viewBackgroundColor: "#faf9f5" }, files: {} };
+  }
+
   if (type === "flowchart") {
     if (template === "funnel") {
       return {

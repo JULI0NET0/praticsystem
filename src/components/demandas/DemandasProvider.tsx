@@ -22,6 +22,7 @@ import { toISODate } from "@/lib/dueDate";
 import { demandMatchesFilters } from "@/lib/demandFilters";
 import { fetchContentPlans } from "@/lib/contentPlans";
 import type { ContentPlan } from "@/types/cronogramas";
+import { authHeaders } from "@/lib/authHeaders";
 import {
   EMPTY_DEMAND_FILTERS,
   PRIORITY_ORDER,
@@ -251,7 +252,7 @@ async function fetchDemandsSnapshot(): Promise<DemandsSnapshot> {
 async function pushGoogleSync(eventId: string, action: "insert" | "update" | "delete"): Promise<void> {
   const res = await fetch("/api/agenda/google-sync", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...(await authHeaders()) },
     body: JSON.stringify({ eventId, action }),
   });
   if (!res.ok) {

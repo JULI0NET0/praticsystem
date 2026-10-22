@@ -44,6 +44,7 @@ import FloatingPopover from "@/components/agenda/FloatingPopover";
 import GoogleAgendaModal from "@/components/agenda/GoogleAgendaModal";
 import GoogleSyncButton, { type GoogleAccountState } from "@/components/agenda/GoogleSyncButton";
 import MobileAgenda, { type MobileView } from "@/components/agenda/MobileAgenda";
+import { authHeaders } from "@/lib/authHeaders";
 
 const VIEW_STORAGE_KEY = "pratic-agenda-view";
 const MOBILE_VIEW_STORAGE_KEY = "pratic-agenda-mobile-view";
@@ -222,7 +223,7 @@ export default function SchedulePage() {
 
   const fetchGoogleStatus = useCallback(async () => {
     try {
-      const res = await fetch("/api/agenda/google-sync");
+      const res = await fetch("/api/agenda/google-sync", { headers: await authHeaders() });
       if (res.ok) setGoogleStatus(await res.json());
     } catch (err) {
       console.error("Erro ao verificar status do Google Agenda:", err);
@@ -235,7 +236,7 @@ export default function SchedulePage() {
         if (!silent) setIsSyncingGoogle(true);
         const res = await fetch("/api/agenda/google-sync", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...(await authHeaders()) },
           body: JSON.stringify({ action: "pull", account: "agenciapratic" }),
         });
         const data = await res.json();
@@ -312,7 +313,7 @@ export default function SchedulePage() {
     try {
       const res = await fetch("/api/agenda/google-sync", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(await authHeaders()) },
         body: JSON.stringify({ eventId, action, ...data }),
       });
       if (!res.ok) {

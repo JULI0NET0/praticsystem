@@ -13,6 +13,7 @@ import { useConfirm } from "@/components/ConfirmProvider";
 import { AsaasLinkDialog } from "@/components/financeiro/AsaasLinkDialog";
 import { buildFaturaGroups, matchClient, extractFaturaNumber, detectFeeCategory, type FaturaGroup } from "@/lib/asaasGroups";
 import type { AsaasTransaction, ExpenseEntry, Invoice, Expense } from "@/types/database";
+import { authHeaders } from "@/lib/authHeaders";
 
 interface AsaasBalance {
   balance: number;
@@ -142,7 +143,7 @@ export function AsaasSync({
     setLoadingTransfer(true);
     setTransferError(null);
     try {
-      const res = await fetch(`/api/financeiro/asaas/transfer/${transferId}`);
+      const res = await fetch(`/api/financeiro/asaas/transfer/${transferId}`, { headers: await authHeaders() });
       const data = await res.json();
       if (!res.ok || data?.error) {
         setTransferError(data?.error || "Não foi possível carregar o destino.");
@@ -158,7 +159,7 @@ export function AsaasSync({
 
   async function openAsaasLink(asaasId: string) {
     try {
-      const res = await fetch(`/api/financeiro/asaas/payment/${asaasId}`);
+      const res = await fetch(`/api/financeiro/asaas/payment/${asaasId}`, { headers: await authHeaders() });
       const payment = await res.json();
       const url = payment?.invoiceUrl || payment?.bankSlipUrl || payment?.transactionReceiptUrl;
       if (url) window.open(url, "_blank", "noopener");

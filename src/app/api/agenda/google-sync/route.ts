@@ -13,6 +13,7 @@ import {
   isOAuthConfigured,
   testAccountToken,
 } from '@/lib/googleCalendar';
+import { requireStaffOrHermes } from '@/lib/apiAuth';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
@@ -20,7 +21,9 @@ const supabase = createClient(
 );
 
 // GET: Retorna o status de conexão das contas Google
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const authError = await requireStaffOrHermes(request);
+  if (authError) return authError;
   try {
     const isOauthReady = isOAuthConfigured();
     const agenciapraticConfigured = await isAccountConfiguredAsync('agenciapratic');
@@ -63,6 +66,8 @@ export async function GET() {
 
 // POST: Executa push (insert/update/delete) ou pull (sincronizar do Google para o banco)
 export async function POST(req: NextRequest) {
+  const authError = await requireStaffOrHermes(req);
+  if (authError) return authError;
   try {
     const body = await req.json();
     const { action, eventId, title, type, date, description, account } = body;

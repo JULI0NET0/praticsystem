@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
+import { requireStaffUser } from '@/lib/apiAuth';
 
 function getAdmin() {
   return createClient(
@@ -10,9 +11,11 @@ function getAdmin() {
 }
 
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const staff = await requireStaffUser(req);
+  if (staff.error) return staff.error;
   const { id } = await params;
   const supabase = getAdmin();
 
@@ -63,6 +66,8 @@ export async function PUT(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const staff = await requireStaffUser(req);
+  if (staff.error) return staff.error;
   const { id } = await params;
   const body = await req.json();
   const supabase = getAdmin();
@@ -74,9 +79,11 @@ export async function PUT(
 }
 
 export async function DELETE(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const staff = await requireStaffUser(req);
+  if (staff.error) return staff.error;
   const { id } = await params;
   const supabase = getAdmin();
 

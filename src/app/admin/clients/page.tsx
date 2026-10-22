@@ -12,6 +12,7 @@ import DriveSyncModal from "@/components/admin/clients/DriveSyncModal";
 import SearchInput from "@/components/ui/SearchInput";
 import SortFilterMenu, { SortOption } from "@/components/ui/SortFilterMenu";
 import { useToast } from "@/components/CustomToast";
+import { authHeaders } from "@/lib/authHeaders";
 
 export default function ClientsPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -48,7 +49,7 @@ export default function ClientsPage() {
   const fetchClients = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/clients');
+      const res = await fetch('/api/clients', { headers: await authHeaders() });
       if (!res.ok) throw new Error(`Erro ao buscar clientes: ${res.status}`);
       const data = await res.json();
 
@@ -131,7 +132,7 @@ export default function ClientsPage() {
     try {
       const res = await fetch('/api/financeiro/asaas/customer-lookup', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
         body: JSON.stringify({ cpfCnpj: asaasCpfCnpj }),
       });
       const data = await res.json();
@@ -150,7 +151,7 @@ export default function ClientsPage() {
     try {
       const res = await fetch('/api/clients/import-from-asaas', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
         body: JSON.stringify({ cpfCnpj: asaasCpfCnpj }),
       });
       const data = await res.json();
