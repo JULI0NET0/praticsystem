@@ -43,9 +43,9 @@ export function identifyAgent(request: Request): AgentName | null {
 
 /** Executa fn com a identidade do agente (autor de notas/chat etc.). */
 export function runAsAgent<T>(agent: AgentName, fn: () => T): T {
-  // O Grok começa só com leitura; GROK_API_KEY_SCOPE=write libera as ferramentas de escrita.
+  // O Grok começa só com leitura; GROK_API_KEY_SCOPE=write (ou full) libera as ferramentas de escrita.
   const scope: AgentScope =
-    agent === 'grok' && process.env.GROK_API_KEY_SCOPE !== 'write' ? 'read' : 'write';
+    agent === 'grok' && !['write', 'full'].includes(process.env.GROK_API_KEY_SCOPE ?? '') ? 'read' : 'write';
   return agentContext.run({ agent, scope }, fn);
 }
 
