@@ -1,6 +1,6 @@
 import { createMcpHandler } from 'mcp-handler';
 import { z } from 'zod';
-import { requireHermesAuth } from '@/lib/hermesAuth';
+import { getAgentScope, identifyAgent, runAsAgent } from '@/lib/hermesAuth';
 import {
   searchClients,
   getClient,
@@ -54,7 +54,20 @@ function asToolError(err: unknown) {
   return { content: [{ type: 'text' as const, text: message }], isError: true };
 }
 
+const READ_TOOL = /^(search|get|list)_/;
+
 const mcpHandler = createMcpHandler((server) => {
+  // Chaves com escopo 'read' (Grok, por padrão) só executam ferramentas de consulta.
+  type RegisterTool = (name: string, config: unknown, cb: (...args: unknown[]) => unknown) => unknown;
+  const registerTool = server.registerTool.bind(server) as unknown as RegisterTool;
+  (server as unknown as { registerTool: RegisterTool }).registerTool = (name, config, cb) =>
+    registerTool(name, config, async (...args) => {
+      if (!READ_TOOL.test(name) && getAgentScope() === 'read') {
+        return asToolError(new Error('Esta chave tem acesso somente leitura.'));
+      }
+      return cb(...args);
+    });
+
   server.registerTool(
     'search_clients',
     {
@@ -720,10 +733,10 @@ const mcpHandler = createMcpHandler((server) => {
 });
 
 async function handler(request: Request) {
-  const authError = requireHermesAuth(request);
-  if (authError) return authError;
+  const agent = identifyAgent(request);
+  if (!agent) return Response.json({ error: 'Não autorizado.' }, { status: 401 });
 
-  return mcpHandler(request);
+  return runAsAgent(agent, () => mcpHandler(request));
 }
 
 export { handler as GET, handler as POST };

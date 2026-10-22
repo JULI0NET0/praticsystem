@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import type { Client } from '@/types/database';
@@ -18,6 +19,40 @@ export function requireHermesAuth(request: Request): NextResponse | null {
   return null;
 }
 
+export type AgentName = 'hermes' | 'grok';
+
+export type AgentScope = 'read' | 'write';
+
+const agentContext = new AsyncLocalStorage<{ agent: AgentName; scope: AgentScope }>();
+
+/**
+ * Descobre qual agente está chamando pelo Bearer token (cada um tem a sua
+ * chave: HERMES_API_KEY e GROK_API_KEY). Retorna null se nenhuma bater.
+ */
+export function identifyAgent(request: Request): AgentName | null {
+  const authHeader = request.headers.get('authorization') || '';
+  const keys: Array<[AgentName, string | undefined]> = [
+    ['hermes', process.env.HERMES_API_KEY],
+    ['grok', process.env.GROK_API_KEY],
+  ];
+  for (const [agent, key] of keys) {
+    if (key && authHeader === `Bearer ${key}`) return agent;
+  }
+  return null;
+}
+
+/** Executa fn com a identidade do agente (autor de notas/chat etc.). */
+export function runAsAgent<T>(agent: AgentName, fn: () => T): T {
+  // O Grok começa só com leitura; GROK_API_KEY_SCOPE=write libera as ferramentas de escrita.
+  const scope: AgentScope =
+    agent === 'grok' && process.env.GROK_API_KEY_SCOPE !== 'write' ? 'read' : 'write';
+  return agentContext.run({ agent, scope }, fn);
+}
+
+export function getAgentScope(): AgentScope {
+  return agentContext.getStore()?.scope ?? 'write';
+}
+
 export function getSupabaseAdmin() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -32,7 +67,9 @@ export function getSupabaseAdmin() {
  * HERMES não é um usuário logado no sistema).
  */
 export function getHermesDefaultUserId(): string {
-  const id = process.env.HERMES_DEFAULT_USER_ID;
+  const id =
+    (agentContext.getStore()?.agent === 'grok' && process.env.GROK_DEFAULT_USER_ID) ||
+    process.env.HERMES_DEFAULT_USER_ID;
   if (!id) throw new Error('HERMES_DEFAULT_USER_ID não configurado.');
   return id;
 }
@@ -43,6 +80,11 @@ export function getHermesDefaultUserId(): string {
  * como vindas do agente, não de uma pessoa real do time.
  */
 export function getHermesBotUserId(): string {
+  if (agentContext.getStore()?.agent === 'grok') {
+    const grokId = process.env.GROK_BOT_USER_ID;
+    if (!grokId) throw new Error('GROK_BOT_USER_ID não configurado.');
+    return grokId;
+  }
   const id = process.env.HERMES_BOT_USER_ID;
   if (!id) throw new Error('HERMES_BOT_USER_ID não configurado.');
   return id;
